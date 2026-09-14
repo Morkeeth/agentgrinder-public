@@ -18,7 +18,7 @@ Free posting and browsing. Recognition comes from real people seeing and respond
 
 ## First useful test
 
-Two people each post a safe real run to the independent service. Each can open the other’s profile, follow and respond. A stranger understands the card without a tour. The current clone still needs its own database and hosting before this can be tested publicly.
+Two people each post a safe real run to the independent service. Each can open the other’s profile, follow and respond. A stranger understands the card without a tour. The current clone still needs its dedicated database schema and hosting before this can be tested publicly.
 
 ## Two repositories
 
@@ -26,8 +26,8 @@ This repository is the public product. Morkeeth/agentgrinder remains the hackath
 
 ## Public release requirements · 14 September
 
-- Independent database and hosting under an approved product brand and domain.
-- GitHub and X sign-in with linked identities belonging to one profile. The additional provider mentioned as “origin” is awaiting clarification.
+- Dedicated `strava` schema in the shared Grinder Supabase project, with separate website hosting under an approved product brand and domain. Auth and infrastructure are shared; app data and profiles are separate.
+- GitHub and X sign-in with linked identities belonging to one profile. Origin means Cursor’s code forge. Plan repository connection; ordinary personal sign-in support still needs verification.
 - Find and follow friends, browse their runs in Following, open their profiles and continue conversations from Responses. Make these paths useful even with a small personal network.
 - A reusable Grok Bot post-run template is required. Source lives in `templates/grokbot/`; second-bot installation and real hosted posting must be verified before calling it released.
 

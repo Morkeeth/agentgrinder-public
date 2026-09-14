@@ -1,1 +1,1 @@
-{"SB_URL": "http://127.0.0.1:54321", "SB_KEY": "local-development-only"}
+{"SB_URL": "http://127.0.0.1:54321", "SB_KEY": "local-development-only", "SB_SCHEMA": "strava"}

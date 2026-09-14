@@ -25,7 +25,7 @@ python3 scripts/dev.py setup
 python3 scripts/dev.py check
 ```
 
-**Current status:** local capture, cards and UI are available. This public repo does not yet have its own hosted database or service. Sign-in, public posting and social interactions need that setup. The localhost defaults deliberately do not connect to the hackathon service.
+**Current status:** local capture, cards and UI are available. This public repo does not yet have its hosted Strava schema or service. Sign-in, public posting and social interactions need that setup. The localhost defaults stay offline from production. The approved deployment shares Supabase Auth and infrastructure with Grinder, using a separate `strava` schema for all app data.
 
 ## Build in Cursor or Grok Bot
 

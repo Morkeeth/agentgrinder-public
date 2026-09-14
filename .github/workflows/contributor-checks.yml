@@ -18,3 +18,5 @@ jobs:
           node-version: '22'
       - run: python3 scripts/dev.py setup
       - run: python3 scripts/dev.py check
+      - run: npm ci --ignore-scripts
+      - run: npm run test:shared-schema

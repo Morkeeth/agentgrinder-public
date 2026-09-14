@@ -15,6 +15,8 @@ DEFAULT_KEY = os.environ.get(
     "local-development-only",
 )
 
+DEFAULT_SCHEMA = "strava"
+
 
 def _get(path: str, params: dict | None = None) -> list | dict:
     q = urllib.parse.urlencode(params or {})
@@ -27,6 +29,7 @@ def _get(path: str, params: dict | None = None) -> list | dict:
             "apikey": DEFAULT_KEY,
             "Authorization": f"Bearer {DEFAULT_KEY}",
             "Accept": "application/json",
+            "Accept-Profile": DEFAULT_SCHEMA,
         },
     )
     with urllib.request.urlopen(req, timeout=15) as resp:

@@ -69,17 +69,8 @@ create schema auth;
 create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
 grant usage on schema auth to anon,authenticated;
 `);
-  await db.exec(await readFile(join(ROOT, "tests/fixtures/hosted-base.sql"), "utf8"));
-  await db.exec(`grant select,insert,update,delete on profiles,runs,acks to anon,authenticated;`);
-  await db.exec(
-    execFileSync("python3", [join(ROOT, "scripts/prepare-migration.py")], { encoding: "utf8" }),
-  );
-  for (const file of (await readFile(join(ROOT, "scripts/migration-order.txt"), "utf8"))
-    .trim()
-    .split("\n")) {
-    const sql = await readFile(join(ROOT, "supabase/migrations", file), "utf8");
-    await db.exec(sql);
-  }
+  await db.exec(execFileSync("python3", [join(ROOT, "scripts/prepare-strava-database.py")], {encoding:"utf8"}));
+  await db.exec("set search_path=strava,pg_temp");
   async function as(id) {
     await db.exec("reset role");
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [id]);
@@ -232,6 +223,13 @@ export function startDisposableServer(db, { port = 0 } = {}) {
 
 async function handle(db, req, res) {
   const url = new URL(req.url, "http://127.0.0.1");
+  if (url.pathname.startsWith('/rest/v1/')) {
+    const header = ['GET','HEAD'].includes(req.method) ? 'accept-profile' : 'content-profile';
+    if (req.headers[header] !== 'strava') {
+      res.statusCode=406;res.setHeader('Content-Type','application/json');
+      res.end(JSON.stringify({code:'PGRST106',message:'Explicit strava schema required'}));return;
+    }
+  }
   const sub = decodeSub(req);
   if (url.pathname === "/auth/v1/user") {
     if (!sub) {

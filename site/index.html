@@ -406,7 +406,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   <main class="main" id="app"></main>
   <aside class="side" id="side"></aside>
 </div>
-<footer>Your agent runs, shared on your terms. &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a><span id="deletewrap" hidden> &middot; <a href="#" id="delete">Delete my Grinder profile</a></span></footer>
+<footer>Your agent runs, shared on your terms. &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a><span id="deletewrap" hidden> &middot; <a href="#" id="delete">Delete my Strava profile</a></span></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
@@ -422,6 +422,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 <script>
 const SB_URL="http://127.0.0.1:54321";
 const SB_KEY="local-development-only";
+const SB_SCHEMA="strava";
 // THE PUBLIC EXAMPLE. One real run, pushed from a real session with `agentgrinder grind --coach`,
 // visibility public, readable with the publishable key above and no account. The landing page
 // shows it to a logged-out visitor so the argument of the product is on screen before sign-in.
@@ -548,7 +549,7 @@ async function grinderFetch(input, options={}){
   if(runId && /^[a-f0-9-]{36}$/i.test(runId)) headers.set('x-grinder-run-id',runId);
   return fetch(input,{...options,headers});
 }
-const sb=window.supabase&&window.supabase.createClient(SB_URL,SB_KEY,{global:{fetch:grinderFetch}});
+const sb=window.supabase&&window.supabase.createClient(SB_URL,SB_KEY,{db:{schema:SB_SCHEMA},auth:{storageKey:"agentic-strava-auth"},global:{fetch:grinderFetch}});
 let ME=null;
 const social=GrinderSocial({client:sb,me:()=>ME,app:()=>$('app'),frame,status,
   renderRuns:async runs=>{noteTraces(runs);const ad=await ackData(runs);setTimeout(()=>{wireKudos();countUp()},0);return runs.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('')}});
@@ -1747,10 +1748,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   $('auth').addEventListener('click',async()=>{ if(!sb){status('Refresh.',true);return;}
     const {data:{session}}=await sb.auth.getSession();
-    if(session){await sb.auth.signOut();location.href='/';return;}
+    if(session){await sb.auth.signOut({scope:"local"});location.href='/';return;}
     showSignIn(); });
-  $('delete').addEventListener('click',async e=>{e.preventDefault(); if(!ME)return; if(!confirm('Delete your Grinder profile and owned work? Shared submitted results and your sign-in account remain. Transfer shared Crews and hosted Challenges first. Deleted work cannot be restored.'))return;
-    const {error}=await sb.from('profiles').delete().eq('id',ME.id); if(error){status(error.message,true);return;} await sb.auth.signOut(); location.href='/'; });
+  $('delete').addEventListener('click',async e=>{e.preventDefault(); if(!ME)return; if(!confirm('Delete your Strava profile and owned work? Your Agent Grinder profile and shared sign-in account remain. Deleted work cannot be restored.'))return;
+    const {error}=await sb.from('profiles').delete().eq('id',ME.id); if(error){status(error.message,true);return;} await sb.auth.signOut({scope:"local"}); location.href='/'; });
   if(sb){
     // Initial session loading and SIGNED_IN can arrive together. Finish one render
     // before another auth refresh can append controls to the same page.

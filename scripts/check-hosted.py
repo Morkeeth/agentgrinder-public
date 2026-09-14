@@ -14,7 +14,7 @@ key = re.search(r'const SB_KEY="([^"]+)"', html).group(1)
 
 
 def read(table, params, extra_headers=None):
-    req = urllib.request.Request(url+'/rest/v1/'+table+'?'+urllib.parse.urlencode(params), headers={'apikey':key, **(extra_headers or {})})
+    req = urllib.request.Request(url+'/rest/v1/'+table+'?'+urllib.parse.urlencode(params), headers={'apikey':key, 'Accept-Profile':'strava', **(extra_headers or {})})
     try:
         with urllib.request.urlopen(req, timeout=20) as response:
             return response.status, json.load(response)
