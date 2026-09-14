@@ -1,0 +1,29 @@
+{"role":"user","message":{"content":[{"type":"text","text":"<environment_context>[SAFE EXPORT] Labelled regression fixture derived from a real Grok Bot JSONL record shape. Prompt text, results, identifiers, and paths were replaced.</environment_context>"}]}}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Monday, Sep 14, 2026, 3:00 PM (UTC)</timestamp>\n<user_query>[SAFE EXPORT] Inspect the labelled sample workspace.</user_query>"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Inspecting the labelled workspace."},{"type":"tool_use","id":"safe-tool-01","name":"Shell","input":{"command":"printf '[SAFE EXPORT] sanitized command\\n'","working_directory":"/SAFE_EXPORT/project"}}]}}
+{"role":"tool","message":{"content":[{"type":"tool_result","tool_use_id":"safe-tool-01","content":"SAFE EXPORT result omitted"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Inspection complete; no private content retained."}]}}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Monday, Sep 14, 2026, 3:05 PM (UTC)</timestamp>\n<user_query>[SAFE EXPORT] Read the normalized sample file.</user_query>"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Reading a normalized fixture path."},{"type":"tool_use","id":"safe-tool-02","name":"Read","input":{"path":"/SAFE_EXPORT/project/README.md"}}]}}
+{"role":"tool","message":{"content":[{"type":"tool_result","tool_use_id":"safe-tool-02","content":"SAFE EXPORT result omitted"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Read completed; source content omitted."}]}}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Monday, Sep 14, 2026, 3:10 PM (UTC)</timestamp>\n<user_query>[SAFE EXPORT] Check the sanitized working state.</user_query>"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Checking the sanitized state."},{"type":"tool_use","id":"safe-tool-03","name":"Shell","input":{"command":"printf '[SAFE EXPORT] status omitted\\n'","working_directory":"/SAFE_EXPORT/project"}}]}}
+{"role":"tool","message":{"content":[{"type":"tool_result","tool_use_id":"safe-tool-03","content":"SAFE EXPORT result omitted"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] State checked; no outcome inferred."}]}}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Monday, Sep 14, 2026, 3:15 PM (UTC)</timestamp>\n<user_query>[SAFE EXPORT] Read the normalized configuration sample.</user_query>"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Reading the normalized configuration path."},{"type":"tool_use","id":"safe-tool-04","name":"Read","input":{"path":"/SAFE_EXPORT/project/config.example.json"}}]}}
+{"role":"tool","message":{"content":[{"type":"tool_result","tool_use_id":"safe-tool-04","content":"SAFE EXPORT result omitted"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Configuration read; values omitted."}]}}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Monday, Sep 14, 2026, 3:20 PM (UTC)</timestamp>\n<user_query>[SAFE EXPORT] Exercise the labelled sample command.</user_query>"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Exercising a non-sensitive placeholder command."},{"type":"tool_use","id":"safe-tool-05","name":"Shell","input":{"command":"printf '[SAFE EXPORT] command output omitted\\n'","working_directory":"/SAFE_EXPORT/project"}}]}}
+{"role":"tool","message":{"content":[{"type":"tool_result","tool_use_id":"safe-tool-05","content":"SAFE EXPORT result omitted"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Command request recorded; success is not inferred."}]}}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Monday, Sep 14, 2026, 3:25 PM (UTC)</timestamp>\n<user_query>[SAFE EXPORT] Read the labelled regression note.</user_query>"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Reading the normalized regression-note path."},{"type":"tool_use","id":"safe-tool-06","name":"Read","input":{"path":"/SAFE_EXPORT/project/docs/regression-note.md"}}]}}
+{"role":"tool","message":{"content":[{"type":"tool_result","tool_use_id":"safe-tool-06","content":"SAFE EXPORT result omitted"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Regression note read; content omitted."}]}}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Monday, Sep 14, 2026, 3:30 PM (UTC)</timestamp>\n<user_query>[SAFE EXPORT] Produce the final private preview summary.</user_query>"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Preparing a metrics-only local summary."},{"type":"tool_use","id":"safe-tool-07","name":"Shell","input":{"command":"printf '[SAFE EXPORT] preview only; not posted\\n'","working_directory":"/SAFE_EXPORT/project"}}]}}
+{"role":"tool","message":{"content":[{"type":"tool_result","tool_use_id":"safe-tool-07","content":"SAFE EXPORT result omitted"}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[SAFE EXPORT] Private preview prepared; nothing published."}]}}
