@@ -85,7 +85,7 @@ window.GrinderSocial = function ({
       if (!follows.length) {
         byId("social-body").innerHTML =
           empty(
-            "Follow a builder from their Scrapbook to bring their grinds here.",
+            "Follow a builder from their profile to bring their runs here.",
           ) + '<a href="/?explore">Explore public grinds</a>';
         return;
       }
@@ -323,7 +323,6 @@ window.GrinderSocial = function ({
           };
           article.append(report);
         }
-        const practiceLink=document.createElement("a");practiceLink.className="act";practiceLink.href="/?practices&from_reply="+reply.id;practiceLink.textContent="Turn into a practice";article.append(practiceLink);
         items.append(article);
       }
       if (!rows.length && !cursor)
@@ -350,7 +349,7 @@ window.GrinderSocial = function ({
       const form = document.createElement("form");
       form.className = "reply-form";
       form.innerHTML =
-        '<label>Your reply<textarea name="body" required maxlength="3000" placeholder="What did you learn from this grind?"></textarea></label><label>Evidence or step you mean (optional)<input name="evidence" maxlength="200"></label><button>Post reply</button>';
+        '<label>Your reply<textarea name="body" required maxlength="3000" placeholder="Ask about the build or respond to the work."></textarea></label><label>Part of the run you mean (optional)<input name="evidence" maxlength="200"></label><button>Post reply</button>';
       form.onsubmit = async (e) => {
         e.preventDefault();
         const button = form.querySelector("button");
@@ -381,7 +380,7 @@ window.GrinderSocial = function ({
   }
 
   async function inbox() {
-    start("Your inbox", "Recognition and conversations about your work.", "inbox");
+    start("Responses", "ACKs, replies and new followers.", "inbox");
     if (!signedIn()) return;
     try {
       const rows = await result(
@@ -401,7 +400,7 @@ window.GrinderSocial = function ({
                 `<article class="card">${link(n.actor)} ${n.kind === "reply" ? "replied to your grind" : n.kind === "ack" ? "ACKed your work" : "followed you"}${!n.read_at ? " · new" : ""}<p>${n.run_id ? `<a href="/?run=${encodeURIComponent(n.run_id)}">Open the grind</a>` : ""}</p><small>${esc(new Date(n.created_at).toLocaleString())}</small></article>`,
             )
             .join("")
-        : empty("Your ACKs and conversations will appear here.");
+        : empty("Responses to your public runs will appear here.");
       const unread = rows.filter((r) => !r.read_at).map((r) => r.id);
       if (unread.length)
         await result(
