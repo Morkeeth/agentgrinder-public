@@ -25,7 +25,15 @@ Python 3.9+; local capture needs no API key. If there is no supported session, r
 
 Open this folder in Cursor. Enable the project MCP server from Customize. It exposes local run previews through the existing Python server. [Cursor setup](docs/CURSOR.md) explains the boundaries and the first tool call.
 
-## Build together
+## Build together · Cursor and Grok Bot first
+
+[Start contributing](CONTRIBUTING.md) · [Pick a first PR](docs/FIRST-PR.md)
+
+```sh
+python3 scripts/dev.py setup
+python3 scripts/dev.py serve
+```
+
 
 Read [PRODUCT.md](PRODUCT.md) for direction, [CONTRIBUTING.md](CONTRIBUTING.md) for setup, and [the Grok Bot brief](docs/GROK-BOT.md) for a bounded first build.
 

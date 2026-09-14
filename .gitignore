@@ -17,3 +17,7 @@ scratchpad/six.json
 # initial public seed, next to its own redacted output. Renders stay local; publish the
 # `-public` variant, which replaces every repository name with a `repo N` label.
 nightrun.html
+
+# Contributor-local environment and generated sessions
+.venv/
+grind.html
