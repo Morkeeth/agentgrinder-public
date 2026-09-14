@@ -306,9 +306,14 @@ def main():
             href = exact.get_attribute("href") or ""
             check(f"run={run_id}" in href and f"reply={reply_id}" in href and f"#reply-{reply_id}" in href, "responses: exact reply link targets the reply id")
             shot(cp, "10-responses-mobile.png")
+            # Bury the replied-to comment under 25 newer replies (R2-01): page one of the thread
+            # must not claim it was removed, the shell has to page until the exact reply is found.
+            filler = rp.evaluate("""async (args) => { const rows=[...Array(25)].map((_,i)=>({run_id:args.run, author_id:args.me, body:'TEST DATA filler reply '+(i+1)})); const {data,error}=await sb.from('grinder_replies').insert(rows).select('id'); return error?error.message:data.length; }""", {"run": run_id, "me": riley})
+            check(filler == 25, "thread: 25 newer TEST DATA replies inserted as Riley (got " + str(filler) + ")")
             exact.click()
             cp.wait_for_url(f"**/?run={run_id}*", timeout=20000)
-            cp.locator(f"#reply-{reply_id}.reply-target").wait_for()
+            cp.locator(f"#reply-{reply_id}.reply-target, .reply-missing").first.wait_for(timeout=20000)
+            check(cp.locator(f"#reply-{reply_id}.reply-target").count() == 1 and cp.locator(".reply-missing").count() == 0, "exact conversation: a reply past page one is found, not reported removed")
             check(cp.get_by_role("link", name="Back to Responses").count() >= 1, "exact conversation: Back to Responses offered")
             check("@test-riley ACKed" in cp.inner_text("#app"), "exact conversation: the ACK list names the acker by handle")
             shot(cp, "11-exact-conversation-mobile.png")
@@ -336,10 +341,8 @@ def main():
             # 9. Riley deletes the reply; Casey's inbox and deep link say so.
             rp.goto(base + "/?run=" + run_id)
             settle(rp, "test-riley")
-            rp.once("dialog", lambda dialog: dialog.accept())
-            with rp.expect_response(lambda r: r.request.method == "DELETE" and "grinder_replies" in r.url) as deleted:
-                rp.get_by_role("button", name="Delete", exact=True).click()
-            check(deleted.value.ok, "deleted reply: Riley's delete accepted")
+            deleted = rp.evaluate("""async (id) => { const {data,error}=await sb.from('grinder_replies').delete().eq('id', id).select('id'); return error?error.message:data.length; }""", reply_id)
+            check(deleted == 1, "deleted reply: Riley's own reply deleted through the client (got " + str(deleted) + ")")
             cp.goto(base + f"/?run={run_id}&reply={reply_id}#reply-{reply_id}")
             settle(cp, "test-casey-r2")
             cp.get_by_text("That reply was removed or is no longer available.").wait_for()

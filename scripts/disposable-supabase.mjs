@@ -146,6 +146,7 @@ function parseFilters(url) {
   const filters = [];
   for (const [key, raw] of url.searchParams) {
     if (["select", "order", "limit", "offset"].includes(key)) continue;
+    if (key === "or" || key === "and") { filters.push({ op: "LOGIC", tree: parseLogic(key, raw) }); continue; }
     const [op, ...rest] = raw.split(".");
     const value = rest.join(".");
     if (op === "eq") filters.push({ key, op: "=", value });
@@ -161,6 +162,41 @@ function parseFilters(url) {
     }
   }
   return filters;
+}
+
+// PostgREST logic tree: or=(created_at.lt.X,and(created_at.eq.X,id.lt.Y)). Cursor pagination
+// in social.js depends on it; without it page two is page one again.
+function splitTop(body) {
+  const terms = []; let depth = 0, start = 0;
+  for (let k = 0; k < body.length; k++) {
+    const ch = body[k];
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    else if (ch === "," && depth === 0) { terms.push(body.slice(start, k)); start = k + 1; }
+  }
+  terms.push(body.slice(start));
+  return terms.map((t) => t.trim()).filter(Boolean);
+}
+function parseLogic(kind, raw) {
+  const body = raw.replace(/^\(/, "").replace(/\)$/, "");
+  const terms = splitTop(body).map((term) => {
+    const nested = term.match(/^(and|or)\((.*)\)$/);
+    if (nested) return parseLogic(nested[1], "(" + nested[2] + ")");
+    const [col, op, ...rest] = term.split(".");
+    return { col, op, value: rest.join(".") };
+  });
+  return { kind, terms };
+}
+const LOGIC_OPS = { eq: "=", neq: "<>", lt: "<", lte: "<=", gt: ">", gte: ">=" };
+function renderLogic(node, params, next) {
+  const rendered = node.terms.map((t) => {
+    if (t.terms) return "(" + renderLogic(t, params, next) + ")";
+    if (t.op === "is" && t.value === "null") return `${ident(t.col)} is null`;
+    if (!LOGIC_OPS[t.op]) throw new Error("Unsupported logic op " + t.op);
+    params.push(t.value);
+    return `${ident(t.col)} ${LOGIC_OPS[t.op]} $${next()}`;
+  });
+  return rendered.join(node.kind === "or" ? " or " : " and ");
 }
 
 function ident(name) {
@@ -468,7 +504,8 @@ function whereClause(filters, start = 1) {
   const params = [];
   let i = start;
   for (const f of filters) {
-    if (f.op === "IS NOT NULL") parts.push(`${ident(f.key)} is not null`);
+    if (f.op === "LOGIC") parts.push("(" + renderLogic(f.tree, params, () => i++) + ")");
+    else if (f.op === "IS NOT NULL") parts.push(`${ident(f.key)} is not null`);
     else if (f.op === "IS NULL") parts.push(`${ident(f.key)} is null`);
     else if (f.op === "IN") {
       const slots = f.value.map(() => "$" + i++);
@@ -488,8 +525,11 @@ async function selectRows(db, table, select, filters, url) {
   let q = `select ${columns === "*" ? "*" : columns.split(",").map((c) => ident(c.trim())).join(",")} from ${ident(table)}${sql}`;
   const order = url.searchParams.get("order");
   if (order) {
-    const [col, dir] = order.split(".");
-    q += ` order by ${ident(col)} ${dir === "desc" ? "desc" : "asc"}`;
+    // PostgREST accepts several columns: order=created_at.desc,id.desc
+    q += " order by " + order.split(",").map((part) => {
+      const [col, dir] = part.split(".");
+      return `${ident(col)} ${dir === "desc" ? "desc" : "asc"}`;
+    }).join(", ");
   }
   const limit = url.searchParams.get("limit");
   if (limit) q += ` limit ${Number(limit)}`;

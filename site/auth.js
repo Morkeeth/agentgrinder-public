@@ -358,8 +358,10 @@
       const u = await user();
       const p = await profile();
       if (!u || !p) throw fail({ code: "42501", message: "not signed in" });
-      const { error } = await client.from("profiles").delete().eq("id", p.id).eq("auth_uid", u.id);
+      const { data, error } = await client.from("profiles").delete().eq("id", p.id).eq("auth_uid", u.id).select("id");
       if (error) throw fail(error);
+      // A stale profile id must not show "deleted" while the row is still there.
+      if (!data || !data.length) throw fail({ code: "PGRST116", message: "Your profile could not be found. Refresh and try again." });
       await signOutLocal();
       return { deleted: p.id };
     }

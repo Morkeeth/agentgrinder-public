@@ -665,11 +665,14 @@ window.GrinderSocial = function ({
     try {
       await page();
       // Keep paging until the known-existing deep link is on screen (R2-01).
-      while (focusReply && !focusKnownMissing && !sawFocus) {
+      let pages = 0;
+      while (focusReply && !focusKnownMissing && !sawFocus && pages < 40) {
         const older = slot.querySelector(".older-replies");
         if (!older) break;
+        const before = cursor && cursor.id;
         const loaded = await page();
-        if (!loaded) break;
+        pages += 1;
+        if (!loaded || (cursor && cursor.id === before)) break; // backend did not advance: stop
       }
     } catch (e) {
       items.textContent = "Replies are temporarily unavailable.";
