@@ -2,7 +2,8 @@
 
 **Branch:** `codex/strava-response-return-20260914`
 **Baseline:** `503bf7e` (main after PR #10)
-**Commit:** see tip of this branch after landing
+**Commit:** `f04115a`
+**Draft PR:** https://github.com/Morkeeth/agentgrinder-public/pull/11
 **Owner files:** `site/social.js`, `site/people.js`, `site/social.css`, `tests/test_response_return.py`, `tests/test_social_product_loop.py`, `scripts/check-response-return.py`
 
 ## What shipped
