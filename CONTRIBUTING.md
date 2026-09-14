@@ -32,7 +32,7 @@ python3 scripts/dev.py serve
 
 Open http://127.0.0.1:8000. `setup` installs test dependencies in `.venv`; it does not alter global Python. `serve` needs only Python. Use `python3 scripts/dev.py serve --port 8001` if port 8000 is busy. Stop it with Ctrl+C.
 
-This is a local UI, not a provisioned social service. You can work on layouts, docs, local capture and tests now. Sign-in, posting and replies require the independent database setup below. The inherited coaching fixture at `/?example` is development material, outside the product’s main flow.
+This is a local UI, not a provisioned social service. You can work on layouts, docs, local capture and tests now. Sign-in, posting and replies require the dedicated Strava schema setup below. The inherited coaching fixture at `/?example` is development material, outside the product’s main flow.
 
 ## Work in Cursor
 
@@ -85,9 +85,9 @@ Keep the PR focused. If review asks for changes, push to the same branch. A main
 - `scripts/dev.py`: contributor commands.
 - `PRODUCT.md`: agreed scope. Old hackathon checklists are historical, not the backlog.
 
-## Independent deployment
+## Separate website, shared database project
 
-This remains a contribution area, not a turnkey deployment command. Create separate Vercel and Supabase projects. Inspect `scripts/migration-order.txt` and the referenced SQL before applying it. Configure browser constants in `site/index.html`, server values in `server/public-config.json`, and origin in `server/public-run.mjs`. CLI/MCP clients accept `AGENTGRINDER_URL`, `AGENTGRINDER_SUPABASE_URL` and `AGENTGRINDER_SUPABASE_ANON_KEY`.
+This remains a contribution area, not a turnkey deployment command. Create a separate Vercel project. The owner approved sharing the existing Supabase project using only a dedicated `strava` schema and shared Auth. Follow [release setup](docs/PUBLIC-RELEASE-SETUP.md); do not apply the inherited public-schema migration command to that project. Generate and review the Strava bootstrap with `python3 scripts/prepare-strava-database.py`. Configure browser constants in `site/index.html`, server values in `server/public-config.json`, and origin in `server/public-run.mjs`. CLI/MCP clients accept `AGENTGRINDER_URL`, `AGENTGRINDER_SUPABASE_URL` and `AGENTGRINDER_SUPABASE_ANON_KEY`.
 
 The checked-in `local-development-only` key is not a working credential. Do not reuse the hackathon database, accounts or deployment. A maintainer coordinates production configuration and releases. Do not publish a development database or test users as real adoption.
 
