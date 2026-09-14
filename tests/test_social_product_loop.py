@@ -32,6 +32,9 @@ def test_social_actions_remain_in_the_focused_app():
     assert "ACK the work" in INDEX
     assert "Responses" in SOCIAL
     assert "/?people" in SOCIAL
+    assert "IntersectionObserver" in SOCIAL
+    assert "Open exact reply" in SOCIAL
+    assert "ag_response_return" in SOCIAL
 
 
 def test_caption_and_output_are_bounded_by_database_constraints():

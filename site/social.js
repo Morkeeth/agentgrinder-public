@@ -89,6 +89,189 @@ window.GrinderSocial = function ({
     return `<div class="card people-empty"><p>${esc(message)}</p>${actionsHtml || ""}</div>`;
   }
 
+  const RESPONSE_RETURN_KEY = "ag_response_return";
+  const unreadMarked = new Set();
+  let inboxObserver = null;
+  let unreadMarkOwner = null;
+
+  function resetUnreadMarks(ownerId) {
+    if (ownerId && ownerId === unreadMarkOwner) return;
+    unreadMarked.clear();
+    unreadMarkOwner = ownerId || null;
+    if (inboxObserver) {
+      inboxObserver.disconnect();
+      inboxObserver = null;
+    }
+  }
+
+  function stashResponseReturn() {
+    try {
+      sessionStorage.setItem(RESPONSE_RETURN_KEY, "?inbox");
+    } catch (_) {}
+  }
+
+  function peekResponseReturn() {
+    try {
+      return sessionStorage.getItem(RESPONSE_RETURN_KEY);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function clearResponseReturn() {
+    try {
+      sessionStorage.removeItem(RESPONSE_RETURN_KEY);
+    } catch (_) {}
+  }
+
+  function replyTargetId() {
+    const hash = (location.hash || "").replace(/^#/, "");
+    if (/^reply-[0-9a-f-]{36}$/i.test(hash)) return hash.slice(6);
+    const q = new URLSearchParams(location.search).get("reply");
+    return uuid(q) ? q : null;
+  }
+
+  function notificationHref(n) {
+    if (n.kind === "follow") {
+      const shown = present(n.actor);
+      return shown.href || "/?people";
+    }
+    if (!n.run_id) return null;
+    if (n.kind === "reply" && uuid(n.source_id)) {
+      return `/?run=${encodeURIComponent(n.run_id)}&reply=${encodeURIComponent(n.source_id)}#reply-${n.source_id}`;
+    }
+    return `/?run=${encodeURIComponent(n.run_id)}${n.kind === "reply" ? "#grind-thread" : ""}`;
+  }
+
+  async function markNotificationsRead(ids) {
+    const recipient = me()?.id;
+    if (!recipient) return;
+    resetUnreadMarks(recipient);
+    const pending = [...new Set(ids)].filter(
+      (id) => id && !unreadMarked.has(id),
+    );
+    if (!pending.length) return;
+    pending.forEach((id) => unreadMarked.add(id));
+    try {
+      const updated = await result(
+        db
+          .from("grinder_notifications")
+          .update({ read_at: new Date().toISOString() })
+          .in("id", pending)
+          .eq("recipient_id", recipient)
+          .is("read_at", null)
+          .select("id"),
+      );
+      // 0-row success must not poison unreadMarked (stale me() / already-read / RLS miss).
+      const confirmed = new Set((updated || []).map((row) => row.id));
+      for (const id of pending) {
+        if (!confirmed.has(id)) unreadMarked.delete(id);
+      }
+      if (me()?.id !== recipient) {
+        pending.forEach((id) => unreadMarked.delete(id));
+        return;
+      }
+      const count = await refreshUnread();
+      const summary = document.querySelector(".response-summary");
+      if (summary) {
+        const total = document.querySelectorAll(".response-item").length;
+        summary.textContent = `${count ? `${count} unread · ` : ""}${total} recent`;
+      }
+      const unreadFilter = document.querySelector(
+        '.response-filters a[href="/?inbox&filter=unread"]',
+      );
+      if (unreadFilter) {
+        unreadFilter.textContent = count ? `Unread · ${count}` : "Unread";
+      }
+    } catch (e) {
+      pending.forEach((id) => unreadMarked.delete(id));
+      fail(e);
+    }
+  }
+
+  async function refreshUnread() {
+    const badges = [
+      byId("nav-inbox-badge"),
+      ...document.querySelectorAll(".mobile-inbox-badge"),
+    ].filter(Boolean);
+    if (!me()) {
+      for (const badge of badges) {
+        badge.hidden = true;
+        badge.setAttribute("aria-hidden", "true");
+        badge.textContent = "";
+      }
+      return 0;
+    }
+    try {
+      const rows = await result(
+        db
+          .from("grinder_notifications")
+          .select("id")
+          .eq("recipient_id", me().id)
+          .is("read_at", null)
+          .limit(50),
+      );
+      const count = rows.length;
+      for (const badge of badges) {
+        if (count > 0) {
+          badge.hidden = false;
+          badge.removeAttribute("aria-hidden");
+          badge.textContent = count > 9 ? "9+" : String(count);
+          badge.setAttribute(
+            "aria-label",
+            count === 1 ? "1 unread response" : `${count} unread responses`,
+          );
+        } else {
+          badge.hidden = true;
+          badge.setAttribute("aria-hidden", "true");
+          badge.textContent = "";
+          badge.removeAttribute("aria-label");
+        }
+      }
+      return count;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  async function resolveNotificationTargets(rows) {
+    const runIds = [
+      ...new Set(rows.map((n) => n.run_id).filter((id) => uuid(id))),
+    ];
+    const replyIds = [
+      ...new Set(
+        rows
+          .filter((n) => n.kind === "reply" && uuid(n.source_id))
+          .map((n) => n.source_id),
+      ),
+    ];
+    const runs = new Map();
+    const replies = new Map();
+    if (runIds.length) {
+      try {
+        const data = await result(
+          db.from("runs").select("id,visibility,title").in("id", runIds),
+        );
+        for (const run of data) runs.set(run.id, run);
+      } catch (_) {}
+    }
+    if (replyIds.length) {
+      try {
+        const data = await result(
+          db.from("grinder_replies").select("id,run_id").in("id", replyIds),
+        );
+        for (const reply of data) replies.set(reply.id, reply);
+      } catch (_) {}
+    }
+    return { runs, replies };
+  }
+
+  function responseReturnBar() {
+    const pending = peekResponseReturn();
+    if (pending !== "?inbox") return "";
+    return `<p class="response-return"><a class="act" href="/?inbox">Back to Responses</a></p>`;
+  }
+
   async function following() {
     start(
       "Following",
@@ -159,6 +342,17 @@ window.GrinderSocial = function ({
 
   async function followControl(person, slot) {
     if (!slot || !person?.id) return;
+    try {
+      if (
+        sessionStorage.getItem(RESPONSE_RETURN_KEY) === "?inbox" &&
+        !slot.parentElement?.querySelector(".response-return")
+      ) {
+        const bar = document.createElement("p");
+        bar.className = "response-return";
+        bar.innerHTML = '<a class="act" href="/?inbox">Back to Responses</a>';
+        slot.before(bar);
+      }
+    } catch (_) {}
     if (!me()) {
       slot.innerHTML =
         '<button type="button" id="follow-signin" class="act">Sign in to follow</button>';
@@ -293,10 +487,41 @@ window.GrinderSocial = function ({
 
   async function thread(runId, slot) {
     if (!slot || !uuid(runId)) return;
+    const focusReply = replyTargetId();
     slot.innerHTML =
+      responseReturnBar() +
       '<div class="head"><h2>Talk about this grind</h2></div><div class="thread-items" aria-live="polite">Loading replies…</div>';
     const items = slot.querySelector(".thread-items");
     let cursor = null;
+    let sawFocus = false;
+    let focusKnownMissing = false;
+    // Resolve the deep-linked reply by id first. Page-1 absence is not deletion.
+    if (focusReply) {
+      try {
+        const focused = await result(
+          db
+            .from("grinder_replies")
+            .select("id,run_id")
+            .eq("id", focusReply)
+            .limit(1),
+        );
+        focusKnownMissing = !focused.length || focused[0].run_id !== runId;
+      } catch (_) {
+        focusKnownMissing = false;
+      }
+    }
+    function focusTarget() {
+      const target = byId("reply-" + focusReply);
+      if (!target) return;
+      slot.querySelector(".reply-missing")?.remove();
+      requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (typeof target.focus === "function") {
+          target.setAttribute("tabindex", "-1");
+          target.focus({ preventScroll: true });
+        }
+      });
+    }
     async function page() {
       let query = db
         .from("grinder_replies")
@@ -317,6 +542,10 @@ window.GrinderSocial = function ({
         const article = document.createElement("article");
         article.className = "card reply";
         article.id = "reply-" + reply.id;
+        if (focusReply && reply.id === focusReply) {
+          article.classList.add("reply-target");
+          sawFocus = true;
+        }
         article.innerHTML = `<div>${link(reply.author)} ${reply.source_actor_id ? `· <a href="/?agent=${reply.source_actor_id}">${esc(reply.agent_name || "Agent")}</a>` : ""} <small>${esc(new Date(reply.created_at).toLocaleString())}${reply.edited_at ? " · edited" : ""}</small></div><p class="reply-body">${esc(reply.body)}</p>${reply.evidence_ref ? `<small>About: ${esc(reply.evidence_ref)}</small>` : ""}`;
         if (me()?.id === reply.author_id) {
           const edit = document.createElement("button");
@@ -421,16 +650,42 @@ window.GrinderSocial = function ({
         const older = document.createElement("button");
         older.className = "older-replies ghost";
         older.textContent = "Earlier replies";
-        older.onclick = () => page().catch(fail);
+        older.onclick = async () => {
+          try {
+            await page();
+            if (focusReply && sawFocus) focusTarget();
+          } catch (e) {
+            fail(e);
+          }
+        };
         slot.append(older);
       }
+      return rows.length;
     }
     try {
       await page();
+      // Keep paging until the known-existing deep link is on screen (R2-01).
+      while (focusReply && !focusKnownMissing && !sawFocus) {
+        const older = slot.querySelector(".older-replies");
+        if (!older) break;
+        const loaded = await page();
+        if (!loaded) break;
+      }
     } catch (e) {
       items.textContent = "Replies are temporarily unavailable.";
       fail(e);
       return;
+    }
+    slot.querySelector(".reply-missing")?.remove();
+    if (focusReply && (focusKnownMissing || !sawFocus)) {
+      const missing = document.createElement("div");
+      missing.className = "card reply-missing";
+      missing.innerHTML =
+        "<p>That reply was removed or is no longer available. The run is still here.</p>" +
+        responseReturnBar();
+      items.before(missing);
+    } else if (focusReply && sawFocus) {
+      focusTarget();
     }
     if (me()) {
       const form = document.createElement("form");
@@ -452,6 +707,11 @@ window.GrinderSocial = function ({
                 evidence_ref: form.elements.evidence.value || null,
               }),
           );
+          status(
+            peekResponseReturn() === "?inbox"
+              ? "Reply posted. Return to Responses when you are ready."
+              : "Reply posted.",
+          );
           await thread(runId, slot);
         } catch (error) {
           fail(error);
@@ -467,8 +727,19 @@ window.GrinderSocial = function ({
   }
 
   async function inbox() {
-    start("Responses", "ACKs, replies and new followers.", "inbox");
+    start(
+      "Responses",
+      "ACKs, replies and new followers. Unread stays unread until you actually see it.",
+      "inbox",
+    );
     if (!signedIn()) return;
+    resetUnreadMarks(me()?.id);
+    clearResponseReturn();
+    const body = byId("social-body");
+    const filter =
+      new URLSearchParams(location.search).get("filter") === "unread"
+        ? "unread"
+        : "all";
     try {
       const rows = await result(
         db
@@ -480,52 +751,158 @@ window.GrinderSocial = function ({
           .order("created_at", { ascending: false })
           .limit(50),
       );
-      byId("social-body").innerHTML = rows.length
-        ? rows
-            .map((n) => {
-              const actor = present(n.actor);
-              const kind =
-                n.kind === "reply"
-                  ? "replied to your run"
-                  : n.kind === "ack"
-                    ? "ACKed your work"
-                    : "followed you";
-              const runHref = n.run_id
-                ? `/?run=${encodeURIComponent(n.run_id)}${n.kind === "reply" ? "#grind-thread" : ""}`
-                : null;
-              const returnLinks = [
-                actor.href
-                  ? `<a href="${actor.href}">Open profile</a>`
-                  : null,
-                runHref
-                  ? `<a href="${runHref}">${n.kind === "reply" ? "Open reply thread" : "Open the run"}</a>`
-                  : null,
-                n.kind === "follow"
-                  ? `<a href="/?following">Open Following</a>`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(" · ");
-              return `<article class="card">${link(n.actor)} ${kind}${!n.read_at ? " · new" : ""}<p>${returnLinks || ""}</p><small>${esc(new Date(n.created_at).toLocaleString())}</small></article>`;
-            })
-            .join("")
-        : empty(
+      const { runs, replies } = await resolveNotificationTargets(rows);
+      const unreadCount = rows.filter((n) => !n.read_at).length;
+      const visible = rows.filter((n) =>
+        filter === "unread" ? !n.read_at : true,
+      );
+
+      const filters = `<nav class="response-filters" aria-label="Response filters">
+        <a href="/?inbox" class="${filter === "all" ? "on" : ""}" ${filter === "all" ? 'aria-current="page"' : ""}>All</a>
+        <a href="/?inbox&filter=unread" class="${filter === "unread" ? "on" : ""}" ${filter === "unread" ? 'aria-current="page"' : ""}>Unread${unreadCount ? ` · ${unreadCount}` : ""}</a>
+      </nav>`;
+
+      if (!rows.length) {
+        body.innerHTML =
+          filters +
+          empty(
             "Responses to your public runs will appear here. Follow someone from Find people to start the loop.",
             `<div class="cta"><a class="act" href="/?people">Find people</a><a class="act" href="/?post">Post a run</a></div>`,
           );
-      const unread = rows.filter((r) => !r.read_at).map((r) => r.id);
-      if (unread.length)
-        await result(
-          db
-            .from("grinder_notifications")
-            .update({ read_at: new Date().toISOString() })
-            .in("id", unread)
-            .eq("recipient_id", me().id),
+        await refreshUnread();
+        return;
+      }
+
+      if (!visible.length) {
+        body.innerHTML =
+          filters +
+          empty(
+            "No unread responses. Open All to browse earlier ACKs and replies.",
+            `<div class="cta"><a class="act" href="/?inbox">Show all responses</a></div>`,
+          );
+        await refreshUnread();
+        return;
+      }
+
+      body.innerHTML =
+        filters +
+        `<p class="response-summary meta">${unreadCount ? `${unreadCount} unread · ` : ""}${rows.length} recent</p>` +
+        visible
+          .map((n) => {
+            const actor = present(n.actor);
+            const kind =
+              n.kind === "reply"
+                ? "replied to your run"
+                : n.kind === "ack"
+                  ? "ACKed your work"
+                  : "followed you";
+            const run = n.run_id ? runs.get(n.run_id) : null;
+            const reply =
+              n.kind === "reply" && n.source_id
+                ? replies.get(n.source_id)
+                : null;
+            const runGone = Boolean(n.run_id) && !run;
+            const replyGone =
+              n.kind === "reply" && uuid(n.source_id) && !reply;
+            const href =
+              runGone || replyGone
+                ? null
+                : notificationHref({
+                    ...n,
+                    actor: n.actor,
+                  });
+            let stateNote = "";
+            if (runGone) {
+              stateNote =
+                "<p class=\"response-state\">This run was deleted or is no longer available.</p>";
+            } else if (replyGone) {
+              stateNote =
+                "<p class=\"response-state\">That reply was removed. The run may still be open.</p>";
+            } else if (!actor.id && !actor.href) {
+              stateNote =
+                "<p class=\"response-state\">This builder is unavailable (blocked, private or removed).</p>";
+            }
+            const openLabel =
+              n.kind === "reply"
+                ? "Open exact reply"
+                : n.kind === "ack"
+                  ? "Open the run"
+                  : "Open profile";
+            const returnLinks = [
+              !runGone && !replyGone && actor.href
+                ? `<a href="${actor.href}" data-response-nav="1">Open profile</a>`
+                : null,
+              href
+                ? `<a href="${href}" data-response-nav="1" data-notification-id="${esc(n.id)}">${openLabel}</a>`
+                : runGone
+                  ? null
+                  : replyGone && n.run_id
+                    ? `<a href="/?run=${encodeURIComponent(n.run_id)}#grind-thread" data-response-nav="1" data-notification-id="${esc(n.id)}">Open the run</a>`
+                    : null,
+              n.kind === "follow" && !runGone
+                ? `<a href="/?following" data-response-nav="1">Open Following</a>`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ");
+            const actorHtml = actor.id || actor.href ? link(n.actor) : "Someone";
+            return `<article class="card response-item${!n.read_at ? " unread" : " read"}" data-notification-id="${esc(n.id)}" data-read="${n.read_at ? "1" : "0"}">
+              <div class="response-item-top">
+                <p class="response-item-copy">${actorHtml} ${kind}${!n.read_at ? ' <span class="response-new">New</span>' : ""}</p>
+                <small>${esc(new Date(n.created_at).toLocaleString())}</small>
+              </div>
+              ${stateNote}
+              <p class="response-item-actions">${returnLinks || "<span class=\"meta\">Nothing to open</span>"}</p>
+            </article>`;
+          })
+          .join("");
+
+      body.querySelectorAll("[data-response-nav]").forEach((anchor) => {
+        anchor.addEventListener("click", () => {
+          stashResponseReturn();
+          const id = anchor.getAttribute("data-notification-id");
+          if (id) markNotificationsRead([id]);
+        });
+      });
+
+      // Mark as read only what actually enters the viewport, not the whole inbox.
+      if (inboxObserver) {
+        inboxObserver.disconnect();
+        inboxObserver = null;
+      }
+      if (typeof IntersectionObserver === "function") {
+        inboxObserver = new IntersectionObserver(
+          (entries) => {
+            const seen = [];
+            for (const entry of entries) {
+              if (!entry.isIntersecting || entry.intersectionRatio < 0.55)
+                continue;
+              const el = entry.target;
+              if (el.getAttribute("data-read") === "1") {
+                inboxObserver.unobserve(el);
+                continue;
+              }
+              const id = el.getAttribute("data-notification-id");
+              if (!id) continue;
+              el.setAttribute("data-read", "1");
+              el.classList.remove("unread");
+              el.classList.add("read");
+              el.querySelector(".response-new")?.remove();
+              seen.push(id);
+              inboxObserver.unobserve(el);
+            }
+            if (seen.length) markNotificationsRead(seen);
+          },
+          { threshold: [0.55] },
         );
+        body
+          .querySelectorAll('.response-item[data-read="0"]')
+          .forEach((el) => inboxObserver.observe(el));
+      }
+
+      await refreshUnread();
     } catch (e) {
-      byId("social-body").innerHTML = empty(
-        "Your inbox could not load. Try again.",
-      );
+      body.innerHTML = empty("Your inbox could not load. Try again.");
       fail(e);
     }
   }
@@ -1103,6 +1480,7 @@ window.GrinderSocial = function ({
     followControl,
     thread,
     inbox,
+    refreshUnread,
     crews,
     crew,
     join,
