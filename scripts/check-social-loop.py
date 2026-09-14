@@ -199,6 +199,16 @@ def main():
             assert "replied to your run" in casey.locator("#social-body").inner_text()
             casey.screenshot(path=str(ARTIFACTS / "responses-desktop.png"), full_page=True)
 
+            # Existing runs without a caption must remain withdrawable.
+            casey.goto(base + "/?run=" + run_id, wait_until="networkidle")
+            casey.get_by_label("Short caption").fill("")
+            casey.get_by_label("Who can read this run").select_option("private")
+            with casey.expect_response(lambda response: response.request.method == "PATCH" and "/rest/v1/runs" in response.url) as saved:
+                casey.get_by_role("button", name="Save changes", exact=True).click()
+            assert saved.value.ok
+            anonymous.goto(base + "/?run=" + run_id, wait_until="networkidle")
+            anonymous.get_by_text("This run is private or does not exist.").wait_for()
+
             assert not errors, errors
             for page in (casey, anonymous, riley):
                 assert not page.evaluate("document.documentElement.scrollWidth > innerWidth")

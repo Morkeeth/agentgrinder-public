@@ -397,7 +397,7 @@ window.GrinderSocial = function ({
         ? rows
             .map(
               (n) =>
-                `<article class="card">${link(n.actor)} ${n.kind === "reply" ? "replied to your grind" : n.kind === "ack" ? "ACKed your work" : "followed you"}${!n.read_at ? " · new" : ""}<p>${n.run_id ? `<a href="/?run=${encodeURIComponent(n.run_id)}">Open the grind</a>` : ""}</p><small>${esc(new Date(n.created_at).toLocaleString())}</small></article>`,
+                `<article class="card">${link(n.actor)} ${n.kind === "reply" ? "replied to your run" : n.kind === "ack" ? "ACKed your work" : "followed you"}${!n.read_at ? " · new" : ""}<p>${n.run_id ? `<a href="/?run=${encodeURIComponent(n.run_id)}">Open the grind</a>` : ""}</p><small>${esc(new Date(n.created_at).toLocaleString())}</small></article>`,
             )
             .join("")
         : empty("Responses to your public runs will appear here.");

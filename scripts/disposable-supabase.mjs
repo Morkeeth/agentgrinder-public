@@ -14,6 +14,7 @@ const TABLES = new Set([
   "runs",
   "acks",
   "grinder_follows",
+  "grinder_blocks",
   "grinder_replies",
   "grinder_practice_versions",
   "grinder_practice_attempts",
@@ -123,7 +124,7 @@ function decodeSub(req) {
       return "";
     }
   }
-  return token;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token) ? token : "";
 }
 
 function parseFilters(url) {
@@ -367,8 +368,8 @@ async function handle(db, req, res) {
 function embedParts(select) {
   const embeds = [];
   let columns = select;
-  columns = columns.replace(/([A-Za-z_]+)!([A-Za-z0-9_]+)\(([^)]*)\)/g, (_, alias, _hint, cols) => {
-    embeds.push({ alias, table: alias === "profiles" ? "profiles" : alias, cols });
+  columns = columns.replace(/(?:([A-Za-z_]+):)?([A-Za-z_]+)!([A-Za-z0-9_]+)\(([^)]*)\)/g, (_, alias, table, hint, cols) => {
+    embeds.push({ alias: alias || table, table, hint, cols });
     return "";
   });
   columns = columns.replace(/([A-Za-z_]+):([A-Za-z0-9_]+)\(([^)]*)\)/g, (_, alias, table, cols) => {
@@ -413,9 +414,9 @@ async function selectRows(db, table, select, filters, url) {
   const rows = (await db.query(q, params)).rows;
   for (const row of rows) {
     for (const emb of embeds) {
-      if (emb.table === "profiles" && row.profile_id) {
+      if (emb.table === "profiles" && (row.profile_id || row.author_id || row.actor_id)) {
         const p = (
-          await db.query("select id,github_handle,name,rig from profiles where id=$1", [row.profile_id])
+          await db.query("select id,github_handle,name,rig from profiles where id=$1", [emb.alias === "author" ? row.author_id : emb.alias === "actor" ? row.actor_id : row.profile_id])
         ).rows[0];
         row[emb.alias] = p || null;
       } else if (emb.table === "grinder_run_moments" && (row.moment_id || row.id)) {
