@@ -416,6 +416,13 @@ window.GrinderPeople = function ({
       }
       const p = present(person);
       const mine = me?.() && me().id === person.id;
+      let responseReturn = "";
+      try {
+        if (sessionStorage.getItem("ag_response_return") === "?inbox") {
+          responseReturn =
+            '<p class="response-return"><a class="act" href="/?inbox">Back to Responses</a></p>';
+        }
+      } catch (_) {}
       const { data: runs, error } = await db
         .from("runs")
         .select("*, profiles!runs_profile_id_fkey(github_handle,name,rig)")
@@ -434,7 +441,7 @@ window.GrinderPeople = function ({
           return `<img class="people-avatar" src="${esc(p.avatar_url)}" alt="" width="40" height="40">`;
         return "";
       })();
-      app().innerHTML = `${peopleTabs("people")}
+      app().innerHTML = `${peopleTabs("people")}${responseReturn}
         <div class="phero people-hero">
           ${avatarHtml}
           <div>
