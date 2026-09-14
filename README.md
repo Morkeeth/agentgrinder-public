@@ -2,35 +2,57 @@
 
 **Post your agent runs. See what other people are building.**
 
-A free, open-source social home for people building with coding agents. Cursor first: turn a real session into a card, share what shipped, follow other builders and give credit for work you like.
+A free, MIT-licensed social app for people building with coding agents. Capture a session, preview its card, choose to post it, and follow other builders. Keep it minimal: runs, a feed, profiles, ACKs and replies.
 
-The product loop is **capture → preview → post → browse**. A minimal app: run cards, a public feed, profiles, follows and ACKs. Coaching and practice programmes are outside the main product.
+**Come build it with us.** Code, design, documentation, accessibility improvements and useful bug reports are all welcome. You do not need an invitation, a paid AI tool or a previous open-source contribution.
 
-## Two repositories
+[Start contributing](CONTRIBUTING.md) · [Find a first contribution](docs/FIRST-PR.md) · [Get help](SUPPORT.md) · [Product direction](PRODUCT.md)
 
-- [agentgrinder-public](https://github.com/Morkeeth/agentgrinder-public): the independent free product and collaboration home.
-- [agentgrinder](https://github.com/Morkeeth/agentgrinder): the hackathon build, judging material and competition deployment.
+## Run it locally
 
-Branched from hackathon main `5828f39ec4cfeaa63c1cc53e3acdc92589a2ca1a`. History and MIT attribution are preserved. This repository has no independent hosted service yet. Runtime defaults point to localhost, not the hackathon database. Older docs and screenshots describe the source release.
-
-## Start in Cursor
+Python 3.9+ runs the local app. Node 20+ is needed for contributor checks.
 
 ```sh
 git clone https://github.com/Morkeeth/agentgrinder-public.git
 cd agentgrinder-public
+python3 scripts/dev.py serve
+```
+
+Open http://127.0.0.1:8000. To install the test tools and check a change:
+
+```sh
+python3 scripts/dev.py setup
+python3 scripts/dev.py check
+```
+
+**Current status:** local capture, cards and UI are available. This public repo does not yet have its own hosted database or service. Sign-in, public posting and social interactions need that setup. The localhost defaults deliberately do not connect to the hackathon service.
+
+## Build in Cursor or Grok Bot
+
+Cursor and Grok Bot are our first documented agent workflows. Any editor or terminal works too.
+
+- **Cursor:** open the folder and follow [Cursor setup](docs/CURSOR.md). The project rule points to the contribution guide. MCP is optional for development and enables local session tools.
+- **Grok Bot:** give it the repository and [build brief](docs/GROK-BOT.md), choose one task, and ask it for a reviewed PR. Its cloud computer cannot read sessions on your laptop.
+- **Without an agent:** use the same setup, branches and checks in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+To capture your own Cursor session locally:
+
+```sh
 python3 -m agentgrinder grind --harness cursor
 ```
 
-Python 3.9+; local capture needs no API key. If there is no supported session, run `python3 -m agentgrinder demo` for the labelled sample.
+No model API key is required for local capture. Review generated cards before sharing. A sample can help with development; it must stay labelled as sample data.
 
-Open this folder in Cursor. Enable the project MCP server from Customize. It exposes local run previews through the existing Python server. [Cursor setup](docs/CURSOR.md) explains the boundaries and the first tool call.
+## What help matters now?
 
-## Build together
+Make first-run instructions easier, improve the card on a phone, test keyboard access, report a reproducible bug, or help connect the independent social preview. [First contributions](docs/FIRST-PR.md) give starting files and a clear outcome. [Open issues](https://github.com/Morkeeth/agentgrinder-public/issues) show reported work; check before starting something large.
 
-Read [PRODUCT.md](PRODUCT.md) for direction, [CONTRIBUTING.md](CONTRIBUTING.md) for setup, and [the Grok Bot brief](docs/GROK-BOT.md) for a bounded first build.
+Small fixes can go straight to a PR. Discuss new features in an issue first. Contributors review their agent-generated changes and explain what they tested. [Maintainer process](docs/MAINTAINING.md) explains how changes are triaged and reviewed.
 
-**Working inheritance:** local readers, cards, MCP, web social features and optional coaching. **New here:** separate repository, public-product brief, Cursor config and isolated runtime defaults. **Still to do:** independent hosting/database, a real Cursor onboarding pass, and a Grok Bot run. No independent adoption is claimed.
+## Scope and origin
 
-Free means no mandatory paid model or subscription for capture and sharing. Optional model calls can still have provider costs. Recognition must come from people responding to real work; activity counts are not a universal quality score.
+The main loop is **capture → preview → post → browse**. Coaching programmes, comparison dashboards, Crews and challenges are outside the main app. Free posting and browsing must not require paid inference.
 
-MIT licensed. [Inherited technical reference](docs/TECHNICAL-HISTORY.md).
+This project started from [the separate Agent Grinder hackathon repo](https://github.com/Morkeeth/agentgrinder) at `5828f39ec4cfeaa63c1cc53e3acdc92589a2ca1a`. History and attribution are preserved. Historical docs and screenshots describe that source release, not a new hosted service. [Technical history](docs/TECHNICAL-HISTORY.md).
+
+[MIT license](LICENSE). Contributions are distributed under the same license.
