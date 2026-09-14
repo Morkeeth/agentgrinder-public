@@ -10,7 +10,8 @@
     "test:shared-schema": "node scripts/test-shared-schema.mjs",
     "build": "node scripts/build-site.mjs",
     "test:identity": "node scripts/test-identity.mjs",
-    "test:people": "node scripts/test-people-schema.mjs"
+    "test:people": "node scripts/test-people-schema.mjs",
+    "test:account": "node scripts/test-account.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8"

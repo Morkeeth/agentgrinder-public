@@ -59,7 +59,7 @@ export function sessionFor(sub, email, handle) {
   };
 }
 
-export async function bootDisposable() {
+export async function bootDisposable({ grinder = false } = {}) {
   const { PGlite } = await import("@electric-sql/pglite");
   const db = new PGlite();
   await db.exec(`create role anon; create role authenticated;
@@ -68,7 +68,14 @@ alter default privileges grant execute on functions to anon,authenticated;
 create schema auth;
 create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
 grant usage on schema auth to anon,authenticated;
+create table auth.identities(id uuid primary key default gen_random_uuid(), user_id uuid not null, provider text not null, identity_data jsonb not null default '{}'::jsonb, created_at timestamptz not null default now());
 `);
+  if (grinder) {
+    // Grinder's public schema (schema-only snapshot) plus one sentinel row, so account
+    // actions in strava can be checked against an untouched public.profiles.
+    await db.exec(await readFile(join(ROOT, "tests/fixtures/hosted-base.sql"), "utf8"));
+    await db.query("insert into public.profiles(id,auth_uid,name,github_handle) values($1,$1,'TEST DATA Grinder sentinel','test-casey')", [CASEY]);
+  }
   await db.exec(execFileSync("python3", [join(ROOT, "scripts/prepare-strava-database.py")], {encoding:"utf8"}));
   await db.exec("set search_path=strava,pg_temp");
   async function as(id) {
@@ -100,6 +107,23 @@ export async function seedJourneyActors(db) {
     "insert into profiles(id,auth_uid,handle,display_name,name) values($1,$1,'test-casey','TEST DATA Casey','TEST DATA Casey'),($2,$2,'test-riley','TEST DATA Riley','TEST DATA Riley')",
     [CASEY, RILEY],
   );
+  // Casey signed in with GitHub and later linked email; Riley has email only.
+  await db.query(
+    "insert into auth.identities(id,user_id,provider,identity_data) values('21000000-0000-0000-0000-000000000001',$1,'github','{\"user_name\":\"test-casey\",\"avatar_url\":\"https://avatars.example.test/casey.png\"}'),('21000000-0000-0000-0000-000000000002',$1,'email','{\"email\":\"test-casey@example.test\"}'),('21000000-0000-0000-0000-000000000003',$2,'email','{\"email\":\"test-riley@example.test\"}')",
+    [CASEY, RILEY],
+  );
+}
+
+async function identitiesFor(db, sub) {
+  await db.exec("reset role");
+  return (await db.query("select id,user_id,provider,identity_data,created_at from auth.identities where user_id=$1 order by created_at,id", [sub])).rows
+    .map((i) => ({ identity_id: i.id, id: i.id, user_id: i.user_id, provider: i.provider, identity_data: i.identity_data, created_at: i.created_at, last_sign_in_at: i.created_at }));
+}
+
+function authError(res, status, code, msg) {
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json");
+  res.end(JSON.stringify({ code, error_code: code, msg, message: msg }));
 }
 
 function decodeSub(req) {
@@ -231,6 +255,47 @@ async function handle(db, req, res) {
     }
   }
   const sub = decodeSub(req);
+  const testMode = process.env.GRINDER_DISPOSABLE_TEST === "1";
+  // Provider round trip: the browser is sent to the provider and comes back with the
+  // implicit-flow error fragment a cancelled or failed authorisation produces. Test only.
+  if (testMode && (url.pathname === "/auth/v1/authorize" || url.pathname === "/auth/v1/user/identities/authorize")) {
+    const back = url.searchParams.get("redirect_to") || "/";
+    const outcome = process.env.DISPOSABLE_OAUTH_OUTCOME || "cancel";
+    const fragment = outcome === "fail"
+      ? "error=server_error&error_code=unexpected_failure&error_description=Unable+to+exchange+external+code"
+      : "error=access_denied&error_code=access_denied&error_description=The+user+cancelled+the+authorisation";
+    res.statusCode = 302;
+    res.setHeader("Location", back + (back.includes("#") ? "&" : "#") + fragment);
+    res.end();
+    return;
+  }
+  if (url.pathname === "/auth/v1/logout") {
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+  if (url.pathname.startsWith("/auth/v1/user/identities/") && req.method === "DELETE") {
+    if (!sub) return authError(res, 401, "no_authorization", "Invalid token");
+    const id = url.pathname.slice("/auth/v1/user/identities/".length);
+    const mine = await identitiesFor(db, sub);
+    if (!mine.some((i) => i.id === id)) return authError(res, 422, "identity_not_found", "Identity not found");
+    if (mine.length < 2) return authError(res, 422, "single_identity_not_deletable", "User must have at least 1 identity after unlinking");
+    await db.exec("reset role");
+    await db.query("delete from auth.identities where id=$1 and user_id=$2", [id, sub]);
+    res.setHeader("Content-Type", "application/json");
+    res.end("{}");
+    return;
+  }
+  if (testMode && url.pathname === "/_test/grinder-snapshot") {
+    await db.exec("reset role");
+    const grinder = (await db.query("select to_regclass('public.profiles') r")).rows[0].r
+      ? (await db.query("select id,auth_uid,name,github_handle from public.profiles order by id")).rows : null;
+    const strava = (await db.query("select id,auth_uid,handle from profiles order by id")).rows;
+    const identities = (await db.query("select id,user_id,provider from auth.identities order by id")).rows;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ grinder, strava, identities }));
+    return;
+  }
   if (url.pathname === "/auth/v1/user") {
     if (!sub) {
       res.statusCode = 401;
@@ -250,6 +315,7 @@ async function handle(db, req, res) {
         role: "authenticated",
         email: handle + "@example.test",
         user_metadata: { user_name: handle, full_name: row?.name || handle },
+        identities: await identitiesFor(db, sub),
       }),
     );
     return;
@@ -481,7 +547,7 @@ export async function seedCoachRun(db, owner, title, revision, whenSql) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const serve = process.argv.includes("--serve");
-  const { db } = await bootDisposable();
+  const { db } = await bootDisposable({ grinder: process.env.DISPOSABLE_GRINDER === "1" });
   await seedJourneyActors(db);
   const caseyRun = await seedCoachRun(db, CASEY, "TEST DATA Casey coach sitting", "a".repeat(64), "now()-interval '2 days'");
   const rileyRun = await seedCoachRun(db, RILEY, "TEST DATA Riley own baseline", "c".repeat(64), "now()-interval '3 days'");
