@@ -290,7 +290,7 @@ def main():
                 wait_until="networkidle",
             )
             casey.get_by_text(
-                "That reply was removed or is no longer available."
+                "That reply was removed or is not visible to you."
             ).wait_for()
             casey.screenshot(
                 path=str(ARTIFACTS / "deleted-reply-mobile.png"), full_page=True

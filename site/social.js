@@ -495,17 +495,21 @@ window.GrinderSocial = function ({
     let cursor = null;
     let sawFocus = false;
     let focusKnownMissing = false;
+    let focusedRow = null;
     // Resolve the deep-linked reply by id first. Page-1 absence is not deletion.
     if (focusReply) {
       try {
         const focused = await result(
           db
             .from("grinder_replies")
-            .select("id,run_id")
+            .select(
+              "*,author:profiles!grinder_replies_author_id_fkey(github_handle,name,handle,display_name,avatar_url)",
+            )
             .eq("id", focusReply)
             .limit(1),
         );
         focusKnownMissing = !focused.length || focused[0].run_id !== runId;
+        if (!focusKnownMissing) focusedRow = focused[0];
       } catch (_) {
         focusKnownMissing = false;
       }
@@ -522,23 +526,7 @@ window.GrinderSocial = function ({
         }
       });
     }
-    async function page() {
-      let query = db
-        .from("grinder_replies")
-        .select(
-          "*,author:profiles!grinder_replies_author_id_fkey(github_handle,name,handle,display_name,avatar_url)",
-        )
-        .eq("run_id", runId)
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .limit(25);
-      if (cursor)
-        query = query.or(
-          `created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`,
-        );
-      const rows = await result(query);
-      if (!cursor) items.innerHTML = "";
-      for (const reply of rows) {
+    function renderReply(reply) {
         const article = document.createElement("article");
         article.className = "card reply";
         article.id = "reply-" + reply.id;
@@ -639,8 +627,25 @@ window.GrinderSocial = function ({
           };
           article.append(report);
         }
-        items.append(article);
-      }
+        return article;
+    }
+    async function page() {
+      let query = db
+        .from("grinder_replies")
+        .select(
+          "*,author:profiles!grinder_replies_author_id_fkey(github_handle,name,handle,display_name,avatar_url)",
+        )
+        .eq("run_id", runId)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(25);
+      if (cursor)
+        query = query.or(
+          `created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`,
+        );
+      const rows = await result(query);
+      if (!cursor) items.innerHTML = "";
+      for (const reply of rows) items.append(renderReply(reply));
       if (!rows.length && !cursor)
         items.innerHTML =
           "<p>No replies yet. Ask about the work or the setup.</p>";
@@ -664,9 +669,10 @@ window.GrinderSocial = function ({
     }
     try {
       await page();
-      // Keep paging until the known-existing deep link is on screen (R2-01).
+      // Keep paging until the known-existing deep link is on screen (R2-01). Past 12 pages (300
+      // replies) the looked-up reply is rendered directly below instead of paging on.
       let pages = 0;
-      while (focusReply && !focusKnownMissing && !sawFocus && pages < 40) {
+      while (focusReply && !focusKnownMissing && !sawFocus && pages < 12) {
         const older = slot.querySelector(".older-replies");
         if (!older) break;
         const before = cursor && cursor.id;
@@ -680,11 +686,26 @@ window.GrinderSocial = function ({
       return;
     }
     slot.querySelector(".reply-missing")?.remove();
-    if (focusReply && (focusKnownMissing || !sawFocus)) {
+    slot.querySelector(".reply-direct")?.remove();
+    if (focusReply && !sawFocus && focusedRow) {
+      // The reply exists (looked up by id) but sits deeper than the pages loaded. Render the
+      // target itself instead of calling unseen data removed.
+      const direct = document.createElement("div");
+      direct.className = "reply-direct";
+      direct.innerHTML =
+        "<p class=\"response-state\">This reply is further back than the thread has loaded, so it is shown here on its own. The replies below are newer.</p>" +
+        responseReturnBar();
+      const article = renderReply(focusedRow);
+      article.classList.add("reply-target");
+      direct.append(article);
+      items.before(direct);
+      sawFocus = true;
+      focusTarget();
+    } else if (focusReply && (focusKnownMissing || !sawFocus)) {
       const missing = document.createElement("div");
       missing.className = "card reply-missing";
       missing.innerHTML =
-        "<p>That reply was removed or is no longer available. The run is still here.</p>" +
+        "<p>That reply was removed or is not visible to you. The run is still here.</p>" +
         responseReturnBar();
       items.before(missing);
     } else if (focusReply && sawFocus) {

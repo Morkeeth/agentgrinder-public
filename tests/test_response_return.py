@@ -43,7 +43,7 @@ def test_r2_01_deep_link_resolves_reply_by_id_before_missing_copy():
     thread = SOCIAL[SOCIAL.index("async function thread(") : SOCIAL.index("async function inbox(")]
     assert '.eq("id", focusReply)' in thread or ".eq('id', focusReply)" in thread
     assert "focusKnownMissing" in thread
-    assert "while (focusReply && !focusKnownMissing && !sawFocus && pages < 40)" in thread
+    assert "while (focusReply && !focusKnownMissing && !sawFocus && pages < 12)" in thread
 
 
 def test_r2_02_unread_mark_requires_confirmed_rows_and_resets_owner():

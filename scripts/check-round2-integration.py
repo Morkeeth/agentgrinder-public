@@ -345,7 +345,7 @@ def main():
             check(deleted == 1, "deleted reply: Riley's own reply deleted through the client (got " + str(deleted) + ")")
             cp.goto(base + f"/?run={run_id}&reply={reply_id}#reply-{reply_id}")
             settle(cp, "test-casey-r2")
-            cp.get_by_text("That reply was removed or is no longer available.").wait_for()
+            cp.get_by_text("That reply was removed or is not visible to you.").wait_for()
             shot(cp, "14-deleted-reply-mobile.png")
             cp.goto(base + "/?inbox")
             settle(cp, "test-casey-r2")
