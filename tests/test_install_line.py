@@ -60,7 +60,7 @@ def test_every_coach_hint_in_the_cli_names_a_venv():
 def test_the_readme_lead_command_matches_the_website():
     assert "python3 -m agentgrinder grind" in README
     # The first command block works without depending on editable-install support.
-    first_block = README.split('```bash', 1)[1].split('```', 1)[0]
+    first_block = re.search(r'```(?:sh|bash)\n(.*?)```', README, re.S).group(1)
     assert "pip install" not in first_block
 
 

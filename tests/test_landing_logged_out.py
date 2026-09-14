@@ -1,96 +1,39 @@
-"""The logged-out landing page. What a judge with no account sees on the first click.
+"""The public Strava entry shows the social product without invented activity or sign-in."""
+from pathlib import Path
 
-The defect this file pins: on 3 Sep 2026 the landing was a hero line, a paragraph and three
-buttons. The product's whole argument, that an agent referees every claim before the card shows
-a number, was invisible until GitHub sign-in. These are contract tests over site/index.html:
-they check the landing renders a real public run and the words that explain the coach, not the
-styling.
-"""
-import os
-import re
-
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-HTML = open(os.path.join(REPO, "site", "index.html"), encoding="utf-8").read()
-
-FEATURED_RUN = "28d5d0b7-eda2-4d94-a83c-580d2e3b75b2"
+HTML = (Path(__file__).resolve().parents[1] / 'site/index.html').read_text()
 
 
-def test_landing_names_one_canonical_public_run_and_reads_it_anonymously():
-    assert f'const FEATURED_RUN="{FEATURED_RUN}"' in HTML
-    # the read is the same publishable key the rest of the page uses, and it is a plain select
-    assert "async function fetchFeatured()" in HTML
-    assert ".eq('id',FEATURED_RUN)" in HTML
+def landing():
+    return HTML[HTML.index('function landingHTML(r)'):HTML.index('\nasync function viewLanding()')]
 
 
-def test_landing_shows_a_run_without_sign_in_before_capture_details():
-    assert "async function viewLanding()" in HTML
-    assert "function landingHTML(r)" in HTML
-    body = HTML[HTML.index("function landingHTML(r)"):]
-    body = body[:body.index("\nasync function viewLanding()")]
-    # Bundled example is the start. Featured public grind remains readable without auth.
-    assert "/?example" in body
-    assert "Try the bundled example" in body
-    assert body.index("/?example") < body.index("uploadBlock()")
-    assert "featuredCard(r)" in body
-    assert "Get started" not in body or body.index("/?example") < body.index("Get started")
-
-
-def test_the_card_carries_the_verdict_its_numbers_and_the_tool_call_count():
-    card = HTML[HTML.index("function featuredCard(r)"):]
-    card = card[:card.index("\n// The five tools")]
-    assert "vptHtml(r)" in card and "fiveRow(r)" in card       # the numbers
-    assert "r.coach_verdict" in card                            # the verdict paragraph
-    assert "verdict produced by <b>${esc(String(n))}</b> tool call" in card
-    assert "<details" in card  # supporting coach evidence is available on demand
-
-
-def test_a_snapshot_paints_before_the_fetch_and_matches_the_row_that_was_published():
-    snap = HTML[HTML.index("const FEATURED_SNAPSHOT="):]
-    snap = snap[:snap.index("async function fetchFeatured()")]
-    for field in ("claims:7", "claims_verified:3", "artifacts_produced:8", "coach_tool_calls:37",
-                  "prompts:3", "commits:6", "tool_calls:150"):
-        assert field in snap, field
-    assert "3 of 7 claims had evidence in their own turn." in snap
-    # No absolute path, no local checkout path, and no repository name outside the ones this
-    # project discloses on purpose.
-    #
-    # This used to name two private repositories as the strings it forbade, which made the guard
-    # itself one of the places a private name appeared in a public repository. It also could only
-    # ever catch the two names somebody had thought of, and on 4 Sep 2026 a list-based sweep of
-    # twelve names missed four that a shape-based scan found immediately. So the check is now on
-    # the SHAPES a name arrives in, and it does not need to know any name in advance.
-    assert "/Users/" not in snap and "~/CODE/" not in snap and "/home/" not in snap
-    import re as _re
-    slugs = set(_re.findall(r"[A-Za-z0-9_]+/([A-Za-z0-9._-]+)", snap))
-    allowed = {"agentgrinder", "agents-for-humans", "mountain-of-helicon", "transcripto"}
-    assert slugs <= allowed, f"an undisclosed repository name is in the featured snapshot: {slugs - allowed}"
-
-
-def test_how_it_works_names_the_five_tools_and_the_three_modes_logged_out():
-    block = HTML[HTML.index("function howItWorks()"):]
-    block = block[:block.index("function landingHTML(r)")]
-    for tool in ("read_run", "check_claim", "verify_artifact", "git_evidence", "write_verdict"):
-        assert f"['{tool}'," in block, tool
-    for mode in ("local", "bedrock", "none"):
-        assert f"['{mode}'," in block, mode
-    assert "DEGRADED" in block
-    assert "Keyless, no network, no spend" in block
-    assert "Needs AWS credentials, costs money" in block
-    # text only: no icon font, no emoji, no svg inside the strip
-    assert "<svg" not in block
-    assert not re.search(r"[\U0001F300-\U0001FAFF←-➿]", block)
-
-
-def test_the_landing_promises_nothing_that_needs_an_account():
-    body = HTML[HTML.index("function landingHTML(r)"):]
-    body = body[:body.index("\nasync function viewLanding()")]
+def test_logged_out_landing_exposes_browsing_and_first_post():
+    body = landing()
     assert 'href="/?explore"' in body
-    assert "Runs start private" in body
-    # every location.href out of the landing is a page that renders without a session
-    for href in re.findall(r"location\.href='([^']+)'", body):
-        assert href in ("/?onboard", "/?explore", "/?example"), href
+    assert 'Post your first run' in body
+    assert 'href="/?onboard"' in body or 'href="/?post"' in body
+    assert 'Sign in to browse' not in body
 
 
-def test_the_clone_command_is_a_real_public_url_not_a_placeholder():
-    assert "git clone https://github.com/Morkeeth/agentgrinder" in HTML
-    assert "git clone &lt;repo&gt;" not in HTML
+def test_landing_explains_deliberate_publication():
+    body = landing()
+    assert 'Capture locally' in body and 'Preview privately' in body
+    assert 'You choose what goes public' in body
+
+
+def test_landing_does_not_promote_coaching_or_a_bundled_run_as_the_product():
+    body = landing()
+    assert '/?example' not in body
+    for retired in ('howItWorks()', 'verified per turn', 'coach verdict', 'DEGRADED'):
+        assert retired not in body
+
+
+def test_landing_never_falls_back_to_inherited_grinder_activity():
+    view = HTML[HTML.index('async function viewLanding()'):HTML.index('async function viewRun(')]
+    assert 'FEATURED_SNAPSHOT' not in view, 'a historical Grinder row is not activity on Strava'
+
+
+def test_capture_command_points_to_the_public_product():
+    assert 'git clone https://github.com/Morkeeth/agentgrinder-public' in HTML
+    assert 'git clone &lt;repo&gt;' not in HTML

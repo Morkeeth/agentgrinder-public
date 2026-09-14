@@ -50,6 +50,7 @@ def test_without_coach_the_same_run_is_still_exit_zero(no_strands, tmp_path, cap
 
 
 def test_the_coach_still_runs_and_exits_zero_when_the_sdk_is_there(tmp_path, monkeypatch, capsys):
+    pytest.importorskip("strands", reason="optional coach SDK is not installed")
     monkeypatch.setenv("AGENTGRINDER_SERIES", str(tmp_path / "series.db"))
     monkeypatch.setattr("webbrowser.open", lambda *a, **k: None)
     rc = cli.main(["grind", SAMPLE, "--coach", "--no-open", "-o", str(tmp_path / "card.html")])

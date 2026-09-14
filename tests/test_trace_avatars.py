@@ -28,6 +28,10 @@ HTML = open(os.path.join(REPO, "site", "index.html"), encoding="utf-8").read()
 START = "const TRACES={}, TRACE_LOOKED={}, TRACE_AGENT={};"
 END = "\nconst esc="
 AVATAR_SRC = HTML[HTML.index(START):HTML.index(END, HTML.index(START))]
+# Load the shipped presentation rule, not a stub of its legacy/identity fallback.
+PROFILE_HELPER = re.search(r"^const profileHandle=.*;$", HTML, re.M).group(0)
+AVATAR_RUNTIME = ("const GrinderAuth=require(" + json.dumps(os.path.join(REPO, "site", "auth.js")) + ");\n"
+                  + PROFILE_HELPER + "\n" + AVATAR_SRC)
 
 
 # ---------------------------------------------------------------- the source
@@ -101,6 +105,8 @@ noteTraces([
   {visibility:'public',created_at:'2026-09-01T00:00:00Z',rhythm:[1,1,1,1],profiles:{github_handle:'Morkeeth'}},
   {visibility:'public',created_at:'2026-09-02T00:00:00Z',rhythm:[9,0,4,7,2],profiles:{github_handle:'Morkeeth'}}]);
 out.real=avatar('Morkeeth');
+noteTraces([{visibility:'public',created_at:'2026-09-02T00:00:00Z',rhythm:[9,0,4,7,2],profiles:{handle:'email-builder',github_handle:null}}]);
+out.chosen=avatar('email-builder');
 // an anonymous run must not become anyone's mark
 noteTraces([{visibility:'anonymous',created_at:'2026-09-03T00:00:00Z',rhythm:[5,5,5],
              profiles:{github_handle:'shy'}}]);
@@ -118,7 +124,7 @@ console.log(JSON.stringify(out));
 def render():
     if not NODE:
         pytest.skip("node is not on this machine")
-    r = subprocess.run([NODE, "-e", HARNESS % AVATAR_SRC], capture_output=True, text=True)
+    r = subprocess.run([NODE, "-e", HARNESS % AVATAR_RUNTIME], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     return json.loads(r.stdout)
 
@@ -181,3 +187,9 @@ def test_the_share_tile_is_the_same_trace_at_56px():
     o = render()
     assert 'class="av share-av"' in o["big"]
     assert 'viewBox="0 0 56 56"' in o["big"]
+
+
+def test_chosen_handle_without_github_gets_its_real_trace():
+    out = render()
+    assert '<polyline' in out['chosen']
+    assert '@email-builder' in out['chosen']

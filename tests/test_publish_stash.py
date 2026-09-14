@@ -29,12 +29,12 @@ def test_the_payload_is_stashed_before_the_redirect_and_the_fragment_is_not_the_
     i_dialog = body.index("showSignIn()", i_stash)
     assert i_stash < i_dialog, "the stash must be written before opening sign-in"
     signin=HTML[HTML.index("function showSignIn(){"):HTML.index("async function refreshAuth()") ]
-    assert signin.index("stashImport") < signin.index("signInWithOAuth")
+    assert signin.index("stashImport") < signin.index("auth.signIn")
     # a fragment cannot come back through OAuth, so it must not be what we ask to come back to.
     # Comment lines are dropped first: the comment above the fix quotes the old call by name.
     code = "".join(l for l in (body+signin).splitlines() if not l.lstrip().startswith("//"))
     assert "redirectTo:location.href" not in code.replace(" ", "")
-    assert "redirectTo:location.origin" in code.replace(" ", "")
+    assert "GrinderAuth.create({client:sb,redirectTo:location.origin+'/'}" in HTML.replace(" ", "")
 
 
 def test_route_restores_the_payload_before_it_reads_the_hash():
@@ -89,3 +89,34 @@ console.log(JSON.stringify({hash:location.hash}));
     out = subprocess.run(["node", "-e", harness], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
     assert json.loads(out.stdout.strip().splitlines()[-1])["hash"] == ""
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="node is not on this machine")
+def test_auth_module_preserves_draft_and_uses_fragment_free_redirect_for_each_provider():
+    harness = "const GrinderAuth=require(" + json.dumps(os.path.join(REPO, "site", "auth.js")) + ");\n" + _js_block() + r"""
+const store={};
+globalThis.sessionStorage={getItem:k=>store[k]??null,setItem:(k,v)=>store[k]=String(v),removeItem:k=>delete store[k]};
+globalThis.location={origin:'https://strava.example',hash:'#import=private-payload',search:'?post'};
+const calls=[];
+const client={from(){throw Error('Sign-in must not publish or create a profile');},auth:{
+ signInWithOAuth:async request=>{calls.push({request,stash:store.ag_import,returnTo:store.ag_auth_return});return {error:null};},
+ signInWithOtp:async request=>{calls.push({request,stash:store.ag_import,returnTo:store.ag_auth_return});return {error:null};}
+}};
+const auth=GrinderAuth.create({client,redirectTo:location.origin+'/'});
+(async()=>{
+ for(const provider of ['github','x','email']){
+   stashImport('private-payload');
+   await auth.signIn(provider,{email:'fixture@example.test',returnTo:location.search});
+ }
+ console.log(JSON.stringify(calls));
+})().catch(e=>{console.error(e);process.exit(1)});
+"""
+    out = subprocess.run(["node", "-e", harness], capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+    calls = json.loads(out.stdout)
+    assert len(calls) == 3
+    for call in calls:
+        assert call['stash'] == 'private-payload'
+        assert call['returnTo'] == '?post'
+        options = call['request']['options']
+        assert options.get('redirectTo', options.get('emailRedirectTo')) == 'https://strava.example/'

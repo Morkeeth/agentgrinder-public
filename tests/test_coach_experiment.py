@@ -94,6 +94,8 @@ def test_cli_live_status_does_not_start_a_live_run():
 
 
 def test_bedrock_without_config_does_not_fabricate_a_live_verdict(tmp_path, monkeypatch):
+    import pytest
+    pytest.importorskip("strands", reason="optional coach SDK is not installed")
     from agentgrinder.coach.agent import run_coach
     from agentgrinder.coach.live_config import LiveConfigError
     from tests.test_coach_tools import _sitting

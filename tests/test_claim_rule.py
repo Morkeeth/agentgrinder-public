@@ -89,7 +89,7 @@ def test_the_docs_print_the_precision_the_counts_produce():
     assert round(p_old, 2) == 0.32 and round(r_old, 2) == 0.37
     surfaces = ((DOC, "the calibration write-up"), (PAGE, "the methodology page"),
                 (os.path.join(REPO, "agentgrinder", "claims.py"), "the module docstring"),
-                (os.path.join(REPO, "README.md"), "the README"))
+                (os.path.join(REPO, "docs", "TECHNICAL-HISTORY.md"), "the inherited technical reference"))
     for path, where in surfaces:
         text = open(path).read()
         for n in ("0.63", "0.66", "0.32", "0.37"):

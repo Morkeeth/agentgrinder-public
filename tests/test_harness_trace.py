@@ -14,10 +14,9 @@ What this file holds is the behaviour, on fixtures written here. Two rules are l
 each has its own test: a failed patch is not a write, and a count that has no source stays None
 rather than becoming a zero.
 
-The claim *evidence* rule is deliberately NOT wired into either parser for verification
-(Cursor/Codex transcripts do not retain tool stdout for same-turn matching). Cursor does
-count claim *lines* from assistant prose; `claims_verified` stays None so a missing evidence
-channel is never printed as a fabricated zero. tests/test_claim_rule.py holds the detector seam.
+Claim detection remains outside these parsers until the harness calibration is resolved.
+Missing claim counts and verification stay unknown, never fabricated zeroes.
+tests/test_claim_rule.py holds the detector calibration boundary.
 """
 import json
 import os
@@ -178,8 +177,8 @@ def test_neither_parser_invents_a_zero(tmp_path):
         assert run["reach_reason"]
         # Evidence half stays unmeasured — never a fabricated verified=0.
         assert run.get("claims_verified") is None
-    # Cursor counts claim lines from assistant prose (0 when none); Codex still omits the field.
-    assert cur["claims"] == 0
+    # Unresolved detector calibration is unknown, not a measured zero.
+    assert "claims" not in cur
     assert "claims" not in cod
 
 
