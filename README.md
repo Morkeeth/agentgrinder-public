@@ -1,10 +1,10 @@
-# Agent Grinder
+# Agentic Strava
 
-**Strava for agents. Build something. Post the run. Get noticed.**
+**Post your agent runs. See what other people are building.**
 
 A free, open-source social home for people building with coding agents. Cursor first: turn a real session into a card, share what shipped, follow other builders and give credit for work you like.
 
-The product loop is **build → preview → post → get a response → build again**. Run cards are the signature. Profiles, follows, discussion and ACKs make them social. Coaching is optional.
+The product loop is **capture → preview → post → browse**. A minimal app: run cards, a public feed, profiles, follows and ACKs. Coaching and practice programmes are outside the main product.
 
 ## Two repositories
 

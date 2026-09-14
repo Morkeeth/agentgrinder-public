@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Agent Grinder — Strava for agents</title>
-<meta name="description" content="Turn a Cursor, Claude Code or Codex session into a run card. Share the work, follow builders and find your next practice. Private until you choose to share.">
+<title>Agentic Strava — Strava for agents</title>
+<meta name="description" content="Turn a Cursor, Claude Code or Codex session into a run card. Post your runs and see what other builders are making. Private until you choose to share.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/design.css">
@@ -374,7 +374,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 </style><link rel="stylesheet" href="/social.css"></head>
 <body>
 <div class="bar"><div class="bar-in">
-  <a class="mark" href="/">Agent<i>&middot;</i>Grinder</a>
+  <a class="mark" href="/">Agentic Strava</a>
   <nav id="nav" aria-label="Primary">
     <a href="/?explore" data-section="feed">Feed</a>
     <a href="/?mine" data-section="mine" data-auth="1" hidden>My runs</a>
@@ -382,7 +382,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
     <details id="account-menu" class="account-menu">
       <summary aria-haspopup="menu">Account</summary>
       <div class="account-panel" role="menu">
-        <a href="/?example" role="menuitem">Try the example</a>
+
         <a href="/?onboard" role="menuitem">Get started</a>
         <a href="/?agents" role="menuitem" data-auth="1" hidden>Agent access</a>
         <a id="account-scrapbook" href="/?mine" role="menuitem" data-auth="1" hidden>My profile</a>
@@ -489,7 +489,7 @@ function feedTabs(active){
   return `<nav class="feed-tabs" aria-label="Feed filters"><a href="/?explore" class="${active==='discover'?'on':''}" ${active==='discover'?'aria-current="page"':''}>Discover</a><a href="/?following" class="${active==='following'?'on':''}" ${active==='following'?'aria-current="page"':''}>Following</a></nav>`;
 }
 function myRunsTabs(active){
-  return `<nav class="section-tabs" aria-label="My runs"><a href="/?mine" class="${active==='runs'?'on':''}" ${active==='runs'?'aria-current="page"':''}>My runs</a><a href="/?practices" class="${active==='practices'?'on':''}" ${active==='practices'?'aria-current="page"':''}>Practices</a></nav>`;
+  return `<nav class="section-tabs" aria-label="My runs"><a href="/?mine" class="${active==='runs'?'on':''}" ${active==='runs'?'aria-current="page"':''}>My runs</a></nav>`;
 }
 function communityTabs(active){
   return `<nav class="section-tabs" aria-label="Community"><a href="/?community" class="${active==='hub'?'on':''}" ${active==='hub'?'aria-current="page"':''}>Overview</a><a href="/?forum" class="${active==='forum'?'on':''}" ${active==='forum'?'aria-current="page"':''}>Forum</a><a href="/?crews" class="${active==='crews'?'on':''}" ${active==='crews'?'aria-current="page"':''}>Crews</a><a href="/?challenges" class="${active==='challenges'?'on':''}" ${active==='challenges'?'aria-current="page"':''}>Challenges</a></nav>`;
@@ -862,7 +862,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   const refereed=r.coach_verdict?'<span class="state" title="A client-supplied coach report; not independent server verification">Coach report</span>':'<span class="state off">No coach report</span>';
   return `<div class="card" id="card-${r.id}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
-      <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} <a href="/?run=${r.id}">${new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</a></small></div>${refereed}</div>
+      <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} <a href="/?run=${r.id}">${new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</a></small></div></div>
     <div class="title"><a href="/?run=${r.id}">${esc(r.title)}</a>${r.is_ship?' · ship':''}${vibeChip}</div>
     ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
     <div class="sub">${esc(r.harness||'agent')}${r.project?' · '+esc(r.project):''}${(r.route&&r.route.length)?' · '+(new Set(r.route)).size+' regions':''}${r.files_touched?' · '+r.files_touched+' files':''}</div>
@@ -974,7 +974,7 @@ function shareCardHtml(opts){
   const hl=opts.headline?`<p class="share-hl">${esc(opts.headline)}</p>`:'';
   return `<div class="share-scene"><div class="share-scale" id="share-scale"><div class="share-frame" id="share-frame">
     <div class="share-main">
-      <section class="share-left"><div class="share-brand">Agent<i>&middot;</i>Grinder</div>
+      <section class="share-left"><div class="share-brand">Agentic Strava</div>
         <div><div class="share-handle-row">${avatar(h,{size:56,cols:20,cls:'share-av',ghost:ghost,rhythm:opts.rhythm})}
           <div><div class="share-handle">@${esc(h)}</div><div class="share-stamp">${esc(stamp)}</div></div></div>
           <p class="share-lead">${esc(opts.lead||'')}</p><p class="share-sub">${esc(opts.sub||'')}</p></div></section>
@@ -1086,7 +1086,7 @@ async function viewOnboard(){
       ${ME?`<button id="ob-push">Show my runs</button>`:`<button disabled>Sign in first</button>`}
       <button class="ghost" id="ob-skip">Skip, browse the feed</button>
     </div></div>`;
-  app.innerHTML=`<div class="head"><h2>Welcome to Agent Grinder</h2><span class="meta">I tried this. Show me what changed.</span></div>
+  app.innerHTML=`<div class="head"><h2>Welcome to Agentic Strava</h2><span class="meta">I tried this. Show me what changed.</span></div>
       <p class="hint">Want the path with no account first? <a href="/?example">Try the bundled example</a>. Sign-in is only to keep your own runs.</p>
       ${stepBar(n,done)}${step1}${step2}${step3}${step4}`;
   wireCopy();
@@ -1120,7 +1120,7 @@ async function viewOnboardAgent(){
 
 function viewPitch(){
   frame(null,null);
-  $('app').innerHTML=`<div class="head"><h2>Agent Grinder</h2><span class="meta">record → share → improve</span></div>
+  $('app').innerHTML=`<div class="head"><h2>Agentic Strava</h2><span class="meta">record → share → improve</span></div>
     <h1>Make your agent work worth coming back to.</h1>
     <p>Turn a Cursor, Claude Code or Codex session into a run. Keep your history, share work with your Crew, and test one change on the next session.</p>
     <div class="panel"><div class="pad"><h2>The run is the starting point</h2><p>Show the work and the setup behind it. Give an ACK for a specific contribution. Save a practice from another builder and compare your next attempt.</p></div></div>
@@ -1237,17 +1237,17 @@ function wireCopy(){
 function landingHTML(r){
   return `<div class="launch-grid"><section class="landing-intro"><p class="meta">STRAVA FOR AGENTS</p>
     <h1>Your agent runs. Worth sharing.</h1>
-    <p>Turn a Cursor, Claude Code or Codex session into a run card. Share the work. Follow the builders. Find your next practice.</p>
+    <p>Turn a Cursor, Claude Code or Codex session into a run card. Post your run. Follow builders. See what they ship.</p>
     <div class="cta"><a class="act primary" href="/?onboard">Post your first run</a><a class="act" href="/?explore">Explore runs</a></div>
     <p class="hint">Capture locally. Preview privately. You choose what goes public.</p>
-    <a class="meta" href="/?example">Try a sample run first →</a></section>
-    <section aria-label="Featured public run"><div class="launch-card-label"><span>ONE BUILDER. ONE RUN.</span><span>RECORDED SEPTEMBER 2026</span></div>
-    ${r?featuredCard(r):'<div class="card launch-card"><div class="empty">The featured run is unavailable. <a href="/?explore">Explore public runs</a> or <a href="/?example">try the sample</a>.</div></div>'}</section></div>
+    </section>
+    <section aria-label="Featured public run"><div class="launch-card-label"><span>ONE BUILDER. ONE RUN.</span><span>YOUR NEXT RUN</span></div>
+    ${r?featuredCard(r):'<div class="card launch-card"><div class="empty">Your run belongs here. <a href="/?onboard">Post your first run</a>.</div></div>'}</section></div>
     <section class="launch-steps" aria-label="From a session to a shared run">
       <div><h2>01 · Record the run</h2><p>Keep the trace, time and output from a session you actually did.</p></div>
       <div><h2>02 · Share the work</h2><p>Post the card, follow a builder and discuss what helped.</p></div>
-      <div><h2>03 · Come back better</h2><p>Pick one practice. Try it in your next run and see what changed.</p></div></section>
-    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/?example">Sample walkthrough</a><a href="/methodology">How the measurements work</a><a href="/privacy">Privacy</a></div>`;
+      <div><h2>03 · See what others ship</h2><p>Follow builders, give an ACK and post your next run.</p></div></section>
+    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/methodology">How the measurements work</a><a href="/privacy">Privacy</a></div>`;
 }
 
 async function viewLanding(){
@@ -1323,16 +1323,13 @@ async function viewRun(id){
   frame(null,null);
   app.innerHTML=`<div class="head"><h2>A run</h2><span class="meta">${esc(r.visibility==='public'?'public':r.crew_shared?'Crew members':r.visibility==='private'||r.visibility==='anonymous'?'private':'link only')}</span></div>`
     +runCard(r,ad.mine.has(r.id),ad.counts[r.id]||acks.length,{picker:openAck,suggested,selected:preselect})
-    +`<section id="grind-thread"></section><details class="run-learning"><summary>One practice for your next run</summary><section id="grind-experiment"></section><section id="grind-moments"></section></details><div class="head"><h2>ACKs</h2><span class="meta">${acks.length}</span></div><div class="panel">`+ackListHtml(acks)+`</div>`
+    +`<section id="grind-thread"></section><div class="head"><h2>ACKs</h2><span class="meta">${acks.length}</span></div><div class="panel">`+ackListHtml(acks)+`</div>`
     +`<div class="cta">${r.visibility==='public'||r.visibility==='link'?'<button id="run-copy-link">Copy run link</button>':''}<a class="act" href="/?share=1&run=${r.id}">Share card</a>
       <span class="hint"><a href="/?u=${encodeURIComponent((r.profiles||{}).github_handle||'')}">see the profile</a></span></div><section id="grind-feature"></section>`;
-  if(ME?.id===r.profile_id){const compare=document.createElement('a');compare.href='/?progress&baseline='+r.id;compare.className='act';compare.textContent='Compare this run';app.querySelector('.cta').append(compare);}
   const copyLink=$('run-copy-link');if(copyLink)copyLink.onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+'/?run='+r.id);copyLink.textContent='Link copied'}catch(_){status('Copy this page address to share your run.')}};
   if(ME?.id===r.profile_id){const controls=document.createElement('div');controls.className='panel reply-form';controls.innerHTML='<label>Who can read this run<select id="run-audience"><option value="private">Only me</option><option value="public">Public</option><option value="link">Anyone with the link</option></select></label><button id="run-save-audience">Save audience</button><button id="run-delete" class="ghost">Delete run</button>';app.append(controls);$('run-audience').value=r.visibility==='anonymous'?'private':r.visibility;$('run-save-audience').onclick=async()=>{const {error}=await sb.from('runs').update({visibility:$('run-audience').value}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};$('run-delete').onclick=async()=>{if(!confirm('Delete this run and its discussion? Submitted Challenge results stay in event history.'))return;const {error}=await sb.from('runs').delete().eq('id',r.id);if(error){status(error.message,true);return}history.replaceState(null,'','/');viewMe()};}
   wireKudos(); if(openAck){ const card=$('card-'+id); if(card) wireAckPicker(card,r,preselect); }
   if(q.get('ack')) history.replaceState(null,'',`/?run=${id}`);
-  await mountCoachExperiment(r, $('grind-experiment'));
-  await GrinderMoments.mount({run:r,slot:$('grind-moments'),client:sb,me:()=>ME,status});
   await social.thread(id,$('grind-thread'));
   await social.askControl(r,$('grind-thread'));
   await social.featureControl(r,$('grind-feature'));

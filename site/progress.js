@@ -22,7 +22,7 @@ window.GrinderProgress = function ({client: db, me, app, frame, status, signIn})
   }
   async function ownRuns(offset=0) {return rows(db.from('runs').select('*').eq('profile_id',me().id).order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+99));}
   function runTile(run) {
-    return `<article class="history-run"><div class="history-trace">${GrinderContract.trace(run)}</div><div><small>${esc(run.harness || 'Harness unknown')} · ${esc(audience(run))}</small><h2><a href="/?run=${run.id}">${esc(title(run))}</a></h2><p>${esc(date(run.started_at))}</p><div class="history-counts"><span>${value(run.prompts)} typed turns</span><span>${value(run.artifacts_produced)} artifacts</span><span>${value(run.commits)} commits</span></div><a class="act" href="/?progress&baseline=${run.id}">Compare from this run</a></div></article>`;
+    return `<article class="history-run"><div class="history-trace">${GrinderContract.trace(run)}</div><div><small>${esc(run.harness || 'Harness unknown')} · ${esc(audience(run))}</small><h2><a href="/?run=${run.id}">${esc(title(run))}</a></h2><p>${esc(date(run.started_at))}</p><div class="history-counts"><span>${value(run.prompts)} typed turns</span><span>${value(run.artifacts_produced)} artifacts</span><span>${value(run.commits)} commits</span></div></div></article>`;
   }
   async function historyView() {
     if(!start('My runs','runs'))return;
