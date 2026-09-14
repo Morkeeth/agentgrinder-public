@@ -377,14 +377,13 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   <a class="mark" href="/">Agentic Strava</a>
   <nav id="nav" aria-label="Primary">
     <a href="/?explore" data-section="feed">Feed</a>
+    <a href="/?post" data-section="post">Post a run</a>
     <a href="/?mine" data-section="mine" data-auth="1" hidden>My runs</a>
-    <a href="/?inbox" data-section="inbox" class="inbox-link" data-auth="1" hidden>Inbox<span id="nav-inbox-badge" class="nav-badge" hidden aria-hidden="true"></span></a>
+    <a href="/?inbox" data-section="inbox" class="inbox-link" data-auth="1" hidden>Responses<span id="nav-inbox-badge" class="nav-badge" hidden aria-hidden="true"></span></a>
     <details id="account-menu" class="account-menu">
       <summary aria-haspopup="menu">Account</summary>
       <div class="account-panel" role="menu">
-
         <a href="/?onboard" role="menuitem">Get started</a>
-        <a href="/?agents" role="menuitem" data-auth="1" hidden>Agent access</a>
         <a id="account-scrapbook" href="/?mine" role="menuitem" data-auth="1" hidden>My profile</a>
       </div>
     </details>
@@ -397,8 +396,9 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 </div></div>
 <nav id="mobile-product-nav" class="mobile-product-nav" aria-label="Primary">
   <a href="/?explore" data-section="feed">Feed</a>
+  <a href="/?post" data-section="post">Post</a>
   <a href="/?mine" data-section="mine" data-auth="1" hidden>My runs</a>
-  <a href="/?inbox" data-section="inbox" class="inbox-link" data-auth="1" hidden>Inbox<span class="nav-badge mobile-inbox-badge" hidden aria-hidden="true"></span></a>
+  <a href="/?inbox" data-section="inbox" class="inbox-link" data-auth="1" hidden>Responses<span class="nav-badge mobile-inbox-badge" hidden aria-hidden="true"></span></a>
 </nav>
 <div id="status"></div>
 <div class="shell solo" id="shell">
@@ -464,13 +464,10 @@ function projectStats(runs){
 }
 function railHtml(active,runs){
   const a=(href,label,on,count)=>`<a href="${href}"${on?' class="on"':''}>${esc(label)}${count!=null?`<span>${count}</span>`:''}</a>`;
-  const ps=projectStats(runs);
   let o='<p class="lbl">Primary</p>'+a('/?explore','Feed',active==='feed'||active==='following',(runs&&runs.length)||null);
-  if(ME) o+=a('/?mine','My runs',active==='me'||active==='progress'||active==='practices')
-    +a('/?inbox','Inbox',active==='inbox');
-  o+=a('/?onboard','Get started',active==='onboard');
-  if(ps.length) o+='<p class="lbl">Projects</p>'+ps.map(x=>`<span class="r">${esc(x.name)}<span>${x.n}</span></span>`).join('');
-  o+='<p class="lbl">Read</p>'+a('/methodology','Methodology')+a('/privacy','Privacy')+a('/terms','Terms');
+  o+=a('/?post','Post a run',active==='post');
+  if(ME) o+=a('/?mine','My runs',active==='me')+a('/?inbox','Responses',active==='inbox');
+  o+='<p class="lbl">About</p>'+a('/privacy','Privacy')+a('/terms','Terms');
   return o;
 }
 function setPrimarySection(section){
@@ -850,28 +847,29 @@ function coachBlock(r){
 }
 
 
+function safeOutputUrl(value){
+  try{const url=new URL(value);return /^https?:$/.test(url.protocol)?url.href:null}catch(_){return null}
+}
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
   const selfAck=ME&&ME.id===r.profile_id;
   const ackBtn=selfAck?'':`<button class="act kudo ${acked?'on':''}" data-run="${r.id}" data-to="${r.profile_id}">${acked?'ACKed':'ACK'}${count?' <span class="n num">'+count+'</span>':''}</button>`;
   const picker=opts.picker?ackPickerHtml(r,opts.suggested||suggestAckReasons(r),opts.selected||null):'';
-  const dm=r.duration_s?Math.round(r.duration_s/60):0;
   const whoLink=att.link?`<a href="${att.link}">${esc(att.name)}</a>`:`<span>${esc(att.name)}</span>`;
   const anonTag=att.ghost?'<span class="ghost-tag">anon</span>':'';
-  const v=vibeForRun(r);
-  const vibeChip=v?`<span class="vibe-chip" title="${esc(v[1])}">${esc(v[0].toLowerCase())}</span>`:'';
-  const refereed=r.coach_verdict?'<span class="state" title="A client-supplied coach report; not independent server verification">Coach report</span>':'<span class="state off">No coach report</span>';
+  const started=r.started_at&&Number.isFinite(Date.parse(r.started_at))?new Date(r.started_at).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}):'Session time unknown';
+  const output=safeOutputUrl(r.output_url);
   return `<div class="card" id="card-${r.id}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} <a href="/?run=${r.id}">${new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</a></small></div></div>
-    <div class="title"><a href="/?run=${r.id}">${esc(r.title)}</a>${r.is_ship?' · ship':''}${vibeChip}</div>
+    <div class="title"><a href="/?run=${r.id}">${esc(r.title)}</a></div>
     ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
-    <div class="sub">${esc(r.harness||'agent')}${r.project?' · '+esc(r.project):''}${(r.route&&r.route.length)?' · '+(new Set(r.route)).size+' regions':''}${r.files_touched?' · '+r.files_touched+' files':''}</div>
-    ${r.note?`<div class="note">${esc(r.note)}</div>`:''}
+    <div class="sub">${r.project?esc(r.project)+' · ':''}${esc(r.harness||'Coding agent')} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
+    ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
+    ${output?`<div class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open what was built ↗</a></div>`:''}
     <div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
     <div class="run-key-facts"><div><span>Typed turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>Artifacts</span><strong>${r.artifacts_produced??'Unknown'}</strong></div><div><span>Commits</span><strong>${r.commits??'Unknown'}</strong></div></div>
-    ${r.rig_revision?`<p class="meta">Rig revision · ${esc(String(r.rig_revision).slice(0,12))}</p>`:''}
-    <details class="run-evidence"><summary>Measurements and coach report</summary>${vptHtml(r)}${fiveRow(r)}${coachBlock(r)}${routeMap(r.route)}<p class="meta">Session time: ${r.duration_s==null?'Unknown':fmtDur(dm)} · ${r.tool_calls??'Unknown'} tool calls</p></details>
-    <div class="foot"><span class="meta">${r.tool_calls??'—'} tool calls${selfAck?' · your grind':''}</span>
+    <details class="run-evidence"><summary>Recorded details</summary><p class="meta">${r.tool_calls??'Unknown'} tool calls · ${r.files_touched??'Unknown'} files touched. Counts describe recorded activity, not quality.</p></details>
+    <div class="foot"><span class="meta">${count||0} ACK${count===1?'':'s'}${selfAck?' · your run':''}</span>
       <span class="acts">${ackBtn}<a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div>
     ${picker}</div>`; }
 
@@ -1080,7 +1078,7 @@ async function viewOnboard(){
     <div class="p-row" style="padding-left:0;padding-right:0"><span>Code and file paths</span><span class="v never">never</span></div>
     <p class="hint" style="margin-top:10px"><a href="/privacy">Privacy policy</a> · <a href="/methodology">methodology</a></p></div>`;
   const step4=`<div class="ob-step"><h3>Share your first run</h3>
-    ${cmd('python3 -m agentgrinder grind --push')}
+    ${cmd('python3 -m agentgrinder grind --harness cursor --push')}
     <p class="hint">Opens this site with a preview. You choose public, link-only, or private.</p>
     <div class="ob-actions">
       ${ME?`<button id="ob-push">Show my runs</button>`:`<button disabled>Sign in first</button>`}
@@ -1193,7 +1191,7 @@ function uploadBlock(){
     <div class="up-top"><span class="t">Bring your own sitting</span><span class="meta">private by default · no account to capture</span></div>
     <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
     <div class="cmd"><span class="c plain">Reads the newest session on your machine and prints the card. No upload.</span></div>
-    <div class="cmd"><span class="c">python3 -m agentgrinder grind --push</span><span class="d">Preview → choose audience → post</span></div>
+    <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span><span class="d">Preview → choose audience → post</span></div>
     <div class="up-top" style="margin-top:2px"><span class="t">Then have the coach check it</span><span class="meta">needs Python 3.10 or newer</span></div>
     <div class="cmd"><span class="c">${COACH_CMD}</span></div>
     <div class="up-foot">Capture stays on your machine. Import starts private. You review counts and any coach notes before an audience other than you can read them. Evidence availability is on the card: a dash names what was not measured.</div>
@@ -1327,7 +1325,13 @@ async function viewRun(id){
     +`<div class="cta">${r.visibility==='public'||r.visibility==='link'?'<button id="run-copy-link">Copy run link</button>':''}<a class="act" href="/?share=1&run=${r.id}">Share card</a>
       <span class="hint"><a href="/?u=${encodeURIComponent((r.profiles||{}).github_handle||'')}">see the profile</a></span></div><section id="grind-feature"></section>`;
   const copyLink=$('run-copy-link');if(copyLink)copyLink.onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+'/?run='+r.id);copyLink.textContent='Link copied'}catch(_){status('Copy this page address to share your run.')}};
-  if(ME?.id===r.profile_id){const controls=document.createElement('div');controls.className='panel reply-form';controls.innerHTML='<label>Who can read this run<select id="run-audience"><option value="private">Only me</option><option value="public">Public</option><option value="link">Anyone with the link</option></select></label><button id="run-save-audience">Save audience</button><button id="run-delete" class="ghost">Delete run</button>';app.append(controls);$('run-audience').value=r.visibility==='anonymous'?'private':r.visibility;$('run-save-audience').onclick=async()=>{const {error}=await sb.from('runs').update({visibility:$('run-audience').value}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};$('run-delete').onclick=async()=>{if(!confirm('Delete this run and its discussion? Submitted Challenge results stay in event history.'))return;const {error}=await sb.from('runs').delete().eq('id',r.id);if(error){status(error.message,true);return}history.replaceState(null,'','/');viewMe()};}
+  if(ME?.id===r.profile_id){
+    const controls=document.createElement('div');controls.className='panel reply-form';
+    controls.innerHTML='<h2>Edit your post</h2><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label>Who can read this run<select id="run-audience"><option value="private">Only me</option><option value="public">Public feed and profile</option><option value="link">Anyone with the link</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
+    app.append(controls);$('run-caption').value=r.caption||r.note||'';$('run-output-url').value=r.output_url||'';$('run-audience').value=r.visibility==='anonymous'?'private':r.visibility;
+    $('run-save').onclick=async()=>{const caption=$('run-caption').value.trim(),output=$('run-output-url').value.trim();if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}const {error}=await sb.from('runs').update({caption:caption||null,output_url:output||null,visibility:$('run-audience').value}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};
+    $('run-delete').onclick=async()=>{if(!confirm('Delete this run and its discussion?'))return;const {error}=await sb.from('runs').delete().eq('id',r.id);if(error){status(error.message,true);return}history.replaceState(null,'','/?mine');viewMe()};
+  }
   wireKudos(); if(openAck){ const card=$('card-'+id); if(card) wireAckPicker(card,r,preselect); }
   if(q.get('ack')) history.replaceState(null,'',`/?run=${id}`);
   await social.thread(id,$('grind-thread'));
@@ -1352,6 +1356,41 @@ function trendingBlock(repos){ if(!repos.length) return '';
       <span class="meta num">${r.stargazers_count.toLocaleString()} stars</span></a>`).join('')}</div>`;
 }
 
+function postComposerHtml(){
+  return `<div class="up post-panel">
+    <div class="up-top"><span class="t">Capture from Cursor</span><span class="meta">local and private until you choose</span></div>
+    <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
+    <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span><span class="d">opens a private preview</span></div>
+    <div class="up-foot">The reader sends recorded counts and timing, never prompt text, code or file paths. You review every field before choosing an audience.</div>
+  </div>
+  <details class="panel manual-post">
+    <summary>Post a run without a Cursor export</summary>
+    <div id="manualbox" class="pad">
+      <p class="hint">Use this only for a real session. Unknown measurements stay unknown.</p>
+      <label>What did you build?<input id="f_title" required maxlength="120" placeholder="Parser refactor"></label>
+      <label>Project<input id="f_project" maxlength="120" placeholder="Project name"></label>
+      <label>Short caption<textarea id="f_caption" required maxlength="280" placeholder="What changed in this session?"></textarea></label>
+      <label>Link to what was built (optional)<input id="f_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
+      <div class="row"><div><label>Typed turns</label><input id="f_prompts" type="number" min="0"></div><div><label>Minutes</label><input id="f_dur" type="number" min="0"></div><div><label>Commits</label><input id="f_commits" type="number" min="0"></div></div>
+      <label>Who can see this run?
+        <select id="f_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me</option><option value="link">Anyone with the link</option><option value="public">Public feed and profile</option></select>
+      </label>
+      <p class="hint">Nothing is posted until you choose an audience and press the button.</p>
+      <button id="publish">Save run</button>
+    </div>
+  </details>`;
+}
+
+async function viewPost(){
+  setPrimarySection('post');
+  frame(railHtml('post'),null);
+  $('app').innerHTML=`<div class="head"><h1>Post a run</h1><span class="meta">capture → preview → choose audience</span></div>
+    <p>Turn a real coding-agent session into a card. Cursor capture stays on your machine until the preview is open.</p>
+    ${ME?postComposerHtml():uploadBlock()+'<div class="panel pad"><p>Sign in when you are ready to save the reviewed preview.</p><button id="post-signin">Sign in</button></div>'}`;
+  if(ME) wireComposer(); else $('post-signin').onclick=showSignIn;
+  wireCopy();
+}
+
 async function viewExplore(){
   const app=$('app');
   setPrimarySection('feed');
@@ -1362,32 +1401,27 @@ async function viewExplore(){
   const ad=await ackData(runs||[]);
   const R=runs||[];
   frame(railHtml('feed',R), null);
-  const composer=`<div class="up">
-    <div class="up-top"><span class="t">Record a run</span><span class="meta">nothing here reads your transcripts</span></div>
-    <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
-    <div class="cmd"><span class="c plain">Or add the MCP and your agent logs its own run for your approval.</span>
-      <a class="d" href="#" id="manuallink">Log one manually</a></div>
-    <div class="cmd"><span class="c">python3 -m agentgrinder grind --push</span><span class="d">Preview → choose audience → post</span></div><div class="up-foot">Capture stays local. The second command opens a private preview; you choose what to post.</div>
-    <div id="manualbox" hidden style="padding:14px 16px;border-top:1px solid var(--rule)">
-      <input id="f_title" placeholder="Title, e.g. the parser refactor, Sunday night">
-      <input id="f_project" placeholder="project">
-      <input id="f_note" placeholder="what did this session do? (optional, you write it)">
-      <div class="row"><div><label>prompts</label><input id="f_prompts" type="number"></div><div><label>minutes</label><input id="f_dur" type="number"></div><div><label>commits</label><input id="f_commits" type="number"></div></div>
-      <div class="row"><select id="f_vis"><option value="private">private</option><option value="link">link-only · anyone with the link can read</option><option value="public">public</option></select><button id="publish">Push run</button></div>
-    </div></div>`;
-  app.innerHTML=feedTabs('discover')+`<details class="feed-composer"><summary class="act">Post a run</summary>${ME?composer:uploadBlock()}</details>`+`
+  app.innerHTML=feedTabs('discover')+`<div class="cta"><a class="act blue" href="/?post">Post a run</a><span class="hint">Capture locally, preview privately.</span></div>`+`
     <div class="head"><h2>Latest runs</h2><span class="meta">${R.length||'none yet'}</span></div>`
-    +(R.length?R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join(''):'<div class="card"><div class="empty">No runs yet, push the first one.</div></div>');
-  if(ME) wireComposer(); wireKudos(); wireCopy(); countUp();
+    +(R.length?R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join(''):'<div class="card"><div class="empty">No public runs yet. <a href="/?post">Post the first one when you are ready.</a></div></div>');
+  wireKudos(); countUp();
 }
 
 function wireComposer(){
-  const ml=$('manuallink'); if(ml) ml.addEventListener('click',e=>{e.preventDefault();$('manualbox').hidden=!$('manualbox').hidden;});
   const pb=$('publish'); if(pb) pb.addEventListener('click',async()=>{ if(!ME)return;
-    const {error}=await sb.from('runs').insert({profile_id:ME.id,title:$('f_title').value||'Untitled run',project:$('f_project').value||null,
+    const title=$('f_title').value.trim(),caption=$('f_caption').value.trim(),audience=$('f_vis').value,output=$('f_output_url').value.trim();
+    if(!title||!caption||!audience){status('Add a title and caption, then choose who can see the run.',true);return}
+    if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
+    pb.disabled=true;
+    const {data,error}=await sb.from('runs').insert({profile_id:ME.id,title,project:$('f_project').value||null,
       harness:null,prompts:+$('f_prompts').value||null,duration_s:(+$('f_dur').value||0)*60||null,commits:+$('f_commits').value||null,
-      note:$('f_note')?$('f_note').value||null:null,visibility:$('f_vis').value,started_at:new Date().toISOString()});
-    if(error){status(error.message,true);return;} status('Pushed.'); viewMe(); });
+      caption,output_url:output||null,visibility:audience,started_at:new Date().toISOString()}).select('id').single();
+    pb.disabled=false;
+    if(error){status(error.message,true);return;}
+    history.replaceState(null,'','/?run='+data.id);
+    status(audience==='private'?'Saved privately. Only you can see it.':'Run posted.');
+    viewRun(data.id);
+  });
 }
 
 async function viewProfile(handle){
@@ -1406,37 +1440,19 @@ async function viewProfile(handle){
     ...vptTotals(R)};
   const harnesses=[...new Set(R.map(r=>r.harness).filter(Boolean))];
   const rg=prof.rig||{};
-  const rigbits=[]; if(rg.mcps) rigbits.push(rg.mcps+' MCPs'); if(rg.skills) rigbits.push(rg.skills+' skills');
-  const mcpNames=(rg.share_names&&rg.mcp_names&&rg.mcp_names.length)?esc(rg.mcp_names.join(' · ')):'';
-  const setup=[harnesses.join(' · '), ...rigbits].filter(Boolean).join(' · ');
+  const setup=harnesses.join(' · ');
   frame(railHtml(mine?'me':null,R), null);
   app.innerHTML=`<div class="phero">${avatar(handle,{size:36,agent:isAgentProfile(prof)})}
       <div><h1>${esc(prof.name||handle)}</h1><div class="h">@${esc(handle)}${setup?' · '+esc(setup):''}</div></div></div>
-    <div id="social-follow" class="social-follow"></div><section id="scrapbook-extras"></section>
-    <div class="ptotals num"><div class="hero" title="${esc(VPT_TIP+' · '+T.vptFormula)}" style="cursor:help"><div class="k">verified per turn</div><div class="v">${T.vpt}</div></div>
-      <div><div class="k">runs</div><div class="v" data-count="${T.runs}">0</div></div>
-      <div><div class="k">prompts · cost</div><div class="v" data-count="${T.prompts}">0</div></div>
-      <div><div class="k">hours</div><div class="v">${T.hours}</div></div>
-      <div><div class="k">commits</div><div class="v">${T.commits}</div></div></div>
-    ${shapeRow(sh)}
-    ${compareAgents(R)}
-    ${mine?`<details class="profile-settings"><summary>Edit profile and shared setup</summary><div class="panel"><div class="p-top"><span class="t">Your setup</span></div>
-      <div class="p-row"><span>Harnesses, from your runs</span><span class="v">${harnesses.length?esc(harnesses.join(' · ')):'run agentgrinder to detect'}</span></div>
-      <div class="p-row"><span>MCP names</span><span class="v">${mcpNames||'hidden, run agentgrinder rig --share-names'}</span></div>
-      <div style="padding:14px 16px">
-        <label>display name</label><input id="e_name" value="${esc(prof.name||'')}">
-        <label>stack notes, what friends should copy</label><input id="e_skills" value="${esc(rg.notes||'')}" placeholder="e.g. design-taste skill, fleet parallel lanes">
-        <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;color:var(--soft)"><input type="checkbox" id="e_share_names" ${rg.share_names?'checked':''}> Show MCP names on the shared rig card</label>
-        <div class="ob-actions"><button id="savep">Save rig</button>
-          <a class="act" href="/?share=1&rig=${encodeURIComponent(handle)}">Share setup</a></div></div></div></details>`:(
-      mcpNames?`<div class="panel"><div class="p-top"><span class="t">Rig</span></div><div class="g-row">${mcpNames}</div>${rg.notes?`<div class="g-row meta">${esc(rg.notes)}</div>`:''}</div>`:'')}
+    <div id="social-follow" class="social-follow"></div>
+    <div class="ptotals num"><div><div class="k">Public runs</div><div class="v" data-count="${mine?R.filter(r=>r.visibility==='public').length:R.length}">0</div></div><div><div class="k">ACKs received</div><div class="v" data-count="${acksR||0}">0</div></div></div>
+    ${mine?`<details class="profile-settings"><summary>Edit profile</summary><div class="panel pad"><label>Display name<input id="e_name" value="${esc(prof.name||'')}"></label><button id="savep">Save profile</button></div></details>`:''}
     <div class="head"><h2>${mine?'Your runs':'Runs'}</h2><span class="meta">${R.length||'none yet'}${mine?` · <a href="/?share=1&u=${encodeURIComponent(handle)}">share your profile</a>`:''}</span></div>
     ${R.length?(await (async()=>{const ad=await ackData(R);return R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('');})()):'<div class="card"><div class="empty">No runs yet.</div></div>'}`;
   wireKudos(); countUp();
   await social.followControl(prof,$('social-follow'));
-  await social.scrapbook(prof,$('scrapbook-extras'));
   if(mine) $('savep').addEventListener('click',async()=>{
-    const {error}=await sb.from('profiles').update({name:$('e_name').value||null,rig:{...(prof.rig||{}),notes:$('e_skills').value||'',share_names:!!$('e_share_names')?.checked,mcp_names:(prof.rig||{}).mcp_names||[]}}).eq('id',prof.id);
+    const {error}=await sb.from('profiles').update({name:$('e_name').value||null}).eq('id',prof.id);
     status(error?error.message:'Saved.',!!error); if(!error) viewProfile(handle); });
 }
 
@@ -1515,23 +1531,35 @@ function importRun(){
   // without those fields and the card says so; nothing is invented and nothing fails silently.
   const unsaved='';
   frame(null,null);
-  app.innerHTML=`<div class="head"><h2>Publish this run?</h2><span class="meta">review the imported fields and choose an audience</span></div>
+  app.innerHTML=`<div class="head"><h2>Preview your run</h2><span class="meta">private until you choose and save</span></div>
     <div class="panel">
       ${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>${unsaved}
     <div class="panel"><div class="pad">
     <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details><p class="hint" style="margin:12px 0">Review the coach text and any shared Rig names before publishing.</p>
-    <input id="i_title" placeholder="Title (optional, you type this, not scraped)" value="${esc(run.project||'')} session">
-    <input id="i_note" placeholder="what did this session do? (optional)">
+    <label>What did you build?<input id="i_title" maxlength="120" required placeholder="Title you write, not scraped" value="${esc(run.project||'')} session"></label>
+    <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
+    <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
     <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;color:var(--muted)">
       <input type="checkbox" id="i_share_rig" ${run.rig_share_names?'checked':''}> Share MCP names on my rig (opt-in)
     </label>
     <input id="i_stack" placeholder="stack notes for friends (optional)" value="${esc(run.rig_notes||'')}">
-    <div class="row"><select id="i_vis"><option value="private">private</option><option value="public">public</option><option value="link">link-only · anyone with the link can read</option></select>
-    <button id="i_pub">${ME?'Publish':'Sign in to publish'}</button></div></div></div>`;
-  const editFields=['i_title','i_note','i_stack','i_vis'];
+    <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me</option><option value="public">Public feed and profile</option><option value="link">Anyone with the link</option></select></label>
+    <p class="hint">Choosing Public is the deliberate action that posts this run to the feed.</p>
+    <button id="i_pub">${ME?'Save run':'Sign in to save'}</button></div></div>
+    <div class="head"><h2>Card preview</h2><span class="meta">not posted</span></div><div id="import-card-preview"></div>`;
+  const editFields=['i_title','i_caption','i_output_url','i_stack','i_vis'];
   try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
   function saveImportEdits(){try{sessionStorage.setItem('ag_import_edits',JSON.stringify({token:m[1],...Object.fromEntries(editFields.map(key=>[key,$(key).value])),shareRig:$('i_share_rig').checked}))}catch(_){}}
-  editFields.forEach(key=>$(key).addEventListener('change',saveImportEdits));
+  function paintImportPreview(){
+    const preview={id:'preview',profile_id:ME?.id||'preview',profiles:ME||{github_handle:'you',name:'Your preview'},title:$('i_title').value||'Untitled run',
+      project:run.project||null,harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
+      commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,artifacts_produced:run.artifacts_produced??null,
+      rhythm:run.rhythm||null,trace_basis:run.trace_basis||null,caption:$('i_caption').value||null,output_url:$('i_output_url').value||null,
+      visibility:'private',started_at:run.started||null,created_at:new Date().toISOString()};
+    $('import-card-preview').innerHTML=runCard(preview,false,0);
+  }
+  editFields.forEach(key=>$(key).addEventListener('input',()=>{saveImportEdits();paintImportPreview()}));
+  paintImportPreview();
   $('i_pub').addEventListener('click',async()=>{
     saveImportEdits();
     const publishButton=$('i_pub');
@@ -1544,12 +1572,15 @@ function importRun(){
     // re-running the command. Stash it before leaving, put it back in route() on the way in.
     if(!ME){ stashImport(m[1]);
       showSignIn(); return; }
+    const caption=$('i_caption').value.trim(),output=$('i_output_url').value.trim(),audience=$('i_vis').value;
+    if(!$('i_title').value.trim()||!caption||!audience){status('Add a title and caption, then choose who can see the run.',true);return}
+    if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
     publishButton.disabled=true;
     try{
     const base={profile_id:ME.id,title:$('i_title').value||'Untitled run',
       project:run.project||null,harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,
-      rhythm:run.rhythm||null,note:$('i_note').value||null,visibility:$('i_vis').value,started_at:run.started||null};
+      rhythm:run.rhythm||null,caption,output_url:output||null,visibility:audience,started_at:run.started||null};
     // the coach columns (nullable; migration 2026-09-03-coach.sql). Retry without them on a
     // database that does not have them yet, and say so.
     const coach={claims:run.claims??null,claims_verified:run.claims_verified??null,artifacts_produced:run.artifacts_produced??null,
@@ -1654,10 +1685,10 @@ async function viewEvent(){
   frame(railHtml('feed',R), sidePanels(R));
   app.innerHTML=`<div class="head"><h2>Agents for Humans</h2><span class="meta">Sep 14 2026 · grind event</span></div>
     <div class="up"><div class="up-top"><span class="t">Post your real runs</span><span class="meta">metrics only, your click</span></div>
-      <div class="cmd"><span class="c">python3 -m agentgrinder grind --push</span></div>
+      <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span></div>
       <div class="up-foot">Share your grind with other builders. No streaks. Agents propose, you ship.</div></div>
     <div class="head"><h2>Event feed</h2><span class="meta">${R.length||'none yet'}</span></div>
-    ${R.length?R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join(''):'<div class="card"><div class="empty">Be the first on the board: python3 -m agentgrinder grind --push</div></div>'}`;
+    ${R.length?R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join(''):'<div class="card"><div class="empty">Be the first on the board: python3 -m agentgrinder grind --harness cursor --push</div></div>'}`;
   wireKudos(); countUp();
 }
 
@@ -1667,7 +1698,7 @@ const forum=GrinderForum({client:sb,app:()=>document.getElementById('app'),frame
 async function route(){ authErrorFromUrl();
   restoreImport();
   if(importRun()) return;
-  if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(mine|forum|progress|comparison|join|crew|crews|following|inbox|agents|agent|rigs|rigversion|practices|practice|experiments|experiment|challenges|challenge|community|run|u|example)(=|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
+  if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example)(=|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
   const q=new URLSearchParams(location.search);
   if(q.has('example')){
     if(q.get('example')==='share') return GrinderExample.viewShare();
@@ -1675,6 +1706,7 @@ async function route(){ authErrorFromUrl();
   }
   if(q.has('community'))return viewCommunity();
   if(q.has('forum')){setPrimarySection('community');return forum.index();}
+  if(q.has('post'))return viewPost();
   if(q.has('mine')){setPrimarySection('mine');return progress.history();}
   if(q.has('progress')){setPrimarySection('mine');return progress.index();}
   if(q.has('comparison')){setPrimarySection('mine');return progress.detail(q.get('comparison'));}

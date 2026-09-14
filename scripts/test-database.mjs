@@ -89,6 +89,12 @@ await db.query(`select grinder_check_agent_payload('{"claims_verified":0,"claims
 
 await as(userA);
 await denied("update runs set claims_verified=1,claims=null where id=$1",[runA]);
+await db.query(
+  "update runs set caption=$2,output_url=$3 where id=$1",
+  [runA, "TEST DATA: added the public run-card fields.", "https://example.test/test-output"],
+);
+await denied("update runs set caption=$2 where id=$1", [runA, ""]);
+await denied("update runs set output_url=$2 where id=$1", [runA, "javascript:alert(1)"]);
 const crew = (await db.query("select grinder_create_crew('Test crew') id"))
   .rows[0].id;
 assert.equal(
@@ -98,6 +104,11 @@ assert.equal(
 const token = (await db.query("select grinder_invite($1) token", [crew]))
   .rows[0].token;
 await as(userB);
+assert.equal(
+  (await db.query("update runs set caption='TEST DATA: not mine' where id=$1 returning id", [runA]))
+    .rows.length,
+  0,
+);
 assert.equal((await db.query("select * from grinder_crews")).rows.length, 0);
 await denied("select grinder_invite($1)", [crew]);
 await db.query("select grinder_join_crew($1)", [token]);
