@@ -1,57 +1,98 @@
-# Build with us
+# Contributing to Agentic Strava
 
-Eric and new contributors can start here. Use Cursor or hand a task to Grok Bot. The product is small: capture a run, preview it, post it and browse other builders.
+Welcome. Help us make a small, useful place to share agent runs. You can contribute code, design, docs, translations, accessibility checks, testing or a clear bug report. Cursor and Grok Bot are supported development paths; neither is required.
 
-## Get running
+## Choose a contribution
 
-Install Python 3.9+ and Node 20+. Then:
+Read [PRODUCT.md](PRODUCT.md) for the scope. Then pick a [first contribution](docs/FIRST-PR.md) or check [open issues](https://github.com/Morkeeth/agentgrinder-public/issues).
+
+A typo, broken link or small fix can go straight to a PR. For a feature or larger change, open an issue describing the user problem and intended result before doing substantial work. Comment when you start an existing issue so others can coordinate. A comment signals intent; it does not reserve the task indefinitely.
+
+You do not need to understand the whole repository. Start with one visible improvement. [Get help](SUPPORT.md) whenever instructions or behaviour are unclear.
+
+## Set up your copy
+
+Use GitHub’s **Fork** button to create your own copy, then clone it. Replace `YOUR-HANDLE` with your GitHub username:
 
 ```sh
-git clone https://github.com/Morkeeth/agentgrinder-public.git
+git clone https://github.com/YOUR-HANDLE/agentgrinder-public.git
 cd agentgrinder-public
+git remote add upstream https://github.com/Morkeeth/agentgrinder-public.git
+git switch -c improve-run-card
+```
+
+If you already have repository write access, clone the main repository and create a branch there instead. Never commit directly to `main` for a contribution.
+
+Python 3.9+ is required; Node 20+ runs the JavaScript checks. On Windows, use `py -3` if `python3` is unavailable.
+
+```sh
 python3 scripts/dev.py setup
 python3 scripts/dev.py serve
 ```
 
-Open http://127.0.0.1:8000. `serve` needs only Python; `setup` installs test dependencies in `.venv` without changing your global Python. Use `--port 8001` if needed. Stop the server with Ctrl+C.
+Open http://127.0.0.1:8000. `setup` installs test dependencies in `.venv`; it does not alter global Python. `serve` needs only Python. Use `python3 scripts/dev.py serve --port 8001` if port 8000 is busy. Stop it with Ctrl+C.
 
-This opens the local UI. The clone has no working social database yet: sign-in, posting, feed data and replies need independent setup below. You can work on layouts and local capture now. The inherited labelled coaching sample at `/?example` is a development fixture, outside the minimal product flow.
+This is a local UI, not a provisioned social service. You can work on layouts, docs, local capture and tests now. Sign-in, posting and replies require the independent database setup below. The inherited coaching fixture at `/?example` is development material, outside the product’s main flow.
 
-## Cursor
+## Work in Cursor
 
-Open this folder in Cursor. The project rule points the agent to the product and contribution instructions. Enable the existing **agentgrinder** MCP server in Customize only if you want local session tools. No MCP setup is required to edit the app.
+Open the repo folder. The project rule points Cursor to these instructions. No MCP setup is required to edit the app. Enable **agentgrinder** under Customize only if you want local session tools; see [Cursor details](docs/CURSOR.md).
 
-Ask Cursor: “Read CONTRIBUTING.md and docs/FIRST-PR.md. Help me implement the card contribution. Inspect the code, make the change, run contributor checks and show it in the browser.”
+A useful task prompt:
 
-[Cursor details](docs/CURSOR.md) · [Pick a first PR](docs/FIRST-PR.md).
+```text
+Read AGENTS.md, PRODUCT.md and CONTRIBUTING.md. Inspect the implementation for the issue I selected. Make one complete improvement, keep the app minimal, run the relevant checks and show the changed path in a browser. Tell me what still needs manual verification.
+```
 
-## Grok Bot
+## Work with Grok Bot
 
-Give it this repository URL and [docs/GROK-BOT.md](docs/GROK-BOT.md), plus the specific first contribution you want. Ask it to work on a branch and return a PR with screenshots. Its cloud computer does not have your laptop’s Cursor sessions. Give it safe test data only when needed. A build prompt is included in that file; no special Grok plugin is required for the terminal-based workflow.
+Give the bot your fork or branch, the selected issue and [docs/GROK-BOT.md](docs/GROK-BOT.md). Ask it to make a PR with a short explanation and screenshots for UI work. It can use the same terminal commands as a person.
 
-## Make a PR
+Its cloud computer does not have your laptop’s sessions. Use safe sample data or explicitly provided exports. Do not grant production access merely to work on the UI.
+
+You are responsible for the contribution even when an agent writes it. Read the diff, check the result and correct unsupported claims. Mention material agent assistance in the PR’s testing notes when it helps reviewers understand what was or was not checked.
+
+## Check the change
 
 ```sh
-git switch -c your-name/short-change
 python3 scripts/dev.py check
 ```
 
-Checks cover the Cursor reader, MCP launch and JavaScript syntax. They do not prove hosted sign-in or social behaviour. Open the path you changed in a browser too. Include what changed, screenshots for UI work, and anything not tested.
+This runs targeted Cursor-reader tests, MCP launch/onboarding checks and JavaScript syntax checks. It does not test every inherited feature or prove hosted behaviour. Add or run focused tests when you change behaviour; documentation-only changes need working links and accurate commands, not unrelated test runs.
 
-With repository write access, push your branch and open a PR. Without it, fork the public repo and open a PR from your fork. Do not wait for a collaborator invitation to contribute. Use issues for bugs or larger proposals; small fixes can go straight to a PR. Preserve MIT attribution.
+For UI changes, open the changed path at desktop and phone widths. Check keyboard access, readable text, loading/empty/error states and the action the user came to complete. For social or privacy changes, test the relevant access rules using disposable data.
 
-## Where things live
+Do not commit local transcripts, generated personal cards, credentials or private notes. Label fixtures. Missing measurements stay unknown. No invented users, engagement or shipped-work claims.
+
+## Send a pull request
+
+Review `git diff` and `git status`. Stage the files you intend to contribute, commit them with a short description, then:
+
+```sh
+git push -u origin improve-run-card
+```
+
+Open a PR from your branch to `Morkeeth/agentgrinder-public:main`. Use the template: describe the user-visible change, link the issue if any, show UI screenshots and state exactly what you tested. List missing checks or required setup.
+
+Keep the PR focused. If review asks for changes, push to the same branch. A maintainer reviews before merging. Reviews have no guaranteed response time; keep follow-ups on the PR so the context stays together. See [maintainer guidelines](docs/MAINTAINING.md).
+
+## Code map
 
 - `site/index.html`: layout, routes, onboarding and run cards.
 - `site/social.js`, `site/sharing.js`, `site/progress.js`: social actions, sharing and run history.
 - `agentgrinder/ingest.py`, `agentgrinder/mcp_server.py`: local capture and agent tools.
 - `server/public-run.mjs`: public link previews.
-- `PRODUCT.md`: the agreed product scope.
-
-Older hackathon docs and receipts are historical. Use the current product brief; do not reopen the coach/practice feature set by following old checklists.
+- `scripts/dev.py`: contributor commands.
+- `PRODUCT.md`: agreed scope. Old hackathon checklists are historical, not the backlog.
 
 ## Independent deployment
 
-Create a separate Vercel project and Supabase project. Use `scripts/migration-order.txt` to inspect migration order. Configure browser constants in `site/index.html`, server values in `server/public-config.json`, and origin in `server/public-run.mjs`. CLI/MCP clients accept `AGENTGRINDER_URL`, `AGENTGRINDER_SUPABASE_URL` and `AGENTGRINDER_SUPABASE_ANON_KEY`.
+This remains a contribution area, not a turnkey deployment command. Create separate Vercel and Supabase projects. Inspect `scripts/migration-order.txt` and the referenced SQL before applying it. Configure browser constants in `site/index.html`, server values in `server/public-config.json`, and origin in `server/public-run.mjs`. CLI/MCP clients accept `AGENTGRINDER_URL`, `AGENTGRINDER_SUPABASE_URL` and `AGENTGRINDER_SUPABASE_ANON_KEY`.
 
-The checked-in `local-development-only` key is not a working credential. Do not reuse the hackathon database, accounts or deployment. Keep local transcripts, generated cards and secrets out of commits. Independent hosting and social acceptance remain pending.
+The checked-in `local-development-only` key is not a working credential. Do not reuse the hackathon database, accounts or deployment. A maintainer coordinates production configuration and releases. Do not publish a development database or test users as real adoption.
+
+## Working together
+
+Be kind, specific and respectful. Critique the change, not the person. Welcome questions and first-time contributors. No harassment, discrimination, spam or publication of another person’s private information. Maintainers may edit or remove harmful content and limit participation when needed.
+
+Keep existing attribution. Contributions must be yours to share and are distributed under this project’s [MIT license](LICENSE).
