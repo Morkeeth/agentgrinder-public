@@ -1,7 +1,7 @@
 """Browser acceptance for the account panel and sign-in recovery.
 
-Drives the real site against the disposable PGlite shim with TEST DATA actors. The account
-lane's shell hooks are applied to site/index.html in memory here; root owns the real edit and
+Drives the real site against the disposable PGlite shim with TEST DATA actors. Since round 2
+the shell hooks live in site/index.html itself; this walk refuses to run against a shell that
 RETURN.md lists the same strings. Exercises: cancelled and failed provider round trips with a
 draft in the browser, a sign-in that never came back, handle and name edit, duplicate handle
 with an offered free variant, unlink with two methods, last-identity refusal by the server, and
@@ -28,53 +28,15 @@ NODE = os.environ.get("NODE_BIN", "/Users/morkeeth/.nvm/versions/node/v22.22.3/b
 ARTIFACTS = Path(os.environ.get("GRINDER_ACCOUNT_ARTIFACTS", "/tmp/agentic-strava-account"))
 ARTIFACTS.mkdir(parents=True, exist_ok=True)
 
-# Shell hooks, verbatim from RETURN.md. Each is applied only when index.html lacks it.
-HOOK_HEAD_OLD = '<link rel="stylesheet" href="/people.css"></head>'
-HOOK_HEAD_NEW = '<link rel="stylesheet" href="/people.css"><link rel="stylesheet" href="/account.css"></head>'
-HOOK_SCRIPT_OLD = '<script src="/people.js"></script>'
-HOOK_SCRIPT_NEW = '<script src="/people.js"></script>\n<script src="/account.js"></script>'
-HOOK_BOOT_OLD = "const challenges=GrinderChallenges({client:sb,me:()=>ME,app:()=>$('app'),frame,status});"
-HOOK_BOOT_NEW = (
-    HOOK_BOOT_OLD
-    + "\nconst account=GrinderAccount({auth,me:()=>ME,app:()=>$('app'),frame,status,providersEnabled:PROVIDERS_ENABLED,signIn:showSignIn,onProfileChange:p=>{ME=p;refreshAuth();}});"
-)
-HOOK_ROUTE_OLD = "async function route(){ authErrorFromUrl();"
-HOOK_ROUTE_NEW = "async function route(){ account.recover();"
-HOOK_ROUTE2_OLD = "if(q.has('following')){setPrimarySection('feed');return social.following();}"
-HOOK_ROUTE2_NEW = "if(q.has('account')){return account.view();}\n  " + HOOK_ROUTE2_OLD
-HOOK_RETURN_OLD = "if(pending&&/^\\?(post|mine|following|inbox|run|u|example|people)(=|$)/.test(pending))"
-HOOK_RETURN_NEW = "if(pending&&/^\\?(post|mine|following|inbox|run|u|example|people|account)(=|$)/.test(pending))"
-HOOK_MENU_OLD = '<a id="account-scrapbook" href="/?mine" role="menuitem" data-auth="1" hidden>My profile</a>'
-HOOK_MENU_NEW = HOOK_MENU_OLD + '\n        <a href="/?account" role="menuitem" data-auth="1" hidden>Account settings</a>'
-HOOK_FOOTER_OLD = '<a href="#" id="delete">Delete my Strava profile</a>'
-HOOK_FOOTER_NEW = '<a href="/?account#danger" id="delete">Delete my Strava profile</a>'
-HOOK_CONFIRM_OLD = (
-    "  $('delete').addEventListener('click',async e=>{e.preventDefault(); if(!ME)return; if(!confirm('Delete your Strava profile and owned work? Your Agent Grinder profile and shared sign-in account remain. Deleted work cannot be restored.'))return;\n"
-    "    try{await auth.deleteProfile();location.href='/';}catch(e){status(e.detail?.message||'Your profile could not be deleted. Try again.',true)} });\n"
-)
-HOOKS = [
-    (HOOK_HEAD_OLD, HOOK_HEAD_NEW, "account.css"),
-    (HOOK_SCRIPT_OLD, HOOK_SCRIPT_NEW, "account.js"),
-    (HOOK_BOOT_OLD, HOOK_BOOT_NEW, "GrinderAccount({"),
-    (HOOK_ROUTE_OLD, HOOK_ROUTE_NEW, "account.recover()"),
-    (HOOK_ROUTE2_OLD, HOOK_ROUTE2_NEW, "q.has('account')"),
-    (HOOK_RETURN_OLD, HOOK_RETURN_NEW, "people|account)(=|$)"),
-    (HOOK_MENU_OLD, HOOK_MENU_NEW, 'href="/?account" role="menuitem"'),
-    (HOOK_FOOTER_OLD, HOOK_FOOTER_NEW, 'href="/?account#danger"'),
-    (HOOK_CONFIRM_OLD, "", None),
-]
-
-
 def integrated_index():
+    """The real shell, byte for byte, with only the backend host pointed at the disposable
+    PGlite shim. No production hook is inserted here: the account panel, its route and its
+    footer link must already be wired in site/index.html or the walk fails."""
     body = (ROOT / "site" / "index.html").read_text()
-    body = body.replace('const SB_URL="http://127.0.0.1:54321";', f'const SB_URL="https://{HOST}";')
-    for old, new, marker in HOOKS:
-        if marker and marker in body:
-            continue
-        if old not in body:
-            raise RuntimeError("shell hook anchor missing from index.html: " + old[:60])
-        body = body.replace(old, new, 1)
-    return body
+    for needle in ("account.js", "account.css", "GrinderAccount({", "account.recover()", "q.has('account')", 'href="/?account#danger"'):
+        if needle not in body:
+            raise RuntimeError("site/index.html is not integrated: missing " + needle)
+    return body.replace('const SB_URL="http://127.0.0.1:54321";', f'const SB_URL="https://{HOST}";')
 
 
 class SiteHandler(SimpleHTTPRequestHandler):

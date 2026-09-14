@@ -371,7 +371,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .experiment-card{padding:16px;border-top:1px solid var(--rule)}
 .experiment-card h2{font-size:18px;line-height:1.3;margin:6px 0 10px}
 @media(max-width:700px){.landing-intro h1{max-width:none}}
-</style><link rel="stylesheet" href="/social.css"><link rel="stylesheet" href="/people.css"></head>
+</style><link rel="stylesheet" href="/social.css"><link rel="stylesheet" href="/people.css"><link rel="stylesheet" href="/account.css"></head>
 <body>
 <div class="bar"><div class="bar-in">
   <a class="mark" href="/">Agentic Strava</a>
@@ -385,6 +385,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
       <div class="account-panel" role="menu">
         <a href="/?onboard" role="menuitem">Get started</a>
         <a id="account-scrapbook" href="/?mine" role="menuitem" data-auth="1" hidden>My profile</a>
+        <a href="/?account" role="menuitem" data-auth="1" hidden>Account settings</a>
       </div>
     </details>
   </nav>
@@ -406,13 +407,14 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   <main class="main" id="app"></main>
   <aside class="side" id="side"></aside>
 </div>
-<footer>Your agent runs, shared on your terms. &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a><span id="deletewrap" hidden> &middot; <a href="#" id="delete">Delete my Strava profile</a></span></footer>
+<footer>Your agent runs, shared on your terms. &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a><span id="deletewrap" hidden> &middot; <a href="/?account#danger" id="delete">Delete my Strava profile</a></span></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
 <script src="/auth.js"></script>
 <script src="/social.js"></script>
 <script src="/people.js"></script>
+<script src="/account.js"></script>
 <script src="/challenges.js"></script>
 <script src="/practice-eligibility.js"></script>
 <script src="/practices.js"></script>
@@ -540,6 +542,8 @@ const sb=window.supabase&&window.supabase.createClient(SB_URL,SB_KEY,{db:{schema
 const auth=sb?GrinderAuth.create({client:sb,redirectTo:location.origin+'/'}):null;
 const PROVIDERS_ENABLED=["github","email"];
 const profileHandle=p=>GrinderAuth.present(p)?.handle||'';
+// A person who arrived from Responses keeps a way back even when the run is gone or private.
+function responseReturnLink(){try{return sessionStorage.getItem('ag_response_return')==='?inbox'?'<p class="response-return"><a class="act" href="/?inbox">Back to Responses</a></p>':''}catch(_){return ''}}
 let ME=null, IDENTITY_SETUP=null;
 const social=GrinderSocial({client:sb,me:()=>ME,app:()=>$('app'),frame,status,
   renderRuns:async runs=>{noteTraces(runs);const ad=await ackData(runs);setTimeout(()=>{wireKudos();countUp()},0);return runs.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('')}});
@@ -547,6 +551,7 @@ const people=GrinderPeople({client:sb,me:()=>ME,app:()=>$('app'),frame,status,so
 const practices=GrinderPractices({client:sb,me:()=>ME,app:()=>$('app'),frame,status});
 const progress=GrinderProgress({client:sb,me:()=>ME,app:()=>$('app'),frame,status,signIn:showSignIn});
 const challenges=GrinderChallenges({client:sb,me:()=>ME,app:()=>$('app'),frame,status});
+const account=GrinderAccount({auth,me:()=>ME,app:()=>$('app'),frame,status,providersEnabled:PROVIDERS_ENABLED,signIn:showSignIn,onProfileChange:p=>{ME=p;refreshAuth();}});
 
 // THE MARK IS THE GRIND, drawn small.
 //
@@ -1027,13 +1032,6 @@ async function viewMe(){
   return ME ? progress.history() : viewLanding();
 }
 
-function authErrorFromUrl(){
-  const q=new URLSearchParams(location.search);
-  const err=q.get('error_description')||q.get('error');
-  if(err){ status(decodeURIComponent(err.replace(/\+/g,' ')),true);
-    history.replaceState(null,'',location.pathname+(q.get('explore')!==null?'?explore':'')); }
-}
-
 async function runCount(){
   if(!ME||!sb) return 0;
   const {count}=await sb.from('runs').select('*',{count:'exact',head:true}).eq('profile_id',ME.id);
@@ -1297,7 +1295,7 @@ async function viewRun(id){
   frame(null,null); app.innerHTML=skeletonCard();
   const {data:r,error:runError}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('id',id).single();
   if(runError&&runError.code!=='PGRST116'){app.innerHTML='<div class="empty">This run could not load. Please refresh to try again.</div>';return;}
-  if(!r){ app.innerHTML='<div class="card"><div class="empty">This run is private or does not exist.</div></div>'; return; }
+  if(!r){ app.innerHTML='<div class="card"><div class="empty">This run is private or does not exist.</div></div>'+responseReturnLink(); return; }
   noteTraces([r]);
   const ad=await ackData([r]);
   const acks=await fetchAckList(id);
@@ -1468,6 +1466,7 @@ async function refreshAuth(){
     $('me').innerHTML=ME?'<a href="'+GrinderAuth.present(ME).url+'">@'+esc(profileHandle(ME))+'</a>':'';
     $('auth').textContent=current.user?'Sign out':'Sign in';$('deletewrap').hidden=!ME;
     $('mobile-product-nav').hidden=false;syncAuthNav();status('');
+    if(social.refreshUnread) social.refreshUnread();
   }catch(e){ME=null;IDENTITY_SETUP=null;status(e.detail?.message||'Sign-in could not be restored. Try again.',true);}
 }
 
@@ -1681,11 +1680,12 @@ async function viewEvent(){
 
 const forum=GrinderForum({client:sb,app:()=>document.getElementById('app'),frame,status});
 
-async function route(){ authErrorFromUrl();
+async function route(){ account.recover();
+  if(ME && social.refreshUnread) social.refreshUnread();
   if(IDENTITY_SETUP)return viewIdentitySetup();
   restoreImport();
   if(importRun()) return;
-  if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example|people)(=|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
+  if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example|people|account)(=|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
   const q=new URLSearchParams(location.search);
   if(q.has('example')){
     if(q.get('example')==='share') return GrinderExample.viewShare();
@@ -1698,6 +1698,7 @@ async function route(){ authErrorFromUrl();
   if(q.has('progress')){setPrimarySection('mine');return progress.index();}
   if(q.has('comparison')){setPrimarySection('mine');return progress.detail(q.get('comparison'));}
   if(q.has('people')){setPrimarySection('feed');return people.discover(q.get('q')||'');}
+  if(q.has('account')){return account.view();}
   if(q.has('following')){setPrimarySection('feed');return social.following();}
   if(q.has('inbox')){setPrimarySection('inbox');return social.inbox();}
   if(q.has('crews')){setPrimarySection('community');return social.crews();}
@@ -1737,8 +1738,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     const {data:{session}}=await sb.auth.getSession();
     if(session){try{await auth.signOutLocal();location.href='/';}catch(e){status(e.detail?.message||'Sign-out failed. Try again.',true)}return;}
     showSignIn(); });
-  $('delete').addEventListener('click',async e=>{e.preventDefault(); if(!ME)return; if(!confirm('Delete your Strava profile and owned work? Your Agent Grinder profile and shared sign-in account remain. Deleted work cannot be restored.'))return;
-    try{await auth.deleteProfile();location.href='/';}catch(e){status(e.detail?.message||'Your profile could not be deleted. Try again.',true)} });
   if(sb){
     // Initial session loading and SIGNED_IN can arrive together. Finish one render
     // before another auth refresh can append controls to the same page.

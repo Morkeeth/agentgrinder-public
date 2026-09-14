@@ -7,6 +7,7 @@ AUTH = (ROOT / "site" / "auth.js").read_text()
 CSS = (ROOT / "site" / "account.css").read_text()
 LOOP = (ROOT / "scripts" / "check-account-loop.py").read_text()
 PACKAGE = (ROOT / "package.json").read_text()
+INDEX = (ROOT / "site" / "index.html").read_text()
 
 
 def test_account_module_owns_the_panel_and_recovery():
@@ -60,6 +61,22 @@ def test_phone_and_keyboard_surface():
 
 
 def test_browser_walk_covers_the_assigned_checks_and_shell_hooks():
-    for needle in ("access_denied", "last_identity", "grinder-snapshot", "test-riley-2", "scope=local", "HOOK_ROUTE2_NEW", "HOOK_CONFIRM_OLD"):
+    for needle in ("access_denied", "last_identity", "grinder-snapshot", "test-riley-2", "scope=local"):
         assert needle in LOOP
+    assert "HOOKS" not in LOOP and "HOOK_" not in LOOP, "the walk drives the real shell, it does not insert hooks"
     assert '"test:account"' in PACKAGE
+
+
+def test_shell_is_integrated_not_patched_in_memory():
+    """Round 2: the eight account hooks live in site/index.html itself."""
+    assert '<link rel="stylesheet" href="/account.css">' in INDEX
+    assert '<script src="/account.js"></script>' in INDEX
+    assert "const account=GrinderAccount({" in INDEX
+    assert "async function route(){ account.recover();" in INDEX
+    assert "authErrorFromUrl" not in INDEX
+    assert "if(q.has('account')){return account.view();}" in INDEX
+    assert "people|account)(=|$)" in INDEX
+    assert '<a href="/?account" role="menuitem" data-auth="1" hidden>Account settings</a>' in INDEX
+    assert '<a href="/?account#danger" id="delete">Delete my Strava profile</a>' in INDEX
+    delete_path = INDEX[INDEX.index("document.addEventListener('DOMContentLoaded'"):]
+    assert "$('delete').addEventListener" not in delete_path and "Delete your Strava profile and owned work?" not in delete_path

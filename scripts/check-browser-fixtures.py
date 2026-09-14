@@ -133,7 +133,7 @@ with sync_playwright() as p:
     assert saved['started_at'] is None # do not invent a session timestamp on import
     # A first-time friend arriving at a run must stay there, even with no runs of their own.
     routing=html[html.index('async function route(){'):html.index("document.addEventListener('DOMContentLoaded'")]
-    imported.add_script_tag(content="function authErrorFromUrl(){};async function shouldOnboard(){return true};async function viewOnboard(){window.wrongOnboard=true};"+routing)
+    imported.add_script_tag(content="const account={recover(){}};const social={};async function shouldOnboard(){return true};async function viewOnboard(){window.wrongOnboard=true};"+routing)
     imported.evaluate('route()')
     assert imported.evaluate('window.openedRun')=='published-fixture'
     assert not imported.evaluate('window.wrongOnboard')
