@@ -22,7 +22,7 @@ from .push import import_url
 PROTO = "2024-11-05"
 
 SAFE_FIELDS = [
-    "harness", "started", "duration_s", "turns_typed",
+    "harness", "activity_label", "started", "duration_s", "turns_typed",
     "tool_calls", "files_touched", "commits", "rhythm",
 ]
 

@@ -18,6 +18,7 @@ def export_run(run: dict) -> dict:
     rhythm = run.get("rhythm") or run.get("series")
     out = {
         "harness": run.get("harness"),
+        "activity_label": "bot activity" if run.get("harness") == "Grok Bot" else None,
         "project": run.get("project"),
         "turns_typed": run.get("turns_typed"),
         "duration_s": run.get("duration_s"),

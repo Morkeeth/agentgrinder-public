@@ -29,7 +29,7 @@ For local MCP discovery, place exports deliberately in
 `~/.agentgrinder/imports/grokbot/`. This import path does not read sessions from a user's laptop,
 and the bot's cloud computer cannot access laptop files. Typed human turns require both
 `<timestamp>` and `<user_query>` wrappers; injected turns are excluded. The measured format does
-not establish elapsed duration or native file writes, so those fields remain unknown. Grok Bot
+not establish elapsed duration, native file writes or completed commits, so those fields remain unknown. Shell requests do not prove successful commits. Grok Bot
 runs are labelled as bot activity. The committed fixture
 `samples/sample_grokbot_bot_activity.jsonl` is synthetic sample bot activity, not a real user run.
 

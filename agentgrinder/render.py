@@ -128,7 +128,7 @@ def render_card(a: Activity) -> str:
       <div class="brand">AGENTGRINDER</div>
     </div>
     <div class="title">{a.title} {pb}</div>
-    <div class="sub">{a.harness} · {a.project}</div>
+    <div class="sub">{a.harness}{" · bot activity" if a.harness == "Grok Bot" else ""} · {a.project}</div>
     <div class="hl" title="{hl_title}">
       <div class="n">{a.headline}</div>
       <div class="lbl">{a.headline_label}<span class="f">{escape(a.headline_formula)}</span></div>
@@ -167,7 +167,7 @@ def render_profile(p: dict) -> str:
         <div class="rm"><span class="hl" title="{escape(ARTIFACTS_PER_TURN_TIP if a.headline_metric_id=='artifacts_per_turn' else HEADLINE_TIP)} · {escape(a.headline_formula)}">{a.headline} {a.headline_label}</span>
           <span class="cost">{a.distance} · cost</span><span>{a.moving_time}</span><span>{a.pace}</span>
           <span>{a.commits} commits</span>{" <span class='pb'>★ PB</span>" if a.focus_pb else ""}</div>
-        <div class="rs">{a.harness} · {a.project} · {a.date_str}</div>
+        <div class="rs">{a.harness}{" · bot activity" if a.harness == "Grok Bot" else ""} · {a.project} · {a.date_str}</div>
       </a>''' for a in acts) or '<div class="empty">No runs yet — <code>agentgrinder run</code> to log one.</div>'
     repos = "".join(f"<li>{r}</li>" for r in gh.get("recent_repos", [])) or "<li>—</li>"
     initial = (gh.get("name") or "?")[0].upper()

@@ -863,7 +863,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} <a href="/?run=${r.id}">${new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</a></small></div></div>
     <div class="title"><a href="/?run=${r.id}">${esc(r.title)}</a></div>
     ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
-    <div class="sub">${r.project?esc(r.project)+' · ':''}${esc(r.harness||'Coding agent')} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
+    <div class="sub">${r.project?esc(r.project)+' · ':''}${esc(r.harness||'Coding agent')}${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
     ${output?`<div class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open what was built ↗</a></div>`:''}
     <div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
