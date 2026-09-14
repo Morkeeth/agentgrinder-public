@@ -17,8 +17,11 @@ Open **Account settings** (or the footer's delete link) and, on a phone or with 
   any request. Duplicate check is the database's, the variant is looked up through the public
   `strava_profile_by_handle` RPC.
 - See which sign-in methods are linked to the shared Auth user (GitHub, email link). Link GitHub
-  when it is not linked yet. Unlink any method except the last; the last is labelled as the only
-  way in and has no button, and the server refuses it too. X appears as "not available on this
+  when it is not linked yet; a failed link comes back to the panel with a dismissable notice, a
+  successful one shows both methods and fills the legacy `github_handle` from the real identity.
+  Unlink any method except the last; the last is labelled as the only way in and has no button.
+  The disposable shim, implementing GoTrue's documented `single_identity_not_deletable`, refuses
+  it server-side too; hosted GoTrue was not observed. X appears as "not available on this
   service yet" text, never a button, until `PROVIDERS_ENABLED` includes it. There is no Cursor or
   Origin login anywhere; repository connection is named as a separate planned feature.
 - Sign out on this device only. The request is `logout?scope=local`; other devices and the
@@ -27,9 +30,10 @@ Open **Account settings** (or the footer's delete link) and, on a phone or with 
   posted runs, ACKs and replies here) and what stays (sign-in account, Agent Grinder profile and
   runs, anything local). No `confirm()` dialog. The Auth user is never deleted from the client.
 - Recover from a provider round trip that was cancelled, failed or expired: the landing page
-  says what happened and that the draft is still there, and the account panel repeats it once
-  with a retry. A sign-in that was started and never came back shows a dismissable notice naming
-  the provider.
+  says what happened and that the draft is still there, and the account panel shows it with a
+  retry until dismissed, contradicted by a later successful sign-in or link, or passed by on
+  another page. A sign-in that was started and never came back shows a dismissable notice
+  naming the provider.
 
 ## Files
 
@@ -41,7 +45,7 @@ Open **Account settings** (or the footer's delete link) and, on a phone or with 
 | `scripts/check-account-loop.py` | this lane | Playwright walk against the disposable shim; applies the shell hooks below in memory |
 | `scripts/test-account.mjs` | this lane | Node test for the auth.js additions; `npm run test:account` |
 | `tests/test_account_lane.py` | this lane | Contract strings: honest providers, safe destructive copy, hook coverage |
-| `scripts/disposable-supabase.mjs` | shared test infra | `auth.identities` table and seed, `/auth/v1/user` returns identities, `DELETE /auth/v1/user/identities/:id` with last-identity refusal, `/auth/v1/logout`, test-gated provider cancel redirect and `/_test/grinder-snapshot`, `DISPOSABLE_GRINDER=1` loads the Grinder public fixture |
+| `scripts/disposable-supabase.mjs` | shared test infra | `auth.identities` table and seed, `/auth/v1/user` returns identities, `DELETE /auth/v1/user/identities/:id` with last-identity refusal, `/auth/v1/logout`, test-gated provider authorize (JSON for link, redirect with the error fragment), `/_test/insert-identity`, `/_test/grinder-snapshot`, `DISPOSABLE_GRINDER=1` loads the Grinder public fixture |
 | `package.json` | shared, 1 line | `test:account` |
 | `docs/screens/account-lane/*.png` | this lane | Screenshots from the walk |
 
@@ -81,7 +85,7 @@ The profile page's `#linked-accounts` placeholder inside "Edit profile" can stay
 | `npm run test:identity` | PASS sql + PASS auth.js (unchanged suite still green after the auth.js additions) |
 | `npm run test:account` | PASS |
 | `npm run test:journey` | passed |
-| `python3 scripts/check-account-loop.py` | 43 checks passed, screenshots in `docs/screens/account-lane/` |
+| `python3 scripts/check-account-loop.py` | 51 checks passed, screenshots in `docs/screens/account-lane/` |
 | `python3 scripts/check-people-loop.py` | passed, no JavaScript errors |
 | `CHROME_BIN=… python3 scripts/check-social-loop.py` | passed (script hard-codes `/usr/local/bin/google-chrome`; the env override is its own) |
 | `python3 scripts/dev.py check` | Contributor checks passed |
@@ -108,7 +112,14 @@ The profile page's `#linked-accounts` placeholder inside "Edit profile" can stay
 6. Delete with the typed handle: Strava row gone, `public.profiles` snapshot identical, the
    user's Auth identities remain, local session cleared, confirmation shown after the shell's
    sign-out re-route. `delete-confirm-mobile.png`, `deleted-mobile.png`.
-7. Riley (email only): no unlink button, Link GitHub offered. Sign out here sends
+7. Riley (email only): no unlink button, Link GitHub offered. Link GitHub with the provider
+   failing: the SDK fetches the authorize URL, the browser navigates, comes back with the error
+   fragment, the shell returns to Account and the panel shows "Linking GitHub did not finish"
+   with Dismiss and no sign-in retry; GitHub still offered. Leaving for the feed and coming back
+   clears the seen notice. Link GitHub with the provider approving: the identity is added, the
+   session comes back in the fragment, both methods show, no stale failure notice, the pending
+   marker is settled and `github_handle` is filled from the identity while the chosen handle is
+   unchanged. `link-failed-mobile.png`, `link-success-mobile.png`. Sign out here sends
    `logout?scope=local` only; the profile row survives.
 8. Signed in on desktop: Account settings appears in the Account menu; the footer delete link
    opens `/?account#danger`.
@@ -118,7 +129,9 @@ The profile page's `#linked-accounts` placeholder inside "Edit profile" can stay
 - **Hosted OAuth is unverified.** The cancel and failure fragments are the documented implicit
   flow shape; the exact `error_code` values GoTrue emits when a person cancels at GitHub were not
   observed on the hosted project. Unknown codes map to a generic retry message, so nothing breaks,
-  but the wording for a real cancel is not evidenced.
+  but the wording for a real cancel is not evidenced. The successful-link return was simulated by
+  the walk's proxy (identity inserted, tokens in the fragment); GoTrue's real link return is
+  unobserved.
 - **Manual identity linking** must be enabled on the shared Supabase project for Link/Unlink to
   work. Its hosted state is unknown to this lane; a disabled flag surfaces as "Account linking is
   not enabled on this service yet". Changing it is root's call and must preserve Grinder.
@@ -129,6 +142,12 @@ The profile page's `#linked-accounts` placeholder inside "Edit profile" can stay
 - The email identity's address is shown in the panel to its owner only (from Auth, never from
   the profile row); it is not rendered anywhere public.
 
-## Lane commit
+## Expectation on root's file
 
-`e3a9e4c` code and tests; RETURN.md and STATUS.md follow in a receipt commit.
+`site/index.html` keeps `PROVIDERS_ENABLED=["github","email"]` until the X provider exists on
+the hosted project; the panel reads it, nothing in this lane asserts on it.
+
+## Lane commits
+
+`e3a9e4c` code and tests, `62f604f` first receipt, then the review-fix commit recorded in
+STATUS.md (stale-notice rule, link fail and success walk steps, tighter identity check).

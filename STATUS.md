@@ -16,3 +16,10 @@ Baseline main `503bf7e`.
 - `scripts/check-account-loop.py`: 43 checks pass (cancel, failure, pending, duplicate handle with free variant, unlink, server last-identity refusal, isolated deletion with Grinder snapshot, local sign-out scope, menu and footer hooks).
 - Full suite: pytest 326 passed 1 skipped; test:identity, test:account, test:journey, people loop, social loop (with CHROME_BIN), dev.py check all pass.
 - RETURN.md written with the eight index.html hooks for root. Next: receipt commit, push, draft PR, final advisor review.
+
+## 2026-09-14 · completion
+
+- Review fixes after the first receipt: a stored failure notice is dropped once contradicted by a later sign-in or link, or once the person moves to another page; linking sets the shell's return path so a signed-in person lands back on Account; the walk now covers a failed and a simulated successful GitHub link for Riley; the deletion identity check compares against the expected set, not after-vs-after; the lane test no longer asserts on root's index.html.
+- Walk: 51 checks pass. pytest 326 passed 1 skipped. test:account, test:identity, test:journey, people loop, social loop (CHROME_BIN), dev.py check pass.
+- Draft PR #12 open on Morkeeth/agentgrinder-public. Not merged. Root applies the eight index.html hooks from RETURN.md.
+- Remaining gaps (unverified here): hosted OAuth cancel values, hosted manual-linking flag, X provider credentials, real link return on hosted GoTrue, any consenting real-user run.

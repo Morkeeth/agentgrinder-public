@@ -258,7 +258,15 @@ async function handle(db, req, res) {
   const testMode = process.env.GRINDER_DISPOSABLE_TEST === "1";
   // Provider round trip: the browser is sent to the provider and comes back with the
   // implicit-flow error fragment a cancelled or failed authorisation produces. Test only.
-  if (testMode && (url.pathname === "/auth/v1/authorize" || url.pathname === "/auth/v1/user/identities/authorize")) {
+  if (testMode && url.pathname === "/auth/v1/user/identities/authorize") {
+    // linkIdentity fetches this with the JWT and receives the provider URL to navigate to.
+    if (!sub) return authError(res, 401, "no_authorization", "Invalid token");
+    const back = url.searchParams.get("redirect_to") || "/";
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ url: "/auth/v1/authorize?provider=" + encodeURIComponent(url.searchParams.get("provider") || "") + "&link=1&redirect_to=" + encodeURIComponent(back) }));
+    return;
+  }
+  if (testMode && url.pathname === "/auth/v1/authorize") {
     const back = url.searchParams.get("redirect_to") || "/";
     const outcome = process.env.DISPOSABLE_OAUTH_OUTCOME || "cancel";
     const fragment = outcome === "fail"
@@ -284,6 +292,14 @@ async function handle(db, req, res) {
     await db.query("delete from auth.identities where id=$1 and user_id=$2", [id, sub]);
     res.setHeader("Content-Type", "application/json");
     res.end("{}");
+    return;
+  }
+  if (testMode && url.pathname === "/_test/insert-identity" && req.method === "POST") {
+    const body = (await readBody(req)) || {};
+    await db.exec("reset role");
+    const row = (await db.query("insert into auth.identities(user_id,provider,identity_data) values($1,$2,$3) returning id", [body.user_id, body.provider, JSON.stringify(body.identity_data || {})])).rows[0];
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ id: row.id }));
     return;
   }
   if (testMode && url.pathname === "/_test/grinder-snapshot") {

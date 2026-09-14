@@ -103,7 +103,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 OPENER = urllib.request.build_opener(NoRedirect)
-OAUTH_OUTCOME = {"value": "cancel"}
+OAUTH_OUTCOME = {"value": "cancel", "session": None}
 REQUESTS = []
 
 
@@ -113,12 +113,25 @@ def proxy(route, disposable):
     REQUESTS.append(request.method + " " + url.replace("https://" + HOST, ""))
     # The provider round trip: the browser really navigates to the authorize URL and is sent
     # back to redirect_to with the implicit-flow error fragment a cancel or failure produces.
-    if "/auth/v1/authorize" in url or "/auth/v1/user/identities/authorize" in url:
+    if "/auth/v1/user/identities/authorize" in url:
+        # linkIdentity fetches this with the JWT and gets the provider URL as JSON; the browser
+        # then navigates there itself (supabase-js v2 behaviour).
+        from urllib.parse import quote, parse_qs, urlparse
+
+        back = parse_qs(urlparse(url).query).get("redirect_to", ["/"])[0]
+        body = json.dumps({"url": "https://" + HOST + "/auth/v1/authorize?provider=github&link=1&redirect_to=" + quote(back, safe="")}).encode()
+        route.fulfill(status=200, headers={"Content-Type": "application/json"}, body=body)
+        return
+    if "/auth/v1/authorize" in url:
         from urllib.parse import parse_qs, urlparse
 
         back = parse_qs(urlparse(url).query).get("redirect_to", ["/"])[0]
         if OAUTH_OUTCOME["value"] == "fail":
             fragment = "error=server_error&error_code=unexpected_failure&error_description=Unable+to+exchange+external+code"
+        elif OAUTH_OUTCOME["value"] == "link-success":
+            # The provider approved: GoTrue would add the identity and return the session tokens.
+            s = OAUTH_OUTCOME["session"]
+            fragment = "access_token=" + s["access_token"] + "&refresh_token=" + s["refresh_token"] + "&token_type=bearer&expires_in=86400&expires_at=2000000000"
         else:
             fragment = "error=access_denied&error_code=access_denied&error_description=The+user+cancelled+the+authorisation"
         route.fulfill(status=302, headers={"Location": back + ("&" if "#" in back else "#") + fragment}, body=b"")
@@ -145,6 +158,12 @@ def settle(page, handle):
     # re-renders the panel. Wait for the header identity, then let that second pass finish.
     page.wait_for_function("document.getElementById('me').textContent.trim()==='@" + handle + "'")
     page.wait_for_timeout(600)
+
+
+def insert_identity(disposable, user_id, provider, identity_data):
+    req = urllib.request.Request(disposable + "/_test/insert-identity", data=json.dumps({"user_id": user_id, "provider": provider, "identity_data": identity_data}).encode(), method="POST", headers={"content-type": "application/json"})
+    with urllib.request.urlopen(req, timeout=30) as response:
+        return json.loads(response.read().decode())["id"]
 
 
 def snapshot(disposable):
@@ -252,7 +271,6 @@ def main():
             page.wait_for_selector("#account-signin")
             page.click("#account-signin")
             page.wait_for_selector("#signin-dialog[open]")
-            page.evaluate("sessionStorage.setItem('ag_social_return','?account')")
             page.click("#signin-dialog [data-provider=github]")
             page.wait_for_url(lambda url: url.startswith(base) and "error" not in url, timeout=15000)
             page.wait_for_function("document.getElementById('status').textContent.length>0")
@@ -351,7 +369,8 @@ def main():
             after = snapshot(disposable)
             check(all(r["auth_uid"] != casey for r in after["strava"]), "delete: Strava profile row removed")
             check(after["grinder"] == before["grinder"], "delete: Grinder public.profiles unchanged")
-            check([i for i in after["identities"] if i["user_id"] == casey] == [i for i in snapshot(disposable)["identities"] if i["user_id"] == casey] and any(i["user_id"] == casey for i in after["identities"]), "delete: Auth identities for the user remain")
+            expected_ids = sorted(i["id"] for i in before["identities"] if i["user_id"] == casey and i["provider"] == "github")
+            check(sorted(i["id"] for i in after["identities"] if i["user_id"] == casey) == expected_ids and expected_ids, "delete: Auth identities for the user remain (all but the one deliberately unlinked)")
             check(page.evaluate("localStorage.getItem('agentic-strava-auth')") is None, "delete: local session cleared")
             check(page.inner_text("#me").strip() == "", "delete: header no longer shows a handle")
             page.screenshot(path=str(ARTIFACTS / "deleted-mobile.png"), full_page=True)
@@ -366,6 +385,38 @@ def main():
             page.wait_for_function("document.querySelectorAll('.account-identity').length===1")
             check(page.query_selector("[data-unlink]") is None and "only way to sign in" in page.inner_text("#account-identities"), "riley: last method cannot be unlinked from the UI")
             check(page.is_visible("[data-link=github]"), "riley: GitHub link offered")
+            # Link GitHub, provider fails: back on Account with the link notice, still signed in.
+            OAUTH_OUTCOME["value"] = "fail"
+            page.click("[data-link=github]")
+            page.wait_for_url(lambda url: "error" not in url and "account" in url, timeout=15000)
+            settle(page, "test-riley")
+            page.wait_for_selector("#account-body .account-notice")
+            notice = page.inner_text("#account-body .account-notice")
+            check("Linking GitHub did not finish" in notice, "riley link failed: inline notice names the link: " + notice)
+            check(page.query_selector("#account-retry") is None and page.is_visible("#account-dismiss"), "riley link failed: no sign-in retry while signed in, dismiss offered")
+            check(page.is_visible("[data-link=github]"), "riley link failed: GitHub still offered")
+            page.screenshot(path=str(ARTIFACTS / "link-failed-mobile.png"), full_page=True)
+            page.goto(base + "/?explore")
+            settle(page, "test-riley")  # let the feed route run, so the shell's recover() sees the notice was passed by
+            page.goto(base + "/?account")
+            settle(page, "test-riley")
+            check(page.query_selector("#account-body .account-notice") is None, "riley link failed: leaving the page clears the seen notice")
+            # Link GitHub, provider approves: identity added, session returned in the fragment,
+            # panel shows both methods and the legacy github_handle is filled from the identity.
+            OAUTH_OUTCOME["value"] = "link-success"
+            OAUTH_OUTCOME["session"] = mint(riley, "test-riley", riley_ids)
+            insert_identity(disposable, riley, "github", {"user_name": "test-riley", "avatar_url": "https://avatars.example.test/riley.png"})
+            page.click("[data-link=github]")
+            page.wait_for_url(lambda url: "access_token" not in url and "account" in url, timeout=15000)
+            settle(page, "test-riley")
+            page.wait_for_function("document.querySelectorAll('.account-identity').length===2")
+            check(page.query_selector("#account-body .account-notice") is None, "riley link ok: no stale failure notice after a successful link")
+            check(page.evaluate("sessionStorage.getItem('ag_auth_pending')") is None, "riley link ok: pending link settled")
+            row = next(r for r in snapshot(disposable)["strava"] if r["auth_uid"] == riley)
+            gh = page.evaluate("(async()=>{const {data}=await sb.from('profiles').select('github_handle').eq('auth_uid','" + riley + "').maybeSingle();return data&&data.github_handle})()")
+            check(gh == "test-riley" and row["handle"] == "test-riley", "riley link ok: legacy github_handle filled from the real identity, chosen handle unchanged")
+            check(page.query_selector("[data-link=github]") is None and len(page.query_selector_all("[data-unlink]")) == 2, "riley link ok: both methods unlinkable, GitHub no longer offered")
+            page.screenshot(path=str(ARTIFACTS / "link-success-mobile.png"), full_page=True)
             page.click("#account-signout")
             page.wait_for_url(base + "/")
             page.wait_for_selector("#auth")
@@ -374,6 +425,7 @@ def main():
             check(any(r.startswith("POST /auth/v1/logout?scope=local") for r in REQUESTS), "riley: sign-out sent scope=local logout: " + ", ".join(r for r in REQUESTS if "logout" in r))
             check(not any("scope=global" in r or "scope=others" in r for r in REQUESTS), "riley: no global sign-out was requested")
             check(any(r["auth_uid"] == riley for r in snapshot(disposable)["strava"]), "riley: profile row survives sign-out")
+            riley_ids = [{"identity_id": i["id"], "id": i["id"], "user_id": riley, "provider": i["provider"], "identity_data": {}} for i in snapshot(disposable)["identities"] if i["user_id"] == riley]
             context.close()
 
             # 5. Keyboard: the account menu item is reachable and the danger link resolves.

@@ -35,20 +35,24 @@ window.GrinderAccount = function ({
   // A provider always sends the browser back to the site root. The shell reports the outcome
   // there; the panel repeats it once with a retry, so opening Account after a failure explains it.
   const RECOVERED_KEY = "ag_auth_recovered";
+  // It stays until dismissed, contradicted by a later sign-in or link, or the person moves on
+  // to another page, so the shell's second route pass on load does not swallow it.
   const keepRecovered = (r) => { try { sessionStorage.setItem(RECOVERED_KEY, JSON.stringify(r)); } catch (_) {} };
+  const peekRecovered = () => { try { const v = sessionStorage.getItem(RECOVERED_KEY); return v ? JSON.parse(v) : null; } catch (_) { return null; } };
+  const dropRecovered = () => { try { sessionStorage.removeItem(RECOVERED_KEY); } catch (_) {} };
+  const settled = (r, user, ids) => !!r && (r.action === "link" ? (ids || []).some((i) => i.provider === r.provider) : !!user);
   // Deleting signs the browser out, and the shell re-routes on SIGNED_OUT. The confirmation
   // survives that re-render through a one-shot marker instead of racing it.
   const DELETED_KEY = "ag_account_deleted";
   const takeDeleted = () => { try { const v = sessionStorage.getItem(DELETED_KEY); sessionStorage.removeItem(DELETED_KEY); return !!v; } catch (_) { return false; } };
-  const takeRecovered = () => { try { const v = sessionStorage.getItem(RECOVERED_KEY); sessionStorage.removeItem(RECOVERED_KEY); return v ? JSON.parse(v) : null; } catch (_) { return null; } };
 
   function recoveryHtml(recovered, pend, user) {
     const draft = hasDraft() ? " The run you were about to post is still in this browser." : "";
     if (recovered) {
       const what = recovered.action === "link" ? "Linking " + label(recovered.provider) : "Sign-in" + (recovered.provider ? " with " + label(recovered.provider) : "");
-      return `<section class="account-notice" role="status" aria-live="polite"><p><strong>${esc(what)} did not finish.</strong> ${esc(recovered.message)}${esc(draft)}</p>${
-        recovered.retry && !user ? `<div class="account-actions"><button type="button" id="account-retry" class="act blue">Try signing in again</button></div>` : ""
-      }</section>`;
+      return `<section class="account-notice" role="status" aria-live="polite"><p><strong>${esc(what)} did not finish.</strong> ${esc(recovered.message)}${esc(draft)}</p><div class="account-actions">${
+        recovered.retry && !user ? `<button type="button" id="account-retry" class="act blue">Try signing in again</button>` : ""
+      }<button type="button" id="account-dismiss" class="act">Dismiss</button></div></section>`;
     }
     if (pend && !user) {
       const what = pend.action === "link" ? "Linking " + label(pend.provider) : "Sign-in with " + label(pend.provider);
@@ -133,17 +137,21 @@ window.GrinderAccount = function ({
       root.innerHTML = '<section class="account card pad"><h1>Your account</h1><p>Account controls are unavailable. Reload the page.</p></section>';
       return;
     }
-    const recovered = auth.recoverFromUrl() || takeRecovered();
+    const fromUrl = auth.recoverFromUrl();
+    if (fromUrl) keepRecovered(fromUrl);
+    let recovered = fromUrl || peekRecovered();
     const pend = auth.pending();
     const deleted = takeDeleted();
     let current;
     try { current = await auth.current(); }
     catch (e) { root.innerHTML = signedOutHtml(recovered, pend, deleted); say(e.detail?.message || "Sign-in could not be restored. Try again.", true); wireSignedOut(); return; }
     if (!current.user) { root.innerHTML = signedOutHtml(recovered, pend, deleted); wireSignedOut(); return; }
-    if (!current.profile) { root.innerHTML = onboardingHtml(recovered, pend, current.user); wireCommon(); return; }
     // The stored session is a snapshot; the linked-method list is read from Auth each time.
     let ids = current.identities || [];
     try { ids = await auth.identities(); } catch (_) {}
+    // A later successful sign-in or link makes an old failure notice wrong. Drop it.
+    if (settled(recovered, current.user, ids)) { dropRecovered(); recovered = null; }
+    if (!current.profile) { root.innerHTML = onboardingHtml(recovered, pend, current.user); wireCommon(); return; }
     let profile = current.profile;
     if (ids.some((i) => i.provider === "github") && !profile.github_handle) {
       try { profile = (await auth.syncGithubHandle()) || profile; if (typeof onProfileChange === "function") onProfileChange(profile); } catch (_) {}
@@ -157,11 +165,11 @@ window.GrinderAccount = function ({
   function wireSignedOut() {
     byId("account-signin")?.addEventListener("click", () => start());
     byId("account-retry")?.addEventListener("click", () => start());
-    byId("account-dismiss")?.addEventListener("click", () => { auth.clearPending(); view(); });
+    byId("account-dismiss")?.addEventListener("click", () => { auth.clearPending(); dropRecovered(); view(); });
   }
   function wireCommon() {
     byId("account-retry")?.addEventListener("click", () => start());
-    byId("account-dismiss")?.addEventListener("click", () => { auth.clearPending(); view(); });
+    byId("account-dismiss")?.addEventListener("click", () => { auth.clearPending(); dropRecovered(); view(); });
     byId("account-signout")?.addEventListener("click", signOut);
   }
   function start() {
@@ -228,6 +236,7 @@ window.GrinderAccount = function ({
       const t = e.target.closest("button"); if (!t) return;
       if (t.dataset.link) {
         t.disabled = true; idState.textContent = "Opening " + label(t.dataset.link) + "…"; idState.classList.remove("err");
+        try { sessionStorage.setItem("ag_social_return", "?account"); } catch (_) {} // the shell brings a signed-in person back here
         try { await auth.link(t.dataset.link, { returnTo: "?account" }); }
         catch (err) { idState.textContent = err.detail?.message || "Linking could not start. Try again."; idState.classList.add("err"); t.disabled = false; }
         return;
@@ -272,10 +281,15 @@ window.GrinderAccount = function ({
     if (!auth) return null;
     if (new URLSearchParams(location.search).has("account")) return null; // the panel reports it inline
     const r = auth.recoverFromUrl();
-    if (!r) return null;
+    if (!r) { dropRecovered(); return null; } // moved on without opening Account: the notice has been seen
+    keepRecovered(r);
+    let backToAccount = false;
+    try { backToAccount = sessionStorage.getItem("ag_social_return") === "?account"; } catch (_) {}
+    // Signed in, the shell reopens Account next and the panel shows the notice; signed out it
+    // stays on the landing page, so the status line is the only place the outcome is said.
+    if (backToAccount && typeof me === "function" && me()) return r;
     const draft = hasDraft() ? " Your draft is still here: open Post a run to continue." : "";
     say(r.message + draft, true);
-    keepRecovered(r);
     return r;
   }
 

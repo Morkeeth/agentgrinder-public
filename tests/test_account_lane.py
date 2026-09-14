@@ -6,7 +6,6 @@ ACCOUNT = (ROOT / "site" / "account.js").read_text()
 AUTH = (ROOT / "site" / "auth.js").read_text()
 CSS = (ROOT / "site" / "account.css").read_text()
 LOOP = (ROOT / "scripts" / "check-account-loop.py").read_text()
-INDEX = (ROOT / "site" / "index.html").read_text()
 PACKAGE = (ROOT / "package.json").read_text()
 
 
@@ -23,7 +22,6 @@ def test_no_cursor_or_origin_login_and_x_is_gated():
     assert "not a login" in ACCOUNT
     assert "is not available on this service yet" in ACCOUNT
     assert "providersEnabled" in ACCOUNT
-    assert 'PROVIDERS_ENABLED=["github","email"]' in INDEX, "X stays off until the hosted provider exists"
 
 
 def test_destructive_action_explains_what_goes_and_stays_without_confirm_dialog():
