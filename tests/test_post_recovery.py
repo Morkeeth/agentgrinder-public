@@ -93,7 +93,7 @@ def test_the_browser_walk_covers_the_journey():
     for needle in (
         'route.abort("connectionfailed")',
         "no automatic retry fired",
-        "lost response: Try again found the saved run by start time and harness",
+        "lost response: Try again found the saved run by measurement revision",
         "re-save: opens the existing run",
         "This import link is incomplete",
         "cap: the exact reply past the 12-page load is rendered directly",
