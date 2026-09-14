@@ -153,7 +153,7 @@ def main():
             my_runs(cp)
             cp.get_by_role("heading", name="Preview your run").wait_for()
             contents = cp.inner_text(".export-contents")
-            check("project folder name" in contents and "route as numbers" in contents and "never carries prompts, code or file paths" in contents and "how many MCPs and skills" in contents and "the stack notes you wrote" in contents, "preview: says in words what the export carries and what it never carries: " + contents[:80])
+            check("project folder name" in contents and "carries only" not in contents and "never carries prompts, code or file paths" in contents and "how many MCPs and skills" in contents and "the stack notes you wrote" in contents, "preview: says in words what the export carries and what it never carries: " + contents[:80])
             cp.fill("#i_title", "TEST DATA recovery session")
             cp.fill("#i_caption", "TEST DATA: caption typed before the connection dropped.")
             cp.select_option("#i_vis", "public")
@@ -201,7 +201,7 @@ def main():
 
             # 3. Lost response: the insert lands, the browser never hears back.
             # Stable measurement revision allows lost-response recovery without conflating distinct captures.
-            second = capture("review-lost-response-unique", "2026-09-14T21:00:00+00:00")
+            second = capture("b" * 64, "2026-09-14T21:00:00+00:00")
             cp.goto(base + "/" + second)
             settle(cp, "test-casey")
             cp.get_by_role("heading", name="Preview your run").wait_for()
@@ -221,7 +221,7 @@ def main():
             cp.wait_for_function("document.getElementById('status').textContent.includes('already saved')")
             rows = my_runs(cp)
             lost_id = cp.url.split("run=", 1)[1].split("&", 1)[0]
-            check(len(rows) == 2 and any(r["id"] == lost_id and r["measurement_revision"] == "review-lost-response-unique" for r in rows), "lost response: Try again found the saved run by measurement revision instead of posting a duplicate (rows " + str(len(rows)) + ")")
+            check(len(rows) == 2 and any(r["id"] == lost_id and r["measurement_revision"] == "b" * 64 for r in rows), "lost response: Try again found the saved run by measurement revision instead of posting a duplicate (rows " + str(len(rows)) + ")")
             check("Only me" in cp.inner_text("#status"), "lost response: the status names the audience the run was saved with")
             shot(cp, "05-lost-response-found-mobile.png")
 
