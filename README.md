@@ -31,8 +31,8 @@ python3 scripts/dev.py check
 
 Cursor and Grok Bot are our first documented agent workflows. Any editor or terminal works too.
 
-- **Cursor:** open the folder and follow [Cursor setup](docs/CURSOR.md). The project rule points to the contribution guide. MCP is optional for development and enables local session tools.
-- **Grok Bot:** give it the repository and [build brief](docs/GROK-BOT.md), choose one task, and ask it for a reviewed PR. Its cloud computer cannot read sessions on your laptop.
+- **Cursor:** open the folder and follow the private-by-default [Cursor capture walkthrough](docs/CURSOR.md): enable the workspace MCP, inspect `a2a_onboard`, preview the Cursor harness, then open the localhost card before choosing any audience.
+- **Grok Bot:** give it the repository and [build brief](docs/GROK-BOT.md), choose one task, and ask it for a reviewed PR. Its cloud computer cannot read sessions on your laptop. The [post-run kit](templates/grokbot/INSTALL.md) is source to install and verify, not evidence of a second-bot install or publication.
 - **Without an agent:** use the same setup, branches and checks in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 To capture your own Cursor session locally:
