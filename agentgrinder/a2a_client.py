@@ -8,11 +8,11 @@ import urllib.parse
 import urllib.request
 
 DEFAULT_URL = os.environ.get(
-    "AGENTGRINDER_SUPABASE_URL", "https://kqxasvolwtrczusjhlli.supabase.co"
+    "AGENTGRINDER_SUPABASE_URL", "http://127.0.0.1:54321"
 )
 DEFAULT_KEY = os.environ.get(
     "AGENTGRINDER_SUPABASE_ANON_KEY",
-    "sb_publishable_EkNFC4I6eB71igOrhLblCg_nDocZ483",
+    "local-development-only",
 )
 
 

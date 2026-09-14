@@ -8,7 +8,7 @@ import urllib.parse
 from .contract import public_revision, validate_run
 from .coach.experiment import public_experiment, public_text
 
-DEFAULT_URL = os.environ.get("AGENTGRINDER_URL", "https://agentgrinder.vercel.app")
+DEFAULT_URL = os.environ.get("AGENTGRINDER_URL", "http://localhost:8000")
 
 
 def export_run(run: dict) -> dict:

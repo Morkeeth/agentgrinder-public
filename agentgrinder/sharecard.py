@@ -10,7 +10,7 @@ import html
 import os
 from urllib.parse import quote
 
-DEFAULT_URL = os.environ.get("AGENTGRINDER_URL", "https://agentgrinder.vercel.app")
+DEFAULT_URL = os.environ.get("AGENTGRINDER_URL", "http://localhost:8000")
 
 
 def _esc(s) -> str:

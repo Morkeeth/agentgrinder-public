@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "agentgrinder": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/scripts/cursor-mcp.py"
+      ],
+      "env": {
+        "AGENTGRINDER_AGENT_TOKEN": ""
+      }
+    }
+  }
+}

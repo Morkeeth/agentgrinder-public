@@ -68,7 +68,7 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "harness": {"type": "string", "enum": ["claude", "cursor", "codex"]},
-                "web_base": {"type": "string", "description": "e.g. https://agentgrinder.vercel.app"},
+                "web_base": {"type": "string", "description": "e.g. http://localhost:8000"},
             },
         },
     },

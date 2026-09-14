@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Agent Grinder — Strava for agents</title>
-<meta name="description" content="Turn a Claude Code, Cursor or Codex session into a run card. Share the work, follow builders and find your next practice. Private until you choose to share.">
+<meta name="description" content="Turn a Cursor, Claude Code or Codex session into a run card. Share the work, follow builders and find your next practice. Private until you choose to share.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/design.css">
@@ -420,15 +420,17 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 <script src="/example.js"></script>
 <script src="/forum.js"></script>
 <script>
-const SB_URL="https://kqxasvolwtrczusjhlli.supabase.co";
-const SB_KEY="sb_publishable_EkNFC4I6eB71igOrhLblCg_nDocZ483";
+const SB_URL="http://127.0.0.1:54321";
+const SB_KEY="local-development-only";
 // THE PUBLIC EXAMPLE. One real run, pushed from a real session with `agentgrinder grind --coach`,
 // visibility public, readable with the publishable key above and no account. The landing page
 // shows it to a logged-out visitor so the argument of the product is on screen before sign-in.
 // FEATURED_SNAPSHOT is the same row, written down at publish time: it paints instantly, and the
 // live row replaces it the moment the fetch lands. If the two ever disagree, the live row wins.
 const FEATURED_RUN="28d5d0b7-eda2-4d94-a83c-580d2e3b75b2";
-const FEATURED_SNAPSHOT={id:FEATURED_RUN,title:"One real sitting, refereed by the coach",
+const FEATURED_SNAPSHOT=null;
+// Historical source example; not a member of this new deployment.
+const ARCHIVED_FEATURED_SNAPSHOT={id:FEATURED_RUN,title:"One real sitting, refereed by the coach",
   project:null,harness:"Claude Code",visibility:"public",created_at:"2026-09-03T14:36:33.161930+00:00",
   started_at:"2026-09-01T20:20:09.757+00:00",duration_s:3948,prompts:3,tool_calls:150,files_touched:44,commits:6,
   claims:7,claims_verified:3,artifacts_produced:8,coach_tool_calls:37,progress_verdict:"baseline",
@@ -1184,7 +1186,7 @@ function howItWorks(){
 // with exit 1, so the first thing anyone did from this page failed. There is no install in the
 // line any more, because the package needs none: it runs from the clone on the python macOS
 // already has. The coach is a second, honest line — it needs Python 3.10 or newer, and says so.
-const INSTALL_CMD="git clone https://github.com/Morkeeth/agentgrinder && cd agentgrinder && python3 -m agentgrinder grind";
+const INSTALL_CMD="git clone https://github.com/Morkeeth/agentgrinder-public && cd agentgrinder-public && python3 -m agentgrinder grind --harness cursor";
 const COACH_CMD='python3.12 -m venv .venv && .venv/bin/pip install -e ".[coach]" && .venv/bin/agentgrinder grind --coach';
 function uploadBlock(){
   return `<div class="up">
@@ -1235,7 +1237,7 @@ function wireCopy(){
 function landingHTML(r){
   return `<div class="launch-grid"><section class="landing-intro"><p class="meta">STRAVA FOR AGENTS</p>
     <h1>Your agent runs. Worth sharing.</h1>
-    <p>Turn a Claude Code, Cursor or Codex session into a run card. Share the work. Follow the builders. Find your next practice.</p>
+    <p>Turn a Cursor, Claude Code or Codex session into a run card. Share the work. Follow the builders. Find your next practice.</p>
     <div class="cta"><a class="act primary" href="/?onboard">Post your first run</a><a class="act" href="/?explore">Explore runs</a></div>
     <p class="hint">Capture locally. Preview privately. You choose what goes public.</p>
     <a class="meta" href="/?example">Try a sample run first →</a></section>
@@ -1245,7 +1247,7 @@ function landingHTML(r){
       <div><h2>01 · Record the run</h2><p>Keep the trace, time and output from a session you actually did.</p></div>
       <div><h2>02 · Share the work</h2><p>Post the card, follow a builder and discuss what helped.</p></div>
       <div><h2>03 · Come back better</h2><p>Pick one practice. Try it in your next run and see what changed.</p></div></section>
-    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder">GitHub ↗</a><a href="/?example">Hackathon walkthrough · labelled sample</a><a href="/methodology">How the measurements work</a><a href="/privacy">Privacy</a></div>`;
+    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/?example">Sample walkthrough</a><a href="/methodology">How the measurements work</a><a href="/privacy">Privacy</a></div>`;
 }
 
 async function viewLanding(){
@@ -1656,7 +1658,7 @@ async function viewEvent(){
   app.innerHTML=`<div class="head"><h2>Agents for Humans</h2><span class="meta">Sep 14 2026 · grind event</span></div>
     <div class="up"><div class="up-top"><span class="t">Post your real runs</span><span class="meta">metrics only, your click</span></div>
       <div class="cmd"><span class="c">python3 -m agentgrinder grind --push</span></div>
-      <div class="up-foot">Tag your grind for the hackathon crew. No streaks. Agents propose, you ship.</div></div>
+      <div class="up-foot">Share your grind with other builders. No streaks. Agents propose, you ship.</div></div>
     <div class="head"><h2>Event feed</h2><span class="meta">${R.length||'none yet'}</span></div>
     ${R.length?R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join(''):'<div class="card"><div class="empty">Be the first on the board: python3 -m agentgrinder grind --push</div></div>'}`;
   wireKudos(); countUp();

@@ -157,7 +157,7 @@ def main(argv=None) -> int:
     g.add_argument("--share-rig-names", action="store_true",
                    help="with --push, include MCP server names in your shared rig (opt-in)")
     g.add_argument("--push-url", default=None,
-                   help="web app base URL for --push (default: AGENTGRINDER_URL or agentgrinder.vercel.app)")
+                   help="web app base URL for --push (default: AGENTGRINDER_URL or localhost:8000)")
     g.add_argument("--no-series", action="store_true",
                    help="do not record this grind in the local per-project series (~/.agentgrinder/series.db)")
     g.add_argument("--coach", nargs="?", const="local", choices=["local", "bedrock", "none"], default=None,

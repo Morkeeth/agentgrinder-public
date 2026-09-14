@@ -1,7 +1,7 @@
 [project]
 name = "agentgrinder"
 version = "0.1.0"
-description = "AGENT GRINDER — a private coach for your agent coding sessions. Reads your local transcripts, metrics only, nothing leaves your machine."
+description = "Agent Grinder — free social run cards for people building with coding agents."
 readme = "README.md"
 requires-python = ">=3.9"      # measured, not assumed: every command runs under macOS system python 3.9.6
 license = {text = "MIT"}

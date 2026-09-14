@@ -1,11 +1,9 @@
-<!-- STATE:start -->
-## SHARED WORK STATE · revision 97735ea910a7 · rendered 2026-09-11 · scope repo agentgrinder
-This repo's rows of the one shared work state. Authorities: todo.md (human), TASKS.yaml (ids), board clocks, Oscar's rulings (local only). Views such as GLANCE, SLASK and ZUP are adapters over the same revision.
-**A CLOSED task stays closed. Do not requeue, re-verify or re-poll it.**
-Before acting, record that you read this revision, exact session and exact rev: `python3 ~/CODE/fleet-ops/state/state.py ack --session <your session id> --consumer <claude|codex|cursor> --rev 97735ea910a7`. In a cloud sandbox instead append `{"session":"<your session id>","consumer":"<claude|codex|cursor>","rev":"97735ea910a7","ts":"<iso>","stage":"acknowledged"}` to `.fleet/ACK.jsonl` in this repo and commit it.
+# Agent Grinder public product
 
-### CLOSED. Not open work.
-- **GRINDER-STRANDS-RULING** · Agents for Humans: rule Strands eligibility, option A or B · **COMPLETED**. by Oscar's ruling (held local-only)
+Read README.md and PRODUCT.md first. This is the free, social, Cursor-first product. The original Morkeeth/agentgrinder repo owns the hackathon and must not be changed by tasks in this repo.
 
-### ACKNOWLEDGED THIS REVISION: nobody yet
-<!-- STATE:end -->
+Build the card → post → response → return experience. Keep optional coach and measurement detail behind the social flow. Preserve the existing visual direction. Missing metrics stay unknown. Never fabricate users, output, engagement or results.
+
+Runtime defaults are local. Do not connect to the competition database. Keep credentials and local session data out of commits. Use small PRs with a working user path; report local, tested, hosted and used separately.
+
+Historical fleet state and hackathon receipts in inherited docs are not active assignments. No invites, messages or public posts without the owner's explicit instruction.
