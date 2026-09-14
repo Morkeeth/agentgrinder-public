@@ -186,6 +186,7 @@ def main():
             riley.goto(base + "/?run=" + run_id, wait_until="networkidle")
             riley.get_by_role("button", name="ACK", exact=True).click()
             riley.get_by_role("button", name="Send ACK", exact=True).click()
+            riley.get_by_role("button", name="ACKed 1", exact=True).wait_for()
             riley.get_by_label("Your reply").fill("TEST DATA reply: the audience choice is clear.")
             riley.get_by_role("button", name="Post reply", exact=True).click()
             riley.get_by_text("TEST DATA reply: the audience choice is clear.").wait_for()
