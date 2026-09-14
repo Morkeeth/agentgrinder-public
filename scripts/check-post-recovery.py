@@ -200,8 +200,8 @@ def main():
             shot(cp, "03-resave-opens-existing-mobile.png")
 
             # 3. Lost response: the insert lands, the browser never hears back.
-            # No measurement revision on this export: the start time + harness fallback must dedupe.
-            second = capture(None, "2026-09-14T21:00:00+00:00")
+            # Stable measurement revision allows lost-response recovery without conflating distinct captures.
+            second = capture("review-lost-response-unique", "2026-09-14T21:00:00+00:00")
             cp.goto(base + "/" + second)
             settle(cp, "test-casey")
             cp.get_by_role("heading", name="Preview your run").wait_for()
@@ -221,7 +221,7 @@ def main():
             cp.wait_for_function("document.getElementById('status').textContent.includes('already saved')")
             rows = my_runs(cp)
             lost_id = cp.url.split("run=", 1)[1].split("&", 1)[0]
-            check(len(rows) == 2 and any(r["id"] == lost_id and r["measurement_revision"] is None for r in rows), "lost response: Try again found the saved run by start time and harness instead of posting a duplicate (rows " + str(len(rows)) + ")")
+            check(len(rows) == 2 and any(r["id"] == lost_id and r["measurement_revision"] == "review-lost-response-unique" for r in rows), "lost response: Try again found the saved run by measurement revision instead of posting a duplicate (rows " + str(len(rows)) + ")")
             check("Only me" in cp.inner_text("#status"), "lost response: the status names the audience the run was saved with")
             shot(cp, "05-lost-response-found-mobile.png")
 

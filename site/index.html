@@ -1514,7 +1514,7 @@ function importRun(){
     <div class="panel">
       ${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>
     <div class="panel"><div class="pad">
-    <p class="hint export-contents" style="margin:0 0 12px">${sample?'This sample':'This export'} carries only: the project folder name, counts, timing, the activity trace and route as numbers${run.reach_reason?', one sentence about reach':''}${run.coach_verdict||run.coach_plan||run.coach_experiment?', the coach\'s sentences':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}${run.rig_notes?', the stack notes you wrote':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
+    <p class="hint export-contents" style="margin:0 0 12px">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
     <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details><p class="hint" style="margin:12px 0">Review the imported details and any tool names you choose to share before publishing.</p>
     <label>What did you build?<input id="i_title" maxlength="120" required placeholder="Title you write, not scraped" value="${esc(run.project||'')} session"></label>
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
@@ -1559,10 +1559,12 @@ function importRun(){
     if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
     publishButton.disabled=true;
     const recover=$('i_recover'); recover.hidden=true; recover.innerHTML='';
-    // The same capture saved twice is one run, not two. The capture's own measurement reference
-    // (or its start time and harness) is the key; a retry after a lost response finds the row
-    // the first attempt made instead of inserting another. Nothing here re-sends on its own.
-    const dedupe=run.measurement_revision?{measurement_revision:run.measurement_revision}:(run.started&&run.harness?{started_at:run.started,harness:run.harness}:null);
+    // The same capture saved twice is one run, not two. Only the capture's measurement
+    // reference is a safe key: start time + harness alone can match two different projects.
+    // A retry after a lost response finds the row the first attempt made. The database unique
+    // index on (profile_id, measurement_revision) arbitrates concurrent inserts (23505).
+    // Nothing here re-sends on its own.
+    const dedupe=run.measurement_revision?{measurement_revision:run.measurement_revision}:null;
     async function existingRun(){ if(!dedupe) return null; let q=sb.from('runs').select('id,visibility').eq('profile_id',ME.id); for(const [k,v] of Object.entries(dedupe)) q=q.eq(k,v); const {data,error}=await q.order('created_at',{ascending:true}).limit(1); if(error) throw error; return (data&&data[0])||null; }
     function openExisting(prior){
       try{sessionStorage.removeItem('ag_import');sessionStorage.removeItem('ag_import_edits')}catch(_){}
@@ -1594,8 +1596,11 @@ function importRun(){
       coach_verdict:run.coach_verdict??null,coach_plan:run.coach_plan??null,coach_tool_calls:run.coach_tool_calls??null,
       coach_mode:run.coach_mode??null,
       progress_verdict:run.progress_verdict??null};
+    // Persist the measurement reference whenever the export carries one, even on schema 0,
+    // so a later retry can find this row. Other schema-1 fields stay gated on version.
+    if(run.measurement_revision!=null) coach.measurement_revision=run.measurement_revision;
+    if(run.baseline_revision!=null) coach.baseline_revision=run.baseline_revision;
     if(run.schema_version===1) Object.assign(coach,{schema_version:1,trace_basis:run.trace_basis||null,route:run.route||null,
-      measurement_revision:run.measurement_revision??null,baseline_revision:run.baseline_revision??null,
       progress_delta:run.progress_delta??null});
     let {data:published,error}=await sb.from('runs').insert({...base,...coach}).select('id').single();
     if(error&&error.code==='23505'){ let again=null; try{again=await existingRun()}catch(_){} if(again){ await openExisting(again); return; } }

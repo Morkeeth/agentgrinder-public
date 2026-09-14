@@ -25,12 +25,20 @@ def test_failed_save_keeps_the_draft_and_offers_an_explicit_retry():
 
 
 def test_same_capture_is_one_run_not_two():
-    assert "const dedupe=run.measurement_revision?{measurement_revision:run.measurement_revision}" in IMPORT
-    assert "started_at:run.started,harness:run.harness" in IMPORT
+    assert "const dedupe=run.measurement_revision?{measurement_revision:run.measurement_revision}:null;" in IMPORT
+    assert "started_at:run.started,harness:run.harness" not in IMPORT
     assert "async function existingRun()" in IMPORT
     assert "prior=await existingRun()" in IMPORT
     assert "error.code==='23505'" in IMPORT
     assert "already saved as a run" in IMPORT and "was not applied" in IMPORT
+    assert "if(run.measurement_revision!=null) coach.measurement_revision=run.measurement_revision;" in IMPORT
+
+
+def test_capture_dedupe_has_a_database_unique_index():
+    sql = (ROOT / "supabase" / "strava" / "run_capture_unique.sql").read_text()
+    assert "runs_profile_measurement_revision_unique" in sql
+    assert "unique index" in sql.lower()
+    assert "measurement_revision is not null" in sql
 
 
 def test_a_failed_rig_update_never_reads_as_a_failed_save():
@@ -41,8 +49,10 @@ def test_a_failed_rig_update_never_reads_as_a_failed_save():
 
 def test_the_preview_names_what_the_export_carries_and_matches_the_allowlist():
     assert 'class="hint export-contents"' in IMPORT
-    assert "the project folder name, counts, timing, the activity trace and route as numbers" in IMPORT
-    assert "one sentence about reach" in IMPORT and "the stack notes you wrote" in IMPORT
+    assert "carries only:" not in IMPORT
+    assert "the project folder name, counts, timing, the activity trace" in IMPORT
+    assert "progress notes" in IMPORT and "a reach flag" in IMPORT and "measurement references" in IMPORT
+    assert "coach_experiment" in IMPORT  # disclosure gates on the traveling field
     assert "It never carries prompts, code or file paths." in IMPORT
     assert "MCP names travel only if you tick the box below." in IMPORT
     assert "saved to your profile even when the run is Only me" in IMPORT
