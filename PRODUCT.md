@@ -23,3 +23,14 @@ Two people each post a safe real run to the independent service. Each can open t
 ## Two repositories
 
 This repository is the public product. Morkeeth/agentgrinder remains the hackathon build. Historical code and docs are retained for reference; they do not define this product’s scope.
+
+## Public release requirements · 14 September
+
+- Independent database and hosting under an approved product brand and domain.
+- GitHub and X sign-in with linked identities belonging to one profile. The additional provider mentioned as “origin” is awaiting clarification.
+- Find and follow friends, browse their runs in Following, open their profiles and continue conversations from Responses. Make these paths useful even with a small personal network.
+- A reusable Grok Bot post-run template is required. Source lives in `templates/grokbot/`; second-bot installation and real hosted posting must be verified before calling it released.
+
+Proposed extension for review: privately mark close friends and offer a Close friends posting audience. Ordinary follows already exist; a private audience needs its own server-enforced access and revocation tests, not just a client-side feed filter. No contact upload or automatic social-network following is implied.
+
+Brand direction for review: “See what your friends are building.” Keep the white cards and blue activity trace. Final name/domain and purchase cost need owner approval. No name has been changed or domain purchased.
