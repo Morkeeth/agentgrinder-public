@@ -23,3 +23,4 @@ Baseline main `503bf7e`.
 - Walk: 51 checks pass. pytest 326 passed 1 skipped. test:account, test:identity, test:journey, people loop, social loop (CHROME_BIN), dev.py check pass.
 - Draft PR #12 open on Morkeeth/agentgrinder-public. Not merged. Root applies the eight index.html hooks from RETURN.md.
 - Remaining gaps (unverified here): hosted OAuth cancel values, hosted manual-linking flag, X provider credentials, real link return on hosted GoTrue, any consenting real-user run.
+- Review-fix commit `7245369`; receipt hash recorded in RETURN.md.

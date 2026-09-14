@@ -149,5 +149,4 @@ the hosted project; the panel reads it, nothing in this lane asserts on it.
 
 ## Lane commits
 
-`e3a9e4c` code and tests, `62f604f` first receipt, then the review-fix commit recorded in
-STATUS.md (stale-notice rule, link fail and success walk steps, tighter identity check).
+`e3a9e4c` code and tests, `62f604f` first receipt, `7245369` review fixes (stale-notice rule, link fail and success walk steps, tighter identity check).
