@@ -262,7 +262,7 @@ def main():
             anon.goto(base + "/?u=test-casey", wait_until="networkidle")
             anon.get_by_text("TEST DATA people lane", exact=True).wait_for()
             anon.goto(base + "/?u=not-a-real-handle-xyz", wait_until="networkidle")
-            anon.get_by_text("No such", exact=False).wait_for()
+            anon.get_by_text("Profile not found.", exact=True).wait_for()
             anon.screenshot(path=str(ARTIFACTS / "signed-out-missing-profile-mobile.png"), full_page=True)
 
             # Keyboard: search field reachable and Escape clears on people page.

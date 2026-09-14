@@ -129,7 +129,7 @@ window.GrinderPeople = function ({
 
   function peopleTabs(active) {
     if (typeof feedTabs === "function") {
-      return feedTabs(active === "following" ? "following" : "discover");
+      return feedTabs(active);
     }
     return `<nav class="feed-tabs people-tabs" aria-label="Feed filters">
       <a href="/?people" class="${active === "people" ? "on" : ""}" ${active === "people" ? 'aria-current="page"' : ""}>Find people</a>

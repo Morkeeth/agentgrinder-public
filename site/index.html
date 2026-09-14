@@ -371,7 +371,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .experiment-card{padding:16px;border-top:1px solid var(--rule)}
 .experiment-card h2{font-size:18px;line-height:1.3;margin:6px 0 10px}
 @media(max-width:700px){.landing-intro h1{max-width:none}}
-</style><link rel="stylesheet" href="/social.css"></head>
+</style><link rel="stylesheet" href="/social.css"><link rel="stylesheet" href="/people.css"></head>
 <body>
 <div class="bar"><div class="bar-in">
   <a class="mark" href="/">Agentic Strava</a>
@@ -410,7 +410,9 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
+<script src="/auth.js"></script>
 <script src="/social.js"></script>
+<script src="/people.js"></script>
 <script src="/challenges.js"></script>
 <script src="/practice-eligibility.js"></script>
 <script src="/practices.js"></script>
@@ -423,26 +425,11 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 const SB_URL="http://127.0.0.1:54321";
 const SB_KEY="local-development-only";
 const SB_SCHEMA="strava";
-// THE PUBLIC EXAMPLE. One real run, pushed from a real session with `agentgrinder grind --coach`,
-// visibility public, readable with the publishable key above and no account. The landing page
-// shows it to a logged-out visitor so the argument of the product is on screen before sign-in.
-// FEATURED_SNAPSHOT is the same row, written down at publish time: it paints instantly, and the
-// live row replaces it the moment the fetch lands. If the two ever disagree, the live row wins.
-const FEATURED_RUN="28d5d0b7-eda2-4d94-a83c-580d2e3b75b2";
-const FEATURED_SNAPSHOT=null;
-// Historical source example; not a member of this new deployment.
-const ARCHIVED_FEATURED_SNAPSHOT={id:FEATURED_RUN,title:"One real sitting, refereed by the coach",
-  project:null,harness:"Claude Code",visibility:"public",created_at:"2026-09-03T14:36:33.161930+00:00",
-  started_at:"2026-09-01T20:20:09.757+00:00",duration_s:3948,prompts:3,tool_calls:150,files_touched:44,commits:6,
-  claims:7,claims_verified:3,artifacts_produced:8,coach_tool_calls:37,progress_verdict:"baseline",
-  coach_verdict:"3 of 7 claims had evidence in their own turn. 8 of 14 files the run wrote exist on disk, 12 of them in a commit. 6 commits during the sitting, over 3 typed turns.",
-  coach_plan:"Claims [4, 5, 6, 7] had no evidence in their turn: run the check in the same turn and name the test or file in the sentence.",
-  rhythm:[9,3,0,0,0,3,6,4,2,0,3,0,3,1,1,3,0,0,0,0,2,1,3,2,4,7,4,2,3,2,0,1,0,0,0,0,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,1,1,0,0,1,2,1,0,0,0,1,3,2,3,4,5,1,7,5,4,2,1,2,4,0,0,2,4,1,0,2,6,4,3,3,0,0,0,0],
-  profiles:{github_handle:"Morkeeth",name:"Oscar Morkeeth"}};
+// Featured activity comes only from public runs in this Strava deployment.
 async function fetchFeatured(){
   if(!sb) return null;
   try{
-    const {data}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig)').eq('id',FEATURED_RUN).maybeSingle();
+    const {data}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('visibility','public').order('created_at',{ascending:false}).limit(1).maybeSingle();
     if(data) noteTraces([data]);
     return data||null;
   }catch(_){ return null; }
@@ -481,10 +468,10 @@ function setPrimarySection(section){
 function syncAuthNav(){
   document.querySelectorAll('[data-auth="1"]').forEach(el=>{el.hidden=!ME});
   const scrap=$('account-scrapbook');
-  if(scrap&&ME) scrap.href='/?u='+encodeURIComponent(ME.github_handle);
+  if(scrap&&ME) scrap.href='/?u='+encodeURIComponent(profileHandle(ME));
 }
 function feedTabs(active){
-  return `<nav class="feed-tabs" aria-label="Feed filters"><a href="/?explore" class="${active==='discover'?'on':''}" ${active==='discover'?'aria-current="page"':''}>Discover</a><a href="/?following" class="${active==='following'?'on':''}" ${active==='following'?'aria-current="page"':''}>Following</a></nav>`;
+  return `<nav class="feed-tabs" aria-label="Feed filters"><a href="/?explore" class="${active==='discover'?'on':''}" ${active==='discover'?'aria-current="page"':''}>Discover</a><a href="/?people" class="${active==='people'?'on':''}" ${active==='people'?'aria-current="page"':''}>Find people</a><a href="/?following" class="${active==='following'?'on':''}" ${active==='following'?'aria-current="page"':''}>Following</a></nav>`;
 }
 function myRunsTabs(active){
   return `<nav class="section-tabs" aria-label="My runs"><a href="/?mine" class="${active==='runs'?'on':''}" ${active==='runs'?'aria-current="page"':''}>My runs</a></nav>`;
@@ -550,9 +537,13 @@ async function grinderFetch(input, options={}){
   return fetch(input,{...options,headers});
 }
 const sb=window.supabase&&window.supabase.createClient(SB_URL,SB_KEY,{db:{schema:SB_SCHEMA},auth:{storageKey:"agentic-strava-auth"},global:{fetch:grinderFetch}});
-let ME=null;
+const auth=sb?GrinderAuth.create({client:sb,redirectTo:location.origin+'/'}):null;
+const PROVIDERS_ENABLED=["github","email"];
+const profileHandle=p=>GrinderAuth.present(p)?.handle||'';
+let ME=null, IDENTITY_SETUP=null;
 const social=GrinderSocial({client:sb,me:()=>ME,app:()=>$('app'),frame,status,
   renderRuns:async runs=>{noteTraces(runs);const ad=await ackData(runs);setTimeout(()=>{wireKudos();countUp()},0);return runs.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('')}});
+const people=GrinderPeople({client:sb,me:()=>ME,app:()=>$('app'),frame,status,social,drawAvatar:avatar,renderRuns:async runs=>{noteTraces(runs);const ad=await ackData(runs);setTimeout(()=>{wireKudos();countUp()},0);return runs.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('')}});
 const practices=GrinderPractices({client:sb,me:()=>ME,app:()=>$('app'),frame,status});
 const progress=GrinderProgress({client:sb,me:()=>ME,app:()=>$('app'),frame,status,signIn:showSignIn});
 const challenges=GrinderChallenges({client:sb,me:()=>ME,app:()=>$('app'),frame,status});
@@ -580,7 +571,7 @@ const isAgentProfile=p=>!!(p&&p.rig&&p.rig.agent===true);
 function noteTraces(runs){
   (runs||[]).forEach(r=>{
     if(!r||r.visibility==='anonymous') return;
-    const p=r.profiles||{}, h=p.github_handle; if(!h) return;
+    const p=r.profiles||{}, h=profileHandle(p); if(!h) return;
     const k=traceKey(h); if(!TRACE_LOOKED[k]) TRACE_LOOKED[k]='public';
     if(isAgentProfile(p)) TRACE_AGENT[k]=true;
     if(!r.rhythm||!r.rhythm.length) return;
@@ -630,8 +621,8 @@ function avatar(handle,opts){
 const esc=s=>String(s??'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
 function runAttribution(r){
   if(r.visibility==='anonymous') return {handle:'ghost',name:'Ghost grinder',ghost:true,link:null};
-  const p=r.profiles||{}, h=p.github_handle||'someone';
-  return {handle:h,name:p.name||h,ghost:false,link:`/?u=${encodeURIComponent(h)}`};
+  const p=r.profiles||{}, h=profileHandle(p)||'someone';
+  return {handle:h,name:p.display_name||p.name||h,ghost:false,link:`/?u=${encodeURIComponent(h)}`};
 }
 function roastShapeLines(r){
   const p=r.prompts||0,t=r.tool_calls||0,c=r.commits??null,regs=r.route?new Set(r.route).size:0;
@@ -720,12 +711,12 @@ function suggestAckReasons(r){
 function ackListHtml(rows){
   if(!rows||!rows.length) return '<p class="hint" style="padding:0 17px 14px">No ACKs yet — be the first to recognize this grind.</p>';
   return `<div class="ack-list">${rows.map(a=>{
-    const p=a.profiles||{}, h=p.github_handle||'?', meta=ACK_REASONS[a.reason]||{label:a.reason,evidence:''};
+    const p=a.profiles||{}, h=profileHandle(p)||'?', meta=ACK_REASONS[a.reason]||{label:a.reason,evidence:''};
     return `<div class="ack-row">${avatar(h)}<div><b>@${esc(h)}</b> ACKed <b>${esc(meta.label)}</b><br><span>${esc(meta.evidence)}</span></div></div>`;
   }).join('')}</div>`;
 }
 async function fetchAckList(runId){
-  const {data}=await sb.from('acks').select('id,reason,created_at,from_profile,profiles:from_profile(github_handle,name,rig)').eq('run_id',runId).order('created_at',{ascending:false});
+  const {data}=await sb.from('acks').select('id,reason,created_at,from_profile,profiles:from_profile(github_handle,name,rig,handle,display_name,avatar_url)').eq('run_id',runId).order('created_at',{ascending:false});
   await fillTraces(data||[]);
   return data||[];
 }
@@ -733,10 +724,10 @@ async function fetchAckList(runId){
 // before the row is drawn, so a flat tile there means "no public grind", never "we did not ask".
 async function fillTraces(rows){
   const ids=[...new Set((rows||[]).map(a=>a.from_profile).filter(Boolean))];
-  const handles=(rows||[]).map(a=>(a.profiles||{}).github_handle).filter(Boolean);
+  const handles=(rows||[]).map(a=>profileHandle(a.profiles)).filter(Boolean);
   const missing=handles.filter(h=>!TRACES[traceKey(h)]);
   if(!ids.length||!missing.length) return;
-  const {data}=await sb.from('runs').select('rhythm,created_at,visibility,profiles!runs_profile_id_fkey(github_handle,name,rig)')
+  const {data}=await sb.from('runs').select('rhythm,created_at,visibility,profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)')
     .in('profile_id',ids).eq('visibility','public').order('created_at',{ascending:false}).limit(200);
   noteTraces(data||[]); noteLooked(handles,'public');
 }
@@ -1067,7 +1058,7 @@ async function viewOnboard(){
   const cmd=t=>`<div class="cmd"><span class="c">${t}</span></div>`;
   const step1=`<div class="ob-step"><h3>Create your profile${ME?' · done':''}</h3>
     <p class="hint">Your profile keeps your run history. Choose GitHub or email. GitHub sign-in does not request access to your repositories.</p>
-    ${ME?`<p class="meta">Connected as <b style="color:var(--ink);font-weight:500">@${esc(ME.github_handle)}</b></p>`:
+    ${ME?`<p class="meta">Connected as <b style="color:var(--ink);font-weight:500">@${esc(profileHandle(ME))}</b></p>`:
     `<button id="ob-auth">Sign in</button>`}</div>`;
   const step2=`<div class="ob-step"><h3>Record a run</h3>
     <p class="hint">Reads Claude Code, Cursor or Codex on your machine. Capture stays on your machine. Sharing opens a preview of the counts and any coach notes before you publish.</p>
@@ -1213,7 +1204,7 @@ function coachStrip(r){
   const dm=r.duration_s?Math.round(r.duration_s/60):0;
   const head=[dm?fmtDur(dm):'',r.harness].filter(Boolean).join(' · ');
   return `<div class="check" id="check">
-    <div class="check-top">${avatar((r.profiles||{}).github_handle,{rhythm:r.rhythm})}
+    <div class="check-top">${avatar(profileHandle(r.profiles),{rhythm:r.rhythm})}
       <span class="t">${esc(head||'a real sitting')}</span><span class="s" id="st">reading</span></div>
     ${rows.map((t,i)=>`<div class="step" data-s="${i}"><span class="i"></span><span class="n">${esc(t[0])}</span><span class="o">${esc(t[1])}</span></div>`).join('')}</div>`;
 }
@@ -1252,17 +1243,10 @@ function landingHTML(r){
 async function viewLanding(){
   const app=$('app');
   frame('','',true);
-  const painted=landingHTML(FEATURED_SNAPSHOT);
-  app.innerHTML=painted; playStrip(); wireCopy(); countUp();
+  app.innerHTML=landingHTML(null); wireCopy();
   const live=await fetchFeatured();
-  // the live row always wins. It only repaints when it says something different from the
-  // snapshot: an identical row that repaints anyway would destroy the coach strip mid-fill.
-  if(live){ const fresh=landingHTML(live);
-    if(fresh!==painted){ app.innerHTML=fresh; playStrip(); wireCopy(); countUp(); } }
-  else if(!FEATURED_SNAPSHOT){
-    const slot=app.querySelector('.card .empty');
-    if(slot) slot.innerHTML='The public example run could not be loaded. <a href="/?explore">Browse public runs</a>.';
-  }
+  if(live && !ME && !location.search && !location.hash){app.innerHTML=landingHTML(live);wireCopy();countUp();}
+
 }
 
 
@@ -1310,7 +1294,7 @@ async function viewRun(id){
   const app=$('app');
   const q=new URLSearchParams(location.search);
   frame(null,null); app.innerHTML=skeletonCard();
-  const {data:r,error:runError}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig)').eq('id',id).single();
+  const {data:r,error:runError}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('id',id).single();
   if(runError&&runError.code!=='PGRST116'){app.innerHTML='<div class="empty">This run could not load. Please refresh to try again.</div>';return;}
   if(!r){ app.innerHTML='<div class="card"><div class="empty">This run is private or does not exist.</div></div>'; return; }
   noteTraces([r]);
@@ -1324,7 +1308,7 @@ async function viewRun(id){
     +runCard(r,ad.mine.has(r.id),ad.counts[r.id]||acks.length,{picker:openAck,suggested,selected:preselect})
     +`<section id="grind-thread"></section><div class="head"><h2>ACKs</h2><span class="meta">${acks.length}</span></div><div class="panel">`+ackListHtml(acks)+`</div>`
     +`<div class="cta">${r.visibility==='public'||r.visibility==='link'?'<button id="run-copy-link">Copy run link</button>':''}<a class="act" href="/?share=1&run=${r.id}">Share card</a>
-      <span class="hint"><a href="/?u=${encodeURIComponent((r.profiles||{}).github_handle||'')}">see the profile</a></span></div><section id="grind-feature"></section>`;
+      <span class="hint"><a href="/?u=${encodeURIComponent(profileHandle(r.profiles)||'')}">see the profile</a></span></div><section id="grind-feature"></section>`;
   const copyLink=$('run-copy-link');if(copyLink)copyLink.onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+'/?run='+r.id);copyLink.textContent='Link copied'}catch(_){status('Copy this page address to share your run.')}};
   if(ME?.id===r.profile_id){
     const controls=document.createElement('div');controls.className='panel reply-form';
@@ -1396,7 +1380,7 @@ async function viewExplore(){
   const app=$('app');
   setPrimarySection('feed');
   frame(railHtml('feed'),null); app.innerHTML=skeletonCard()+skeletonCard()+skeletonCard();
-  const {data:runs,error}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig)').eq('visibility','public').order('created_at',{ascending:false}).limit(50);
+  const {data:runs,error}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('visibility','public').order('created_at',{ascending:false}).limit(50);
   noteTraces(runs);
   if(error){status(error.message,true);return;}
   const ad=await ackData(runs||[]);
@@ -1428,10 +1412,11 @@ function wireComposer(){
 async function viewProfile(handle){
   const app=$('app');
   frame(null,null); app.innerHTML=skeletonCard();
-  const {data:prof}=await sb.from('profiles').select('*').eq('github_handle',handle).single();
-  if(!prof){ app.innerHTML='<div class="card"><div class="empty">No such grinder.</div></div>'; return; }
+  let prof;try{prof=await auth.byHandle(handle)}catch(e){status(e.detail?.message||'Profile could not load. Try again.',true);app.innerHTML='<p>Profile unavailable. Please refresh.</p>';return;}
+  if(prof)handle=profileHandle(prof);
+  if(!prof){ app.innerHTML='<div class="card"><div class="empty">Profile not found.</div></div>'; return; }
   const mine=ME&&ME.id===prof.id;
-  const {data:runs}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig)')
+  const {data:runs}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)')
     .eq('profile_id',prof.id)[mine?'in':'eq']('visibility',mine?['public','link','private','anonymous']:'public').order('created_at',{ascending:false}).limit(50);
   noteTraces(runs); noteLooked([handle],mine?'all':'public');
   const R=runs||[]; const {count:acksR}=await sb.from('acks').select('*',{count:'exact',head:true}).eq('to_profile',prof.id);
@@ -1444,51 +1429,45 @@ async function viewProfile(handle){
   const setup=harnesses.join(' · ');
   frame(railHtml(mine?'me':null,R), null);
   app.innerHTML=`<div class="phero">${avatar(handle,{size:36,agent:isAgentProfile(prof)})}
-      <div><h1>${esc(prof.name||handle)}</h1><div class="h">@${esc(handle)}${setup?' · '+esc(setup):''}</div></div></div>
+      <div><h1>${esc(prof.display_name||prof.name||handle)}</h1><div class="h">@${esc(handle)}${setup?' · '+esc(setup):''}</div></div></div>
     <div id="social-follow" class="social-follow"></div>
     <div class="ptotals num"><div><div class="k">Public runs</div><div class="v" data-count="${mine?R.filter(r=>r.visibility==='public').length:R.length}">0</div></div><div><div class="k">ACKs received</div><div class="v" data-count="${acksR||0}">0</div></div></div>
-    ${mine?`<details class="profile-settings"><summary>Edit profile</summary><div class="panel pad"><label>Display name<input id="e_name" value="${esc(prof.name||'')}"></label><button id="savep">Save profile</button></div></details>`:''}
+    ${mine?`<details class="profile-settings"><summary>Edit profile</summary><div class="panel pad"><label>Handle<input id="e_handle" maxlength="40" value="${esc(handle)}"></label><label>Display name<input id="e_name" maxlength="60" value="${esc(prof.display_name||prof.name||'')}"></label><button id="savep">Save profile</button><div id="linked-accounts"></div></div></details>`:''}
     <div class="head"><h2>${mine?'Your runs':'Runs'}</h2><span class="meta">${R.length||'none yet'}${mine?` · <a href="/?share=1&u=${encodeURIComponent(handle)}">share your profile</a>`:''}</span></div>
     ${R.length?(await (async()=>{const ad=await ackData(R);return R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('');})()):'<div class="card"><div class="empty">No runs yet.</div></div>'}`;
   wireKudos(); countUp();
   await social.followControl(prof,$('social-follow'));
   if(mine) $('savep').addEventListener('click',async()=>{
-    const {error}=await sb.from('profiles').update({name:$('e_name').value||null}).eq('id',prof.id);
-    status(error?error.message:'Saved.',!!error); if(!error) viewProfile(handle); });
+    try{ME=await auth.updateProfile({handle:$('e_handle').value,display_name:$('e_name').value});const h=profileHandle(ME);history.replaceState(null,'','/?u='+encodeURIComponent(h));await refreshAuth();await viewProfile(h);status('Saved.');}catch(e){status(e.detail?.message||'Your profile could not be saved.',true)} });
 }
 
 function showSignIn(){
-  if(!sb){status('Sign-in is unavailable. Please refresh.',true);return;}
-  const imported=location.hash.match(/import=([^&]+)/);if(imported&&!stashImport(imported[1])){status('This browser could not preserve the draft for sign-in. Keep this tab open and save your run JSON before continuing in another tab.',true);return;}
+  if(!auth){status('Sign-in is unavailable. Please refresh.',true);return;}
+  const imported=location.hash.match(/import=([^&]+)/);if(imported&&!stashImport(imported[1])){status('This browser could not preserve the draft. Save your run JSON before signing in.',true);return;}
   try{sessionStorage.setItem('ag_social_return',location.search)}catch(_){}
   let dialog=$('signin-dialog');if(dialog)dialog.remove();
-  dialog=document.createElement('dialog');dialog.id='signin-dialog';dialog.setAttribute('aria-labelledby','signin-title');dialog.innerHTML='<h2 id="signin-title">Keep your run</h2><p>Sign in to post a run, follow builders and return to your work.</p><button id="signin-github">Continue with GitHub</button><form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public handle.</p><button>Send a sign-in link</button></form><p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
+  dialog=document.createElement('dialog');dialog.id='signin-dialog';dialog.setAttribute('aria-labelledby','signin-title');
+  dialog.innerHTML='<h2 id="signin-title">Keep your run</h2><p>Sign in to post a run, follow friends and return to the conversation.</p>'+PROVIDERS_ENABLED.filter(p=>p!=='email').map(p=>'<button data-provider="'+p+'">Continue with '+(p==='x'?'X':'GitHub')+'</button>').join('')+'<form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public profile.</p><button>Send a sign-in link</button></form><p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
   document.body.append(dialog);dialog.showModal();$('signin-close').onclick=()=>dialog.close();
-  $('signin-github').onclick=async()=>{const {error}=await sb.auth.signInWithOAuth({provider:'github',options:{redirectTo:location.origin+'/'}});if(error)$('signin-state').textContent='GitHub sign-in could not start. Try again.'};
-  $('signin-email').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,button=f.querySelector('button');button.disabled=true;try{const {error}=await sb.auth.signInWithOtp({email:f.elements.email.value,options:{emailRedirectTo:location.origin+'/'}});$('signin-state').textContent=error?'The sign-in link could not be sent. Try again or use GitHub.':'Check your email for the sign-in link. Keep this tab open to return to your draft.'}catch(_){$('signin-state').textContent='Sign-in could not connect. Try again.'}finally{button.disabled=false}};
+  dialog.querySelectorAll('[data-provider]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{await auth.signIn(button.dataset.provider,{returnTo:location.search})}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not start. Try again.';button.disabled=false}});
+  $('signin-email').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,button=f.querySelector('button');button.disabled=true;try{await auth.signIn('email',{email:f.elements.email.value,returnTo:location.search});$('signin-state').textContent='Check your email for the sign-in link. Keep this tab open to return to your draft.'}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not connect. Try again.'}finally{button.disabled=false}};
 }
 
-async function refreshAuth(){ if(!sb)return;
-  const {data:{session},error:sessionError}=await sb.auth.getSession();
-  if(sessionError){status('Sign-in could not be restored. Please sign in again.',true);return;}
-  if(session){ const u=session.user,meta=u.user_metadata||{},candidate=meta.user_name||meta.preferred_username||'';
-    const h=/^[a-z0-9_-]{1,60}$/i.test(candidate)?candidate:'grinder-'+u.id.slice(0,8);
-    const initialName=typeof meta.full_name==='string'&&!meta.full_name.includes('@')?meta.full_name:h;
-    let {data:p,error}=await sb.from('profiles').select('*').eq('auth_uid',u.id).maybeSingle();
-    if(!error&&!p){
-      const created=await sb.from('profiles').insert({auth_uid:u.id,github_handle:h,name:initialName}).select('*').single();
-      p=created.data;error=created.error;
-      if(error?.code==='23505'){
-        const existing=await sb.from('profiles').select('*').eq('auth_uid',u.id).maybeSingle();
-        if(existing.data){p=existing.data;error=null}
-      }
-    }
-    if(error||!p){ME=null;status('Your profile could not load. Please try signing in again.',true);return;}
-    ME=p; $('me').innerHTML=`<a href="/?u=${encodeURIComponent(p.github_handle)}">@${esc(p.github_handle)}</a>`; $('auth').textContent='Sign out'; $('deletewrap').hidden=false;
-  } else { ME=null; $('me').textContent=''; $('auth').textContent='Sign in'; $('deletewrap').hidden=true; }
-  $('mobile-product-nav').hidden = false;
-  syncAuthNav();
-  status('');
+function viewIdentitySetup(){
+  frame(null,null);
+  const suggestion=IDENTITY_SETUP?.suggestion||{};
+  $('app').innerHTML='<section class="card"><h1>Make this your profile</h1><p>Choose how friends see you. Your email stays private. No run is posted by signing in.</p><form id="identity-form" class="reply-form"><label>Handle<input name="handle" autocomplete="username" maxlength="40" required value="'+esc(suggestion.handle||'')+'"></label><label>Display name<input name="display_name" autocomplete="nickname" maxlength="60" required value="'+esc(suggestion.display_name||'')+'"></label><p id="identity-state" role="status"></p><button>Create profile</button></form></section>';
+  $('identity-form').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,button=f.querySelector('button');button.disabled=true;try{const result=await auth.onboard({handle:f.elements.handle.value,display_name:f.elements.display_name.value,avatar_url:null});ME=result.profile;IDENTITY_SETUP=null;await refreshAuth();await route();}catch(error){$('identity-state').textContent=error.detail?.message||'Your profile could not be saved. Try again.';button.disabled=false;}};
+}
+
+async function refreshAuth(){
+  if(!auth)return;
+  try{
+    const current=await auth.current();ME=current.profile;IDENTITY_SETUP=current.needsOnboarding?current:null;
+    $('me').innerHTML=ME?'<a href="'+GrinderAuth.present(ME).url+'">@'+esc(profileHandle(ME))+'</a>':'';
+    $('auth').textContent=current.user?'Sign out':'Sign in';$('deletewrap').hidden=!ME;
+    $('mobile-product-nav').hidden=false;syncAuthNav();status('');
+  }catch(e){ME=null;IDENTITY_SETUP=null;status(e.detail?.message||'Sign-in could not be restored. Try again.',true);}
 }
 
 // The publish payload survives the OAuth round trip in sessionStorage, because it cannot survive
@@ -1614,7 +1593,7 @@ function importRun(){
 async function viewShareRun(id){
   const app=$('app'); frame(null,null,true);
   const q=new URLSearchParams(location.search);
-  const {data:r,error:runError}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig)').eq('id',id).single();
+  const {data:r,error:runError}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('id',id).single();
   if(runError&&runError.code!=='PGRST116'){app.innerHTML='<div class="empty">This run could not load. Please refresh to try again.</div>';return;}
   if(!r){ app.innerHTML='<div class="empty">Run not found or private.</div>'; return; }
   let moment=null;const mid=q.get('moment');
@@ -1627,8 +1606,9 @@ async function viewShareRun(id){
 }
 async function viewShareRig(handle){
   const app=$('app'); frame(null,null);
-  const {data:prof}=await sb.from('profiles').select('*').eq('github_handle',handle).single();
-  if(!prof){ app.innerHTML='<div class="card"><div class="empty">No such grinder.</div></div>'; return; }
+  let prof;try{prof=await auth.byHandle(handle)}catch(e){status(e.detail?.message||'Profile could not load. Try again.',true);app.innerHTML='<p>Profile unavailable. Please refresh.</p>';return;}
+  if(prof)handle=profileHandle(prof);
+  if(!prof){ app.innerHTML='<div class="card"><div class="empty">Profile not found.</div></div>'; return; }
   const {data:runs}=await sb.from('runs').select('harness').eq('profile_id',prof.id).eq('visibility','public');
   const harnesses=[...new Set((runs||[]).map(r=>r.harness).filter(Boolean))];
   const rg=prof.rig||{};
@@ -1645,8 +1625,9 @@ async function viewShareRig(handle){
 
 async function viewShareProfile(handle){
   const app=$('app'); frame(null,null,true);
-  const {data:prof}=await sb.from('profiles').select('*').eq('github_handle',handle).single();
-  if(!prof){ app.innerHTML='<div class="empty">No such grinder.</div>'; return; }
+  let prof;try{prof=await auth.byHandle(handle)}catch(e){status(e.detail?.message||'Profile could not load. Try again.',true);app.innerHTML='<p>Profile unavailable. Please refresh.</p>';return;}
+  if(prof)handle=profileHandle(prof);
+  if(!prof){ app.innerHTML='<div class="empty">Profile not found.</div>'; return; }
   const mine=ME&&ME.id===prof.id;
   const {data:runs}=await sb.from('runs').select('*').eq('profile_id',prof.id)
     [mine?'in':'eq']('visibility',mine?['public','link','private']:'public');
@@ -1679,7 +1660,7 @@ function viewClaim(){
 async function viewEvent(){
   const app=$('app');
   frame(railHtml('feed'),null); app.innerHTML=skeletonCard()+skeletonCard();
-  const {data:runs}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig)').eq('visibility','public').order('created_at',{ascending:false}).limit(40);
+  const {data:runs}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('visibility','public').order('created_at',{ascending:false}).limit(40);
   noteTraces(runs);
   const ad=await ackData(runs||[]);
   const R=runs||[];
@@ -1697,9 +1678,10 @@ async function viewEvent(){
 const forum=GrinderForum({client:sb,app:()=>document.getElementById('app'),frame,status});
 
 async function route(){ authErrorFromUrl();
+  if(IDENTITY_SETUP)return viewIdentitySetup();
   restoreImport();
   if(importRun()) return;
-  if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example)(=|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
+  if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example|people)(=|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
   const q=new URLSearchParams(location.search);
   if(q.has('example')){
     if(q.get('example')==='share') return GrinderExample.viewShare();
@@ -1711,6 +1693,7 @@ async function route(){ authErrorFromUrl();
   if(q.has('mine')){setPrimarySection('mine');return progress.history();}
   if(q.has('progress')){setPrimarySection('mine');return progress.index();}
   if(q.has('comparison')){setPrimarySection('mine');return progress.detail(q.get('comparison'));}
+  if(q.has('people')){setPrimarySection('feed');return people.discover(q.get('q')||'');}
   if(q.has('following')){setPrimarySection('feed');return social.following();}
   if(q.has('inbox')){setPrimarySection('inbox');return social.inbox();}
   if(q.has('crews')){setPrimarySection('community');return social.crews();}
@@ -1748,10 +1731,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   $('auth').addEventListener('click',async()=>{ if(!sb){status('Refresh.',true);return;}
     const {data:{session}}=await sb.auth.getSession();
-    if(session){await sb.auth.signOut({scope:"local"});location.href='/';return;}
+    if(session){try{await auth.signOutLocal();location.href='/';}catch(e){status(e.detail?.message||'Sign-out failed. Try again.',true)}return;}
     showSignIn(); });
   $('delete').addEventListener('click',async e=>{e.preventDefault(); if(!ME)return; if(!confirm('Delete your Strava profile and owned work? Your Agent Grinder profile and shared sign-in account remain. Deleted work cannot be restored.'))return;
-    const {error}=await sb.from('profiles').delete().eq('id',ME.id); if(error){status(error.message,true);return;} await sb.auth.signOut({scope:"local"}); location.href='/'; });
+    try{await auth.deleteProfile();location.href='/';}catch(e){status(e.detail?.message||'Your profile could not be deleted. Try again.',true)} });
   if(sb){
     // Initial session loading and SIGNED_IN can arrive together. Finish one render
     // before another auth refresh can append controls to the same page.

@@ -115,7 +115,7 @@ window.GrinderSocial = function ({
       const runs = await result(
         db
           .from("runs")
-          .select("*,profiles!runs_profile_id_fkey(github_handle,name,rig)")
+          .select("*,profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)")
           .in("profile_id", followedIds)
           .eq("visibility", "public")
           .order("created_at", { ascending: false })
@@ -128,7 +128,7 @@ window.GrinderSocial = function ({
       const people = await result(
         db
           .from("profiles")
-          .select("id,github_handle,name")
+          .select("id,github_handle,name,handle,display_name,avatar_url")
           .in("id", followedIds)
           .limit(24),
       );
@@ -301,7 +301,7 @@ window.GrinderSocial = function ({
       let query = db
         .from("grinder_replies")
         .select(
-          "*,author:profiles!grinder_replies_author_id_fkey(github_handle,name)",
+          "*,author:profiles!grinder_replies_author_id_fkey(github_handle,name,handle,display_name,avatar_url)",
         )
         .eq("run_id", runId)
         .order("created_at", { ascending: false })
@@ -474,7 +474,7 @@ window.GrinderSocial = function ({
         db
           .from("grinder_notifications")
           .select(
-            "*,actor:profiles!grinder_notifications_actor_id_fkey(github_handle,name)",
+            "*,actor:profiles!grinder_notifications_actor_id_fkey(github_handle,name,handle,display_name,avatar_url)",
           )
           .eq("recipient_id", me().id)
           .order("created_at", { ascending: false })
@@ -634,7 +634,7 @@ window.GrinderSocial = function ({
       const members = await result(
         db
           .from("grinder_memberships")
-          .select("profile_id,role,profile:profiles(github_handle,name)")
+          .select("profile_id,role,profile:profiles(github_handle,name,handle,display_name,avatar_url)")
           .eq("crew_id", id),
       );
       const mine = members.some((m) => m.profile_id === me()?.id),
@@ -642,7 +642,7 @@ window.GrinderSocial = function ({
       const runs = await result(
         db
           .from("runs")
-          .select("*,profiles!runs_profile_id_fkey(github_handle,name,rig)")
+          .select("*,profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)")
           .eq("crew_id", id)
           .order("created_at", { ascending: false })
           .limit(50),
@@ -956,7 +956,7 @@ window.GrinderSocial = function ({
         db
           .from("grinder_agents")
           .select(
-            "*,owner:profiles!grinder_agents_owner_id_fkey(github_handle,name)",
+            "*,owner:profiles!grinder_agents_owner_id_fkey(github_handle,name,handle,display_name,avatar_url)",
           )
           .eq("id", id),
       );
@@ -970,7 +970,7 @@ window.GrinderSocial = function ({
       const runs = await result(
         db
           .from("runs")
-          .select("*,profiles!runs_profile_id_fkey(github_handle,name,rig)")
+          .select("*,profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)")
           .eq("source_actor_id", id)
           .order("created_at", { ascending: false })
           .limit(50),
@@ -1039,7 +1039,7 @@ window.GrinderSocial = function ({
         const runs = await result(
           db
             .from("runs")
-            .select("*,profiles!runs_profile_id_fkey(github_handle,name,rig)")
+            .select("*,profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)")
             .eq("id", person.featured_run_id)
             .eq("profile_id", person.id)
             .eq("visibility", "public"),

@@ -97,7 +97,7 @@ grant usage on schema auth to anon,authenticated;
 export async function seedJourneyActors(db) {
   await db.exec("reset role");
   await db.query(
-    "insert into profiles(id,auth_uid,github_handle,name) values($1,$1,'test-casey','TEST DATA Casey'),($2,$2,'test-riley','TEST DATA Riley')",
+    "insert into profiles(id,auth_uid,handle,display_name,name) values($1,$1,'test-casey','TEST DATA Casey','TEST DATA Casey'),($2,$2,'test-riley','TEST DATA Riley','TEST DATA Riley')",
     [CASEY, RILEY],
   );
 }
@@ -239,9 +239,9 @@ async function handle(db, req, res) {
       return;
     }
     const row = (
-      await db.query("select id,github_handle,name from profiles where auth_uid=$1", [sub])
+      await db.query("select id,github_handle,name,handle,display_name,avatar_url from profiles where auth_uid=$1", [sub])
     ).rows[0];
-    const handle = row?.github_handle || "grinder-" + sub.slice(0, 8);
+    const handle = row?.handle || row?.github_handle || "grinder-" + sub.slice(0, 8);
     res.setHeader("Content-Type", "application/json");
     res.end(
       JSON.stringify({
@@ -270,12 +270,14 @@ async function handle(db, req, res) {
     const body = (await readBody(req)) || {};
     const keys = Object.keys(body);
     const result = await withRole(db, sub, async () => {
-      if (!keys.length) {
-        return (await db.query(`select ${ident(fn)}() as result`)).rows[0].result;
+      const args = keys.map((k,i)=>ident(k)+" := $"+(i+1)).join(", ");
+      const values = keys.map(k=>body[k]);
+      const meta=(await db.query("select proretset from pg_proc where pronamespace='strava'::regnamespace and proname=$1",[fn])).rows[0];
+      if(meta?.proretset){
+        const rows=(await db.query(`select * from ${ident(fn)}(${args})`,values)).rows;
+        return /vnd\.pgrst\.object/.test(String(req.headers.accept||""))?(rows[0]||null):rows;
       }
-      const args = keys.map((k, i) => ident(k) + " := $" + (i + 1)).join(", ");
-      const values = keys.map((k) => body[k]);
-      return (await db.query(`select ${ident(fn)}(${args}) as result`, values)).rows[0].result;
+      return (await db.query(`select ${ident(fn)}(${args}) as result`,values)).rows[0]?.result;
     });
     let payload = result;
     if (typeof payload === "string") {
@@ -414,7 +416,7 @@ async function selectRows(db, table, select, filters, url) {
     for (const emb of embeds) {
       if (emb.table === "profiles" && (row.profile_id || row.author_id || row.actor_id)) {
         const p = (
-          await db.query("select id,github_handle,name,rig from profiles where id=$1", [emb.alias === "author" ? row.author_id : emb.alias === "actor" ? row.actor_id : row.profile_id])
+          await db.query("select id,github_handle,name,rig,handle,display_name,avatar_url from profiles where id=$1", [emb.alias === "author" ? row.author_id : emb.alias === "actor" ? row.actor_id : row.profile_id])
         ).rows[0];
         row[emb.alias] = p || null;
       } else if (emb.table === "grinder_run_moments" && (row.moment_id || row.id)) {

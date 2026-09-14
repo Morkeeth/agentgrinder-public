@@ -15,11 +15,11 @@ await as(RILEY);
 const byHandle = (
   await db.query("select grinder_find_people($1,20) as rows", ["casey"])
 ).rows[0].rows;
-assert.equal(byHandle[0]?.github_handle, "test-casey");
+assert.equal(byHandle[0]?.handle, "test-casey");
 const byName = (
   await db.query("select grinder_find_people($1,20) as rows", ["TEST DATA Casey"])
 ).rows[0].rows;
-assert.equal(byName[0]?.github_handle, "test-casey");
+assert.equal(byName[0]?.handle, "test-casey");
 
 await db.query(
   "insert into grinder_follows(follower_id,followed_id) values($1,$2)",
@@ -47,7 +47,7 @@ await as(RILEY);
 assert.equal(
   (
     await db.query("select grinder_recent_builders(12) as rows")
-  ).rows[0].rows.filter((r) => r.github_handle === "test-casey").length,
+  ).rows[0].rows.filter((r) => r.handle === "test-casey").length,
   0,
 );
 await db.query(
@@ -58,7 +58,7 @@ assert.equal(
   Number(
     (
       await db.query("select grinder_recent_builders(12) as rows")
-    ).rows[0].rows.find((r) => r.github_handle === "test-casey").public_runs,
+    ).rows[0].rows.find((r) => r.handle === "test-casey").public_runs,
   ),
   1,
 );

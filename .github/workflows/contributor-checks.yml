@@ -20,3 +20,8 @@ jobs:
       - run: python3 scripts/dev.py check
       - run: npm ci --ignore-scripts
       - run: npm run test:shared-schema
+      - run: npm run test:identity
+      - run: npm run test:people
+      - run: node scripts/test-runtime-config.mjs
+      - run: npm run build
+      - run: node scripts/test-people-identity.mjs
