@@ -53,6 +53,11 @@ The command prints allowlisted metrics and a private localhost import URL. It pe
 request and publishes nothing. Next, run the same command against an explicitly selected real
 export on the bot's own computer:
 
+`samples/sample_grokbot_safe_real_shape.jsonl` is an additional regression fixture derived from
+the supplied description of a real 29-record role/content shape. Its seven prompts, tool inputs,
+result bodies, identifiers and paths are replaced with conspicuous `SAFE EXPORT` labels. It
+remains labelled sample bot data and is not evidence that a second bot was used.
+
 ```sh
 python3 templates/grokbot/post-agent-run/scripts/preview.py path/to/selected-export.jsonl
 ```
