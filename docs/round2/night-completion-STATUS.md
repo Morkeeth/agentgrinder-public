@@ -5,7 +5,7 @@ Baseline main `dad083e` (merge of PR #14). Read `FINAL-REVIEW.json` (restart-203
 
 ## 2026-09-15 · start
 
-- Fleet ACK for rev e2daf56ba4f1 rejected as unregistered (session 080cddbb). Recorded once, not retried.
+- Fleet ACK for rev e2daf56ba4f1 rejected as unregistered (this session). Recorded once, not retried.
 - `python3 scripts/dev.py setup` completed in this worktree (venv + npm).
 - Identity, people, account recovery and Responses return are complete on main (FINAL-REVIEW.json R2-01..03 fixed). Not rebuilt here.
 - Trace of the capture > preview > post path as committed (`site/index.html` importRun, `site/social.js` thread):
@@ -21,3 +21,9 @@ Baseline main `dad083e` (merge of PR #14). Read `FINAL-REVIEW.json` (restart-203
 - `scripts/check-post-recovery.py` 28/28, artifacts `/tmp/agentic-strava-post-recovery`, eight phone screenshots inspected and copied to `docs/round2/screens/completion/`. First runs found two walk bugs, not product bugs: the fixture seeds one run for Casey (now excluded), and page one plus 12 pages is 325 so the target must sit past 325 (331 seeded).
 - pytest 347 passed 1 skipped (baseline in this worktree before changes: 322 passed 6 skipped, with the six skips from a venv without playwright; system python3 has it). round2 walk 40/40, response-return pass, social loop pass, `dev.py check` pass.
 - Next: stranger script, push, draft PR, NIGHT-RETURN.md.
+
+## 2026-09-15 · completion
+
+- Review pass added: the export line now names the reach sentence, stack notes and the route as numbers (probed with `export_run` on `samples/sample_run.json`); the walk proves the start time + harness dedupe fallback on an export without a measurement revision, and Back to Responses on the direct reply card. All eight screenshots read one by one.
+- Walk 29/29 · pytest 347 passed 1 skipped · round2 walk 40/40 · response-return · social loop · `dev.py check` all pass at the final head.
+- Draft PR #15 open, not merged, not deployed. NIGHT-RETURN.md written.

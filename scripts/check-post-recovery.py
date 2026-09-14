@@ -39,7 +39,7 @@ ARTIFACTS.mkdir(parents=True, exist_ok=True)
 HOST = round2.HOST
 
 
-def capture(revision: str, started: str):
+def capture(revision, started: str):
     payload = {
         "schema_version": 1,
         "harness": "Cursor",
@@ -48,10 +48,12 @@ def capture(revision: str, started: str):
         "duration_s": 600,
         "tool_calls": 9,
         "started": started,
-        "measurement_revision": revision,
         "rig_mcps": 2,
         "rig_skills": 1,
+        "rig_notes": "TEST DATA stack notes",
     }
+    if revision:
+        payload["measurement_revision"] = revision
     return "#import=" + quote(base64.b64encode(json.dumps(payload).encode()).decode(), safe="")
 
 
@@ -151,7 +153,7 @@ def main():
             my_runs(cp)
             cp.get_by_role("heading", name="Preview your run").wait_for()
             contents = cp.inner_text(".export-contents")
-            check("project folder name" in contents and "never carries prompts, code or file paths" in contents and "how many MCPs and skills" in contents, "preview: says in words what the export carries and what it never carries: " + contents[:80])
+            check("project folder name" in contents and "route as numbers" in contents and "never carries prompts, code or file paths" in contents and "how many MCPs and skills" in contents and "the stack notes you wrote" in contents, "preview: says in words what the export carries and what it never carries: " + contents[:80])
             cp.fill("#i_title", "TEST DATA recovery session")
             cp.fill("#i_caption", "TEST DATA: caption typed before the connection dropped.")
             cp.select_option("#i_vis", "public")
@@ -194,10 +196,12 @@ def main():
             check("already saved" in again and "not applied" in again, "re-save: opens the existing run and says the new caption was not applied: " + again[:100])
             rows = my_runs(cp)
             check(len(rows) == 1 and rows[0]["caption"] == "TEST DATA: caption typed before the connection dropped.", "re-save: still one run with the first caption")
+            cp.get_by_text("No replies yet").wait_for()
             shot(cp, "03-resave-opens-existing-mobile.png")
 
             # 3. Lost response: the insert lands, the browser never hears back.
-            second = capture("d" * 64, "2026-09-14T21:00:00+00:00")
+            # No measurement revision on this export: the start time + harness fallback must dedupe.
+            second = capture(None, "2026-09-14T21:00:00+00:00")
             cp.goto(base + "/" + second)
             settle(cp, "test-casey")
             cp.get_by_role("heading", name="Preview your run").wait_for()
@@ -217,7 +221,7 @@ def main():
             cp.wait_for_function("document.getElementById('status').textContent.includes('already saved')")
             rows = my_runs(cp)
             lost_id = cp.url.split("run=", 1)[1].split("&", 1)[0]
-            check(len(rows) == 2 and any(r["id"] == lost_id and r["measurement_revision"] == "d" * 64 for r in rows), "lost response: Try again found the saved run instead of posting a duplicate (rows " + str(len(rows)) + ")")
+            check(len(rows) == 2 and any(r["id"] == lost_id and r["measurement_revision"] is None for r in rows), "lost response: Try again found the saved run by start time and harness instead of posting a duplicate (rows " + str(len(rows)) + ")")
             check("Only me" in cp.inner_text("#status"), "lost response: the status names the audience the run was saved with")
             shot(cp, "05-lost-response-found-mobile.png")
 
@@ -235,6 +239,7 @@ def main():
             check(len(str(oldest)) == 36, "cap: the target reply exists (" + str(oldest)[:36] + ")")
             filler = rp.evaluate("""async (args) => { const rows=[...Array(330)].map((_,i)=>({run_id:args.run, author_id:args.me, body:'TEST DATA filler reply '+(i+1)})); const {data,error}=await sb.from('grinder_replies').insert(rows).select('id'); return error?error.message:data.length; }""", {"run": run_id, "me": riley})
             check(filler == 330, "cap: 330 newer TEST DATA replies inserted (got " + str(filler) + ")")
+            cp.evaluate("sessionStorage.setItem('ag_response_return','?inbox')")
             cp.goto(base + f"/?run={run_id}&reply={oldest}#reply-{oldest}")
             settle(cp, "test-casey")
             try:
@@ -249,6 +254,7 @@ def main():
             check(cp.locator(".reply-missing").count() == 0, "cap: no removed claim for a reply that exists")
             check("shown here on its own" in cp.inner_text(".reply-direct") and "the reply a friend actually meant" in cp.inner_text(".reply-direct"), "cap: the direct card explains itself and carries the reply body")
             check(cp.evaluate("() => document.activeElement && document.activeElement.id === 'reply-" + str(oldest) + "'"), "cap: focus lands on the exact reply")
+            check(cp.locator(".reply-direct").get_by_role("link", name="Back to Responses").count() == 1, "cap: Back to Responses is offered on the direct card")
             cp.screenshot(path=str(ARTIFACTS / "07-exact-reply-beyond-cap-mobile.png"), full_page=False)
             ghost = str(uuid.uuid4())
             cp.goto(base + f"/?run={run_id}&reply={ghost}#reply-{ghost}")

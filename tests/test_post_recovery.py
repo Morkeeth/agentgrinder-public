@@ -41,7 +41,8 @@ def test_a_failed_rig_update_never_reads_as_a_failed_save():
 
 def test_the_preview_names_what_the_export_carries_and_matches_the_allowlist():
     assert 'class="hint export-contents"' in IMPORT
-    assert "the project folder name, counts, timing, the activity trace" in IMPORT
+    assert "the project folder name, counts, timing, the activity trace and route as numbers" in IMPORT
+    assert "one sentence about reach" in IMPORT and "the stack notes you wrote" in IMPORT
     assert "It never carries prompts, code or file paths." in IMPORT
     assert "MCP names travel only if you tick the box below." in IMPORT
     assert "saved to your profile even when the run is Only me" in IMPORT
@@ -82,7 +83,7 @@ def test_the_browser_walk_covers_the_journey():
     for needle in (
         'route.abort("connectionfailed")',
         "no automatic retry fired",
-        "lost response: Try again found the saved run instead of posting a duplicate",
+        "lost response: Try again found the saved run by start time and harness",
         "re-save: opens the existing run",
         "This import link is incomplete",
         "cap: the exact reply past the 12-page load is rendered directly",
