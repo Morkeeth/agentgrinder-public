@@ -134,6 +134,43 @@ assert.equal((await db.query('select count(*)::int n from strava.profile_handle_
 // The storage constraint itself rejects a second owner, independent of profile trigger checks.
 await denied("insert into strava.profile_handle_claims(alias,profile_id) values('alicegh',$1)", [pb.id], ['23505']);
 assert.deepEqual(await grinder(), before, 'Strava identity actions must not change Grinder');
+// Exercise the real auth helper against SQL, not a duplicate-rule mock: a GitHub
+// alias may already be a chosen handle, but a different chosen handle must still work.
+await as(c);
+const RealAuth = createRequire(import.meta.url)('../site/auth.js');
+const providerUser = {id:c, identities:[{provider:'github',identity_data:{user_name:'alice_builder'}}]};
+let inserts=0;
+const sqlClient={auth:{getSession:async()=>({data:{session:{user:providerUser}},error:null})},
+  from(table){
+    assert.equal(table,'profiles');
+    let inserted=null;const filters=[];
+    const q={select(){return q;},single(){return q;},maybeSingle(){return q;},
+      eq(k,v){assert(['id','auth_uid'].includes(k));filters.push([k,v]);return q;},
+      insert(row){inserted=row;return q;},
+      async then(resolve){
+        try{
+          let result;
+          if(inserted){
+            inserts++;
+            const keys=Object.keys(inserted);assert(keys.every(k=>/^[a-z_]+$/.test(k)));
+            result=await db.query('insert into strava.profiles('+keys.join(',')+') values ('+keys.map((_,i)=>'$'+(i+1)).join(',')+') returning *',Object.values(inserted));
+          }else result=await db.query('select * from strava.profiles where '+filters.map(([k],i)=>k+'=$'+(i+1)).join(' and '),filters.map(([,v])=>v));
+          return resolve({data:result.rows[0]||null,error:null});
+        }catch(e){return resolve({data:null,error:{code:e.code,message:e.message}});}
+      }};return q;
+  }};
+const sqlAuth=RealAuth.create({client:sqlClient});
+await assert.rejects(sqlAuth.onboard({handle:'alice_builder'}),e=>e.detail.code==='handle_taken');
+assert.equal((await db.query('select count(*)::int n from profiles where auth_uid=$1',[c])).rows[0].n,0,'chosen collision creates no profile');
+const recovered=await sqlAuth.onboard({handle:'new-builder',display_name:'New Builder'});
+assert.equal(recovered.profile.handle,'new-builder');assert.equal(recovered.profile.github_handle,null);
+assert.equal((await lookup('alice_builder')).id,pa.id,'existing URL owner is unchanged');
+const attempts=inserts;
+assert.equal((await sqlAuth.onboard({handle:'unused'})).profile.id,recovered.profile.id);
+assert.equal(inserts,attempts,'retry after success reuses existing profile');
+await db.query('delete from profiles where id=$1',[recovered.profile.id]);
+await db.exec('reset role');
+
 // Simulate an already-ambiguous legacy namespace (case variants were permitted by the
 // old github_handle UNIQUE constraint). Migration must refuse, not choose a URL owner.
 await db.exec(`drop trigger strava_profile_handle_guard on strava.profiles;

@@ -214,7 +214,14 @@
         github_handle: s.github_handle,
         name: normalizeDisplayName(choice.display_name, s.display_name || v.handle) || null,
       };
-      const created = await client.from("profiles").insert(row).select("*").single();
+      let created = await client.from("profiles").insert(row).select("*").single();
+      // The linked GitHub name is an optional legacy URL alias. Another builder may
+      // already own it as their chosen Strava handle. Retry only a definite uniqueness
+      // rejection; the database still arbitrates the chosen handle and account identity.
+      if (created.error?.code === "23505" && row.github_handle &&
+          !/auth_uid/.test(String(created.error.message))) {
+        created = await client.from("profiles").insert({ ...row, github_handle: null }).select("*").single();
+      }
       if (!created.error) return { profile: created.data, created: true };
       if (created.error.code === "23505" && /auth_uid/.test(String(created.error.message))) {
         const again = await profile();
