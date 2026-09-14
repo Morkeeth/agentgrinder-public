@@ -21,9 +21,30 @@ window.GrinderSocial = function ({
     );
   const byId = (id) => document.getElementById(id);
   const uuid = (id) => typeof id === "string" && /^[0-9a-f-]{36}$/i.test(id);
-  const profile = (p) => p?.name || p?.github_handle || "A grinder";
-  const link = (p) =>
-    `<a href="/?u=${encodeURIComponent(p?.github_handle || "")}">${esc(profile(p))}</a>`;
+  const present = (p) =>
+    typeof window.GrinderPeople?.present === "function"
+      ? window.GrinderPeople.present(p)
+      : {
+          id: p?.id || null,
+          handle: p?.handle || p?.github_handle || null,
+          display_name: p?.display_name || p?.name || null,
+          avatar_url: p?.avatar_url || null,
+          label:
+            p?.display_name ||
+            p?.name ||
+            (p?.handle || p?.github_handle
+              ? "@" + (p.handle || p.github_handle)
+              : "A builder"),
+          href:
+            p?.handle || p?.github_handle
+              ? "/?u=" + encodeURIComponent(p.handle || p.github_handle)
+              : null,
+        };
+  const link = (p) => {
+    const shown = present(p);
+    if (!shown.href) return esc(shown.label);
+    return `<a href="${shown.href}">${esc(shown.label)}</a>`;
+  };
   const nav =
     (typeof communityTabs === "function" ? communityTabs("crews") : "") +
     '<nav class="social-nav" aria-label="Community extras"><a href="/?inbox">Inbox</a></nav>';
@@ -64,14 +85,14 @@ window.GrinderSocial = function ({
   function fail(error) {
     status(GrinderContract.message(error), true);
   }
-  function empty(message) {
-    return `<div class="card"><p>${esc(message)}</p></div>`;
+  function empty(message, actionsHtml) {
+    return `<div class="card people-empty"><p>${esc(message)}</p>${actionsHtml || ""}</div>`;
   }
 
   async function following() {
     start(
-      "Your following feed",
-      "The real grinds of people you choose to follow.",
+      "Following",
+      "Public runs from people you follow. Follow works before they post.",
       "feed",
     );
     if (!signedIn()) return;
@@ -85,35 +106,81 @@ window.GrinderSocial = function ({
       if (!follows.length) {
         byId("social-body").innerHTML =
           empty(
-            "Follow a builder from their profile to bring their runs here.",
-          ) + '<a href="/?explore">Explore public grinds</a>';
+            "You are not following anyone yet. Find a friend by handle or open a profile from Discover.",
+            `<div class="cta"><a class="act blue" href="/?people">Find people</a><a class="act" href="/?explore">Discover runs</a></div>`,
+          );
         return;
       }
+      const followedIds = follows.map((f) => f.followed_id);
       const runs = await result(
         db
           .from("runs")
           .select("*,profiles!runs_profile_id_fkey(github_handle,name,rig)")
-          .in(
-            "profile_id",
-            follows.map((f) => f.followed_id),
-          )
+          .in("profile_id", followedIds)
           .eq("visibility", "public")
           .order("created_at", { ascending: false })
           .limit(50),
       );
-      byId("social-body").innerHTML = runs.length
-        ? await renderRuns(runs)
-        : empty("No public grinds from these builders yet.");
+      if (runs.length) {
+        byId("social-body").innerHTML = await renderRuns(runs);
+        return;
+      }
+      const people = await result(
+        db
+          .from("profiles")
+          .select("id,github_handle,name")
+          .in("id", followedIds)
+          .limit(24),
+      );
+      const list = (people || [])
+        .map((p) => {
+          const shown = present(p);
+          return shown.href
+            ? `<li><a href="${shown.href}">${esc(shown.label)}</a>${shown.handle ? ` <span class="meta">@${esc(shown.handle)}</span>` : ""}</li>`
+            : `<li>${esc(shown.label)}</li>`;
+        })
+        .join("");
+      byId("social-body").innerHTML =
+        empty(
+          "You follow these builders, but none have public runs yet. Open a profile to respond when they post.",
+          `<div class="cta"><a class="act blue" href="/?people">Find more people</a><a class="act" href="/?explore">Discover runs</a></div>`,
+        ) +
+        (list
+          ? `<article class="card"><h3>People you follow</h3><ul class="following-people">${list}</ul></article>`
+          : "");
     } catch (e) {
       byId("social-body").innerHTML = empty(
         "The following feed could not load. Your follows have not changed.",
+        `<div class="cta"><a class="act" href="/?people">Find people</a></div>`,
       );
       fail(e);
     }
   }
 
   async function followControl(person, slot) {
-    if (!slot || !me() || person.id === me().id) return;
+    if (!slot || !person?.id) return;
+    if (!me()) {
+      slot.innerHTML =
+        '<button type="button" id="follow-signin" class="act">Sign in to follow</button>';
+      slot.querySelector("#follow-signin").onclick = () => {
+        try {
+          sessionStorage.setItem(
+            "ag_social_return",
+            location.search ||
+              (present(person).href
+                ? present(person).href.replace(/^\//, "")
+                : "?people"),
+          );
+        } catch (_) {}
+        byId("auth")?.click();
+      };
+      return;
+    }
+    if (person.id === me().id) {
+      slot.innerHTML =
+        '<p class="meta">This is you. Share your profile link so friends can follow.</p>';
+      return;
+    }
     try {
       const rows = await result(
         db
@@ -124,7 +191,9 @@ window.GrinderSocial = function ({
       );
       let active = rows.length > 0;
       const button = document.createElement("button");
+      button.type = "button";
       button.textContent = active ? "Following · unfollow" : "Follow";
+      button.setAttribute("aria-pressed", active ? "true" : "false");
       slot.append(button);
       button.onclick = async () => {
         button.disabled = true;
@@ -151,10 +220,13 @@ window.GrinderSocial = function ({
             );
           active = !active;
           button.textContent = active ? "Following · unfollow" : "Follow";
+          button.setAttribute("aria-pressed", active ? "true" : "false");
+          status(active ? "Following. Their public runs will appear in Following." : "Unfollowed.");
         } catch (e) {
           fail(e);
         } finally {
           button.disabled = false;
+          button.focus();
         }
       };
       const blocks = await result(
@@ -166,6 +238,7 @@ window.GrinderSocial = function ({
       );
       let blocked = blocks.length > 0;
       const block = document.createElement("button");
+      block.type = "button";
       block.className = "ghost";
       block.textContent = blocked ? "Unblock" : "Block";
       slot.append(block);
@@ -180,12 +253,25 @@ window.GrinderSocial = function ({
                 .eq("blocker_id", me().id)
                 .eq("blocked_id", person.id),
             );
-          else
+          else {
+            if (active) {
+              await result(
+                db
+                  .from("grinder_follows")
+                  .delete()
+                  .eq("follower_id", me().id)
+                  .eq("followed_id", person.id),
+              );
+              active = false;
+              button.textContent = "Follow";
+              button.setAttribute("aria-pressed", "false");
+            }
             await result(
               db
                 .from("grinder_blocks")
                 .insert({ blocker_id: me().id, blocked_id: person.id }),
             );
+          }
           blocked = !blocked;
           block.textContent = blocked ? "Unblock" : "Block";
           status(
@@ -197,6 +283,7 @@ window.GrinderSocial = function ({
           fail(e);
         } finally {
           block.disabled = false;
+          block.focus();
         }
       };
     } catch (e) {
@@ -395,12 +482,37 @@ window.GrinderSocial = function ({
       );
       byId("social-body").innerHTML = rows.length
         ? rows
-            .map(
-              (n) =>
-                `<article class="card">${link(n.actor)} ${n.kind === "reply" ? "replied to your run" : n.kind === "ack" ? "ACKed your work" : "followed you"}${!n.read_at ? " · new" : ""}<p>${n.run_id ? `<a href="/?run=${encodeURIComponent(n.run_id)}">Open the grind</a>` : ""}</p><small>${esc(new Date(n.created_at).toLocaleString())}</small></article>`,
-            )
+            .map((n) => {
+              const actor = present(n.actor);
+              const kind =
+                n.kind === "reply"
+                  ? "replied to your run"
+                  : n.kind === "ack"
+                    ? "ACKed your work"
+                    : "followed you";
+              const runHref = n.run_id
+                ? `/?run=${encodeURIComponent(n.run_id)}${n.kind === "reply" ? "#grind-thread" : ""}`
+                : null;
+              const returnLinks = [
+                actor.href
+                  ? `<a href="${actor.href}">Open profile</a>`
+                  : null,
+                runHref
+                  ? `<a href="${runHref}">${n.kind === "reply" ? "Open reply thread" : "Open the run"}</a>`
+                  : null,
+                n.kind === "follow"
+                  ? `<a href="/?following">Open Following</a>`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
+              return `<article class="card">${link(n.actor)} ${kind}${!n.read_at ? " · new" : ""}<p>${returnLinks || ""}</p><small>${esc(new Date(n.created_at).toLocaleString())}</small></article>`;
+            })
             .join("")
-        : empty("Responses to your public runs will appear here.");
+        : empty(
+            "Responses to your public runs will appear here. Follow someone from Find people to start the loop.",
+            `<div class="cta"><a class="act" href="/?people">Find people</a><a class="act" href="/?post">Post a run</a></div>`,
+          );
       const unread = rows.filter((r) => !r.read_at).map((r) => r.id);
       if (unread.length)
         await result(

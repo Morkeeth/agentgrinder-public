@@ -1,0 +1,31 @@
+/* Friends / people lane — white cards, blue traces, phone + keyboard first. */
+.people-lead{max-width:40rem;color:var(--soft);margin:0 0 18px}
+.people-search{margin:0 0 24px;padding:18px;background:var(--box);border:1px solid var(--rule)}
+.people-search label{display:block;font-size:12px;color:var(--soft);margin-bottom:8px}
+.people-search-row{display:flex;gap:10px;align-items:stretch}
+.people-search input[type=search]{flex:1;min-width:0;min-height:44px;padding:10px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--paper);color:var(--ink);font:inherit}
+.people-search button{min-height:44px;padding:10px 18px;border:1px solid var(--ink);background:var(--ink);color:var(--box);border-radius:2px;cursor:pointer}
+.people-search button:focus-visible,.people-card a:focus-visible,#people-copy-link:focus-visible,#people-share:focus-visible,#people-signin:focus-visible,#people-retry:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.people-body{display:grid;gap:16px}
+.people-section{display:grid;gap:12px}
+.people-empty,.people-share,.people-card{background:var(--box);border:1px solid var(--rule);padding:20px;margin:0}
+.people-empty h3,.people-card h3{margin:0 0 8px;font-size:18px;letter-spacing:-.02em;line-height:1.25}
+.people-empty p,.people-share p,.people-card p{margin:0 0 8px;line-height:1.5}
+.people-empty .cta,.people-share .cta,.people-card-actions,.people-profile-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.people-card-main{display:flex;gap:14px;align-items:flex-start;min-width:0}
+.people-card-copy{min-width:0;flex:1}
+.people-handle{font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums}
+.people-avatar{width:36px;height:36px;flex:0 0 auto;border-radius:2px;object-fit:cover;border:1px solid var(--rule)}
+.people-avatar-fallback{display:inline-block;background:var(--blue-wash);border:1px solid var(--blue-soft)}
+.people-follow{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.people-follow button{min-height:44px}
+.people-share-url{overflow-wrap:anywhere;font-size:14px}
+.people-share-url a{color:var(--blue)}
+.people-hero{display:flex;gap:16px;align-items:center;margin:8px 0 16px}
+.people-tabs{margin-bottom:8px}
+@media(max-width:600px){
+  .people-search{padding:16px}
+  .people-search-row{flex-direction:column}
+  .people-search button,.people-empty .cta .act,.people-share .cta .act,.people-card-actions .act{width:100%;text-align:center;box-sizing:border-box}
+  .people-card,.people-empty,.people-share{padding:16px}
+}

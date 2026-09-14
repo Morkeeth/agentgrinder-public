@@ -31,6 +31,7 @@ def test_social_actions_remain_in_the_focused_app():
     assert ".from(\"grinder_replies\")" in SOCIAL
     assert "ACK the work" in INDEX
     assert "Responses" in SOCIAL
+    assert "/?people" in SOCIAL
 
 
 def test_caption_and_output_are_bounded_by_database_constraints():
