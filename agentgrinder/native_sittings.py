@@ -61,7 +61,11 @@ def sittings(path, harness, gap=1800):
         else:
             from .ingest import _cursor_text
             text = _cursor_text(row.get("message") or {})
-            human = row.get("role")=="user" and "<user_query>" in text
+            human = (
+                row.get("role") == "user"
+                and "<user_query>" in text
+                and (harness != "grokbot" or "<timestamp>" in text)
+            )
             stamp = cursor_time(text)
         if human and current and stamp and last and (stamp-last).total_seconds()>gap:
             groups.append(metadata+current); current=[]
@@ -83,6 +87,10 @@ def read_sitting(path, harness, athlete='you', pick=-1, gap=1800):
     if harness == 'claude':
         from .solo import parse_solo
         return parse_solo(path, athlete=athlete, pick=pick, gap=gap)
-    from .ingest import parse_codex_session, parse_cursor_session
-    parser = {'codex': parse_codex_session, 'cursor': parse_cursor_session}[harness]
+    from .ingest import parse_codex_session, parse_cursor_session, parse_grokbot_session
+    parser = {
+        'codex': parse_codex_session,
+        'cursor': parse_cursor_session,
+        'grokbot': parse_grokbot_session,
+    }[harness]
     return parser(path, athlete=athlete, records=choose(sittings(path, harness, gap), pick))

@@ -22,7 +22,7 @@ from .push import import_url
 PROTO = "2024-11-05"
 
 SAFE_FIELDS = [
-    "harness", "started", "duration_s", "turns_typed",
+    "harness", "activity_label", "started", "duration_s", "turns_typed",
     "tool_calls", "files_touched", "commits", "rhythm",
 ]
 
@@ -37,7 +37,7 @@ TOOLS = [
     },
     {
         "name": "list_sessions",
-        "description": "List recent local agent sessions (Claude Code, Cursor, Codex). Local only.",
+        "description": "List recent local agent sessions (Claude Code, Cursor, Codex, Grok Bot). Local only.",
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
@@ -46,7 +46,7 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "harness": {"type": "string", "enum": ["claude", "cursor", "codex"]},
+                "harness": {"type": "string", "enum": ["claude", "cursor", "codex", "grokbot"]},
             },
         },
     },
@@ -56,7 +56,7 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "harness": {"type": "string", "enum": ["claude", "cursor", "codex"]},
+                "harness": {"type": "string", "enum": ["claude", "cursor", "codex", "grokbot"]},
                 "athlete_handle": {"type": "string", "description": "GitHub handle if known"},
             },
         },
@@ -67,7 +67,7 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "harness": {"type": "string", "enum": ["claude", "cursor", "codex"]},
+                "harness": {"type": "string", "enum": ["claude", "cursor", "codex", "grokbot"]},
                 "web_base": {"type": "string", "description": "e.g. http://localhost:8000"},
             },
         },
@@ -96,7 +96,7 @@ TOOLS = [
     },
     {
         "name": "a2a_flex",
-        "description": "Compare your real runs across agents on this machine (Claude Code, Cursor, Codex). Local only.",
+        "description": "Compare your real runs across agents on this machine (Claude Code, Cursor, Codex, Grok Bot). Local only.",
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
@@ -144,6 +144,11 @@ def _load_run(harness: str = "claude") -> tuple[dict, str]:
         if not path:
             raise FileNotFoundError("no Codex session")
         return read_sitting(path, 'codex'), path
+    if harness == "grokbot":
+        path = ingest.latest_grokbot_session()
+        if not path:
+            raise FileNotFoundError("no imported Grok Bot export")
+        return read_sitting(path, 'grokbot'), path
     path = ingest.latest_session()
     if not path:
         raise FileNotFoundError("no Claude Code session")
@@ -164,7 +169,8 @@ def list_sessions() -> str:
     out = []
     for label, path in (("Claude Code", ingest.latest_session()),
                         ("Cursor", ingest.latest_cursor_session()),
-                        ("Codex", ingest.latest_codex_session())):
+                        ("Codex", ingest.latest_codex_session()),
+                        ("Grok Bot", ingest.latest_grokbot_session())):
         if not path:
             continue
         try:
@@ -238,17 +244,14 @@ def a2a_flex() -> str:
 
 def a2a_roast() -> str:
     from .flex import latest_any
-    from .ingest import parse_codex_session, parse_cursor_session, parse_session
+    from .ingest import parse_codex_session, parse_cursor_session, parse_grokbot_session, parse_session
     from .meme import format_roast
     from .solo import latest_grind, parse_solo
     picked = latest_any()
     if not picked:
         return "no local session found"
     harness, path = picked
-    if harness == "cursor":
-        from .native_sittings import read_sitting
-        run = read_sitting(path, harness)
-    elif harness == "codex":
+    if harness in ("cursor", "codex", "grokbot"):
         from .native_sittings import read_sitting
         run = read_sitting(path, harness)
     else:

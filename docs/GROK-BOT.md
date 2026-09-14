@@ -14,6 +14,23 @@ First inspect what already works. Read docs/FIRST-PR.md and use the task the con
 Do not claim to have captured a Cursor session from my laptop: your cloud machine has different files. Use a deliberately provided safe sample or a real session available on your own machine, clearly labelled. Bot activity is bot activity, not human effort. Do not invent successful runs or engagement.
 ```
 
-This is a build handoff, not a shipped Grok Bot transcript adapter. The existing parser supports Claude Code, Cursor and Codex. Native Grok Bot capture needs a real exported session format and a separate adapter test before we claim support.
+The build brief above remains a handoff for contributing code; it is separate from transcript
+capture support.
+
+Agent Grinder now has a native `grokbot` adapter tested against the measured Grok Bot cloud-computer
+export format: JSONL records with `user`, `assistant` and `tool` roles and content blocks for text,
+tool use and tool results. Use an explicitly provided export:
+
+```sh
+python3 -m agentgrinder grind path/to/export.jsonl --harness grokbot
+```
+
+For local MCP discovery, place exports deliberately in
+`~/.agentgrinder/imports/grokbot/`. This import path does not read sessions from a user's laptop,
+and the bot's cloud computer cannot access laptop files. Typed human turns require both
+`<timestamp>` and `<user_query>` wrappers; injected turns are excluded. The measured format does
+not establish elapsed duration, native file writes or completed commits, so those fields remain unknown. Shell requests do not prove successful commits. Grok Bot
+runs are labelled as bot activity. The committed fixture
+`samples/sample_grokbot_bot_activity.jsonl` is synthetic sample bot activity, not a real user run.
 
 Cursor documents Grok Bot as a persistent cloud computer with terminal, filesystem and browser: [Grok Bot overview](https://prod.cursor.com/docs/grok-bot), checked 14 September 2026. That supports the repo-building workflow above; it does not establish native Grinder capture compatibility.

@@ -1,13 +1,24 @@
-"""Flex — compare your real runs across agents (Claude, Cursor, fleet)."""
+"""Flex — compare your real runs across supported agents on this machine."""
 from __future__ import annotations
 
 import glob
 import os
 
 from . import history
-from .ingest import CURSOR_GLOB, _codex_count, codex_session_files, latest_cursor_session, latest_codex_session, latest_session, parse_cursor_session, parse_codex_session
+from .ingest import (
+    CURSOR_GLOB,
+    codex_session_files,
+    grokbot_session_files,
+    latest_cursor_session,
+    latest_codex_session,
+    latest_grokbot_session,
+    latest_session,
+    parse_cursor_session,
+    parse_codex_session,
+    parse_grokbot_session,
+)
 
-HARNESS_ORDER = ("Claude Code", "Cursor", "Fleet", "Codex")
+HARNESS_ORDER = ("Claude Code", "Cursor", "Fleet", "Codex", "Grok Bot")
 
 
 def _claude_stats() -> dict:
@@ -26,7 +37,11 @@ def _claude_stats() -> dict:
 
 def _native_stats(files, harness):
     from .native_sittings import sittings
-    parser = {'cursor': parse_cursor_session, 'codex': parse_codex_session}[harness]
+    parser = {
+        'cursor': parse_cursor_session,
+        'codex': parse_codex_session,
+        'grokbot': parse_grokbot_session,
+    }[harness]
     runs = []
     for path in files:
         try:
@@ -34,7 +49,7 @@ def _native_stats(files, harness):
         except (OSError, ValueError):
             continue
     durations = [r.get('duration_s') for r in runs]
-    return dict(harness={'cursor':'Cursor','codex':'Codex'}[harness],
+    return dict(harness={'cursor':'Cursor','codex':'Codex','grokbot':'Grok Bot'}[harness],
         grinds=len(runs), prompts=sum(r.get('turns_typed') or 0 for r in runs),
         moving_s=sum(durations) if all(d is not None for d in durations) else None,
         tools=sum(r.get('tool_calls') or 0 for r in runs),
@@ -50,9 +65,13 @@ def _codex_stats(scan: int = 80) -> dict:
     return _native_stats(codex_session_files()[:scan], 'codex')
 
 
+def _grokbot_stats(scan: int = 80) -> dict:
+    return _native_stats(grokbot_session_files()[:scan], 'grokbot')
+
+
 def local_flex() -> list[dict]:
     """Per-harness totals on this machine."""
-    rows = [_claude_stats(), _cursor_stats(), _codex_stats()]
+    rows = [_claude_stats(), _cursor_stats(), _codex_stats(), _grokbot_stats()]
     return [r for r in rows if r["grinds"] > 0]
 
 
@@ -61,6 +80,7 @@ def latest_any() -> tuple[str, str] | None:
     c = latest_session()
     cu = latest_cursor_session()
     cx = latest_codex_session()
+    gb = latest_grokbot_session()
     candidates: list[tuple[str, str, float]] = []
     if c:
         candidates.append(("claude", c, os.path.getmtime(c)))
@@ -68,6 +88,8 @@ def latest_any() -> tuple[str, str] | None:
         candidates.append(("cursor", cu, os.path.getmtime(cu)))
     if cx:
         candidates.append(("codex", cx, os.path.getmtime(cx)))
+    if gb:
+        candidates.append(("grokbot", gb, os.path.getmtime(gb)))
     if not candidates:
         return None
     harness, path, _ = max(candidates, key=lambda x: x[2])
@@ -77,7 +99,7 @@ def latest_any() -> tuple[str, str] | None:
 def format_flex(rows: list[dict] | None = None) -> str:
     rows = rows if rows is not None else local_flex()
     if not rows:
-        return "No grinds found — run agentgrinder grind after a Claude, Cursor or Codex session."
+        return "No grinds found — run agentgrinder grind after a Claude, Cursor, Codex or Grok Bot session."
     lines = ["\n  flex · your real runs across agents\n"]
     for r in rows:
         h = r["harness"]

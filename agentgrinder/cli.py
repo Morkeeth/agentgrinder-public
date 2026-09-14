@@ -130,7 +130,7 @@ def main(argv=None) -> int:
     c.add_argument("run"); c.add_argument("-o", "--out", default="card.html")
     c.add_argument("--no-open", action="store_true")
     g = sub.add_parser("grind", aliases=["run"],
-                       help="one ordinary session -> the grind card (Claude Code, Cursor or Codex)")
+                       help="one ordinary session -> the grind card (Claude Code, Cursor, Codex or Grok Bot)")
     g.add_argument("session", nargs="?", help="path to a .jsonl (default: your most recent grind)")
     g.add_argument("--pick", type=int, default=None,
                    help="which sitting in that transcript (-1 = the last, 1 = the first)")
@@ -143,8 +143,8 @@ def main(argv=None) -> int:
     # AUTO IS THE DEFAULT. It was `claude` until 3 Sep 2026, so a Cursor or Codex user running the
     # advertised one-liner got "no Claude Code session with a human turn" — a wall, with no hint
     # that either of the other two harnesses was supported at all. The site promises three.
-    g.add_argument("--harness", choices=["claude", "cursor", "codex", "auto"], default="auto",
-                   help="which agent's transcript (default auto = the freshest of Claude, Cursor, Codex)")
+    g.add_argument("--harness", choices=["claude", "cursor", "codex", "grokbot", "auto"], default="auto",
+                   help="which agent's transcript (default auto = freshest Claude, Cursor, Codex or imported Grok Bot export)")
     g.add_argument("--no-rank", action="store_true",
                    help="skip the pass over your history (faster; drops the progression line)")
     g.add_argument("--show-paths", action="store_true",
@@ -187,7 +187,7 @@ def main(argv=None) -> int:
     sh.add_argument("--claim", action="store_true", help="invite card — open handle slot")
     sh.add_argument("--profile", action="store_true", help="scrapbook card from local stats")
     sh.add_argument("--handle", default="you", help="GitHub handle on the card")
-    sh.add_argument("--harness", choices=["claude", "cursor", "codex", "auto"], default="auto")
+    sh.add_argument("--harness", choices=["claude", "cursor", "codex", "grokbot", "auto"], default="auto")
     sh.add_argument("-o", "--out", default="share.html")
     sh.add_argument("--no-open", action="store_true")
     sh.add_argument("--push-url", default=None, help="base URL printed on the claim stub")
@@ -195,7 +195,7 @@ def main(argv=None) -> int:
     sh.add_argument("--roast", action="store_true", help="add roast-shape lines to the card")
     vb = sub.add_parser("vibe", help="meme label for a grind — real numbers, no streaks")
     vb.add_argument("session", nargs="?", help="run JSON (default: latest grind)")
-    vb.add_argument("--harness", choices=["claude", "cursor", "codex", "auto"], default="auto")
+    vb.add_argument("--harness", choices=["claude", "cursor", "codex", "grokbot", "auto"], default="auto")
     vb.add_argument("--json", dest="as_json", action="store_true")
     rb = sub.add_parser("roast", help="roast your grind shape — receipts only, no streaks")
     rb.add_argument("session", nargs="?", help="run JSON (default: latest grind)")
@@ -220,7 +220,7 @@ def main(argv=None) -> int:
     a2sub = a2.add_subparsers(dest="a2cmd", required=True)
     a2sub.add_parser("onboard", help="print A2A agent onboarding (for MCP agents)")
     ex = a2sub.add_parser("export", help="export latest grind as A2A JSON")
-    ex.add_argument("--harness", choices=["claude", "cursor", "codex"], default="claude")
+    ex.add_argument("--harness", choices=["claude", "cursor", "codex", "grokbot"], default="claude")
     ex.add_argument("--handle", default="you")
     fd = a2sub.add_parser("feed", help="fetch public grinds (network)")
     fd.add_argument("--handle", default=None, help="athlete GitHub handle")
@@ -234,7 +234,7 @@ def main(argv=None) -> int:
     akls.add_argument("run_id")
     r = sub.add_parser("v1card", help="the v1 sparkline card (kept for the bundled sample)")
     r.add_argument("session", nargs="?")
-    r.add_argument("--harness", choices=["claude", "cursor", "codex"], default="claude")
+    r.add_argument("--harness", choices=["claude", "cursor", "codex", "grokbot"], default="claude")
     r.add_argument("--athlete", default="you")
     r.add_argument("-o", "--out", default="card.html")
     r.add_argument("--no-open", action="store_true")
@@ -430,10 +430,11 @@ def main(argv=None) -> int:
                 print(format_feed(public_feed(args.limit)))
             return 0
         if args.a2cmd == "export":
-            from .ingest import latest_codex_session
+            from .ingest import latest_codex_session, latest_grokbot_session
             from .native_sittings import read_sitting
             p = {'claude': latest_session, 'cursor': latest_cursor_session,
-                 'codex': latest_codex_session}[args.harness]()
+                 'codex': latest_codex_session,
+                 'grokbot': latest_grokbot_session}[args.harness]()
             if not p:
                 print(f"No {args.harness} session"); return 1
             try:
@@ -497,11 +498,15 @@ def main(argv=None) -> int:
     if args.cmd == "v1card":
         # the pre-trace sparkline card. Kept because `demo`/`card` render the bundled sample,
         # which has no per-event data, and because the Cursor path still lands here.
-        if args.harness == "cursor":
-            path = args.session or latest_cursor_session()
+        if args.harness in ("cursor", "grokbot"):
+            from .ingest import latest_grokbot_session, parse_grokbot_session
+            path = args.session or (
+                latest_cursor_session() if args.harness == "cursor" else latest_grokbot_session()
+            )
             if not path:
-                print("no Cursor session found under ~/.cursor/projects"); return 1
-            run = parse_cursor_session(path, athlete=args.athlete)
+                print(f"no {args.harness} session found"); return 1
+            parser = parse_cursor_session if args.harness == "cursor" else parse_grokbot_session
+            run = parser(path, athlete=args.athlete)
         else:
             path = args.session or best_recent_session() or latest_session()
             if not path:
@@ -616,15 +621,12 @@ def _load_latest_run(session: str | None = None) -> dict | None:
             return None
     from .flex import latest_any
     from .solo import parse_solo, latest_grind
-    from .ingest import parse_cursor_session, parse_codex_session, parse_session
+    from .ingest import parse_cursor_session, parse_codex_session, parse_grokbot_session, parse_session
     picked = latest_any()
     if not picked:
         return None
     harness, path = picked
-    if harness == "cursor":
-        from .native_sittings import read_sitting
-        return read_sitting(path, harness)
-    if harness == "codex":
+    if harness in ("cursor", "codex", "grokbot"):
         from .native_sittings import read_sitting
         return read_sitting(path, harness)
     found = latest_grind()
@@ -707,6 +709,38 @@ def _grind(args) -> int:
             print(f"\n  {e}"
                   "\n  A rollout with no human turn has no cost to divide by, so there is no"
                   "\n  card to draw. Run without --session to take the newest one you typed in.\n")
+            return 1
+        return _native_grind(run, args, path, source_digest)
+
+    if harness == "grokbot":
+        from .ingest import latest_grokbot_session, parse_grokbot_session
+        path = args.session or latest_grokbot_session()
+        if not path:
+            from .ingest import GROKBOT_GLOB
+            print("\n  no imported Grok Bot export with a typed human turn. Searched:"
+                  f"\n      {GROKBOT_GLOB}"
+                  "\n\n  pass an export explicitly or place it in that import directory."
+                  "\n  try:  python3 -m agentgrinder demo\n")
+            return 1
+        from .contract import capture_digest
+        source_digest = capture_digest(path)
+        try:
+            from .native_sittings import sittings, choose
+            groups = sittings(path, "grokbot", args.gap * 60)
+            if args.list:
+                print(json.dumps(
+                    [{"sitting": i + 1, "records": len(group)}
+                     for i, group in enumerate(groups)],
+                    indent=2,
+                ))
+                return 0
+            run = parse_grokbot_session(
+                path,
+                athlete=args.athlete,
+                records=choose(groups, args.pick),
+            )
+        except ValueError as error:
+            print(str(error), file=sys.stderr)
             return 1
         return _native_grind(run, args, path, source_digest)
 
