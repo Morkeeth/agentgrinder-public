@@ -1,0 +1,33 @@
+/* Account control panel — white cards, one blue accent, phone and keyboard first. */
+.account{max-width:40rem}
+.account h1{font-size:22px;letter-spacing:-.03em;line-height:1.2;margin:0 0 10px}
+.account h2{font-size:17px;letter-spacing:-.02em;line-height:1.3;margin:0 0 8px}
+.account p{line-height:1.5;margin:0 0 10px}
+.account-section{margin-bottom:14px}
+.account-lead a{color:var(--blue)}
+.account-hint{font-size:12px;color:var(--soft);line-height:1.5}
+.account-form{display:grid;gap:6px;margin-top:12px}
+.account-form label{margin-top:8px}
+.account-form input{min-height:44px;padding:10px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--box);color:var(--ink)}
+.account-form input[aria-invalid=true]{border-color:#b3261e}
+.account-state{min-height:1.2em;font-size:13px;margin:4px 0 0;line-height:1.5}
+.account-state.err{color:#b3261e}
+.account-state button{margin-left:8px;min-height:44px}
+.account-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.account-actions button,.account-actions .act{min-height:44px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;text-decoration:none}
+.account-notice{background:var(--blue-wash);border:1px solid var(--blue-soft);padding:14px 16px;margin-bottom:14px}
+.account-notice p{margin:0}
+.account-identities{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.account-identity{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--rule-2)}
+.account-identity:first-child{border-top:0;padding-top:0}
+.account-identity button{min-height:44px}
+.account-danger{border-color:var(--rule)}
+.account-danger h2{color:#b3261e}
+button.danger{background:#b3261e;border-color:#b3261e;color:#fff}
+button.danger:hover{background:#8f1e17;border-color:#8f1e17}
+button.danger:disabled{background:#b3261e;border-color:#b3261e}
+@media(max-width:600px){
+  .account-actions button,.account-actions .act{width:100%}
+  .account-identity{flex-direction:column;align-items:stretch}
+  .account-state button{margin:8px 0 0;width:100%}
+}

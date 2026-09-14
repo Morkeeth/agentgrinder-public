@@ -135,10 +135,30 @@
     if (code === "identity_already_exists" || /identity is already linked|already linked/i.test(msg)) return m("identity_taken", "That account is already linked to another profile. Sign in with it instead.");
     if (code === "single_identity_not_deletable" || /at least 2 linked|single identity|last identity/i.test(msg)) return m("last_identity", "Keep at least one way to sign in. Link another account before removing this one.");
     if (code === "identity_not_found") return m("identity_missing", "That linked account was not found.");
+    if (code === "access_denied" || /access_denied|cancelled/i.test(msg)) return m("cancelled", "Sign-in was cancelled before it finished. Nothing changed.", true);
+    if (code === "otp_expired" || code === "flow_state_expired" || code === "flow_state_not_found" || code === "bad_code_verifier" || code === "bad_oauth_callback" || code === "bad_oauth_state" || /expired|already been used|invalid or has expired/i.test(msg)) return m("link_expired", "That sign-in link expired or was already used. Start again.", true);
+    if (code === "server_error" || code === "unexpected_failure" || /Unable to exchange external code/i.test(msg)) return m("provider_failed", "The sign-in provider did not finish. Try again.", true);
     if (code === "validation_failed" || code === "invalid_request" || /provider is not enabled|unsupported provider/i.test(msg)) return m("provider_unavailable", "That sign-in provider is not available here yet.");
     if (code === "over_email_send_rate_limit" || code === "over_request_rate_limit") return m("rate_limited", "Too many attempts. Wait a minute and try again.", true);
     if (/fetch|network|Failed to fetch|Load failed/i.test(msg)) return m("offline", "Could not connect. Check your connection and try again.", true);
     return m("unknown", "Something went wrong. Try again.", true);
+  }
+
+  // A provider round trip that fails or is cancelled comes back to redirectTo with error,
+  // error_code and error_description in the fragment (implicit flow, the default here) or in the
+  // query (PKCE). Both shapes are read. Returns null when the URL carries no auth error.
+  const ERROR_KEYS = ["error", "error_code", "error_description"];
+  function parseAuthError(search, hash) {
+    const q = new URLSearchParams(str(search).replace(/^\?/, ""));
+    const h = new URLSearchParams(str(hash).replace(/^#/, ""));
+    const get = (k) => str(h.get(k)) || str(q.get(k));
+    const error = get("error"), code = get("error_code"), description = get("error_description");
+    if (!error && !code && !description) return null;
+    const detail = explain({ code: code || error, message: description || error });
+    const strip = (params) => { ERROR_KEYS.forEach((k) => params.delete(k)); const out = params.toString(); return out; };
+    const cleanSearch = strip(q), cleanHash = strip(h);
+    return { ...detail, error, error_code: code, description,
+      clean: { search: cleanSearch ? "?" + cleanSearch : "", hash: cleanHash ? "#" + cleanHash : "" } };
   }
 
   /* ---------- client-bound API ---------- */
@@ -151,7 +171,22 @@
       try { return storage || (typeof sessionStorage !== "undefined" ? sessionStorage : null); } catch (_) { return null; }
     };
     const RETURN_KEY = "ag_auth_return";
+    const PENDING_KEY = "ag_auth_pending";
     const remember = (v) => { const s = memo(); if (s && v != null) try { s.setItem(RETURN_KEY, String(v)); } catch (_) {} };
+    // What was started and not yet finished, so a person who comes back from a closed provider
+    // tab, an expired link or a cancelled authorisation is told what happened and what to do.
+    const markPending = (action, provider, returnTo) => {
+      const s = memo(); if (!s) return;
+      try { s.setItem(PENDING_KEY, JSON.stringify({ action, provider, returnTo: returnTo == null ? null : String(returnTo), at: Date.now() })); } catch (_) {}
+    };
+    function pending() {
+      const s = memo(); if (!s) return null;
+      try { const v = s.getItem(PENDING_KEY); if (!v) return null; const o = JSON.parse(v); return o && o.action ? o : null; } catch (_) { return null; }
+    }
+    function clearPending() {
+      const s = memo(); if (!s) return;
+      try { s.removeItem(PENDING_KEY); } catch (_) {}
+    }
 
     async function session() {
       const { data, error } = await client.auth.getSession();
@@ -167,6 +202,7 @@
     async function signIn(provider, opts = {}) {
       if (OAUTH.has(provider)) {
         if (opts.returnTo) remember(opts.returnTo);
+        markPending("signin", provider, opts.returnTo);
         const { error } = await client.auth.signInWithOAuth({ provider, options: { redirectTo: where(), ...(opts.options || {}) } });
         if (error) throw fail(error);
         return { provider, started: true };
@@ -175,6 +211,7 @@
         if (opts.returnTo) remember(opts.returnTo);
         const email = str(opts.email);
         if (!email) throw fail({ code: "validation_failed", message: "email required" });
+        markPending("signin", "email", opts.returnTo);
         const { error } = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: where() } });
         if (error) throw fail(error);
         return { provider, started: true, sent: true };
@@ -194,7 +231,10 @@
       const u = await user();
       if (!u) return { user: null, profile: null, needsOnboarding: false, suggestion: null };
       const p = await profile();
-      return { user: u, profile: p, needsOnboarding: !p, suggestion: p ? null : suggest(u), identities: identitiesOf(u) };
+      const ids = identitiesOf(u);
+      const pend = pending();
+      if (pend && (pend.action === "signin" || ids.some((i) => i.provider === pend.provider))) clearPending();
+      return { user: u, profile: p, needsOnboarding: !p, suggestion: p ? null : suggest(u), identities: ids };
     }
 
     // Insert-if-missing keyed on auth_uid. profile.id never changes after this.
@@ -274,6 +314,7 @@
     async function link(provider, opts = {}) {
       if (!OAUTH.has(provider)) throw fail({ code: "validation_failed", message: "unsupported provider " + provider });
       if (opts.returnTo) remember(opts.returnTo);
+      markPending("link", provider, opts.returnTo);
       const { data, error } = await client.auth.linkIdentity({ provider, options: { redirectTo: where(), ...(opts.options || {}) } });
       if (error) throw fail(error);
       return { provider, url: data?.url || null, started: true };
@@ -317,10 +358,28 @@
       const u = await user();
       const p = await profile();
       if (!u || !p) throw fail({ code: "42501", message: "not signed in" });
-      const { error } = await client.from("profiles").delete().eq("id", p.id).eq("auth_uid", u.id);
+      const { data, error } = await client.from("profiles").delete().eq("id", p.id).eq("auth_uid", u.id).select("id");
       if (error) throw fail(error);
+      // A stale profile id must not show "deleted" while the row is still there.
+      if (!data || !data.length) throw fail({ code: "PGRST116", message: "Your profile could not be found. Refresh and try again." });
       await signOutLocal();
       return { deleted: p.id };
+    }
+    // Read a failed or cancelled round trip off the URL, clean the URL in place and return
+    // {code, message, retry, action, provider, returnTo} or null. Safe to call on every route.
+    function recoverFromUrl(loc, hist) {
+      const L = loc || (typeof location !== "undefined" ? location : null);
+      if (!L) return null;
+      const found = parseAuthError(L.search, L.hash);
+      if (!found) return null;
+      const pend = pending();
+      clearPending();
+      const H = hist || (typeof history !== "undefined" ? history : null);
+      if (H && typeof H.replaceState === "function") {
+        try { H.replaceState(null, "", (L.pathname || "/") + found.clean.search + found.clean.hash); } catch (_) {}
+      }
+      return { code: found.code, message: found.message, retry: found.retry, raw: found.raw,
+        action: pend ? pend.action : null, provider: pend ? pend.provider : null, returnTo: pend ? pend.returnTo : null };
     }
     function returnTo() {
       const s = memo();
@@ -334,9 +393,10 @@
 
     return { providers: PROVIDERS, session, user, signIn, profile, current, onboard, updateProfile, byHandle,
       identities, link, unlink, syncGithubHandle, signOutLocal, deleteProfile, returnTo, onChange,
+      pending, clearPending, recoverFromUrl, parseAuthError,
       present, explain, suggest, normalizeHandle, normalizeDisplayName, normalizeAvatarUrl, validateHandle };
   }
 
-  return { create, providers: PROVIDERS, present, explain, suggest, identitiesOf, githubHandleOf,
+  return { create, providers: PROVIDERS, present, explain, suggest, identitiesOf, githubHandleOf, parseAuthError,
     normalizeHandle, normalizeDisplayName, normalizeAvatarUrl, validateHandle };
 });

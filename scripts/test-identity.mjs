@@ -235,7 +235,7 @@ function mockClient({ user, rows = [] }) {
         } else if (st.op === 'update') {
           const r = table.find(match);
           if (r) { Object.assign(r, st.row); data = r; } else error = { code: 'PGRST116', message: 'no rows' };
-        } else if (st.op === 'delete') { const i = table.findIndex(match); if (i >= 0) table.splice(i, 1); }
+        } else if (st.op === 'delete') { const i = table.findIndex(match); data = i >= 0 ? table.splice(i, 1).map((r) => ({ id: r.id })) : []; }
         calls.push([name, st.op, st.filters]);
         return Promise.resolve({ data, error }).then(resolve);
       },
