@@ -452,6 +452,7 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
     """Parse a measured Grok Bot JSONL export without inferring absent measurements."""
     from .native_sittings import cursor_time, records as read_records
 
+    sample = False
     typed = 0
     tool_calls = 0
     stamps: list[datetime] = []
@@ -459,6 +460,7 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
     uq_re = _re.compile(r"<user_query>(.*?)</user_query>", _re.S)
 
     for row in records if records is not None else read_records(path):
+        sample = sample or row.get("agentgrinder_sample") is True
         role = row.get("role")
         msg = row.get("message") if isinstance(row.get("message"), dict) else {}
         text = _cursor_text(msg)
@@ -485,6 +487,7 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
         "title": "Grok Bot session",
         "harness": "Grok Bot",
         "activity_label": "bot activity",
+        "is_sample": sample,
         "project": "session",
         "project_identity": None,
         "parser_version": "grokbot-export-2026-09-14",

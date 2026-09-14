@@ -49,6 +49,9 @@ python3 templates/grokbot/post-agent-run/scripts/preview.py \
   samples/sample_grokbot_bot_activity.jsonl
 ```
 
+Start `python3 scripts/dev.py serve` in another terminal before opening the localhost URL.
+Bundled examples are labelled **Sample preview** and cannot be saved or posted.
+
 The command prints allowlisted metrics and a private localhost import URL. It performs no network
 request and publishes nothing. Next, run the same command against an explicitly selected real
 export on the bot's own computer:

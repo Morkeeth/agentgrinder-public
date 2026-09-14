@@ -34,6 +34,15 @@ python3 templates/grokbot/post-agent-run/scripts/preview.py \
   samples/sample_grokbot_bot_activity.jsonl
 ```
 
+Before opening the localhost URL, start the site from the repository root in another terminal:
+
+```sh
+python3 scripts/dev.py serve
+```
+
+The sample card is visibly labelled **Sample preview** and cannot be saved or posted.
+Capture a real export to enable saving; a sample run is not your activity.
+
 Expected status is `private preview; not posted`, with `Grok Bot`, `bot activity`, 2 typed turns
 and 3 tool calls. The URL must start with `http://localhost:8000/#import=`. The helper performs no
 network request and does not publish. This fixture is synthetic, labelled sample bot activity;

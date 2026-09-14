@@ -1493,6 +1493,7 @@ function importRun(){
     run.coach_plan=GrinderContract.rejectPaths(run.coach_plan);
     run.coach_experiment=GrinderContract.rejectPaths(run.coach_experiment);
   }
+  const sample=run.is_sample===true;
   const app=$('app');
   const rows=[['harness',run.harness],['project',run.project],['prompts (cost)',run.turns_typed],
     ['minutes',run.duration_s?Math.round(run.duration_s/60):null],['tool calls',run.tool_calls],
@@ -1511,7 +1512,8 @@ function importRun(){
   // without those fields and the card says so; nothing is invented and nothing fails silently.
   const unsaved='';
   frame(null,null);
-  app.innerHTML=`<div class="head"><h2>Preview your run</h2><span class="meta">private until you choose and save</span></div>
+  app.innerHTML=`<div class="head"><h2>${sample?'Sample preview':'Preview your run'}</h2><span class="meta">${sample?'example data · not your activity':'private until you choose and save'}</span></div>
+    ${sample?'<p role="note">This sample is for trying the preview. It cannot be saved or posted. Capture your own session to share a run.</p>':''}
     <div class="panel">
       ${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>${unsaved}
     <div class="panel"><div class="pad">
@@ -1525,8 +1527,8 @@ function importRun(){
     <input id="i_stack" placeholder="stack notes for friends (optional)" value="${esc(run.rig_notes||'')}">
     <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me</option><option value="public">Public feed and profile</option><option value="link">Anyone with the link</option></select></label>
     <p class="hint">Choosing Public is the deliberate action that posts this run to the feed.</p>
-    <button id="i_pub">${ME?'Save run':'Sign in to save'}</button></div></div>
-    <div class="head"><h2>Card preview</h2><span class="meta">not posted</span></div><div id="import-card-preview"></div>`;
+    <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample — preview only':(ME?'Save run':'Sign in to save')}</button></div></div>
+    <div class="head"><h2>${sample?'Sample card preview':'Card preview'}</h2><span class="meta">not posted</span></div><div id="import-card-preview"></div>`;
   const editFields=['i_title','i_caption','i_output_url','i_stack','i_vis'];
   try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
   function saveImportEdits(){try{sessionStorage.setItem('ag_import_edits',JSON.stringify({token:m[1],...Object.fromEntries(editFields.map(key=>[key,$(key).value])),shareRig:$('i_share_rig').checked}))}catch(_){}}
@@ -1541,6 +1543,7 @@ function importRun(){
   editFields.forEach(key=>$(key).addEventListener('input',()=>{saveImportEdits();paintImportPreview()}));
   paintImportPreview();
   $('i_pub').addEventListener('click',async()=>{
+    if(sample){status('Samples are preview-only. Capture your own session to save a run.',true);return;}
     saveImportEdits();
     const publishButton=$('i_pub');
     if(publishButton.disabled)return;
