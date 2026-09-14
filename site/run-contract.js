@@ -77,7 +77,7 @@
         )
         .join(" ");
     return (
-      '<svg viewBox="0 0 240 72" role="img" aria-label="Recorded session rhythm" style="display:block;width:100%;color:var(--ink)"><polyline points="' +
+      '<svg viewBox="0 0 240 72" role="img" aria-label="Recorded session rhythm" style="display:block;width:100%;color:var(--blue)"><polyline points="' +
       points +
       '" stroke="currentColor" fill="none" stroke-width="2"/></svg>'
     );
