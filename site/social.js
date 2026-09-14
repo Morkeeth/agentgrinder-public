@@ -769,7 +769,7 @@ window.GrinderSocial = function ({
                   ? "Open the run"
                   : "Open profile";
             const returnLinks = [
-              !runGone && !replyGone && actor.href
+              n.kind !== "follow" && !runGone && !replyGone && actor.href
                 ? `<a href="${actor.href}" data-response-nav="1">Open profile</a>`
                 : null,
               href
@@ -784,7 +784,7 @@ window.GrinderSocial = function ({
                 : null,
             ]
               .filter(Boolean)
-              .join(" · ");
+              .join('<span class="response-sep" aria-hidden="true">·</span>');
             const actorHtml = actor.id || actor.href ? link(n.actor) : "Someone";
             return `<article class="card response-item${!n.read_at ? " unread" : " read"}" data-notification-id="${esc(n.id)}" data-read="${n.read_at ? "1" : "0"}">
               <div class="response-item-top">

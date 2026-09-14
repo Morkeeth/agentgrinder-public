@@ -3,8 +3,8 @@
   "observed": [
     "cancel round trip: status says cancelled: Sign-in was cancelled before it finished. Nothing changed. Your draft is still here: open Post a run to continue.",
     "cancel round trip: draft named in the message",
-    "cancel round trip: draft survives (stash or restored #import=): http://127.0.0.1:55427/#import=eyJ0ZXN0IjoiZHJhZnQifQ",
-    "cancel round trip: error fragment removed from the URL: http://127.0.0.1:55427/#import=eyJ0ZXN0IjoiZHJhZnQifQ",
+    "cancel round trip: draft survives (stash or restored #import=): http://127.0.0.1:59849/#import=eyJ0ZXN0IjoiZHJhZnQifQ",
+    "cancel round trip: error fragment removed from the URL: http://127.0.0.1:59849/#import=eyJ0ZXN0IjoiZHJhZnQifQ",
     "cancel round trip: pending marker settled",
     "failed round trip: landing status names the failure: The sign-in provider did not finish. Try again.",
     "failed round trip: inline notice on account: Sign-in with GitHub did not finish. The sign-in provider did not finish. Try again.\n\nTry signing in again\nDismiss",

@@ -496,9 +496,9 @@ async function selectRows(db, table, select, filters, url) {
   const rows = (await db.query(q, params)).rows;
   for (const row of rows) {
     for (const emb of embeds) {
-      if (emb.table === "profiles" && (row.profile_id || row.author_id || row.actor_id)) {
+      if ((emb.table === "profiles" || (emb.alias === "profiles" && emb.table in row)) && (row.profile_id || row.author_id || row.actor_id || row[emb.table])) {
         const p = (
-          await db.query("select id,github_handle,name,rig,handle,display_name,avatar_url from profiles where id=$1", [emb.alias === "author" ? row.author_id : emb.alias === "actor" ? row.actor_id : row.profile_id])
+          await db.query("select id,github_handle,name,rig,handle,display_name,avatar_url from profiles where id=$1", [emb.table in row && emb.table !== "profiles" ? row[emb.table] : emb.alias === "author" ? row.author_id : emb.alias === "actor" ? row.actor_id : row.profile_id])
         ).rows[0];
         row[emb.alias] = p || null;
       } else if (emb.table === "grinder_run_moments" && (row.moment_id || row.id)) {

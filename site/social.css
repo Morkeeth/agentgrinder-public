@@ -53,6 +53,7 @@
   .response-item{padding:16px 14px 16px 16px}
   .response-item-top{flex-direction:column;align-items:flex-start}
   .response-item-actions{flex-direction:column;align-items:stretch}
+  .response-sep{display:none}
   .response-item-actions a{justify-content:flex-start}
   .response-filters{justify-content:space-between;width:100%}
 }
