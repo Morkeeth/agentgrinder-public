@@ -15,7 +15,12 @@ alter default privileges grant all on tables to anon,authenticated;
 alter default privileges grant execute on functions to anon,authenticated;
 create schema auth;
 create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
-grant usage on schema auth to anon,authenticated;`);
+grant usage on schema auth to anon,authenticated;
+create table auth.identities(user_id uuid, provider text, identity_data jsonb);
+insert into auth.identities values
+('${a}','github','{"user_name":"AliceGH"}'),
+('${b}','github','{"user_name":"bob_legacy"}'),
+('${c}','github','{"user_name":"alice_builder"}');`);
 await db.exec(read('tests/fixtures/hosted-base.sql'));
 await db.exec(build('prepare-migration.py'));
 await db.exec(`insert into public.profiles(id,auth_uid,name,github_handle) values ('${a}','${a}','Grinder sentinel','sentinel');`);
@@ -23,7 +28,8 @@ async function grinder() { return (await db.query(`select jsonb_build_object(
  'columns',(select jsonb_agg(row_to_json(x) order by attrelid,attnum) from pg_attribute x join pg_class c on c.oid=x.attrelid where c.relnamespace='public'::regnamespace),
  'triggers',(select jsonb_agg(row_to_json(t) order by t.oid) from pg_trigger t join pg_class c on c.oid=t.tgrelid where c.relnamespace='public'::regnamespace),
  'functions',(select jsonb_agg(row_to_json(p) order by p.oid) from pg_proc p where pronamespace='public'::regnamespace),
- 'profiles',(select jsonb_agg(row_to_json(p)) from public.profiles p)) v`)).rows[0].v; }
+ 'profiles',(select jsonb_agg(row_to_json(p)) from public.profiles p),
+ 'auth',(select jsonb_agg(row_to_json(i)) from auth.identities i)) v`)).rows[0].v; }
 const before = await grinder();
 const bootstrap = build('prepare-strava-database.py');
 assert(bootstrap.includes('-- strava/identity.sql'), 'bootstrap must include the strava identity migration');
@@ -62,6 +68,12 @@ for (const h of ['alice_builder', 'ALICE_BUILDER', 'bob_legacy', 'Bob_Legacy', '
   const e = await denied('insert into profiles(auth_uid,handle) values($1,$2)', [c, h], ['23505']);
   assert.match(e.message, /handle_taken|profiles_handle_unique/, h);
 }
+// Provider provenance is server-enforced, independent of the browser helper.
+await denied("insert into profiles(auth_uid,handle,github_handle) values($1,'fakegh','unlinked')", [c], ['42501']);
+await denied("insert into profiles(auth_uid,handle,github_handle) values($1,'third','alice_builder')", [c], ['23505']);
+// Claim storage is never a client API, including under permissive default grants.
+await denied("insert into profile_handle_claims(alias,profile_id) values('stolen',$1)", [pa.id], ['42501']);
+await denied("delete from profile_handle_claims", [], ['42501']);
 // Format and avatar constraints.
 await denied('insert into profiles(auth_uid,handle) values($1,$2)', [c, '-bad'], ['23514']);
 await denied('insert into profiles(auth_uid,handle) values($1,$2)', [c, 'a'.repeat(41)], ['23514']);
@@ -89,6 +101,7 @@ await as(b);
 assert.equal((await db.query("update profiles set handle='mine',avatar_url='https://example.test/b.png',display_name='Not Alice' where id=$1 returning id", [pa.id])).rows.length, 0);
 assert.equal((await db.query('delete from profiles where id=$1 returning id', [pa.id])).rows.length, 0);
 // Legacy owner adopts a chosen handle in place: same id, github_handle untouched, old URL still resolves.
+await db.query("update profiles set handle='bob_legacy' where id=$1", [pb.id]); // both labels may belong to the same profile
 const pb2 = (await db.query("update profiles set handle='Bobby',display_name='Bobby B' where id=$1 returning *", [pb.id])).rows[0];
 assert.equal(pb2.id, pb.id); assert.equal(pb2.handle, 'bobby'); assert.equal(pb2.github_handle, 'bob_legacy');
 await anon();
@@ -104,12 +117,32 @@ await anon();
 assert.equal(await lookup('alice_builder'), null); assert.equal((await lookup('alicegh')).id, pa.id);
 await as(a);
 await db.query("update profiles set handle='alice_builder' where id=$1", [pa.id]);
+// Case-insensitive legacy aliases share the same unique namespace as chosen handles.
+await as(b);
+await denied("update profiles set github_handle='AliceGH' where id=$1", [pb.id], ['42501']);
+await denied("update profiles set id=$1 where id=$2", [c, pb.id], ['23514']);
+await db.exec('reset role');
+assert.equal((await db.query("select count(*)::int n from strava.profile_handle_claims where alias in ('bobby','bob_legacy')")).rows[0].n, 2);
+await db.exec(identity); // backfill on populated rows preserves both URLs
+await as(c);
 // Owner deletion removes the Strava row; the Grinder profile for the same Auth user is untouched.
 await as(c);
 await db.query('delete from profiles where id=$1', [pc.id]);
 await db.exec('reset role');
 assert.equal((await db.query('select count(*)::int n from strava.profiles')).rows[0].n, 2);
+assert.equal((await db.query('select count(*)::int n from strava.profile_handle_claims where profile_id=$1', [pc.id])).rows[0].n, 0, 'deletion releases aliases');
+// The storage constraint itself rejects a second owner, independent of profile trigger checks.
+await denied("insert into strava.profile_handle_claims(alias,profile_id) values('alicegh',$1)", [pb.id], ['23505']);
 assert.deepEqual(await grinder(), before, 'Strava identity actions must not change Grinder');
+// Simulate an already-ambiguous legacy namespace (case variants were permitted by the
+// old github_handle UNIQUE constraint). Migration must refuse, not choose a URL owner.
+await db.exec(`drop trigger strava_profile_handle_guard on strava.profiles;
+drop trigger strava_profile_handle_claim on strava.profiles;
+insert into strava.profiles(id,auth_uid,github_handle) values('${c}','${c}','alicegh');`);
+await assert.rejects(db.exec(identity), (e) => e.code === '23505');
+await db.exec('rollback');
+assert.equal((await db.query("select count(*)::int n from strava.profiles where lower(github_handle)='alicegh'")).rows[0].n, 2, 'ambiguous legacy profiles survive refusal');
+assert.deepEqual(await grinder(), before, 'failed migration leaves Grinder and Auth unchanged');
 await db.close();
 console.log('PASS sql: identity columns, normalisation, duplicate/squat refusal, format checks, lookup precedence, owner-only edits, stable ids, deletion isolation');
 

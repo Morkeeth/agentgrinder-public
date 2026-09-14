@@ -32,7 +32,7 @@ grant insert,delete on acks to authenticated;
     for path in sorted((ROOT / 'supabase/strava').glob('*.sql')):
         if path.name in ('base.sql', 'preflight.sql'):
             continue
-        parts.append('-- strava/' + path.name + '\n' + path.read_text())
+        parts.append('-- strava/' + path.name + '\n' + re.sub(r'^\s*(begin|commit);\s*$', '', path.read_text(), flags=re.M | re.I))
     parts.append("notify pgrst, 'reload schema';\ncommit;\n")
     return '\n'.join(parts)
 
