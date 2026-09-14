@@ -1,5 +1,6 @@
-import config from './public-config.json' with {type:'json'};
-export const origin='http://localhost:8000';
+import {runtimeConfig} from './runtime-config.mjs';
+const config=runtimeConfig();
+export const origin=config.ORIGIN;
 export const validId=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function readPublic(id,fetcher=fetch){

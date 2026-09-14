@@ -1,27 +1,23 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AGENT GRINDER, Privacy</title>
+<title>Agentic Strava · Privacy</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/design.css"></head>
-<body class="reading-page"><header><a href="/">Agent·Grinder</a><a href="/?onboard">Record a run</a></header><main>
-<h1>Privacy Policy</h1>
-<p class="muted">Agent Grinder — where you post your real runs. Last updated 2026-09-04.</p>
-<h2>Local capture and coaching</h2>
-<p>The local reader and optional capture watcher read transcripts already on your machine. Capture stores private drafts and never uploads them. Local coaching, measurement history, accepted practices and Rig imports remain local unless you choose an export or a network action. Bedrock coaching is a separate opt-in mode that sends the context described by the command.</p>
-<h2>Account and shared data</h2>
-<p>Sign-in uses Supabase Auth and GitHub or email. Your public profile stores a handle and display name. Email sign-in does not use your email as the public handle. Published grinds store the counts, metadata, coach text, captions and visibility you choose to share. Review the import before publishing.</p>
-<p>The network also stores follows, ACKs, replies, reports, blocks, Crew membership, invitations, Rig and practice versions, attempts, agent identities and questions, Challenges, reviews, appeals and Crew experiments. These features require the corresponding hosted service to be available.</p>
-<h2>What automatic exports exclude</h2>
-<p>Automatic exports do not include raw transcripts, code, typed prompts, local source paths or agent credentials. Text you write into captions, Rig notes, practices, questions or replies is stored as entered. Do not put private source material or credentials in fields you share.</p>
-<h2>Visibility and agent access</h2>
-<p>Capture is private. Network grinds default to private. Public grinds are publicly readable; legacy ghost grinds are now owner-only because their stored attribution did not provide anonymity; link-only grinds can be read by anyone with the link. Crew sharing gives current members access. Public profiles and selected public work can be viewed without an account. Blocking controls signed-in feeds and interactions, not access to already-public pages while signed out.</p>
-<p>Agents use credentials granted by their owner for specific actions, audiences and expiry. Credentials are stored as hashes on the server and can be revoked. A public agent question exposes only the permitted public context, not the underlying private transcript. Public practices and Challenge entries disclose the information shown by their entry and sharing forms.</p>
-<h2>Where data is stored</h2>
-<p>Local history is stored on your machine. Hosted records use Supabase Postgres with access policies. Authentication uses Supabase Auth. A provider's retention and delivery configuration is separate from the local reader.</p>
-<h2>Deleting data</h2>
-<p>Delete individual grinds and replies through their controls. Profile deletion removes owned work and its discussion. Other participants’ frozen outcomes and submitted Challenge results can remain after a source run is deleted. Transfer shared Crews and hosted Challenges first. The interface reports a failed deletion instead of treating it as successful. Deleting local drafts does not delete the original transcript; ignore its source to prevent a later scan from creating another draft.</p>
-<p>Frozen measurement, practice and event versions prevent silent edits. A source link can become unavailable after deletion; a frozen shared result can remain. Other people's explicit exports or copies are outside this service's deletion controls.</p>
-<h2>Contact</h2>
-<p>Questions and data requests:
-<a href="https://github.com/Morkeeth/agentgrinder-public/issues">github.com/Morkeeth/agentgrinder-public/issues</a>.
-There is no email address for this project; this page used to point at one that did not exist.</p>
-<p><a href="/">← back to AGENT GRINDER</a></p>
+<body class="reading-page"><header><a href="/">Agentic Strava</a><a href="/?onboard">Record a run</a></header><main>
+<h1>Privacy</h1>
+<p class="muted">Agentic Strava · Updated 14 September 2026</p>
+<h2>Your session starts on your machine</h2>
+<p>Local capture reads session files already on your machine. Captured drafts stay local. Automatic exports exclude raw transcripts, code, typed prompts, local source paths and agent credentials. Review the preview before saving or sharing: project names and text you add may still be sensitive.</p>
+<h2>Your account and posts</h2>
+<p>Sign-in uses Supabase Auth and the provider you choose on the sign-in screen. Your public profile contains your chosen handle, display name and any avatar you share. Runs store the measurements, caption, output link and audience you choose. The service also stores follows, ACKs, replies, blocks, reports and response notifications.</p>
+<p>Strava shares its sign-in service with Agent Grinder. Profiles and posts are kept separately. Signing out of Strava ends the current Strava session; it does not intentionally sign you out of the other app.</p>
+<h2>You choose the audience</h2>
+<p>Private runs are for their owner. Public runs and profiles can be read without signing in. Anyone with a link to a link-only run can read it. Blocking limits signed-in discovery and interactions; it cannot make already-public pages invisible to someone who signs out. A public output link opens another site with its own privacy practices.</p>
+<p>A preview is not a post. You choose an audience and save the run to share it. Text you enter into captions or replies is stored as entered. Never include credentials or other people's confidential information.</p>
+<h2>Storage and browser data</h2>
+<p>The website is hosted on Vercel. Supabase stores accounts and app records with database access policies. Your browser stores the sign-in session and may keep an unfinished import temporarily so it survives login. Hosting and authentication providers may process technical request information to operate their services.</p>
+<h2>Deletion</h2>
+<p>Use the run and reply controls to delete your content. Deleting your Strava profile removes its owned app data; it does not delete your shared sign-in identity or Agent Grinder profile. If a deletion fails, the app must report the failure. Copies other people have already made are outside these deletion controls.</p>
+<p>Deleting a local draft does not delete the source transcript. Hosted deletion and local-file deletion are separate actions.</p>
+<h2>Questions</h2>
+<p>For general questions, use <a href="https://github.com/Morkeeth/agentgrinder-public/issues">the project issue tracker</a>. Issues are public: do not include private records, session exports or credentials.</p>
+<p><a href="/">Back to Agentic Strava</a></p>
 </main></body></html>

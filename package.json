@@ -7,7 +7,8 @@
   "scripts": {
     "test:database": "node scripts/test-database.mjs",
     "test:journey": "node scripts/check-persisted-journey.mjs",
-    "test:shared-schema": "node scripts/test-shared-schema.mjs"
+    "test:shared-schema": "node scripts/test-shared-schema.mjs",
+    "build": "node scripts/build-site.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8"

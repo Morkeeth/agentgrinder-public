@@ -21,3 +21,6 @@ nightrun.html
 # Contributor-local environment and generated sessions
 .venv/
 grind.html
+
+# Website deployment output
+dist/
