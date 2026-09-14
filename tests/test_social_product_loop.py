@@ -17,7 +17,7 @@ def test_post_page_exposes_cursor_capture_and_private_preview():
 
 
 def test_card_shows_builder_project_session_caption_and_output():
-    card = INDEX[INDEX.index("function runCard(") : INDEX.index("function wireKudos()")]
+    card = INDEX[INDEX.index("function runAttribution(") : INDEX.index("function wireKudos()")]
     for field in ("profiles", "project", "started_at", "duration_s", "caption", "output_url"):
         assert field in card
     assert "Open what was built" in card

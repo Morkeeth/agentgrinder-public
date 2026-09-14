@@ -13,6 +13,8 @@ const TABLES = new Set([
   "profiles",
   "runs",
   "acks",
+  "grinder_follows",
+  "grinder_replies",
   "grinder_practice_versions",
   "grinder_practice_attempts",
   "grinder_run_moments",
