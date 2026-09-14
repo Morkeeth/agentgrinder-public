@@ -28,20 +28,29 @@ def connect(root=None):
 
 
 def sources():
-    from .ingest import CLAUDE_GLOB, CURSOR_GLOB, CODEX_GLOBS
+    from .ingest import CLAUDE_GLOB, CURSOR_GLOB, GROKBOT_GLOB, CODEX_GLOBS
     found = []
-    for harness, patterns in [('claude', [CLAUDE_GLOB]), ('cursor', [CURSOR_GLOB]), ('codex', CODEX_GLOBS)]:
+    for harness, patterns in [
+        ('claude', [CLAUDE_GLOB]),
+        ('cursor', [CURSOR_GLOB]),
+        ('codex', CODEX_GLOBS),
+        ('grokbot', [GROKBOT_GLOB]),
+    ]:
         for pattern in patterns:
             found.extend((harness, Path(p)) for p in glob.glob(os.path.expanduser(pattern), recursive=True) if Path(p).is_file())
     return sorted(set(found), key=lambda item: (item[0], str(item[1])))
 
 
 def read_run(harness, path, pick=-1, records=None):
-    from .ingest import parse_codex_session, parse_cursor_session
+    from .ingest import parse_codex_session, parse_cursor_session, parse_grokbot_session
     from .solo import parse_solo
     if harness == 'claude':
         return parse_solo(str(path), pick=pick)
-    return {'codex': parse_codex_session, 'cursor': parse_cursor_session}[harness](str(path), records=records)
+    return {
+        'codex': parse_codex_session,
+        'cursor': parse_cursor_session,
+        'grokbot': parse_grokbot_session,
+    }[harness](str(path), records=records)
 
 
 def scan(db, selected=None):
@@ -97,7 +106,7 @@ def add_parser(sub):
     for name in ('scan', 'watch'):
         p = commands.add_parser(name)
         p.add_argument('--session', help='one transcript; omit to backfill discovered transcripts')
-        p.add_argument('--harness', choices=['claude', 'cursor', 'codex'], default='claude')
+        p.add_argument('--harness', choices=['claude', 'cursor', 'codex', 'grokbot'], default='claude')
         if name == 'watch':
             p.add_argument('--interval', type=int, default=60)
     for name in ('pause', 'resume', 'list'):

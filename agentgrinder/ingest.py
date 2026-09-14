@@ -41,13 +41,21 @@ def _tool_uses(msg: dict):
 
 CLAUDE_GLOB = "~/.claude/projects/*/*.jsonl"
 CURSOR_GLOB = "~/.cursor/projects/*/agent-transcripts/*/*.jsonl"
+# Grok Bot exports are explicitly placed here by the user. This is an Agent Grinder import
+# location, not a claim that a bot can read transcripts from somebody else's laptop.
+GROKBOT_GLOB = "~/.agentgrinder/imports/grokbot/*.jsonl"
 
 # THE READER'S HARNESSES — one registry, `--harness` key -> the name a person reads.
 # Every user-facing sentence that lists what this tool can read is checked against this dict by
 # tests/test_harness_strings.py. Codex was added to the reader and two shipped strings still said
 # "Claude vs Cursor" for a day, so the list a stranger reads and the list the reader supports are
 # now bound by a test rather than by remembering.
-HARNESSES = {"claude": "Claude Code", "cursor": "Cursor", "codex": "Codex"}
+HARNESSES = {
+    "claude": "Claude Code",
+    "cursor": "Cursor",
+    "codex": "Codex",
+    "grokbot": "Grok Bot",
+}
 
 
 def latest_session() -> str | None:
@@ -61,7 +69,7 @@ def searched_paths() -> tuple:
     An error that says "nothing found" without saying where it looked is untestable by the person
     reading it. Every not-found message prints this list.
     """
-    return (CLAUDE_GLOB, CURSOR_GLOB) + CODEX_GLOBS
+    return (CLAUDE_GLOB, CURSOR_GLOB, GROKBOT_GLOB) + CODEX_GLOBS
 
 
 def parse_session(path: str, athlete: str = "you") -> dict:
@@ -408,6 +416,115 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None) -> dict:
         "route": _route_indices(route),      # integers only, safe to publish
         "route_legend": _dedupe(route),      # region names, LOCAL only, never pushed
         "private_title_prompt": private_title_prompt,  # LOCAL only — never a share default
+    }
+
+
+# ---- Grok Bot origin ---------------------------------------------------------
+# Measured export shape (14 Sep 2026): JSONL records with role user|assistant|tool
+# and message.content blocks. A typed human turn is stricter than role=user: its text
+# must contain both a timestamp and a user_query wrapper. Injected user records without
+# user_query are not typed turns. The export has no top-level clock or working directory.
+_GROKBOT_SHELL_TOOLS = {"Shell", "shell", "ExternalShell"}
+
+
+def grokbot_session_files() -> list[str]:
+    """Explicitly imported Grok Bot exports, newest first."""
+    files = glob.glob(os.path.expanduser(GROKBOT_GLOB))
+    return sorted(
+        (path for path in files if os.path.isfile(path)),
+        key=os.path.getmtime,
+        reverse=True,
+    )
+
+
+def latest_grokbot_session() -> str | None:
+    """Newest imported Grok Bot export containing a typed human turn."""
+    for path in grokbot_session_files():
+        try:
+            with open(path, encoding="utf-8") as stream:
+                for line in stream:
+                    try:
+                        row = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    msg = row.get("message") if isinstance(row.get("message"), dict) else {}
+                    text = _cursor_text(msg)
+                    if (
+                        row.get("role") == "user"
+                        and "<timestamp>" in text
+                        and "<user_query>" in text
+                    ):
+                        return path
+        except OSError:
+            continue
+    return None
+
+
+def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict:
+    """Parse a measured Grok Bot JSONL export without inferring absent measurements."""
+    from .native_sittings import cursor_time, records as read_records
+
+    typed = 0
+    tool_calls = 0
+    commits = 0
+    stamps: list[datetime] = []
+    first_prompt = None
+    uq_re = _re.compile(r"<user_query>(.*?)</user_query>", _re.S)
+
+    for row in records if records is not None else read_records(path):
+        role = row.get("role")
+        msg = row.get("message") if isinstance(row.get("message"), dict) else {}
+        text = _cursor_text(msg)
+        if role == "user" and "<timestamp>" in text and "<user_query>" in text:
+            typed += 1
+            stamp = cursor_time(text)
+            if stamp:
+                stamps.append(stamp)
+            if first_prompt is None:
+                match = uq_re.search(text)
+                first_prompt = (match.group(1).strip() if match else text.strip())
+        elif role == "assistant":
+            for name, inputs in _cursor_tool_uses(msg):
+                tool_calls += 1
+                if name in _GROKBOT_SHELL_TOOLS and isinstance(inputs, dict):
+                    if "git commit" in (inputs.get("command") or ""):
+                        commits += 1
+
+    if not typed:
+        raise ValueError(f"no typed <timestamp> and <user_query> turns in {path}")
+
+    # The export timestamps typed turns, not agent events. They establish when the sitting
+    # began and can split sittings, but they do not establish duration, pace, or timed trace.
+    rhythm = [1] * typed
+    return {
+        "athlete": athlete,
+        "title": "Grok Bot session",
+        "harness": "Grok Bot",
+        "activity_label": "bot activity",
+        "project": "session",
+        "project_identity": None,
+        "parser_version": "grokbot-export-2026-09-14",
+        "started": min(stamps).isoformat() if stamps else None,
+        "trace_basis": "typed-turn order; Grok Bot export has no top-level event timestamps",
+        "capabilities": {"timed_trace": False, "authorship": True},
+        "duration_s": None,
+        "turns_typed": typed,
+        "tool_calls": tool_calls,
+        # Shell, Read and tool-result blocks are observed. No native edit tool was observed,
+        # and parsing shell command text as writes would guess at shell semantics.
+        "files_touched": None,
+        "commits": commits if commits else None,
+        "rhythm": rhythm,
+        "claims": None,
+        "claims_verified": None,
+        "artifacts_produced": None,
+        "artifacts_promised": None,
+        "corrections": None,
+        "reach": None,
+        "reach_reason": reachmod.R_NO_REPO,
+        "route": [],
+        "route_legend": [],
+        "private_title_prompt": first_prompt,
     }
 
 

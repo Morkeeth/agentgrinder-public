@@ -1,0 +1,9 @@
+{"role": "user", "message": {"content": [{"type": "text", "text": "<timestamp>Monday, Sep 14, 2026, 1:00 PM (UTC)</timestamp>\n<user_query>\n[t0u]\nLabel this as sample bot activity. Add a README note in /workspace/sample-project.\n</user_query>"}]}}
+{"role": "assistant", "message": {"content": [{"type": "text", "text": "Creating the note."}, {"type": "tool_use", "name": "Shell", "input": {"command": "mkdir -p /workspace/sample-project && printf 'sample\\n' > /workspace/sample-project/README.md", "working_directory": "/workspace"}}]}}
+{"role": "tool", "message": {"content": [{"type": "tool_result", "content": "ok"}]}}
+{"role": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read", "input": {"path": "/workspace/sample-project/README.md"}}]}}
+{"role": "tool", "message": {"content": [{"type": "tool_result", "content": "sample\n"}]}}
+{"role": "user", "message": {"content": [{"type": "text", "text": "<timestamp>Monday, Sep 14, 2026, 1:15 PM (UTC)</timestamp>\n<user_query>\n[t1u]\nCommit that as a sample.\n</user_query>"}]}}
+{"role": "assistant", "message": {"content": [{"type": "tool_use", "name": "Shell", "input": {"command": "cd /workspace/sample-project && git init && git add README.md && git commit -m \"sample bot activity\"", "working_directory": "/workspace/sample-project"}}]}}
+{"role": "tool", "message": {"content": [{"type": "tool_result", "content": "[main (root-commit) abc1234] sample bot activity\n 1 file changed, 1 insertion(+)"}]}}
+{"role": "assistant", "message": {"content": [{"type": "text", "text": "Done. Labeled sample bot activity."}]}}
