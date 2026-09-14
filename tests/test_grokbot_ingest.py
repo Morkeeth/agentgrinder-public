@@ -8,6 +8,7 @@ from agentgrinder.mcp_server import preview_run
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "samples" / "sample_grokbot_bot_activity.jsonl"
+SAFE_REAL_SHAPE = ROOT / "samples" / "sample_grokbot_safe_real_shape.jsonl"
 
 
 def test_measured_grokbot_export_parses_as_labelled_bot_activity():
@@ -111,3 +112,32 @@ def test_public_export_keeps_bot_label_and_drops_private_prompt():
     assert payload["activity_label"] == "bot activity"
     assert "PRIVATE PROMPT SENTINEL" not in json.dumps(payload)
     assert "private_title_prompt" not in payload
+
+
+def test_safe_real_shape_fixture_preserves_structure_without_exporting_labels_or_paths():
+    from agentgrinder.push import export_run
+
+    rows = [
+        json.loads(line)
+        for line in SAFE_REAL_SHAPE.read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(rows) == 29
+    assert {row["role"] for row in rows} == {"user", "assistant", "tool"}
+
+    fixture_text = SAFE_REAL_SHAPE.read_text(encoding="utf-8")
+    assert "[SAFE EXPORT]" in fixture_text
+    assert "/SAFE_EXPORT/project" in fixture_text
+    assert "/workspace/" not in fixture_text
+    assert "/home/" not in fixture_text
+
+    run = parse_grokbot_session(str(SAFE_REAL_SHAPE))
+    assert run["activity_label"] == "bot activity"
+    assert run["turns_typed"] == 7
+    assert run["tool_calls"] == 7
+    assert run["commits"] is None
+    assert run["files_touched"] is None
+
+    exported = json.dumps(export_run(run))
+    assert "SAFE EXPORT" not in exported
+    assert "/SAFE_EXPORT/project" not in exported
+    assert "private_title_prompt" not in exported

@@ -35,4 +35,44 @@ runs are labelled as bot activity. The committed fixture
 
 Cursor documents Grok Bot as a persistent cloud computer with terminal, filesystem and browser: [Grok Bot overview](https://prod.cursor.com/docs/grok-bot), checked 14 September 2026. That supports the repo-building workflow above; it does not establish native Grinder capture compatibility.
 
-The reusable [posting skill source kit](../templates/grokbot/INSTALL.md) prepares a private preview. It is not yet an installed or published Grok Bot template.
+## Install and verify the post-run source kit
+
+The reusable [posting skill source kit](../templates/grokbot/INSTALL.md) lives at
+`templates/grokbot/post-agent-run/`. Install that complete directory through the current Grok Bot
+skill interface so both `SKILL.md` and `scripts/preview.py` remain together. This is a source path,
+not a verified marketplace or one-click install.
+
+Always exercise the labelled sample before selecting a real export:
+
+```sh
+python3 templates/grokbot/post-agent-run/scripts/preview.py \
+  samples/sample_grokbot_bot_activity.jsonl
+```
+
+The command prints allowlisted metrics and a private localhost import URL. It performs no network
+request and publishes nothing. Next, run the same command against an explicitly selected real
+export on the bot's own computer:
+
+`samples/sample_grokbot_safe_real_shape.jsonl` is an additional regression fixture derived from
+the supplied description of a real 29-record role/content shape. Its seven prompts, tool inputs,
+result bodies, identifiers and paths are replaced with conspicuous `SAFE EXPORT` labels. It
+remains labelled sample bot data and is not evidence that a second bot was used.
+
+```sh
+python3 templates/grokbot/post-agent-run/scripts/preview.py path/to/selected-export.jsonl
+```
+
+Until an approved hosted Agentic Strava URL exists, omit `--base-url` and stop at the localhost
+preview. Once the owner supplies an approved HTTPS origin, passing it changes only the import URL;
+the owner must still review the card, account and destination, choose an audience deliberately,
+and save. Never point the helper at the hackathon service.
+
+Keep the evidence states separate:
+
+- **Source available:** this repository contains the kit.
+- **Installed:** a second bot was observed invoking the installed skill.
+- **Used:** that bot previewed its explicitly selected real export.
+- **Published:** the owner deliberately saved an approved run through an approved hosted account.
+
+Only the first state is established here. Do not describe the source kit or sample run as installed
+on a second bot, used on a real export, or published in a marketplace or social product.
