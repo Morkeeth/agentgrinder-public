@@ -1496,7 +1496,7 @@ function importRun(){
   }
   const sample=run.is_sample===true;
   const app=$('app');
-  const rows=[['harness',run.harness],['project',run.project],['prompts (cost)',run.turns_typed],
+  const rows=[['harness',run.harness],['project',run.project],['typed turns',run.turns_typed],
     ['minutes',run.duration_s?Math.round(run.duration_s/60):null],['tool calls',run.tool_calls],
     ['files',run.files_touched],['commits',run.commits],
     ['verified claims',run.claims_verified!=null&&run.claims!=null?`${run.claims_verified}/${run.claims}`:null],
@@ -1518,7 +1518,7 @@ function importRun(){
     <div class="panel">
       ${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>${unsaved}
     <div class="panel"><div class="pad">
-    <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details><p class="hint" style="margin:12px 0">Review the coach text and any shared Rig names before publishing.</p>
+    <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details><p class="hint" style="margin:12px 0">Review the imported details and any tool names you choose to share before publishing.</p>
     <label>What did you build?<input id="i_title" maxlength="120" required placeholder="Title you write, not scraped" value="${esc(run.project||'')} session"></label>
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
