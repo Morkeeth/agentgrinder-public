@@ -1,10 +1,11 @@
-import config from './public-config.json' with {type:'json'};
-export const origin='http://localhost:8000';
+import {runtimeConfig} from './runtime-config.mjs';
+const config=runtimeConfig();
+export const origin=config.ORIGIN;
 export const validId=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function readPublic(id,fetcher=fetch){
  if(!validId(id))return null;
- const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,title,caption,output_url,project,harness,started_at,duration_s,prompts,artifacts_produced,commits,rhythm,trace_basis,profiles!runs_profile_id_fkey(github_handle)',limit:'1'});
+ const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,title,caption,output_url,project,harness,started_at,duration_s,prompts,artifacts_produced,commits,rhythm,trace_basis,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
  const response=await fetcher(config.SB_URL+'/rest/v1/runs?'+query,{headers:{apikey:config.SB_KEY,"Accept-Profile":config.SB_SCHEMA},cache:'no-store',signal:AbortSignal.timeout(8000)});
  if(!response.ok)throw new Error('Public run unavailable');const rows=await response.json();
  return Array.isArray(rows)&&rows.length===1?rows[0]:null;
@@ -19,7 +20,7 @@ export function card(run){const values=run.rhythm,valid=Array.isArray(values)&&v
  return el('div',{style:{width:'100%',height:'100%',background:'#f8f8f6',color:'#111',display:'flex',flexDirection:'column',padding:'46px 60px',fontFamily:'sans-serif'}},
  el('div',{style:{display:'flex',color:'#123cff',fontSize:24,fontWeight:700}},'AGENTIC STRAVA'),
  el('div',{style:{display:'flex',fontSize:46,fontWeight:700,marginTop:22,height:112,overflow:'hidden'}},String(run.title||'Agent run').slice(0,120)),
- el('div',{style:{display:'flex',color:'#666',fontSize:22}},[run.profiles?.github_handle?'@'+run.profiles.github_handle:null,run.harness].filter(Boolean).join(' · ')||'Public run'),
+ el('div',{style:{display:'flex',color:'#666',fontSize:22}},[(run.profiles?.handle||run.profiles?.github_handle)?'@'+(run.profiles.handle||run.profiles.github_handle):null,run.harness].filter(Boolean).join(' · ')||'Public run'),
  run.caption?el('div',{style:{display:'flex',fontSize:22,marginTop:18,height:54,overflow:'hidden'}},String(run.caption).slice(0,280)):null,
  valid?el('svg',{width:1080,height:140,viewBox:'0 0 1080 140',style:{marginTop:20}},el('polyline',{points,stroke:'#123cff',strokeWidth:4,fill:'none'})):el('div',{style:{display:'flex',height:140,alignItems:'center',color:'#666'}},'Trace unavailable'),
  el('div',{style:{display:'flex',marginTop:22,gap:90}},...metrics.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',width:270}},el('div',{style:{display:'flex',fontSize:18,color:'#666'}},label),el('div',{style:{display:'flex',fontSize:36,marginTop:6}},value==null?'Unknown':String(value))))),

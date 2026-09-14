@@ -2,12 +2,15 @@
   "name": "agentgrinder-web-checks",
   "private": true,
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   },
   "scripts": {
     "test:database": "node scripts/test-database.mjs",
     "test:journey": "node scripts/check-persisted-journey.mjs",
-    "test:shared-schema": "node scripts/test-shared-schema.mjs"
+    "test:shared-schema": "node scripts/test-shared-schema.mjs",
+    "build": "node scripts/build-site.mjs",
+    "test:identity": "node scripts/test-identity.mjs",
+    "test:people": "node scripts/test-people-schema.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8"

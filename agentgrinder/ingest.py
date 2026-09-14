@@ -286,11 +286,9 @@ def latest_cursor_session() -> str | None:
     return max(files, key=os.path.getmtime) if files else None
 
 def parse_cursor_session(path: str, athlete: str = "you", records=None) -> dict:
-    from .claims import claims_in
     typed = 0
     tool_calls = 0
     commits = 0
-    claim_count = 0
     stamps = []
     files: set[str] = set()
     written: set[str] = set()
@@ -318,11 +316,8 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None) -> dict:
                 best_prompt = prompt
         elif role == "assistant":
             tool_calls += _cursor_tool_blocks(msg)
-            # Count claim lines from assistant prose. Do NOT feed ClaimTracker verification:
-            # Cursor agent-transcripts retain tool_use blocks but not tool stdout, so a
-            # verified=0 would look measured while evidence was never available to check.
-            if text.strip():
-                claim_count += len(claims_in(text))
+            # Cursor claim detection has no resolved harness-specific calibration.
+            # Keep claim counts unknown while preserving native activity measurements.
             # THE TRACE. Until 4 Sep 2026 this branch counted tool blocks and threw the rest
             # away, so every Cursor card printed a dash for files touched, commits and
             # artifacts, and reach printed "this harness does not name the repository". All
@@ -398,7 +393,7 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None) -> dict:
     route = [_region_of(fp, repo_root) for fp in edits]
     return {
         "athlete": athlete, "title": title, "harness": "Cursor", "project": proj,
-        "parser_version": "cursor-claims-count-2026-09-11" if records is not None else "cursor-claims-count-2026-09-11",
+        "parser_version": "cursor-claims-unknown-2026-09-14",
         "project_identity": project_identity(repo_root or os.path.dirname(os.path.dirname(os.path.dirname(path)))),
         "started": (min(pts).isoformat() if pts else None),
         "trace_basis": "typed-turn order; spacing is not elapsed time; sessions split on human-turn gaps, not measured idle",
@@ -407,8 +402,6 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None) -> dict:
         "files_touched": len(files) if files else None,
         "commits": commits if edits or commits else None,
         "rhythm": rhythm,
-        "claims": claim_count,
-        "claims_verified": None,  # tool stdout absent from Cursor agent-transcripts
         "artifacts_produced": artifacts_produced,
         "artifacts_promised": None,   # no harness records what a run said it would deliver
         "corrections": None,          # the inverse class, not built
@@ -459,6 +452,7 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
     """Parse a measured Grok Bot JSONL export without inferring absent measurements."""
     from .native_sittings import cursor_time, records as read_records
 
+    sample = False
     typed = 0
     tool_calls = 0
     stamps: list[datetime] = []
@@ -466,6 +460,7 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
     uq_re = _re.compile(r"<user_query>(.*?)</user_query>", _re.S)
 
     for row in records if records is not None else read_records(path):
+        sample = sample or row.get("agentgrinder_sample") is True
         role = row.get("role")
         msg = row.get("message") if isinstance(row.get("message"), dict) else {}
         text = _cursor_text(msg)
@@ -492,6 +487,7 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
         "title": "Grok Bot session",
         "harness": "Grok Bot",
         "activity_label": "bot activity",
+        "is_sample": sample,
         "project": "session",
         "project_identity": None,
         "parser_version": "grokbot-export-2026-09-14",

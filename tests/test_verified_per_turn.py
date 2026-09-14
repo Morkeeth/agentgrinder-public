@@ -239,13 +239,15 @@ def test_web_app_never_headlines_prompts():
     card = src[src.index("function runCard("):src.index("function wireKudos(")]
     assert card.index('${esc(r.title)}') < card.index('run-signature') < card.index('run-key-facts')
     assert '<details class="run-evidence">' in card
-    assert '${vptHtml(r)}' in card and '${fiveRow(r)}' in card
+    assert 'Counts describe recorded activity, not quality.' in card
+    assert '${vptHtml(r)}' not in card and '${fiveRow(r)}' not in card
     assert '<span>Typed turns</span>' in card
     # Share export is exercised by check-moment-fixtures.py; its call signature
     # is not part of the card's headline contract.
-    # the profile totals lead with verified per turn; prompts is labelled cost
+    # Social profiles show public work and responses, not activity-as-quality rankings.
     prof = src[src.index("async function viewProfile("):src.index("async function refreshAuth(")]
-    assert prof.index("verified per turn") < prof.index("prompts · cost")
+    assert "Public runs" in prof and "ACKs received" in prof
+    assert "verified per turn" not in prof
     assert '<div class="k">prompts</div>' not in prof
     # a missing part is a dash that names the missing fact, never a 0 and never a private project
     assert "if(v==null||a==null||!p) return null;" in src

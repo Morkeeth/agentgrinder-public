@@ -28,6 +28,11 @@ grant insert,delete on acks to authenticated;
 ''']
     for name in (ROOT / 'scripts/migration-order.txt').read_text().splitlines():
         parts.append('-- ' + name + '\n' + namespaced((ROOT / 'supabase/migrations' / name).read_text()))
+    # Strava-only migrations: already strava-qualified, never translated, applied after the inherited list.
+    for path in sorted((ROOT / 'supabase/strava').glob('*.sql')):
+        if path.name in ('base.sql', 'preflight.sql'):
+            continue
+        parts.append('-- strava/' + path.name + '\n' + re.sub(r'^\s*(begin|commit);\s*$', '', path.read_text(), flags=re.M | re.I))
     parts.append("notify pgrst, 'reload schema';\ncommit;\n")
     return '\n'.join(parts)
 

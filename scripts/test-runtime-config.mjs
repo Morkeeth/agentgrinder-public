@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {runtimeConfig} from '../server/runtime-config.mjs';
+assert.equal(runtimeConfig({}).SB_SCHEMA,'strava');
+const publicKey='e30.'+Buffer.from(JSON.stringify({role:'anon'})).toString('base64url')+'.signature';
+const env={VERCEL:'1',AGENTGRINDER_SUPABASE_URL:'https://example.supabase.co',AGENTGRINDER_SUPABASE_ANON_KEY:publicKey,STRAVA_ORIGIN:'https://example.vercel.app'};
+assert.equal(runtimeConfig(env).ORIGIN,env.STRAVA_ORIGIN);
+for(const field of ['AGENTGRINDER_SUPABASE_URL','AGENTGRINDER_SUPABASE_ANON_KEY','STRAVA_ORIGIN']) assert.throws(()=>runtimeConfig({...env,[field]:''}));
+for(const key of ['sb_secret_PRIVATE','e30.'+Buffer.from(JSON.stringify({role:'service_role'})).toString('base64url')+'.signature','invalid']) assert.throws(()=>runtimeConfig({...env,AGENTGRINDER_SUPABASE_ANON_KEY:key}));
+for(const url of ['http://example.com','https://user:secret@example.com','https://example.com/path','https://example.com/?token=secret','javascript:alert(1)']) assert.throws(()=>runtimeConfig({...env,STRAVA_ORIGIN:url}));
+console.log('PASS: explicit production configuration; service keys, credential URLs and wrong origins rejected');
