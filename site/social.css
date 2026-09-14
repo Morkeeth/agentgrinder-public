@@ -38,6 +38,9 @@
 .response-return .act{min-height:44px;display:inline-flex;align-items:center}
 .reply-target{outline:2px solid var(--blue);outline-offset:2px}
 .reply-missing{border-left:3px solid var(--rule)}
+.reply-direct{border-left:3px solid var(--blue);padding-left:12px;margin:0 0 16px}
+.reply-direct .response-state{margin:0 0 16px}
+.reply-direct .reply{margin:6px 0 0}
 .nav-badge:not([hidden]),
 #nav .nav-badge:not([hidden]),
 .mobile-inbox-badge:not([hidden]){

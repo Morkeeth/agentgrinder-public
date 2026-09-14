@@ -204,7 +204,7 @@ a.act{display:inline-block;text-decoration:none}
 .p-row,.flex-row{display:flex;justify-content:space-between;align-items:center;gap:10px;
   padding:10px 14px;border-bottom:1px solid var(--rule-2);font-size:13px}
 .p-row:last-child,.flex-row:last-child{border-bottom:0}
-.p-row .v{color:var(--soft)}
+.p-row .v{color:var(--soft);min-width:0;overflow-wrap:anywhere;text-align:right}
 .p-row .v b{color:var(--ink);font-weight:500}
 .p-row .v.never{color:var(--ink);font-weight:500}
 .g-row{padding:10px 14px;border-bottom:1px solid var(--rule-2);font-size:13px;display:block}
@@ -1486,7 +1486,7 @@ function restoreImport(){
 
 function importRun(){
   const m=location.hash.match(/import=([^&]+)/); if(!m) return false;
-  let run; try{ run=JSON.parse(atob(decodeURIComponent(m[1]))); }catch(_){ return false; }
+  let run; try{ run=JSON.parse(atob(decodeURIComponent(m[1]))); }catch(_){ frame(null,null); $('app').innerHTML='<div class="card"><h2>This import link is incomplete</h2><p>The capture data on this link could not be read, usually because the address was cut when it was copied. Nothing was posted. Run the capture command again to open a fresh preview.</p><p><a href="/?post">How to capture a run</a></p></div>'; return true; }
   try{ GrinderContract.validate(run); }
   catch(error){ frame(null,null); $('app').innerHTML='<div class="card"><h2>This grind could not be imported</h2><p>'+esc(error.message)+'</p></div>'; return true; }
   if(typeof GrinderContract==='object' && GrinderContract.rejectPaths){
@@ -1508,16 +1508,13 @@ function importRun(){
     ['vs your last grind',run.progress_verdict],
     ['measurement reference',run.measurement_revision],
     ['baseline reference',run.baseline_revision]].filter(r=>r[1]!=null&&r[1]!=='');
-  // The five-number parts and the coach verdict are saved when the runs table has their columns
-  // (supabase/migrations/2026-09-03-coach.sql). On a database without them the insert is retried
-  // without those fields and the card says so; nothing is invented and nothing fails silently.
-  const unsaved='';
   frame(null,null);
   app.innerHTML=`<div class="head"><h2>${sample?'Sample preview':'Preview your run'}</h2><span class="meta">${sample?'example data · not your activity':'private until you choose and save'}</span></div>
     ${sample?'<p role="note">This sample is for trying the preview. It cannot be saved or posted. Capture your own session to share a run.</p>':''}
     <div class="panel">
-      ${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>${unsaved}
+      ${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>
     <div class="panel"><div class="pad">
+    <p class="hint export-contents" style="margin:0 0 12px">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
     <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details><p class="hint" style="margin:12px 0">Review the imported details and any tool names you choose to share before publishing.</p>
     <label>What did you build?<input id="i_title" maxlength="120" required placeholder="Title you write, not scraped" value="${esc(run.project||'')} session"></label>
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
@@ -1528,7 +1525,8 @@ function importRun(){
     <input id="i_stack" placeholder="stack notes for friends (optional)" value="${esc(run.rig_notes||'')}">
     <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me</option><option value="public">Public feed and profile</option><option value="link">Anyone with the link</option></select></label>
     <p class="hint">Choosing Public is the deliberate action that posts this run to the feed.</p>
-    <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample — preview only':(ME?'Save run':'Sign in to save')}</button></div></div>
+    <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample — preview only':(ME?'Save run':'Sign in to save')}</button>
+    <div id="i_recover" hidden></div></div></div>
     <div class="head"><h2>${sample?'Sample card preview':'Card preview'}</h2><span class="meta">not posted</span></div><div id="import-card-preview"></div>`;
   const editFields=['i_title','i_caption','i_output_url','i_stack','i_vis'];
   try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
@@ -1560,7 +1558,33 @@ function importRun(){
     if(!$('i_title').value.trim()||!caption||!audience){status('Add a title and caption, then choose who can see the run.',true);return}
     if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
     publishButton.disabled=true;
+    const recover=$('i_recover'); recover.hidden=true; recover.innerHTML='';
+    // The same capture saved twice is one run, not two. Only the capture's measurement
+    // reference is a safe key: start time + harness alone can match two different projects.
+    // A retry after a lost response finds the row the first attempt made. The database unique
+    // index on (profile_id, measurement_revision) arbitrates concurrent inserts (23505).
+    // Nothing here re-sends on its own.
+    const dedupe=run.measurement_revision?{measurement_revision:run.measurement_revision}:null;
+    async function existingRun(){ if(!dedupe) return null; let q=sb.from('runs').select('id,visibility').eq('profile_id',ME.id); for(const [k,v] of Object.entries(dedupe)) q=q.eq(k,v); const {data,error}=await q.order('created_at',{ascending:true}).limit(1); if(error) throw error; return (data&&data[0])||null; }
+    function openExisting(prior){
+      try{sessionStorage.removeItem('ag_import');sessionStorage.removeItem('ag_import_edits')}catch(_){}
+      history.replaceState(null,'','/?run='+prior.id);
+      status('This capture was already saved as a run ('+(prior.visibility==='private'?'Only me':prior.visibility==='link'?'Anyone with the link':'Public')+'). Opening it. The caption you typed here was not applied; edit it on the run if you want it.');
+      return viewRun(prior.id);
+    }
+    function showRecovery(error){
+      const text=String(error?.message||error||'');
+      const offline=/failed to fetch|networkerror|load failed|network request failed|fetch failed/i.test(text);
+      const why=offline?'The service could not be reached.':(typeof GrinderContract==='object'&&GrinderContract.message?GrinderContract.message(error):text)||'The save did not complete.';
+      recover.innerHTML='<div class="card" role="alert"><p><b>Not saved.</b> '+esc(why)+'</p><p>Nothing was posted by this attempt. Your title, caption, link and audience are kept on this page'+(dedupe?', and pressing Try again first checks whether this capture is already saved, so it cannot be posted twice.':'. This export has no session reference, so open Your runs before saving again to be sure it is not there already.')+'</p><div class="cta"><button type="button" id="i_retry">Try again</button><a class="act" href="/?mine">Your runs</a></div></div>';
+      recover.hidden=false;
+      $('i_retry').onclick=()=>{recover.hidden=true;publishButton.click()};
+      status('Not saved. Your draft is still here.',true);
+    }
     try{
+    let prior=null;
+    try{ prior=await existingRun(); }catch(lookupError){ showRecovery(lookupError); return; }
+    if(prior){ await openExisting(prior); return; }
     const base={profile_id:ME.id,title:$('i_title').value||'Untitled run',
       project:run.project||null,harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,
@@ -1572,23 +1596,30 @@ function importRun(){
       coach_verdict:run.coach_verdict??null,coach_plan:run.coach_plan??null,coach_tool_calls:run.coach_tool_calls??null,
       coach_mode:run.coach_mode??null,
       progress_verdict:run.progress_verdict??null};
+    // Persist the measurement reference whenever the export carries one, even on schema 0,
+    // so a later retry can find this row. Other schema-1 fields stay gated on version.
+    if(run.measurement_revision!=null) coach.measurement_revision=run.measurement_revision;
+    if(run.baseline_revision!=null) coach.baseline_revision=run.baseline_revision;
     if(run.schema_version===1) Object.assign(coach,{schema_version:1,trace_basis:run.trace_basis||null,route:run.route||null,
-      measurement_revision:run.measurement_revision??null,baseline_revision:run.baseline_revision??null,
       progress_delta:run.progress_delta??null});
     let {data:published,error}=await sb.from('runs').insert({...base,...coach}).select('id').single();
-    if(!error){
+    if(error&&error.code==='23505'){ let again=null; try{again=await existingRun()}catch(_){} if(again){ await openExisting(again); return; } }
+    if(error){showRecovery(error);return;}
+    // The run is saved from here on. A failed rig update must never read as a failed save.
+    let rigNote='';
+    try{
       const rig={...(ME.rig||{})};
       if(run.rig_mcps!=null) rig.mcps=run.rig_mcps;
       if(run.rig_skills!=null) rig.skills=run.rig_skills;
       const notes=$('i_stack')?.value; if(notes) rig.notes=notes;
       if($('i_share_rig')?.checked && run.rig_mcp_names){ rig.mcp_names=run.rig_mcp_names; rig.share_names=true; }
-      await sb.from('profiles').update({rig}).eq('id',ME.id);
-    }
-    if(error){status(error.message,true);return;}
+      const {error:rigError}=await sb.from('profiles').update({rig}).eq('id',ME.id);
+      if(rigError) throw rigError;
+    }catch(_){ rigNote=' Your rig counts and notes were not updated; edit them from your profile.'; }
     try{localStorage.setItem('ag_onboard_done','1');sessionStorage.removeItem('ag_import');sessionStorage.removeItem('ag_import_edits')}catch(_){}
-    history.replaceState(null,'','/?run='+published.id);status(base.visibility==='private'?'Saved privately. You can make it public when you are ready.':'Run published. Copy its link to share.');
+    history.replaceState(null,'','/?run='+published.id);status((base.visibility==='private'?'Saved privately. You can make it public when you are ready.':'Run published. Copy its link to share.')+rigNote);
     await viewRun(published.id);
-    }catch(_){status('Publishing could not connect. Your draft is still here. Check Your runs before retrying.',true)}finally{publishButton.disabled=false}
+    }catch(unexpected){showRecovery(unexpected)}finally{publishButton.disabled=false}
 
   });
   return true;
