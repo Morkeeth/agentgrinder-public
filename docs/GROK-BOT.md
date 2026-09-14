@@ -34,3 +34,5 @@ runs are labelled as bot activity. The committed fixture
 `samples/sample_grokbot_bot_activity.jsonl` is synthetic sample bot activity, not a real user run.
 
 Cursor documents Grok Bot as a persistent cloud computer with terminal, filesystem and browser: [Grok Bot overview](https://prod.cursor.com/docs/grok-bot), checked 14 September 2026. That supports the repo-building workflow above; it does not establish native Grinder capture compatibility.
+
+The reusable [posting skill source kit](../templates/grokbot/INSTALL.md) prepares a private preview. It is not yet an installed or published Grok Bot template.
