@@ -7,7 +7,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from .a2a_client import DEFAULT_URL, DEFAULT_KEY
+from .a2a_client import DEFAULT_URL, DEFAULT_KEY, DEFAULT_SCHEMA
 from .contract import validate_run
 from .push import export_run
 
@@ -45,7 +45,7 @@ class AgentClient:
     def questions(self) -> list:
         request=urllib.request.Request(self._url.replace('grinder_agent_action','grinder_agent_questions'),
             data=json.dumps({'token':self._token}).encode(),method='POST',
-            headers={'Content-Type':'application/json','apikey':self._key})
+            headers={'Content-Type':'application/json','apikey':self._key,'Content-Profile':DEFAULT_SCHEMA})
         try:
             with urllib.request.urlopen(request,timeout=30) as response: result=json.load(response)
         except (urllib.error.URLError,ValueError):
@@ -58,7 +58,7 @@ class AgentClient:
         rid=str(uuid.UUID(request_id)) if request_id else str(uuid.uuid4())
         raw=json.dumps(dict(token=self._token,action=action,payload=payload,request_id=rid)).encode()
         request=urllib.request.Request(self._url,data=raw,method='POST',headers={
-            'Content-Type':'application/json','apikey':self._key})
+            'Content-Type':'application/json','apikey':self._key,'Content-Profile':DEFAULT_SCHEMA})
         try:
             with urllib.request.urlopen(request,timeout=30) as response:
                 result=json.load(response)

@@ -5,7 +5,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 export async function readPublic(id,fetcher=fetch){
  if(!validId(id))return null;
  const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,title,caption,output_url,project,harness,started_at,duration_s,prompts,artifacts_produced,commits,rhythm,trace_basis,profiles!runs_profile_id_fkey(github_handle)',limit:'1'});
- const response=await fetcher(config.SB_URL+'/rest/v1/runs?'+query,{headers:{apikey:config.SB_KEY},cache:'no-store',signal:AbortSignal.timeout(8000)});
+ const response=await fetcher(config.SB_URL+'/rest/v1/runs?'+query,{headers:{apikey:config.SB_KEY,"Accept-Profile":config.SB_SCHEMA},cache:'no-store',signal:AbortSignal.timeout(8000)});
  if(!response.ok)throw new Error('Public run unavailable');const rows=await response.json();
  return Array.isArray(rows)&&rows.length===1?rows[0]:null;
 }

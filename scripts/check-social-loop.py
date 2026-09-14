@@ -103,7 +103,7 @@ def mint(sub, handle):
 
 def session_script(session):
     return (
-        "localStorage.setItem('sb-kqxasvolwtrczusjhlli-auth-token',"
+        "localStorage.setItem('agentic-strava-auth',"
         + json.dumps(json.dumps(session))
         + ");"
     )

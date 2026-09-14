@@ -15,6 +15,7 @@ def test_network_client_sends_one_scoped_request_and_returns_no_credential():
     seen=[]
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
+            assert self.headers['Content-Profile'] == 'strava'
             seen.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
             self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers()
             self.wfile.write(b'{"id":"00000000-0000-0000-0000-000000000099","action":"draft","debug_token":"fixture-token"}')

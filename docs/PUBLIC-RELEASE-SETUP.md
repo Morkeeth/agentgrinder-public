@@ -1,29 +1,34 @@
-# Independent release setup
+# Shared Supabase release setup
 
-Current status: Grok adapter PR #5 merged after review. The independent database, domain, multi-provider login and installed template are not deployed.
+Owner decision, 14 September: use the existing Agent Grinder Supabase project. Keep Grinder's public schema intact; all Strava app data and functions use a new `strava` schema. Auth identities, provider settings, limits, backups and outages are project-wide. This is application data separation, not separate authentication tenants. No new paid plan is needed just to add a schema.
 
-Use a new Supabase project and new Vercel project for agentgrinder-public. Existing agentgrinder and aistrava projects are not proof of this product's independent deployment. Vercel account access was verified; Supabase's browser session returned to sign-in during project creation on 14 September. Restore that session before provisioning. No project was created in this attempt.
+## Current evidence
 
-## Database and hosting
+Local PostgreSQL/WASM checks install both apps, compare Grinder definitions/grants/data before and after, and exercise independent profile creation, private-run denial, owner writes, follows, replies, notifications and withdrawal. The disposable browser flow exercises posting, following, ACKs, replies and return at phone and desktop sizes, requiring explicit Strava schema headers. These are synthetic tests, not hosted acceptance or real users.
 
-Provision independent Postgres/Auth and apply a complete schema plus ordered migrations. Do not treat tests/fixtures/hosted-base.sql as a verified production bootstrap. Validate fresh-project creation, row policies and owner access on the actual project before connecting the public UI.
+Production schema installation, API exposure, auth-trigger inspection, callback setup and the separate website remain pending. Chrome's Supabase session is signed out; automated login timed out. No production database change has been made.
 
-Move the browser/server/CLI public endpoint configuration together: site/index.html, server/public-config.json, server/public-run.mjs and AGENTGRINDER_URL / AGENTGRINDER_SUPABASE_URL / AGENTGRINDER_SUPABASE_ANON_KEY. Keep privileged keys out of frontend assets. Set the new origin in sign-in callbacks and link metadata. Configure the approved domain, DNS and TLS. No domain purchase is authorised until its exact name and price are approved.
+## Database installation
 
-## Sign-in
+1. Confirm the existing Grinder project identity. Run `supabase/strava/preflight.sql` read-only. Inspect auth-user triggers before installation: shared signup must not unexpectedly populate Grinder data. Do not change those triggers as part of this deployment.
+2. Generate the first-install transaction with `python3 scripts/prepare-strava-database.py > /tmp/strava-bootstrap.sql`. Review it. It creates only the new schema, no user data, and deliberately refuses an existing `strava` schema. Do not drop an existing schema to retry; inspect its deployment state instead. Do not use the inherited `prepare-migration.py` against production: it targets Grinder's public schema.
+3. Apply the reviewed transaction in the confirmed project. Retain the result and run preflight again. Add `strava` to the Data API's exposed schemas, preserving every existing entry. Do not change the project-wide default search path or default privileges.
+4. Every later Strava migration must use qualified `strava` targets and restricted function search paths. The bootstrap translates the explicitly reviewed inherited migration list; it is not a general SQL transformer. Review additions and rerun isolation checks before use.
 
-Start with GitHub and X. Both need provider applications configured for the independent Supabase callback. Keep one internal person/profile ID, with linked provider identities and a separately chosen public handle. The existing github_handle column and GitHub metadata assumptions need a compatibility migration before enabling X. Do not infer account ownership by matching public handles. Third provider awaits clarification.
+Browser SDK uses `db.schema = strava`; public server/CLI reads send `Accept-Profile: strava`; agent POSTs send `Content-Profile: strava`. Auth requests use the shared project. There is no fallback to public on errors. No privileged key belongs in frontend assets.
 
-Primary docs: [GitHub](https://supabase.com/docs/guides/auth/social-login/auth-github), [X](https://supabase.com/docs/guides/auth/social-login/auth-twitter), [identity linking](https://supabase.com/docs/guides/auth/auth-identity-linking).
+## Hosting and sign-in
 
-## Friends and return
+Use a separate Vercel project. Move the browser/server/CLI endpoint configuration together: site/index.html, server/public-config.json, server/public-run.mjs, AGENTGRINDER_URL, AGENTGRINDER_SUPABASE_URL and AGENTGRINDER_SUPABASE_ANON_KEY. Keep schema selection fixed to strava. Configure the approved origin in page metadata and explicit auth redirects; append callbacks to the allowlist without changing Grinder's Site URL. Strava uses its own auth storage key and local-scope sign-out.
 
-Add direct person lookup/profile sharing so someone can find a friend without waiting for their run to appear in Discover. Exercise follow/unfollow and the Following feed, including empty state, own-profile handling and blocks. Responses must return to the exact run. A close-friends audience is a proposed extension; define membership/revocation before adding it, and deny strangers in the database and public-link handlers.
+Start with GitHub and X linked to one internal identity, with separate Strava onboarding/profile. The existing github_handle and GitHub metadata assumptions need a compatibility migration before enabling X. Do not match account ownership by public handles. Origin is Cursor's code forge: repository connection is planned; personal sign-in support remains unverified.
 
-## Grok template
+Final brand/domain and exact purchase cost require owner approval. No name has been changed or domain purchased.
 
-The source kit is in templates/grokbot. Its helper creates a private preview, not a social write. Install on a second bot using the actual current Grok interface. Verify a real export, human review, deliberate post to the new service, response by a second person and withdrawal. Template installation, successful real use and marketplace publication are separate states.
+## Friends, template and hosted acceptance
 
-## Launch evidence
+Add direct person lookup/profile sharing so users can find friends before a run appears in Discover. Test follow/unfollow and Following, empty states, blocks and exact-run response links. A Close friends audience remains a proposal requiring membership/revocation rules.
 
-Two consenting people on the independent service must each post a safe real run, follow/respond and return. Inspect phone and desktop views. Verify signed-out cards, private/link audiences, owner edits/deletion and response links. Use their observed friction to guide the next change. Outbound messages and public posts require owner approval of recipient, channel and exact text.
+Install templates/grokbot on a second bot using the current Grok interface. Verify a real export, owner review, deliberate post, second-person response and withdrawal. Installation, real use and publication are distinct states.
+
+Two consenting people must each post a safe real run, find/follow/respond and return on the hosted Strava website. Verify privacy, deletion and links, plus that Grinder continues working. Messages and public posts need approval of recipient, channel and exact text.
