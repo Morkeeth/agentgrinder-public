@@ -36,3 +36,21 @@ def test_response_inbox_phone_styles_use_blue_unread_trace():
     assert "border-left:3px solid var(--blue)" in SOCIAL_CSS
     assert ".response-filters" in SOCIAL_CSS
     assert "min-height:44px" in SOCIAL_CSS
+
+
+def test_r2_01_deep_link_resolves_reply_by_id_before_missing_copy():
+    """R2-01: page-1 miss is not deletion; lookup by id, then page until focused."""
+    thread = SOCIAL[SOCIAL.index("async function thread(") : SOCIAL.index("async function inbox(")]
+    assert '.eq("id", focusReply)' in thread or ".eq('id', focusReply)" in thread
+    assert "focusKnownMissing" in thread
+    assert "while (focusReply && !focusKnownMissing && !sawFocus)" in thread
+
+
+def test_r2_02_unread_mark_requires_confirmed_rows_and_resets_owner():
+    """R2-02: 0-row updates must not poison unreadMarked; owner change clears the set."""
+    mark = SOCIAL[SOCIAL.index("async function markNotificationsRead(") : SOCIAL.index("async function refreshUnread(")]
+    assert '.select("id")' in mark or ".select('id')" in mark
+    assert "confirmed" in mark
+    assert "unreadMarked.delete" in mark
+    assert "resetUnreadMarks" in SOCIAL
+    assert "inboxObserver.disconnect" in SOCIAL

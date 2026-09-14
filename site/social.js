@@ -91,6 +91,18 @@ window.GrinderSocial = function ({
 
   const RESPONSE_RETURN_KEY = "ag_response_return";
   const unreadMarked = new Set();
+  let inboxObserver = null;
+  let unreadMarkOwner = null;
+
+  function resetUnreadMarks(ownerId) {
+    if (ownerId && ownerId === unreadMarkOwner) return;
+    unreadMarked.clear();
+    unreadMarkOwner = ownerId || null;
+    if (inboxObserver) {
+      inboxObserver.disconnect();
+      inboxObserver = null;
+    }
+  }
 
   function stashResponseReturn() {
     try {
@@ -132,20 +144,33 @@ window.GrinderSocial = function ({
   }
 
   async function markNotificationsRead(ids) {
+    const recipient = me()?.id;
+    if (!recipient) return;
+    resetUnreadMarks(recipient);
     const pending = [...new Set(ids)].filter(
       (id) => id && !unreadMarked.has(id),
     );
-    if (!pending.length || !me()) return;
+    if (!pending.length) return;
     pending.forEach((id) => unreadMarked.add(id));
     try {
-      await result(
+      const updated = await result(
         db
           .from("grinder_notifications")
           .update({ read_at: new Date().toISOString() })
           .in("id", pending)
-          .eq("recipient_id", me().id)
-          .is("read_at", null),
+          .eq("recipient_id", recipient)
+          .is("read_at", null)
+          .select("id"),
       );
+      // 0-row success must not poison unreadMarked (stale me() / already-read / RLS miss).
+      const confirmed = new Set((updated || []).map((row) => row.id));
+      for (const id of pending) {
+        if (!confirmed.has(id)) unreadMarked.delete(id);
+      }
+      if (me()?.id !== recipient) {
+        pending.forEach((id) => unreadMarked.delete(id));
+        return;
+      }
       const count = await refreshUnread();
       const summary = document.querySelector(".response-summary");
       if (summary) {
@@ -469,6 +494,34 @@ window.GrinderSocial = function ({
     const items = slot.querySelector(".thread-items");
     let cursor = null;
     let sawFocus = false;
+    let focusKnownMissing = false;
+    // Resolve the deep-linked reply by id first. Page-1 absence is not deletion.
+    if (focusReply) {
+      try {
+        const focused = await result(
+          db
+            .from("grinder_replies")
+            .select("id,run_id")
+            .eq("id", focusReply)
+            .limit(1),
+        );
+        focusKnownMissing = !focused.length || focused[0].run_id !== runId;
+      } catch (_) {
+        focusKnownMissing = false;
+      }
+    }
+    function focusTarget() {
+      const target = byId("reply-" + focusReply);
+      if (!target) return;
+      slot.querySelector(".reply-missing")?.remove();
+      requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (typeof target.focus === "function") {
+          target.setAttribute("tabindex", "-1");
+          target.focus({ preventScroll: true });
+        }
+      });
+    }
     async function page() {
       let query = db
         .from("grinder_replies")
@@ -597,19 +650,34 @@ window.GrinderSocial = function ({
         const older = document.createElement("button");
         older.className = "older-replies ghost";
         older.textContent = "Earlier replies";
-        older.onclick = () => page().catch(fail);
+        older.onclick = async () => {
+          try {
+            await page();
+            if (focusReply && sawFocus) focusTarget();
+          } catch (e) {
+            fail(e);
+          }
+        };
         slot.append(older);
       }
+      return rows.length;
     }
     try {
       await page();
+      // Keep paging until the known-existing deep link is on screen (R2-01).
+      while (focusReply && !focusKnownMissing && !sawFocus) {
+        const older = slot.querySelector(".older-replies");
+        if (!older) break;
+        const loaded = await page();
+        if (!loaded) break;
+      }
     } catch (e) {
       items.textContent = "Replies are temporarily unavailable.";
       fail(e);
       return;
     }
     slot.querySelector(".reply-missing")?.remove();
-    if (focusReply && !sawFocus) {
+    if (focusReply && (focusKnownMissing || !sawFocus)) {
       const missing = document.createElement("div");
       missing.className = "card reply-missing";
       missing.innerHTML =
@@ -617,16 +685,7 @@ window.GrinderSocial = function ({
         responseReturnBar();
       items.before(missing);
     } else if (focusReply && sawFocus) {
-      const target = byId("reply-" + focusReply);
-      if (target) {
-        requestAnimationFrame(() => {
-          target.scrollIntoView({ behavior: "smooth", block: "center" });
-          if (typeof target.focus === "function") {
-            target.setAttribute("tabindex", "-1");
-            target.focus({ preventScroll: true });
-          }
-        });
-      }
+      focusTarget();
     }
     if (me()) {
       const form = document.createElement("form");
@@ -674,6 +733,7 @@ window.GrinderSocial = function ({
       "inbox",
     );
     if (!signedIn()) return;
+    resetUnreadMarks(me()?.id);
     clearResponseReturn();
     const body = byId("social-body");
     const filter =
@@ -806,8 +866,12 @@ window.GrinderSocial = function ({
       });
 
       // Mark as read only what actually enters the viewport, not the whole inbox.
+      if (inboxObserver) {
+        inboxObserver.disconnect();
+        inboxObserver = null;
+      }
       if (typeof IntersectionObserver === "function") {
-        const observer = new IntersectionObserver(
+        inboxObserver = new IntersectionObserver(
           (entries) => {
             const seen = [];
             for (const entry of entries) {
@@ -815,7 +879,7 @@ window.GrinderSocial = function ({
                 continue;
               const el = entry.target;
               if (el.getAttribute("data-read") === "1") {
-                observer.unobserve(el);
+                inboxObserver.unobserve(el);
                 continue;
               }
               const id = el.getAttribute("data-notification-id");
@@ -825,7 +889,7 @@ window.GrinderSocial = function ({
               el.classList.add("read");
               el.querySelector(".response-new")?.remove();
               seen.push(id);
-              observer.unobserve(el);
+              inboxObserver.unobserve(el);
             }
             if (seen.length) markNotificationsRead(seen);
           },
@@ -833,7 +897,7 @@ window.GrinderSocial = function ({
         );
         body
           .querySelectorAll('.response-item[data-read="0"]')
-          .forEach((el) => observer.observe(el));
+          .forEach((el) => inboxObserver.observe(el));
       }
 
       await refreshUnread();
