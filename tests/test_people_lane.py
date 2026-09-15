@@ -33,8 +33,8 @@ def test_people_module_owns_lookup_and_shareable_profile():
 def test_following_empty_states_point_to_people():
     assert "/?people" in SOCIAL
     assert "Follow works before they post" in SOCIAL
-    assert "You are not following anyone yet" in SOCIAL
-    assert "none have public runs yet" in SOCIAL
+    assert "nobody is imported or followed automatically" in SOCIAL
+    assert "none has a public run yet" in SOCIAL
 
 
 def test_follow_control_blocks_self_and_supports_signed_out():
