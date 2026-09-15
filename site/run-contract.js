@@ -163,7 +163,76 @@
       )
       .join("\n");
   }
-  const api = { validate, message, trace, sittingsComparable, headlineMetric, rejectPaths };
+  /* Orchestration tree: one orchestrator on top, workers as rows. Reads only the fields the
+     tree builder allows (ids, model, timestamps, counts). A tree with no children still renders
+     the orchestrator line so a reader sees that delegation was recorded but the workers were not. */
+  const escText = (s) =>
+    String(s ?? "").replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" })[c]);
+  function wall(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) return "unknown";
+    const total = Math.round(seconds), h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+    if (h) return h + "h " + String(m).padStart(2, "0") + "m";
+    if (m) return m + "m " + String(s).padStart(2, "0") + "s";
+    return s + "s";
+  }
+  function offset(start, base) {
+    const a = Date.parse(start), b = Date.parse(base);
+    if (!Number.isFinite(a) || !Number.isFinite(b) || a < b) return "";
+    return "+" + wall((a - b) / 1000);
+  }
+  function treeNode(node) {
+    if (!node || typeof node !== "object" || Array.isArray(node)) return null;
+    const num = (v) => (Number.isSafeInteger(v) && v >= 0 ? v : null);
+    return {
+      model: typeof node.model === "string" ? node.model.slice(0, 60) : null,
+      subagent_type: typeof node.subagent_type === "string" ? node.subagent_type.slice(0, 24) : null,
+      status: typeof node.status === "string" ? node.status.slice(0, 24) : null,
+      started_at: typeof node.started_at === "string" && Number.isFinite(Date.parse(node.started_at)) ? node.started_at : null,
+      wall_seconds: Number.isFinite(node.wall_seconds) && node.wall_seconds >= 0 ? node.wall_seconds : null,
+      bubbles: num(node.bubbles),
+      tool_calls: num(node.tool_calls),
+      tool_errors: num(node.tool_errors),
+      children: Array.isArray(node.children) ? node.children.map(treeNode).filter(Boolean).slice(0, 200) : [],
+    };
+  }
+  function tree(raw) {
+    const root = treeNode(raw);
+    if (!root) return "";
+    const workers = root.children;
+    const longest = Math.max(1, ...workers.map((w) => w.wall_seconds || 0));
+    const chip = (m) => '<span class="tree-chip" title="' + escText(m || "model unknown") + '">' + escText(m || "model unknown") + "</span>";
+    const counts = (n) =>
+      '<span class="tree-counts">' +
+      (n.bubbles == null ? "?" : n.bubbles) + " turns · " +
+      (n.tool_calls == null ? "?" : n.tool_calls) + " tools" +
+      (n.tool_errors ? " · " + n.tool_errors + " err" : "") +
+      "</span>";
+    const rows = workers
+      .map((w, i) => {
+        const width = w.wall_seconds == null ? 0 : Math.max(1, Math.round((w.wall_seconds / longest) * 100));
+        const label = "worker " + (i + 1) + (w.subagent_type && w.subagent_type !== "generalPurpose" ? " · " + w.subagent_type : "");
+        const flag = w.status && w.status !== "completed" ? ' <span class="tree-flag">' + escText(w.status) + "</span>" : "";
+        return (
+          '<li class="tree-worker"><div class="tree-line"><span class="tree-name">' + escText(label) + flag + "</span>" + chip(w.model) +
+          '<span class="tree-wall">' + escText(wall(w.wall_seconds)) + "</span></div>" +
+          '<div class="tree-bar" role="img" aria-label="' + escText(wall(w.wall_seconds)) + ' of the longest worker"><span style="width:' + width + '%"></span></div>' +
+          '<div class="tree-line small">' + counts(w) + '<span class="tree-start">' + escText(offset(w.started_at, root.started_at)) + "</span></div></li>"
+        );
+      })
+      .join("");
+    const sum = workers.reduce((a, w) => a + (w.wall_seconds || 0), 0);
+    return (
+      '<section class="tree" aria-label="Orchestration tree">' +
+      '<div class="tree-root"><div class="tree-line"><span class="tree-name">orchestrator</span>' + chip(root.model) +
+      '<span class="tree-wall">' + escText(wall(root.wall_seconds)) + " span</span></div>" +
+      '<div class="tree-line small">' + counts(root) + '<span class="tree-start">' + workers.length + " worker" + (workers.length === 1 ? "" : "s") +
+      (workers.length ? " · " + escText(wall(sum)) + " worker time" : "") + "</span></div></div>" +
+      (workers.length ? '<ol class="tree-workers">' + rows + "</ol>" : '<p class="tree-empty">Delegation recorded, no worker rows found.</p>') +
+      '<p class="tree-foot">Bars compare worker wall time to the longest worker. Model names are what Cursor recorded. Tokens are not on disk and are not shown.</p>' +
+      "</section>"
+    );
+  }
+  const api = { validate, message, trace, sittingsComparable, headlineMetric, rejectPaths, tree };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -70,3 +70,29 @@ button,summary{touch-action:manipulation}
 .run-output{padding:10px 16px 0}.run-output a{color:var(--blue);font-weight:500;overflow-wrap:anywhere}
 
 .forum-trace{max-width:420px;margin:20px 0}.forum-trace svg{height:90px}.forum-item h3{font-size:23px;line-height:1.3}.forum-item .reply-body{white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Orchestration tree on a run card: orchestrator on top, workers as rows. Same white card, same
+   blue trace. The bar is a wall-time trace, not a progress bar: it compares a worker to the
+   longest worker in the same run. Phone width first; the desktop rule only widens the gutter. */
+.tree{padding:14px 16px 0;border-top:1px solid var(--rule);margin-top:14px}
+.tree-line{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:13px}
+.tree-line.small{font-size:12px;color:var(--soft);margin-top:4px;flex-wrap:wrap;row-gap:2px}
+.tree-name{font-weight:500;color:var(--ink);white-space:nowrap}
+.tree-chip{font:11px/1.5 ui-monospace,monospace;color:var(--blue);background:var(--blue-wash);padding:0 6px;border-radius:2px;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-wall{margin-left:auto;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
+.tree-start{margin-left:auto;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tree-counts{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tree-flag{font-weight:400;color:var(--dim);margin-left:4px}
+.tree-root{padding-bottom:12px;border-bottom:1px solid var(--rule-2)}
+.tree-workers{list-style:none;margin:0;padding:0 0 0 12px;border-left:1px solid var(--blue-soft)}
+.tree-worker{padding:10px 0 10px 8px;border-bottom:1px solid var(--rule-2);position:relative}
+.tree-worker::before{content:'';position:absolute;left:-12px;top:19px;width:8px;height:1px;background:var(--blue-soft)}
+.tree-worker:last-child{border-bottom:0}
+.tree-bar{height:6px;margin-top:6px;background:var(--rule-2);position:relative;overflow:hidden}
+.tree-bar span{display:block;height:100%;background:var(--blue);transform-origin:left;transform:scaleX(0);animation:tree-grow .6s cubic-bezier(.25,.7,.3,1) .15s forwards}
+@keyframes tree-grow{to{transform:scaleX(1)}}
+@media (prefers-reduced-motion:reduce){.tree-bar span{animation:none;transform:none}}
+.tree-empty,.tree-foot{font-size:12px;color:var(--soft);margin:10px 0 0}
+.tree-foot{padding-bottom:2px}
+@media(min-width:720px){.tree{padding:16px 20px 0}.tree-workers{padding-left:16px}}
