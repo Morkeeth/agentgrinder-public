@@ -1,4 +1,4 @@
-# Agentic Strava public product
+# Pacecard public product
 
 Read README.md and PRODUCT.md first. This repository is the free, social, Cursor-first product. The separate hackathon repository is out of scope.
 

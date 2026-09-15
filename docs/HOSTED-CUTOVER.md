@@ -21,7 +21,7 @@ Create a separate Vercel project for this repository and set all three productio
 |---|---|
 | `AGENTGRINDER_SUPABASE_URL` | `https://<shared-project-ref>.supabase.co` |
 | `AGENTGRINDER_SUPABASE_ANON_KEY` | The project's public anon/publishable key; never a secret or service-role key |
-| `STRAVA_ORIGIN` | The approved HTTPS Agentic Strava origin, with no path, query or fragment |
+| `STRAVA_ORIGIN` | The approved HTTPS Pacecard origin, with no path, query or fragment |
 
 `npm run build` writes the first two values into the browser's `SB_URL` and `SB_KEY` constants. `SB_SCHEMA` is deliberately not configurable: it must remain `strava`.
 
@@ -38,7 +38,7 @@ For a capture client pointed at the hosted app, set:
 
 | Variable | Purpose |
 |---|---|
-| `AGENTGRINDER_URL` | Approved hosted Strava origin used to build the private import URL |
+| `AGENTGRINDER_URL` | Approved hosted Pacecard origin used to build the private import URL |
 | `AGENTGRINDER_SUPABASE_URL` | Same shared-project URL as Vercel |
 | `AGENTGRINDER_SUPABASE_ANON_KEY` | Same public key as Vercel |
 
@@ -50,7 +50,7 @@ Do not put any of these values in reusable Grok skills, prompts or committed fil
 - [ ] Append `https://<approved-strava-origin>/**` to Supabase Auth Redirect URLs. Keep localhost redirects needed for development.
 - [ ] In the GitHub OAuth app used by the shared Supabase provider, retain the Supabase provider callback: `https://<shared-project-ref>.supabase.co/auth/v1/callback`.
 - [ ] Confirm GitHub is enabled before exposing sign-in. X and Origin remain outside this cutover unless their separately reviewed identity work is already present.
-- [ ] Verify sign-in returns to the exact Strava path/draft and that signing out clears only `agentic-strava-auth`.
+- [ ] Verify sign-in returns to the exact Pacecard path and draft and that signing out clears only `agentic-strava-auth`.
 
 Do not change shared Auth triggers or merge accounts by a public handle.
 
@@ -70,9 +70,9 @@ The first command fails if a browser/server/CLI/agent schema pin or required `Ac
 
 ## 5. After deploy
 
-- [ ] Open `/api/health`; require `{"service":"agentic-strava","database":"ready"}`.
+- [ ] Open `/api/health`; require `{"service":"pacecard","database":"ready"}`.
 - [ ] Signed out: open Feed, a public run, its builder profile and output link.
-- [ ] Fresh GitHub account: create the Strava profile, confirm zero-run Post guidance, save Only me, then deliberately change/post Public.
+- [ ] Fresh GitHub account: create the Pacecard profile, confirm zero-run Post guidance, save Only me, then deliberately change/post Public.
 - [ ] Two consenting accounts: share profile URL, search handle, follow, open Following, ACK, reply, open Responses and return to the exact reply.
 - [ ] Confirm a private/link run is absent from signed-out reads and public link previews.
 - [ ] Confirm one capture creates one run by opening the same `measurement_revision` import twice.

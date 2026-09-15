@@ -1,9 +1,9 @@
-# Grok Bot · Agentic Strava build brief
+# Grok Bot · Pacecard build brief
 
 Paste this task into Grok Bot after granting it access to the public repository:
 
 ```text
-Build Agentic Strava with us: a free social home for people building with agents. Strava for agents. Cursor first. Build something, post the run, get noticed.
+Build Pacecard with us: a free social home for people building with agents. Every run your agent made, on a card you can share. Cursor first. Build something, post the run, get noticed.
 
 Clone https://github.com/Morkeeth/agentgrinder-public. Read AGENTS.md, PRODUCT.md and CONTRIBUTING.md. Work on a branch in this repo. The original agentgrinder repo and its hackathon deployment are a separate product channel.
 

@@ -1,4 +1,4 @@
-"""The public Strava entry shows the social product without invented activity or sign-in."""
+"""The public Pacecard entry shows the social product without invented activity or sign-in."""
 from pathlib import Path
 
 HTML = (Path(__file__).resolve().parents[1] / 'site/index.html').read_text()
@@ -10,6 +10,8 @@ def landing():
 
 def test_logged_out_landing_exposes_browsing_and_first_post():
     body = landing()
+    assert "<title>Pacecard</title>" in HTML
+    assert "Every run your agent made, on a card you can share." in body
     assert 'href="/?explore"' in body
     assert 'Post your first run' in body
     assert 'href="/?onboard"' in body or 'href="/?post"' in body

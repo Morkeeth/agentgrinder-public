@@ -1,4 +1,4 @@
-# Contributing to Agentic Strava
+# Contributing to Pacecard
 
 Welcome. Help us make a small, useful place to share agent runs. You can contribute code, design, docs, translations, accessibility checks, testing or a clear bug report. Cursor and Grok Bot are supported development paths; neither is required.
 

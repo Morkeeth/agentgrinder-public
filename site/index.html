@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Agentic Strava — Strava for agents</title>
+<title>Pacecard</title>
 <meta name="description" content="Turn a Cursor, Claude Code or Codex session into a run card. Post your runs and see what other builders are making. Private until you choose to share.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -379,7 +379,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 </style><link rel="stylesheet" href="/social.css"><link rel="stylesheet" href="/people.css"><link rel="stylesheet" href="/account.css"></head>
 <body>
 <div class="bar"><div class="bar-in">
-  <a class="mark" href="/">Agentic Strava</a>
+  <a class="mark" href="/">Pacecard</a>
   <nav id="nav" aria-label="Primary">
     <a href="/?explore" data-section="feed">Feed</a>
     <a href="/?post" data-section="post">Post a run</a>
@@ -412,7 +412,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   <main class="main" id="app"></main>
   <aside class="side" id="side"></aside>
 </div>
-<footer>Your agent runs, shared on your terms. &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a><span id="deletewrap" hidden> &middot; <a href="/?account#danger" id="delete">Delete my Strava profile</a></span></footer>
+<footer>Your agent runs, shared on your terms. &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a><span id="deletewrap" hidden> &middot; <a href="/?account#danger" id="delete">Delete my Pacecard profile</a></span></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
@@ -1002,7 +1002,7 @@ function shareCardHtml(opts){
   const hl=opts.headline?`<p class="share-hl">${esc(opts.headline)}</p>`:'';
   return `<div class="share-scene"><div class="share-scale" id="share-scale"><div class="share-frame" id="share-frame">
     <div class="share-main">
-      <section class="share-left"><div class="share-brand">Agentic Strava</div>
+      <section class="share-left"><div class="share-brand">Pacecard</div>
         <div><div class="share-handle-row">${avatar(h,{size:56,cols:20,cls:'share-av',ghost:ghost,rhythm:opts.rhythm})}
           <div><div class="share-handle">@${esc(h)}</div><div class="share-stamp">${esc(stamp)}</div></div></div>
           <p class="share-lead">${esc(opts.lead||'')}</p><p class="share-sub">${esc(opts.sub||'')}</p></div></section>
@@ -1105,7 +1105,7 @@ async function viewOnboard(){
       ${ME?`<button id="ob-push">Show my runs</button>`:`<button disabled>Sign in first</button>`}
       <button class="ghost" id="ob-skip">Skip, browse the feed</button>
     </div></div>`;
-  app.innerHTML=`<div class="head"><h2>Welcome to Agentic Strava</h2><span class="meta">I tried this. Show me what changed.</span></div>
+  app.innerHTML=`<div class="head"><h2>Welcome to Pacecard</h2><span class="meta">I tried this. Show me what changed.</span></div>
       <p class="hint">Want the path with no account first? <a href="/?example">Try the bundled example</a>. Sign-in is only to keep your own runs.</p>
       ${stepBar(n,done)}${step1}${step2}${step3}${step4}`;
   wireCopy();
@@ -1139,7 +1139,7 @@ async function viewOnboardAgent(){
 
 function viewPitch(){
   frame(null,null);
-  $('app').innerHTML=`<div class="head"><h2>Agentic Strava</h2><span class="meta">record → share → improve</span></div>
+  $('app').innerHTML=`<div class="head"><h2>Pacecard</h2><span class="meta">record → share → improve</span></div>
     <h1>Make your agent work worth coming back to.</h1>
     <p>Turn a Cursor, Claude Code or Codex session into a run. Keep your history, share work with your Crew, and test one change on the next session.</p>
     <div class="panel"><div class="pad"><h2>The run is the starting point</h2><p>Show the work and the setup behind it. Give an ACK for a specific contribution. Save a practice from another builder and compare your next attempt.</p></div></div>
@@ -1263,8 +1263,8 @@ function wireCopy(){
 
 
 function landingHTML(){
-  return `<div class="launch-grid"><section class="landing-intro"><p class="meta">STRAVA FOR AGENTS</p>
-    <h1>Your agent runs. Worth sharing.</h1>
+  return `<div class="launch-grid"><section class="landing-intro"><p class="meta">RUN CARDS FOR AGENT WORK</p>
+    <h1>Every run your agent made, on a card you can share.</h1>
     <p>Turn a Cursor, Claude Code or Codex session into a run card. Post your run. Follow builders. See what they ship.</p>
     <div class="cta"><a class="act primary" href="/?onboard">Post your first run</a><a class="act" href="/?explore">Explore runs</a></div>
     <p class="hint">Capture locally. Preview privately. You choose what goes public.</p>

@@ -55,6 +55,6 @@ def test_cutover_docs_and_dry_run_cover_schema_boundary():
     ):
         assert value in HOSTED
     assert "localhost can preview" in GROK.lower()
-    assert "hosted Agentic Strava URL" in GROK
+    assert "hosted Pacecard URL" in GROK
     assert "Accept-Profile" in DRY_RUN and "Content-Profile" in DRY_RUN
     assert "No network request or production write was made." in DRY_RUN
