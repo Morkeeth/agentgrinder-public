@@ -59,12 +59,12 @@ two-person use or later-day return.
 
 ## Tonight handoff
 
-Merge **#27 → #28 → #23**, then deploy the merged tip with a new receipt. Confirm the Auth
-allowlist for `https://agentic-strava.vercel.app`, then run the two-consenting-person walk. #26 and
-#29 follow the core; do not expand merged #20.
+Merge **#27 → #28 → #30 (this PR) → #23**, then deploy the merged tip with a new receipt. Confirm
+the Auth allowlist for `https://agentic-strava.vercel.app`, then run the two-consenting-person
+walk. #26 and #29 follow the core; do not expand merged #20.
 
 Exact Codex paste:
 
 ```text
-merge #27+#28+#23, deploy tip, confirm Auth allowlist, then two-person walk.
+merge #27+#28+#30+#23, deploy tip, confirm Auth allowlist, then two-person walk.
 ```

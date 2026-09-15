@@ -404,7 +404,7 @@ def main():
             inbox_text = cp.locator("#social-body").inner_text()
             # grinder_notifications.actor_id cascades on profile delete, so a deleted person's
             # rows vanish rather than degrade; either outcome must leave no dead link.
-            check("Responses to your public runs will appear here" in inbox_text or "Someone" in inbox_text or "unavailable" in inbox_text, "deleted target: inbox is empty (cascade) or degrades cleanly, no crash")
+            check("Post a real run and share it with a friend" in inbox_text or "Someone" in inbox_text or "unavailable" in inbox_text, "deleted target: inbox is empty (cascade) or degrades cleanly, no crash")
             check(cp.locator('#social-body a[href="/?u=test-riley"]').count() == 0, "deleted target: no dead profile link in Responses")
             shot(cp, "20-responses-after-deletion-mobile.png")
 

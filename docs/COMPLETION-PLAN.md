@@ -7,9 +7,10 @@ A builder finishes something with an agent, posts a card they want to show, gets
 ## Tonight's core handoff · 15 September
 
 Merge the reviewable core in dependency order: **#27 capture from the builder's own project → #28
-journey map and idempotent Save → #23 two-person checklist**, resolving only the conflicts needed
-to preserve that path. Then deploy the merged tip and record a new deployment receipt. The latest
-supplied receipt remains `726f8a57`; a live-source observation is not a newer Vercel receipt.
+journey map and idempotent Save → #30 cross-flow hierarchy and empty states → #23 two-person
+checklist**, resolving only the conflicts needed to preserve that path. Then deploy the merged tip
+and record a new deployment receipt. The latest supplied receipt remains `726f8a57`; a live-source
+observation is not a newer Vercel receipt.
 
 After deployment, Codex confirms that the Auth allowlist accepts
 `https://agentic-strava.vercel.app`. Only then do Oscar and one consenting friend walk capture →
@@ -24,7 +25,7 @@ merged despite the hold: do not expand segments.
 Exact Codex paste:
 
 ```text
-merge #27+#28+#23, deploy tip, confirm Auth allowlist, then two-person walk.
+merge #27+#28+#30+#23, deploy tip, confirm Auth allowlist, then two-person walk.
 ```
 
 ## 1. Land the social loop
