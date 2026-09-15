@@ -7,6 +7,8 @@ bounded card → post → response → return loop. It does not replace
 ## Evidence boundary
 
 - Repository: `Morkeeth/agentgrinder-public` only.
+- Cursor Cloud run: `bc-521cf5c3-2609-4e09-959f-321690c9d56b` on
+  `cursor/full-cursor-grok-user-journey-and-core-loop-build-map-9998`.
 - Exact starting SHA and current `origin/main` at review time:
   `29a5074a58014a9d29a1e0bb4e5cfa35943a3b6c`.
 - Live origin at review time: `https://agentic-strava.vercel.app`.
