@@ -3,13 +3,15 @@
 Drives site/index.html and site/social.js as committed against the disposable PGlite shim
 (scripts/disposable-supabase.mjs). Proves, on a phone viewport:
 
-  1. offline save: the draft survives, nothing is posted, recovery is on screen, no retry fires
+  1. offline save: the draft survives, no row reaches the server, recovery is on screen, no retry fires
      by itself; Try again is the person's click and makes exactly one run.
   2. lost response: the insert lands but the browser never hears back; Try again finds the run
      the first attempt made instead of posting a second one.
-  3. same capture saved again on purpose: opens the existing run, says the caption was not applied.
-  4. a chopped import link says so, instead of falling through to the landing page.
-  5. an exact-reply link ranked past the 12-page load (331 replies; page one plus 12 more pages is 325) is rendered directly, not
+  3. manual-post lost response: a browser-scoped save id preserves the draft and finds the first
+     insert instead of posting a duplicate.
+  4. same capture saved again on purpose: opens the existing run, says the caption was not applied.
+  5. a chopped import link says so, instead of falling through to the landing page.
+  6. an exact-reply link ranked past the 12-page load (331 replies; page one plus 12 more pages is 325) is rendered directly, not
      called removed; a reply that does not exist is called removed or not visible.
 
 Disposable TEST DATA identities only. No hosted OAuth, no consenting person, no public write.
@@ -161,8 +163,9 @@ def main():
             cp.click("#i_pub")
             cp.locator("#i_recover:not([hidden])").wait_for(timeout=15000)
             recover_text = cp.inner_text("#i_recover")
-            check("Not saved" in recover_text and "could not be reached" in recover_text, "offline: recovery names the failure and that nothing was posted: " + recover_text[:90])
-            check("Try again" in recover_text and "already saved" in recover_text, "offline: recovery offers Try again and says it checks for an existing run first")
+            check("Save not confirmed" in recover_text and "could not be reached" in recover_text, "offline: recovery names the unconfirmed save and connection failure: " + recover_text[:90])
+            check("cannot tell whether" in recover_text, "offline: recovery does not claim to know whether an uncertain request reached the service")
+            check("Check and try again" in recover_text and "cannot be posted twice" in recover_text, "offline: recovery offers an explicit retry and says it checks for an existing run first")
             check(cp.get_by_role("link", name="Your runs").count() == 1, "offline: recovery links to Your runs")
             check(cp.input_value("#i_caption") == "TEST DATA: caption typed before the connection dropped." and cp.input_value("#i_vis") == "public", "offline: caption and audience survive on the page")
             check("import=" in cp.url, "offline: the capture stays on the URL, nothing navigated away")
@@ -213,7 +216,7 @@ def main():
             cp.locator("#i_recover:not([hidden])").wait_for(timeout=15000)
             rows = my_runs(cp)
             check(len(rows) == 2, "lost response: the server holds the run the browser thinks failed (rows " + str(len(rows)) + ")")
-            check("Not saved" in cp.inner_text("#i_recover"), "lost response: the page says not saved, because it cannot know better yet")
+            check("Save not confirmed" in cp.inner_text("#i_recover") and "cannot tell whether" in cp.inner_text("#i_recover"), "lost response: the page states exactly what it cannot know")
             shot(cp, "04-lost-response-recovery-mobile.png")
             gate.mode = "open"
             cp.click("#i_retry")
@@ -225,13 +228,38 @@ def main():
             check("Only me" in cp.inner_text("#status"), "lost response: the status names the audience the run was saved with")
             shot(cp, "05-lost-response-found-mobile.png")
 
-            # 4. A chopped import link.
+            # 4. A manual post uses a browser-scoped id to recover a lost response.
+            cp.goto(base + "/?post")
+            settle(cp, "test-casey")
+            cp.get_by_text("Post a run without a Cursor export").click()
+            cp.fill("#f_title", "TEST DATA manual lost response")
+            cp.fill("#f_project", "agentgrinder-public TEST DATA")
+            cp.fill("#f_caption", "TEST DATA: manual save response was lost.")
+            cp.select_option("#f_vis", "link")
+            before_manual = len(my_runs(cp))
+            gate.mode = "lost"
+            cp.click("#publish")
+            cp.locator("#manual-recover:not([hidden])").wait_for(timeout=15000)
+            manual_recovery = cp.inner_text("#manual-recover")
+            check("Save not confirmed" in manual_recovery and "cannot tell whether" in manual_recovery, "manual lost response: uncertainty is honest")
+            check("Check and try again" in manual_recovery and "exact save" in manual_recovery, "manual lost response: explicit idempotent retry is offered")
+            check(cp.input_value("#f_caption") == "TEST DATA: manual save response was lost." and cp.input_value("#f_vis") == "link", "manual lost response: draft and audience remain on screen")
+            check(len(my_runs(cp)) == before_manual + 1, "manual lost response: first insert reached the service")
+            gate.mode = "open"
+            cp.click("#manual-retry")
+            cp.wait_for_url("**/?run=*", timeout=20000)
+            cp.wait_for_function("document.getElementById('status').textContent.includes('already received')")
+            check(len(my_runs(cp)) == before_manual + 1, "manual retry: existing save opened and no duplicate was created")
+            check("Anyone with the link" in cp.inner_text("#status"), "manual retry: status names the existing audience")
+            shot(cp, "06-manual-lost-response-found-mobile.png")
+
+            # 5. A chopped import link.
             cp.goto(base + "/" + first[:-40])
             cp.get_by_role("heading", name="This import link is incomplete").wait_for(timeout=10000)
             check("Nothing was posted" in cp.inner_text("#app"), "chopped link: says the link is incomplete and nothing was posted")
-            shot(cp, "06-chopped-link-mobile.png")
+            shot(cp, "07-chopped-link-mobile.png")
 
-            # 5. Exact reply beyond the paging cap, then a reply that does not exist.
+            # 6. Exact reply beyond the paging cap, then a reply that does not exist.
             riley_context, rp = context_for(riley, "test-riley")
             rp.goto(base + "/?run=" + run_id)
             settle(rp, "test-riley")
@@ -255,14 +283,14 @@ def main():
             check("shown here on its own" in cp.inner_text(".reply-direct") and "the reply a friend actually meant" in cp.inner_text(".reply-direct"), "cap: the direct card explains itself and carries the reply body")
             check(cp.evaluate("() => document.activeElement && document.activeElement.id === 'reply-" + str(oldest) + "'"), "cap: focus lands on the exact reply")
             check(cp.locator(".reply-direct").get_by_role("link", name="Back to Responses").count() == 1, "cap: Back to Responses is offered on the direct card")
-            cp.screenshot(path=str(ARTIFACTS / "07-exact-reply-beyond-cap-mobile.png"), full_page=False)
+            cp.screenshot(path=str(ARTIFACTS / "08-exact-reply-beyond-cap-mobile.png"), full_page=False)
             ghost = str(uuid.uuid4())
             cp.goto(base + f"/?run={run_id}&reply={ghost}#reply-{ghost}")
             settle(cp, "test-casey")
             cp.locator(".reply-missing").wait_for(timeout=120000)
             check("removed or is not visible to you" in cp.inner_text(".reply-missing"), "missing reply: named as removed or not visible, not as an error")
             check(cp.locator(".reply-direct").count() == 0, "missing reply: nothing rendered directly for an id that does not exist")
-            cp.screenshot(path=str(ARTIFACTS / "08-missing-reply-mobile.png"), full_page=False)
+            cp.screenshot(path=str(ARTIFACTS / "09-missing-reply-mobile.png"), full_page=False)
 
             for page in (cp, rp):
                 check(not page.evaluate("document.documentElement.scrollWidth > innerWidth + 1"), "phone: no horizontal overflow")
