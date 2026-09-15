@@ -122,7 +122,6 @@ def test_redaction_guard_refuses_path_shaped_strings():
 def test_source_store_is_copied_not_opened_live(store, tmp_path):
     before = store.stat().st_mtime_ns
     with cursor_tree.CopiedDb(store) as conn:
-        assert conn.execute('pragma query_only').fetchone()[0] == 0 or True
         with pytest.raises(sqlite3.OperationalError):
             conn.execute("insert into cursorDiskKV values ('x','y')")
     assert store.stat().st_mtime_ns == before
