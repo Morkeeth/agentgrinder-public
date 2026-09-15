@@ -32,7 +32,7 @@ Done when: `docs/CURSOR.md` names both paths and the flag in the capture walkthr
 
 Files: `CONTRIBUTING.md` (section "Code map"), `api/health.js`, `api/run.js`.
 
-The code map lists `site/`, `agentgrinder/`, `server/` and `scripts/` but not `api/`. `api/health.js` answers `/api/health` with `{"service":"agentic-strava","database":"ready"}` or `"unavailable"` with status 503. `api/run.js` serves a public run as an HTML preview page, or as a 1200 by 630 PNG when `image=1`, and a plain-text 404 when the run is not public.
+The code map lists `site/`, `agentgrinder/`, `server/` and `scripts/` but not `api/`. `api/health.js` answers `/api/health` with `{"service":"pacecard","database":"ready"}` or `"unavailable"` with status 503. `api/run.js` serves a public run as an HTML preview page, or as a 1200 by 630 PNG when `image=1`, and a plain-text 404 when the run is not public.
 
 Done when: the code map has one line per file in `api/` that says what each endpoint returns, and the sentence about `/api/health` matches the JSON the handler writes.
 

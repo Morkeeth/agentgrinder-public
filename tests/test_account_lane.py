@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ACCOUNT = (ROOT / "site" / "account.js").read_text()
 AUTH = (ROOT / "site" / "auth.js").read_text()
+ORIGIN = (ROOT / "site" / "origin.js").read_text()
 CSS = (ROOT / "site" / "account.css").read_text()
 LOOP = (ROOT / "scripts" / "check-account-loop.py").read_text()
 PACKAGE = (ROOT / "package.json").read_text()
@@ -23,6 +24,15 @@ def test_no_cursor_or_origin_login_and_x_is_gated():
     assert "not a login" in ACCOUNT
     assert "is not available on this service yet" in ACCOUNT
     assert "providersEnabled" in ACCOUNT
+
+
+def test_origin_is_a_post_sign_in_repository_connection_only():
+    assert "not a sign-in method" in ORIGIN
+    assert "Continue with Origin" not in ORIGIN and "Sign in with Origin" not in ORIGIN
+    for state in ("hidden", "connect", "cancelled", "error", "connected", "disconnected"):
+        assert f'"{state}"' in ORIGIN
+    assert 'origin.html({ signedIn: true })' in ACCOUNT
+    assert '{ id: "origin"' not in AUTH.lower(), "Origin must not become a Supabase Auth provider"
 
 
 def test_destructive_action_explains_what_goes_and_stays_without_confirm_dialog():
@@ -65,18 +75,22 @@ def test_browser_walk_covers_the_assigned_checks_and_shell_hooks():
         assert needle in LOOP
     assert "HOOKS" not in LOOP and "HOOK_" not in LOOP, "the walk drives the real shell, it does not insert hooks"
     assert '"test:account"' in PACKAGE
+    assert '"test:origin"' in PACKAGE
 
 
 def test_shell_is_integrated_not_patched_in_memory():
     """Round 2: the eight account hooks live in site/index.html itself."""
     assert '<link rel="stylesheet" href="/account.css">' in INDEX
     assert '<script src="/account.js"></script>' in INDEX
+    assert '<script src="/origin.js"></script>' in INDEX
+    assert INDEX.index('<script src="/origin.js"></script>') < INDEX.index('<script src="/account.js"></script>')
     assert "const account=GrinderAccount({" in INDEX
+    assert "const originConnection=GrinderOrigin.create();" in INDEX
     assert "async function route(){ account.recover();" in INDEX
     assert "authErrorFromUrl" not in INDEX
     assert "if(q.has('account')){return account.view();}" in INDEX
     assert "people|account)(=|$)" in INDEX
     assert '<a href="/?account" role="menuitem" data-auth="1" hidden>Account settings</a>' in INDEX
-    assert '<a href="/?account#danger" id="delete">Delete my Strava profile</a>' in INDEX
+    assert '<a href="/?account#danger" id="delete">Delete my Pacecard profile</a>' in INDEX
     delete_path = INDEX[INDEX.index("document.addEventListener('DOMContentLoaded'"):]
-    assert "$('delete').addEventListener" not in delete_path and "Delete your Strava profile and owned work?" not in delete_path
+    assert "$('delete').addEventListener" not in delete_path and "Delete your Pacecard profile and owned work?" not in delete_path

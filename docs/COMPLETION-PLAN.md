@@ -1,59 +1,85 @@
-# Agentic Strava: from a live loop to two-person use
+# STRIVE: tonight's path to two-person use
 
-Updated 15 September 2026 against `main`, [PRODUCT.md](../PRODUCT.md), the open pull requests and the live health endpoint. Hosting exists; two-person use and Eric's critique are not yet established.
+Updated 15 September 2026 against `main` at `b39eeee`, the merged core pull requests and the live
+health endpoint. **STRIVE** is the working public name for now. The live origin remains
+[agentic-strava.vercel.app](https://agentic-strava.vercel.app); a full repository, product-copy and
+domain rename is deferred.
 
-A builder finishes something with an agent, previews a white card with a blue activity trace, adds a caption and output link, posts it deliberately, gets a response from another builder, and returns to the conversation.
+The core loop stays capture → private preview → deliberate audience and Save → browse → follow →
+ACK/reply → Responses return. Keep the white card, blue trace, caption and output link. Missing
+measurements stay unknown.
 
-## 1. Keep the core loop locked
+## Tonight's launch handoff
 
-The product surface is Feed, Post, My runs, Profile, follow/Following, ACK, reply and Responses. Caption and output link come first on the card. Keep missing measurements unknown.
+The core implementation is now on `main`:
 
-Review and merge [#21](https://github.com/Morkeeth/agentgrinder-public/pull/21) for identity and [#22](https://github.com/Morkeeth/agentgrinder-public/pull/22) for the anonymous first minute when their normal review is complete, then deploy those reviewed commits together. Draft [#13](https://github.com/Morkeeth/agentgrinder-public/pull/13) can be closed if its review findings and fixes are already represented on `main`; confirm that before closing it.
+- [#27](https://github.com/Morkeeth/agentgrinder-public/pull/27): capture from the builder's own
+  project.
+- [#28](https://github.com/Morkeeth/agentgrinder-public/pull/28): journey continuity and idempotent
+  Save.
+- [#30](https://github.com/Morkeeth/agentgrinder-public/pull/30): cross-flow hierarchy, response
+  return and empty states.
 
-**HOLD [#20](https://github.com/Morkeeth/agentgrinder-public/pull/20).** Its segment leaderboard is a score/comparison dashboard and conflicts with the locked scope. Do not apply its SQL migration, deploy it or use it as the next product slice.
+Merge [#23](https://github.com/Morkeeth/agentgrinder-public/pull/23), deploy the resulting reviewed
+`main` tip and record the exact deployment receipt. Then complete these still-open acceptance
+steps in order:
 
-## 2. Finish the live acceptance path
+1. Confirm the shared Supabase Auth redirect allowlist accepts
+   `https://agentic-strava.vercel.app` without replacing the shared Site URL or existing callbacks.
+2. Verify GitHub and email-link sign-in return to the intended live page with the private draft
+   intact. Check cancellation and sign-out as well.
+3. Run [the two-person live test](TWO-PERSON-TEST.md) with Oscar and one consenting friend, each
+   using their own account and safe real session.
+4. On Grok Bot's own computer, explicitly select a safe real JSONL export and create a private
+   hosted preview:
 
-The shared place now exists at [agentic-strava.vercel.app](https://agentic-strava.vercel.app). It is a separate Vercel app using the dedicated Supabase `strava` schema and shared Auth. On 15 September, [`/api/health`](https://agentic-strava.vercel.app/api/health) reported `database: ready`. This proves service and database health, not sign-in completion or real two-person use. Grinder public tables, functions and Auth triggers remain out of bounds.
+   ```sh
+   python3 templates/grokbot/post-agent-run/scripts/preview.py \
+     path/to/selected-export.jsonl \
+     --base-url https://agentic-strava.vercel.app
+   ```
 
-Remaining release work:
+   The helper does not publish. The owner must inspect the card, account, destination and audience,
+   then deliberately choose **Save run**.
 
-1. Confirm the shared Supabase Auth redirect allowlist includes the exact Agentic Strava return origin without replacing the shared Site URL or existing callbacks.
-2. After review, merge and deploy #21 and #22. Verify the deployed commit and confirm GitHub and email-link sign-in return to the intended live page with private draft state preserved. Check cancellation and sign-out too.
-3. Run [the two-person test](TWO-PERSON-TEST.md) with Oscar and one consenting friend, each using their own account and safe real session.
+Hosting already exists, and
+[`/api/health`](https://agentic-strava.vercel.app/api/health) reports `database: ready`. That does
+not prove Auth return, a hosted Grok Save or two-person use. Keep local, tested, deployed and used
+evidence separate.
 
-Acceptance is both people completing the live post → follow → ACK/reply → Responses return path, with observed friction recorded. A local fixture, health response or owner-only walkthrough does not satisfy it.
+## Keep the scope locked
 
-## 3. Make real capture lead to deliberate posting
+The launch surface is Feed, Post, My runs, Profile, follow/Following, ACK, reply and Responses.
+Public links must reveal only public content, and withdrawing or deleting a run must remove access.
+Use the two-person walk to find the largest friction before adding another surface.
 
-For Cursor, run onboarding from a clean contributor checkout, select a safe real session, and show the private card before any social write. Point hosted imports only at the approved live origin. Preserve unknown measurements and let the builder supply the public caption and output link.
+[#20](https://github.com/Morkeeth/agentgrinder-public/pull/20) was merged despite the earlier hold.
+Do not expand, promote or treat its leaderboard/segment work as part of tonight's launch acceptance.
+Do not apply further leaderboard SQL or build a score/comparison dashboard.
 
-For Grok Bot, explicitly select a real JSONL export on that bot's computer and create a private preview:
+Defer all of the following until after the core path is accepted:
 
-```sh
-python3 templates/grokbot/post-agent-run/scripts/preview.py \
-  path/to/selected-export.jsonl \
-  --base-url https://agentic-strava.vercel.app
-```
+- [#26](https://github.com/Morkeeth/agentgrinder-public/pull/26), including OG work and Close
+  friends;
+- [#29](https://github.com/Morkeeth/agentgrinder-public/pull/29), including the private Cursor hook
+  and ridge;
+- Close friends migrations, server-enforced access and revocation work;
+- the full STRIVE rename, new domain work and broad public announcement.
 
-The helper does not publish. The owner must inspect the card, signed-in account, destination and audience, then deliberately choose **Save run**. Record source available, installed, real export previewed and saved as separate states; only source availability is currently established.
+Do not add coaching, practice programmes, comparisons, Crews or challenges. Do not create
+artificial engagement, automated ACKs or invented users, output or results. Grinder public tables,
+functions and Auth triggers remain out of bounds.
 
-## 4. Fix friction before adding surfaces
+## Eric's product and launch contribution
 
-Use the two-person test to find the largest break in understanding, posting, following, responding or returning. Responses must open the exact run and conversation. Public links must reveal only public content, and withdrawing or deleting a run must remove access.
+Eric has not yet reviewed or used the live product. Do not contact him until the owner approves the
+recipient, channel and exact message. The live URL is not permission to send anything.
 
-Do not add coaching, practice programmes, comparisons, score dashboards, Crews or challenges. Do not create artificial engagement, automated ACKs or invented users, output or results.
+When explicitly approved, send Eric the repository, this plan and the live URL. Ask him to try one
+safe run and critique three things: would he show this card; does a stranger understand it; what
+would make him return tomorrow?
 
-## 5. Eric's product and launch contribution
-
-Eric has not yet reviewed or used the live product. Do not contact him until the owner approves the recipient, channel and exact message. The live URL now exists, but that alone is not permission to send anything.
-
-When explicitly approved, send Eric the repository, this plan and the live URL. Ask him to try one safe run and critique three things: would he show this card; does a stranger understand it; what would make him return tomorrow?
-
-Invite him to own one bounded slice through a normal PR: first-post friction, card hierarchy or response navigation. [CONTRIBUTING.md](../CONTRIBUTING.md) has the setup and [docs/FIRST-PR.md](FIRST-PR.md) has starting points. Ask which initial builder group he would personally bring in and why; do not present that as an agreed launch commitment.
-
-## 6. Sequence later work and launch
-
-After the core live path works for two people, consider Close friends only with server-enforced membership, visibility and revocation tests. X sign-in needs provider configuration. Origin repository linking needs an app registration and reviewed callback flow.
-
-Public announcement and broad outreach come last, after observed two-person use and fixes to its largest friction. Oscar owns any outward launch. Do not seed synthetic runs or claim adoption from test data.
+Invite him to own one bounded slice through a normal PR: first-post friction, card hierarchy or
+response navigation. [CONTRIBUTING.md](../CONTRIBUTING.md) has the setup and
+[docs/FIRST-PR.md](FIRST-PR.md) has starting points. Do not present his participation or launch
+commitment as established before he agrees.

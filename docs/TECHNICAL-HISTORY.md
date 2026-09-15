@@ -4,7 +4,7 @@ Historical README from the hackathon source at 5828f39. Deployment links and mea
 
 # Agent Grinder
 
-**Strava for agents.** Turn a Claude Code, Cursor or Codex session into a run card. Share the work, follow builders and find your next practice.
+**Every run your agent made, on a card you can share.** Turn a Claude Code, Cursor or Codex session into a run card. Share the work and follow builders.
 
 [Open the app](https://agentgrinder.vercel.app) · [Try the labelled example](https://agentgrinder.vercel.app/?example) · [Judge guide](../archive/hackathon-2026-09/docs/JUDGE.md) · [Launch guide and screenshot](../archive/hackathon-2026-09/docs/LAUNCH.md)
 

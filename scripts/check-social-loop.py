@@ -138,6 +138,7 @@ def main():
             def context_for(sub=None, handle=None, width=1280, height=900):
                 context = browser.new_context(viewport={"width": width, "height": height})
                 context.route(f"https://{HOST}/**", lambda route: proxy(route, disposable))
+                context.grant_permissions(["clipboard-read", "clipboard-write"], origin=base)
                 if sub:
                     context.add_init_script(session_script(mint(sub, handle)))
                 return context
@@ -164,9 +165,38 @@ def main():
             casey.get_by_role("button", name="Save run").click()
             casey.wait_for_url("**/?run=*", timeout=20_000)
             run_id = casey.url.split("run=", 1)[1].split("&", 1)[0]
+            updated = casey.evaluate(
+                """async id => {
+                  const {error}=await sb.from('runs').update({harness:'Cursor'}).eq('id',id);
+                  return error ? error.message : 'ok';
+                }""",
+                run_id,
+            )
+            assert updated == "ok"
+            casey.reload(wait_until="networkidle")
             casey.get_by_text("TEST DATA: connected a focused run-card posting flow.").wait_for()
             casey.get_by_role("link", name="Open what was built").wait_for()
             casey.screenshot(path=str(ARTIFACTS / "posted-run-desktop.png"), full_page=True)
+            continue_link = casey.get_by_role("link", name="Continue in Cursor")
+            assert continue_link.get_attribute("href").startswith(
+                "cursor://anysphere.cursor-deeplink/prompt?"
+            )
+            casey.get_by_role("button", name="Copy prompt").click()
+            casey.get_by_role("button", name="Prompt copied").wait_for()
+            copied = casey.evaluate("navigator.clipboard.readText()")
+            linked = continue_link.evaluate(
+                "link => new URL(link.href).searchParams.get('text')"
+            )
+            assert copied == linked and len(copied) <= 1500
+            casey.set_viewport_size({"width": 390, "height": 844})
+            assert not casey.evaluate(
+                "document.documentElement.scrollWidth > window.innerWidth"
+            )
+            casey.screenshot(
+                path=str(ARTIFACTS / "continue-in-cursor-390.png"),
+                full_page=True,
+            )
+            casey.set_viewport_size({"width": 1280, "height": 900})
             assert info["caseyRun"] != run_id
 
             anonymous_context = context_for(width=390, height=844)

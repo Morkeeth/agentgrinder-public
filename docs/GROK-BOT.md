@@ -1,81 +1,78 @@
-# Grok Bot · Agentic Strava build brief
+# Grok Bot · capture work from the bot’s computer
 
-Paste this task into Grok Bot after granting it access to the public repository:
+Use Agentic Strava as a post-run step for the project Grok Bot is already building. The export
+must be a JSONL file explicitly selected on that bot’s computer. A bot cannot read a session from
+the owner’s laptop, and the capture flow must never guess private paths.
 
-```text
-Build Agentic Strava with us: a free social home for people building with agents. Strava for agents. Cursor first. Build something, post the run, get noticed.
+## Install the post-run source kit
 
-Clone https://github.com/Morkeeth/agentgrinder-public. Read AGENTS.md, PRODUCT.md and CONTRIBUTING.md. Work on a branch in this repo. The original agentgrinder repo and its hackathon deployment are a separate product channel.
-
-Use the contribution selected by the human. If none is selected, your first slice is to make a Cursor builder's first run feel native. Use the existing reader and MCP server. Create one clear capture → private preview → deliberate share flow, with a useful output link and short caption. Keep the white card and blue trace. Profiles, follows, discussion and ACKs carry the social value. Keep it minimal: no coach, practice programme, comparison dashboard, Crews or challenges in the main app. Paid model calls must not be required.
-
-First inspect what already works. Read docs/FIRST-PR.md and use the task the contributor selected; do not run all three. Run python3 scripts/dev.py setup, then python3 scripts/dev.py serve. Run python3 scripts/dev.py check for the contributor checks. Build the selected complete improvement, then open it in your browser and show the resulting flow. Open a PR with screenshots, exact checks, and the remaining independent deployment steps. Do not post on social media, change the hackathon repo, copy its database, or deploy without a separate deployment task.
-
-Do not claim to have captured a Cursor session from my laptop: your cloud machine has different files. Use a deliberately provided safe sample or a real session available on your own machine, clearly labelled. Bot activity is bot activity, not human effort. Do not invent successful runs or engagement.
-```
-
-The build brief above remains a handoff for contributing code; it is separate from transcript
-capture support.
-
-Agent Grinder now has a native `grokbot` adapter tested against the measured Grok Bot cloud-computer
-export format: JSONL records with `user`, `assistant` and `tool` roles and content blocks for text,
-tool use and tool results. Use an explicitly provided export:
+Clone or update the capture tool on the bot’s computer, separate from the project being built:
 
 ```sh
-python3 -m agentgrinder grind path/to/export.jsonl --harness grokbot
+git clone https://github.com/Morkeeth/agentgrinder-public.git ~/.agentgrinder/agentgrinder-public
+cd ~/.agentgrinder/agentgrinder-public
 ```
 
-For local MCP discovery, place exports deliberately in
-`~/.agentgrinder/imports/grokbot/`. This import path does not read sessions from a user's laptop,
-and the bot's cloud computer cannot access laptop files. Typed human turns require both
-`<timestamp>` and `<user_query>` wrappers; injected turns are excluded. The measured format does
-not establish elapsed duration, native file writes or completed commits, so those fields remain unknown. Shell requests do not prove successful commits. Grok Bot
-runs are labelled as bot activity. The committed fixture
-`samples/sample_grokbot_bot_activity.jsonl` is synthetic sample bot activity, not a real user run.
+Install the complete `templates/grokbot/post-agent-run/` directory through the current Grok Bot
+skill interface. Keep `SKILL.md` and `scripts/preview.py` together. This repository contains
+source, not a verified marketplace or one-click installation.
 
-Cursor documents Grok Bot as a persistent cloud computer with terminal, filesystem and browser: [Grok Bot overview](https://prod.cursor.com/docs/grok-bot), checked 14 September 2026. That supports the repo-building workflow above; it does not establish native Grinder capture compatibility.
-
-## Install and verify the post-run source kit
-
-The reusable [posting skill source kit](../templates/grokbot/INSTALL.md) lives at
-`templates/grokbot/post-agent-run/`. Install that complete directory through the current Grok Bot
-skill interface so both `SKILL.md` and `scripts/preview.py` remain together. This is a source path,
-not a verified marketplace or one-click install.
-
-Always exercise the labelled sample before selecting a real export:
+First verify the helper with labelled sample bot activity:
 
 ```sh
 python3 templates/grokbot/post-agent-run/scripts/preview.py \
   samples/sample_grokbot_bot_activity.jsonl
 ```
 
-Start `python3 scripts/dev.py serve` in another terminal before opening the localhost URL.
-Bundled examples are labelled **Sample preview** and cannot be saved or posted.
+The sample is visibly labelled **SAMPLE** / **bot activity** and cannot be saved or posted.
+Running it proves only that this checkout’s source works.
 
-The command prints allowlisted metrics and a private localhost import URL. It performs no network
-request and publishes nothing. Next, run the same command against an explicitly selected real
-export on the bot's own computer:
+## Select one real export and open the hosted private preview
 
-`samples/sample_grokbot_safe_real_shape.jsonl` is an additional regression fixture derived from
-the supplied description of a real 29-record role/content shape. Its seven prompts, tool inputs,
-result bodies, identifiers and paths are replaced with conspicuous `SAFE EXPORT` labels. It
-remains labelled sample bot data and is not evidence that a second bot was used.
+Ask the owner to identify the exact JSONL export already present on this bot’s computer. Then run:
 
 ```sh
-python3 templates/grokbot/post-agent-run/scripts/preview.py path/to/selected-export.jsonl
+cd ~/.agentgrinder/agentgrinder-public
+python3 templates/grokbot/post-agent-run/scripts/preview.py \
+  /exact/path/to/selected-grokbot-export.jsonl \
+  --base-url https://agentic-strava.vercel.app
 ```
 
-Omit `--base-url` to stop at the localhost preview. Passing the hosted origin
-(`https://agentic-strava.vercel.app`) changes only the import URL;
-the owner must still review the card, account and destination, choose an audience deliberately,
-and save. Never point the helper at the hackathon service.
+The output repeats `selected_export`, says that the latest sitting in that selected export was
+used, prints allowlisted metrics, and returns a private `#import` URL on the hosted origin. The
+helper makes no network request and does not post or save anything. Open that URL for the owner.
+
+Review the white card and blue trace. Grok Bot runs remain labelled **bot activity**. This export
+format does not establish elapsed duration, native file writes, completed commits or other
+unsupported measurements, so those fields remain unknown. Shell requests do not prove that a
+commit succeeded.
+
+The owner supplies public-facing title, caption and optional HTTPS output link, checks the
+signed-in account and destination, deliberately chooses **Only me**, **Anyone with the link**, or
+**Public feed and profile**, and only then presses **Save run**. Never auto-publish, select an
+audience, or perform engagement for the owner.
+
+For local-only kit development, omit `--base-url`, run `python3 scripts/dev.py serve`, and use the
+localhost URL. Normal capture should use the exact hosted-origin command above. Never point the
+helper at the separate hackathon service.
 
 Keep the evidence states separate:
 
 - **Source available:** this repository contains the kit.
-- **Installed:** a second bot was observed invoking the installed skill.
+- **Installed:** a second bot was observed invoking its installed copy.
 - **Used:** that bot previewed its explicitly selected real export.
-- **Published:** the owner deliberately saved an approved run through an approved hosted account.
+- **Published:** the owner deliberately saved an approved run to an approved audience.
 
-Only the first state is established here. Do not describe the source kit or sample run as installed
-on a second bot, used on a real export, or published in a marketplace or social product.
+Only source availability is established by this repository. Samples do not establish installation,
+real use, publication, two-person use or hosted OAuth verification.
+
+## Separate workflow: contribute code to Agentic Strava
+
+Cloning Agentic Strava as the active workspace is for contributors, not for capturing ordinary
+work. When the owner explicitly wants a contribution, give Grok Bot the selected issue and ask it
+to read `AGENTS.md`, `PRODUCT.md`, `CONTRIBUTING.md` and `docs/FIRST-PR.md`; inspect first, keep the
+change bounded, run `python3 scripts/dev.py check`, browser-check the changed path and open a
+reviewed PR. Do not deploy, alter production data or post publicly.
+
+Cursor documents Grok Bot as a persistent cloud computer with terminal, filesystem and browser:
+[Grok Bot overview](https://prod.cursor.com/docs/grok-bot), checked 14 September 2026.

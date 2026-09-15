@@ -129,12 +129,23 @@ def main(argv=None) -> int:
     c = sub.add_parser("card", help="render a run JSON to a card")
     c.add_argument("run"); c.add_argument("-o", "--out", default="card.html")
     c.add_argument("--no-open", action="store_true")
-    g = sub.add_parser("grind", aliases=["run"],
-                       help="one ordinary session -> the grind card (Claude Code, Cursor, Codex or Grok Bot)")
-    g.add_argument("session", nargs="?", help="path to a .jsonl (default: your most recent grind)")
+    g = sub.add_parser(
+        "grind",
+        aliases=["run"],
+        help="select one local agent session, render its card, and optionally open a private web preview",
+    )
+    g.add_argument(
+        "session",
+        nargs="?",
+        help="explicit transcript/export .jsonl (default: freshest supported session on this machine)",
+    )
     g.add_argument("--pick", type=int, default=None,
                    help="which sitting in that transcript (-1 = the last, 1 = the first)")
-    g.add_argument("--list", action="store_true", help="list the sittings in the transcript and stop")
+    g.add_argument(
+        "--list",
+        action="store_true",
+        help="show the selected transcript, project, and its sittings; do not render or open anything",
+    )
     g.add_argument("--gap", type=int, default=30,
                    help="minutes of total idle that end a grind (default 30)")
     g.add_argument("--athlete", default="you")
@@ -152,12 +163,19 @@ def main(argv=None) -> int:
                         "Off by default: see agentgrinder/privacy.py. Even on, a home path, a "
                         "synced-notes path or a memory filename is still refused.")
     g.add_argument("--no-open", action="store_true")
-    g.add_argument("--push", action="store_true",
-                   help="open the web importer with this grind's metrics (sign in there to publish)")
+    g.add_argument(
+        "--push",
+        action="store_true",
+        help="open a private import preview; it is not saved until you choose an audience and Save run",
+    )
     g.add_argument("--share-rig-names", action="store_true",
                    help="with --push, include MCP server names in your shared rig (opt-in)")
-    g.add_argument("--push-url", default=None,
-                   help="web app base URL for --push (default: AGENTGRINDER_URL or localhost:8000)")
+    g.add_argument(
+        "--push-url",
+        default=None,
+        help="preview origin for --push (default: AGENTGRINDER_URL or http://localhost:8000; "
+             "hosted: https://agentic-strava.vercel.app)",
+    )
     g.add_argument("--no-series", action="store_true",
                    help="do not record this grind in the local per-project series (~/.agentgrinder/series.db)")
     g.add_argument("--coach", nargs="?", const="local", choices=["local", "bedrock", "none"], default=None,
@@ -668,8 +686,6 @@ def _grind(args) -> int:
 
     if harness == "cursor":
         from .ingest import parse_cursor_session, latest_cursor_session
-        from .metrics import build_activity
-        from .render import render_card
         path = args.session or latest_cursor_session()
         if not path:
             print("no Cursor session under ~/.cursor/projects/*/agent-transcripts"); return 1
@@ -679,11 +695,14 @@ def _grind(args) -> int:
             from .native_sittings import sittings, choose
             groups=sittings(path,'cursor',args.gap*60)
             if args.list:
-                print(json.dumps([{'sitting':i+1,'records':len(g)} for i,g in enumerate(groups)],indent=2));return 0
+                return _list_native_selection(
+                    path, "cursor", groups, parse_cursor_session, args.show_paths
+                )
+            selected = len(groups) if args.pick in (None, -1) else args.pick
             run = parse_cursor_session(path, athlete=args.athlete, records=choose(groups,args.pick))
         except ValueError as e:
             print(str(e),file=sys.stderr);return 1
-        return _native_grind(run, args, path, source_digest)
+        return _native_grind(run, args, path, source_digest, selected, len(groups))
 
     if harness == "codex":
         from .ingest import parse_codex_session, latest_codex_session
@@ -702,7 +721,10 @@ def _grind(args) -> int:
             from .native_sittings import sittings, choose
             groups=sittings(path,'codex',args.gap*60)
             if args.list:
-                print(json.dumps([{'sitting':i+1,'records':len(g)} for i,g in enumerate(groups)],indent=2));return 0
+                return _list_native_selection(
+                    path, "codex", groups, parse_codex_session, args.show_paths
+                )
+            selected = len(groups) if args.pick in (None, -1) else args.pick
             run = parse_codex_session(path, athlete=args.athlete, records=choose(groups,args.pick))
         except ValueError as e:
             # A named --session with no typed turn used to reach the user as a raw traceback.
@@ -710,7 +732,7 @@ def _grind(args) -> int:
                   "\n  A rollout with no human turn has no cost to divide by, so there is no"
                   "\n  card to draw. Run without --session to take the newest one you typed in.\n")
             return 1
-        return _native_grind(run, args, path, source_digest)
+        return _native_grind(run, args, path, source_digest, selected, len(groups))
 
     if harness == "grokbot":
         from .ingest import latest_grokbot_session, parse_grokbot_session
@@ -728,12 +750,10 @@ def _grind(args) -> int:
             from .native_sittings import sittings, choose
             groups = sittings(path, "grokbot", args.gap * 60)
             if args.list:
-                print(json.dumps(
-                    [{"sitting": i + 1, "records": len(group)}
-                     for i, group in enumerate(groups)],
-                    indent=2,
-                ))
-                return 0
+                return _list_native_selection(
+                    path, "grokbot", groups, parse_grokbot_session, args.show_paths
+                )
+            selected = len(groups) if args.pick in (None, -1) else args.pick
             run = parse_grokbot_session(
                 path,
                 athlete=args.athlete,
@@ -742,7 +762,7 @@ def _grind(args) -> int:
         except ValueError as error:
             print(str(error), file=sys.stderr)
             return 1
-        return _native_grind(run, args, path, source_digest)
+        return _native_grind(run, args, path, source_digest, selected, len(groups))
 
     pick = args.pick
     if args.session:
@@ -870,7 +890,31 @@ def _grind(args) -> int:
 
 
 
-def _native_grind(run, args, path, source_digest):
+def _list_native_selection(path, harness, groups, parser, show_paths=False):
+    """Print enough local provenance to deliberately choose a sitting."""
+    project = parser(path, records=groups[-1]).get("project") if groups else None
+    selection = {
+        "harness": harness,
+        "project": project,
+        "source": str(Path(path).resolve()) if show_paths else Path(path).name,
+        "source_path_hidden": not show_paths,
+    }
+    rows = []
+    for index, group in enumerate(groups, 1):
+        run = parser(path, records=group)
+        rows.append({
+            "selected_session": selection,
+            "sitting": index,
+            "started": run.get("started"),
+            "typed_turns": run.get("turns_typed"),
+            "tool_calls": run.get("tool_calls"),
+            "next": "rerun with --pick N after confirming the project and sitting",
+        })
+    print(json.dumps(rows, indent=2))
+    return 0
+
+
+def _native_grind(run, args, path, source_digest, selected=None, total=None):
     from .contract import capture_digest
     from .engine.series import record_and_attach
     if source_digest != capture_digest(path):
@@ -892,6 +936,14 @@ def _native_grind(run, args, path, source_digest):
     if args.as_json:
         from .coach.experiment import public_run_view
         print(json.dumps(public_run_view(run), indent=2)); return 0
+    selection = (
+        f" · sitting {selected} of {total}"
+        if selected is not None and total is not None else ""
+    )
+    print(
+        f"  selected session -> {run.get('harness', 'agent')} · "
+        f"{run.get('project', 'unknown project')} · {Path(path).name}{selection}"
+    )
     _render(run,Path(args.out),False)
     print('  '+run.get('trace_basis','Trace timing unavailable'))
     if coach_text:print(coach_text)
@@ -901,7 +953,8 @@ def _native_grind(run, args, path, source_digest):
         run['rig']=detect_rig()
         if args.share_rig_names:run['rig']['share_names']=True
         url=import_url(run,args.push_url)
-        print('  Review the import before publishing. Nothing has been uploaded.')
+        print('  Private preview; not saved. Review it, choose an audience deliberately, then Save run.')
+        print('  Nothing has been uploaded by this command.')
         webbrowser.open(url)
     elif not args.no_open:
         webbrowser.open(Path(args.out).resolve().as_uri())

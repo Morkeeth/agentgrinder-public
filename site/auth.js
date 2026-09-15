@@ -1,4 +1,4 @@
-/* Strava identity: provider-neutral sign-in, onboarding, identity linking, profile presentation
+/* Pacecard identity: provider-neutral sign-in, onboarding, identity linking, profile presentation
  * and local sign-out. Uses the page's existing Supabase client (db.schema = strava, its own
  * auth storage key). Never creates a client and never holds a key.
  *
@@ -256,7 +256,7 @@
       };
       let created = await client.from("profiles").insert(row).select("*").single();
       // The linked GitHub name is an optional legacy URL alias. Another builder may
-      // already own it as their chosen Strava handle. Retry only a definite uniqueness
+      // already own it as their chosen Pacecard handle. Retry only a definite uniqueness
       // rejection; the database still arbitrates the chosen handle and account identity.
       if (created.error?.code === "23505" && row.github_handle &&
           !/auth_uid/.test(String(created.error.message))) {
@@ -335,7 +335,11 @@
       const u = await user();
       const p = await profile();
       if (!u || !p) return p;
-      const gh = githubHandleOf(u);
+      // getSession() may still contain the pre-link identity snapshot after the OAuth return.
+      // Ask Auth for its current server-owned identities before claiming the compatibility alias.
+      const { data: identityData, error: identityError } = await client.auth.getUserIdentities();
+      if (identityError) throw fail(identityError);
+      const gh = githubHandleOf({ identities: identityData?.identities || [] });
       if (!gh || p.github_handle) return p;
       const { data, error } = await client.from("profiles").update({ github_handle: gh }).eq("id", p.id).eq("auth_uid", u.id).select("*").single();
       if (error) {
@@ -353,7 +357,7 @@
       if (s) try { s.removeItem(RETURN_KEY); } catch (_) {}
       return true;
     }
-    // Deletes the Strava profile and owned rows (server cascade). The Auth account remains.
+    // Deletes the Pacecard profile and owned rows (server cascade). The Auth account remains.
     async function deleteProfile() {
       const u = await user();
       const p = await profile();

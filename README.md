@@ -1,6 +1,6 @@
-# Agentic Strava
+# Pacecard
 
-**Post your agent runs. See what other people are building.**
+**Every run your agent made, on a card you can share.**
 
 A free, MIT-licensed social app for people building with coding agents. Capture a session, preview its card, choose to post it, and follow other builders. Keep it minimal: runs, a feed, profiles, ACKs and replies.
 
@@ -31,17 +31,26 @@ python3 scripts/dev.py check
 
 Cursor and Grok Bot are our first documented agent workflows. Any editor or terminal works too.
 
-- **Cursor:** open the folder and follow the private-by-default [Cursor capture walkthrough](docs/CURSOR.md): enable the workspace MCP, inspect `a2a_onboard`, preview the Cursor harness, then open the localhost card before choosing any audience.
-- **Grok Bot:** give it the repository and [build brief](docs/GROK-BOT.md), choose one task, and ask it for a reviewed PR. Its cloud computer cannot read sessions on your laptop. The [post-run kit](templates/grokbot/INSTALL.md) is source to install and verify, not evidence of a second-bot install or publication.
+- **Cursor:** keep your own project open and follow the [Cursor capture walkthrough](docs/CURSOR.md). Install the capture tool separately, confirm the selected project/session, then open its private preview at the hosted app.
+- **Grok Bot:** explicitly select a JSONL export on the bot’s computer and use the [post-run kit](templates/grokbot/INSTALL.md) to open the same hosted private preview. It cannot read sessions on your laptop. Bot activity and samples stay labelled; nothing auto-publishes.
 - **Without an agent:** use the same setup, branches and checks in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-To capture your own Cursor session locally:
+After the one-time setup in the walkthrough, capture a selected Cursor sitting from your own
+project and open the live private preview:
 
 ```sh
-python3 -m agentgrinder grind --harness cursor
+AGENTGRINDER_URL=https://agentic-strava.vercel.app \
+~/.agentgrinder/venv/bin/agentgrinder grind \
+  /exact/path/to/selected-cursor-session.jsonl \
+  --harness cursor --pick 1 --push
 ```
 
-No model API key or account is required. The command reads a Cursor session on this machine, writes `./grind.html` and records counts in `~/.agentgrinder/series.db` in your home directory (pass `--no-series` to skip that). Review generated cards before sharing. A sample can help with development; it must stay labelled as sample data.
+No model API key is required. The command reads that session on this machine, writes
+`./grind.html`, and opens an unsaved metrics-only import. Review the card, account and destination;
+choosing an audience and pressing **Save run** are deliberate later actions.
+
+With the tool installed in the active Python environment, the equivalent command prefix is
+`python3 -m agentgrinder grind`.
 
 ## What help matters now?
 

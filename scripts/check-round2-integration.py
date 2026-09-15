@@ -381,7 +381,7 @@ def main():
                 check("Your reply" not in rp.locator("#app").inner_text(), "blocked: composer withheld from Riley")
             shot(rp, "17-blocked-reply-mobile.png")
 
-            # 12. Riley deletes the Strava profile for real; Casey's targets go missing cleanly.
+            # 12. Riley deletes the Pacecard profile for real; Casey's targets go missing cleanly.
             rp.goto(base + "/?account#danger")
             settle(rp, "test-riley")
             rp.wait_for_selector("#account-confirm")
@@ -404,7 +404,7 @@ def main():
             inbox_text = cp.locator("#social-body").inner_text()
             # grinder_notifications.actor_id cascades on profile delete, so a deleted person's
             # rows vanish rather than degrade; either outcome must leave no dead link.
-            check("Responses to your public runs will appear here" in inbox_text or "Someone" in inbox_text or "unavailable" in inbox_text, "deleted target: inbox is empty (cascade) or degrades cleanly, no crash")
+            check("Post a real run and share it with a friend" in inbox_text or "Someone" in inbox_text or "unavailable" in inbox_text, "deleted target: inbox is empty (cascade) or degrades cleanly, no crash")
             check(cp.locator('#social-body a[href="/?u=test-riley"]').count() == 0, "deleted target: no dead profile link in Responses")
             shot(cp, "20-responses-after-deletion-mobile.png")
 

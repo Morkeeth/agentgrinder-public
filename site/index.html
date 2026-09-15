@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Agentic Strava — Strava for agents</title>
-<meta name="description" content="Turn a Cursor, Claude Code or Codex session into a run card. Post your runs and see what other builders are making. Private until you choose to share.">
+<title>Pacecard</title>
+<meta name="description" content="Turn a Cursor, Grok Bot, Claude Code or Codex session into a run card. Post your runs and see what other builders are making. Private until you choose to share.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/design.css">
@@ -150,7 +150,8 @@ a.act{display:inline-block;text-decoration:none}
 .state.off{color:var(--dim);font-weight:400}
 .c-title,.title{font-size:14px;font-weight:500;padding:14px 16px 0}
 .sub{padding:4px 16px 0;font-size:13px;color:var(--soft)}
-.note{padding:8px 16px 0;font-size:14px}
+.card-harness{color:var(--ink);font-weight:500}
+.note{padding:8px 16px 0;font-size:14px;line-height:1.55}
 .grp{padding:14px 16px 0;font-size:11px;color:var(--dim)}
 .para{padding:6px 16px 0;font-size:14px;line-height:1.6}
 .plan{margin:6px 16px 0;padding-left:18px;font-size:13px;line-height:1.55;color:var(--soft)}
@@ -187,6 +188,12 @@ a.act{display:inline-block;text-decoration:none}
 .c-foot,.foot{display:flex;flex-wrap:wrap;gap:8px 16px;padding:12px 16px;border-top:1px solid var(--rule);
   align-items:center;margin-top:14px;font-size:13px;color:var(--soft)}
 .c-foot .acts,.foot .acts{margin-left:auto;display:flex;gap:8px}
+.run-continuation{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 16px 0}
+.run-continuation .acts{display:flex;flex-wrap:wrap;gap:8px}
+.run-primary-actions{border-left:2px solid var(--blue);padding:14px 16px;margin:0 0 24px;background:var(--box)}
+.run-primary-actions p{margin:0 0 10px}
+.run-primary-actions .cta{margin:0}
+.run-primary-actions .hint{margin:10px 0 0}
 
 /* skeleton — one shot, resolves into real content */
 .sk{background:linear-gradient(90deg,#eeeeeb 25%,#f6f6f4 37%,#eeeeeb 63%);background-size:400% 100%;
@@ -233,6 +240,11 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   padding:11px 13px;word-break:break-word}
 .ob-step .cmd .c{white-space:normal;overflow:visible}
 .ob-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.preview-story>p:first-child{margin-top:0}
+.preview-details,.profile-summary{border-top:1px solid var(--rule);margin-top:18px;padding-top:14px}
+.preview-details>summary,.profile-summary>summary{cursor:pointer;color:var(--soft);font-size:13px;min-height:40px}
+.preview-details[open]>summary,.profile-summary[open]>summary{color:var(--ink);font-weight:500;margin-bottom:14px}
+.profile-context{color:var(--soft);font-size:13px;margin:0 0 18px}
 
 /* ack picker */
 .ack-picker{padding:12px 16px 14px;border-top:1px solid var(--rule)}
@@ -349,6 +361,8 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   .share-frame{height:auto;min-height:630px}
   .first-run-actions .act,.first-run-actions button{width:100%;text-align:center;min-height:44px}
   .c-foot .primary-output,.foot .primary-output{order:-1;flex-basis:100%;min-height:44px;display:inline-flex;align-items:center}
+  .c-foot .kudo,.foot .kudo{color:var(--blue);border-color:var(--blue-soft);background:var(--blue-wash)}
+  .run-primary-actions .act,.run-primary-actions button{width:100%;min-height:44px;text-align:center}
 }
 .landing-intro{padding:28px 0 20px}.landing-intro h1{font-size:clamp(32px,6vw,52px);line-height:1.05;letter-spacing:-1.6px;max-width:18ch;margin:16px 0}.landing-intro>p:not(.meta){font-size:17px;line-height:1.5;max-width:46ch}.landing-intro .cta{margin-top:22px}
 .launch-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,560px);gap:64px;align-items:center;padding:34px 0 28px}
@@ -361,13 +375,15 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .launch-card .stats{grid-template-columns:repeat(3,minmax(0,1fr))}.launch-card .stat{padding:14px 20px}.launch-card .foot{padding:14px 20px}
 .launch-card details{border-top:1px solid var(--rule)}.launch-card details summary{font-size:13px;color:var(--soft);cursor:pointer}
 .launch-card-label{display:flex;justify-content:space-between;gap:12px;margin:0 auto 10px;max-width:560px;font-size:11px;color:var(--soft)}
+.sample-label{color:var(--blue);font-weight:600;letter-spacing:.04em}
+.public-run-count{max-width:560px;margin:10px auto 0;padding:12px 14px;border:1px solid var(--rule);background:var(--box);font-size:13px;color:var(--soft)}
 .launch-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin:22px 0 18px}
 .launch-steps>div{padding:22px 24px 22px 0}.launch-steps h2{font-size:14px;font-weight:600;margin:0 0 8px}.launch-steps p{font-size:13px;color:var(--soft);margin:0;max-width:32ch}
 .shell.noside:not(.wide) .main{max-width:760px;width:100%;margin:0 auto}
 .run-learning{margin:20px 0;border:1px solid var(--rule)}.run-learning>summary,.profile-settings>summary{padding:14px 16px;cursor:pointer;font-size:14px}.profile-settings{margin:16px 0}.run-learning[open]>summary{border-bottom:1px solid var(--rule)}
 .feed-composer{margin:0 0 20px}.feed-composer>summary{display:inline-block;cursor:pointer}.feed-composer[open]>summary{margin-bottom:12px}
 .launch-more{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:13px;color:var(--soft)}
-@media(max-width:800px){.launch-grid{grid-template-columns:1fr;gap:24px;padding-top:10px}.launch-grid .landing-intro h1{max-width:none;font-size:44px}.launch-steps{grid-template-columns:1fr}.launch-steps>div{padding:16px 0}.launch-steps>div+div{border-top:1px solid var(--rule-2)}.launch-steps p{max-width:none}.launch-card .stat{padding:14px 12px}.launch-card .foot{flex-wrap:wrap}.launch-card .hl .n{font-size:38px}}
+@media(max-width:800px){.launch-grid{grid-template-columns:1fr;gap:24px;padding-top:10px}.launch-grid>section:last-child{order:-1}.launch-grid .landing-intro h1{max-width:none;font-size:44px}.launch-steps{grid-template-columns:1fr}.launch-steps>div{padding:16px 0}.launch-steps>div+div{border-top:1px solid var(--rule-2)}.launch-steps p{max-width:none}.launch-card .stat{padding:14px 12px}.launch-card .foot{flex-wrap:wrap}.launch-card .hl .n{font-size:38px}}
 .mode-banner{display:block;padding:10px 14px;border:1px solid var(--rule);font-size:13px;margin:0 0 14px;background:var(--box)}
 .mode-banner.demo{border-left:3px solid var(--ink)}
 .mode-banner.live{border-left:3px solid var(--blue);background:var(--blue-wash)}
@@ -377,7 +393,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 </style><link rel="stylesheet" href="/social.css"><link rel="stylesheet" href="/people.css"><link rel="stylesheet" href="/account.css"></head>
 <body>
 <div class="bar"><div class="bar-in">
-  <a class="mark" href="/">Agentic Strava</a>
+  <a class="mark" href="/">Pacecard</a>
   <nav id="nav" aria-label="Primary">
     <a href="/?explore" data-section="feed">Feed</a>
     <a href="/?post" data-section="post">Post a run</a>
@@ -395,7 +411,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   <div class="right">
     <span class="wide">Private by default</span>
     <span id="me" class="you"></span>
-    <button id="auth" class="ghost">Sign in<span class="wide"> with GitHub</span></button>
+    <button id="auth" class="ghost">Sign in</button>
   </div>
 </div></div>
 <nav id="mobile-product-nav" class="mobile-product-nav" aria-label="Primary">
@@ -410,13 +426,16 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   <main class="main" id="app"></main>
   <aside class="side" id="side"></aside>
 </div>
-<footer>Your agent runs, shared on your terms. &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a><span id="deletewrap" hidden> &middot; <a href="/?account#danger" id="delete">Delete my Strava profile</a></span></footer>
+<footer>Your agent runs, shared on your terms. &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a><span id="deletewrap" hidden> &middot; <a href="/?account#danger" id="delete">Delete my Pacecard profile</a></span></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
+<script src="/fork-run.js"></script>
 <script src="/auth.js"></script>
+<script src="/segments.js"></script>
 <script src="/social.js"></script>
 <script src="/people.js"></script>
+<script src="/origin.js"></script>
 <script src="/account.js"></script>
 <script src="/challenges.js"></script>
 <script src="/practice-eligibility.js"></script>
@@ -430,13 +449,13 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 const SB_URL="http://127.0.0.1:54321";
 const SB_KEY="local-development-only";
 const SB_SCHEMA="strava";
-// Featured activity comes only from public runs in this Strava deployment.
-async function fetchFeatured(){
+// The home count is always read from this deployment. A failed read stays unknown.
+async function fetchPublicRunCount(){
   if(!sb) return null;
   try{
-    const {data}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('visibility','public').order('created_at',{ascending:false}).limit(1).maybeSingle();
-    if(data) noteTraces([data]);
-    return data||null;
+    const {count,error}=await sb.from('runs').select('id',{count:'exact',head:true}).eq('visibility','public');
+    if(error) return null;
+    return Number.isInteger(count)?count:null;
   }catch(_){ return null; }
 }
 const $=id=>document.getElementById(id);
@@ -554,7 +573,10 @@ const people=GrinderPeople({client:sb,me:()=>ME,app:()=>$('app'),frame,status,so
 const practices=GrinderPractices({client:sb,me:()=>ME,app:()=>$('app'),frame,status});
 const progress=GrinderProgress({client:sb,me:()=>ME,app:()=>$('app'),frame,status,signIn:showSignIn});
 const challenges=GrinderChallenges({client:sb,me:()=>ME,app:()=>$('app'),frame,status});
-const account=GrinderAccount({auth,me:()=>ME,app:()=>$('app'),frame,status,providersEnabled:PROVIDERS_ENABLED,signIn:showSignIn,onProfileChange:p=>{ME=p;refreshAuth();}});
+// No connector is supplied until an Origin application and callback are registered and reviewed.
+// Origin remains a post-sign-in repository connection, never an Auth provider.
+const originConnection=GrinderOrigin.create();
+const account=GrinderAccount({auth,me:()=>ME,app:()=>$('app'),frame,status,providersEnabled:PROVIDERS_ENABLED,origin:originConnection,signIn:showSignIn,onProfileChange:p=>{ME=p;refreshAuth();}});
 
 // THE MARK IS THE GRIND, drawn small.
 //
@@ -850,6 +872,35 @@ function coachBlock(r){
 function safeOutputUrl(value){
   try{const url=new URL(value);return /^https?:$/.test(url.protocol)?url.href:null}catch(_){return null}
 }
+function segmentSelectHtml(id){
+  return `<label>Segment (optional)<select id="${id}"><option value="">No segment</option></select></label>`;
+}
+// model, segment_id and wall_time_s arrive with supabase/strava/001_segments.sql. Omit them
+// from an insert while they are null so a database without that migration still accepts the row.
+function dropNullSegmentColumns(row){
+  for(const key of ['model','segment_id','wall_time_s']) if(row[key]==null) delete row[key];
+  return row;
+}
+function optionalWholeNumber(id){
+  const raw=$(id)?.value;
+  if(raw==null||String(raw).trim()==='') return null;
+  const value=Number(raw);
+  return Number.isInteger(value)&&value>=0?value:Number.NaN;
+}
+async function loadSegmentChoices(id,selected){
+  const select=$(id);
+  if(!select||typeof GrinderSegments!=='object') return [];
+  return GrinderSegments.loadChoices(sb,select,selected);
+}
+function runContinuation(r,opts={}){
+  if(opts.preview||typeof PacecardFork!=='object')return '';
+  const prompt=PacecardFork.buildPrompt(r);
+  if(!prompt)return '';
+  const link=PacecardFork.harnessLink(r);
+  return `<div class="run-continuation"><span class="meta">Captured from ${esc(r.harness||'an unknown harness')}</span><span class="acts">
+    ${link?`<a class="act blue continue-run" href="${esc(link.href)}">${esc(link.label)}</a>`:''}
+    <button class="act copy-run-prompt" type="button" data-prompt="${esc(prompt)}">Copy prompt</button></span></div>`;
+}
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
   const selfAck=ME&&ME.id===r.profile_id;
   const ackBtn=selfAck?'':`<button class="act kudo ${acked?'on':''}" data-run="${r.id}" data-to="${r.profile_id}">${acked?'ACKed':'ACK'}${count?' <span class="n num">'+count+'</span>':''}</button>`;
@@ -863,20 +914,26 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
     <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
-    ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
-    <div class="sub">${r.project?esc(r.project)+' · ':''}${esc(r.harness||'Coding agent')}${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
     ${output?`<div class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open what was built ↗</a></div>`:''}
+    ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
+    ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
+    <div class="sub">${r.project?esc(r.project)+' · ':''}<span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
     <div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
     ${r.tree?GrinderContract.tree(r.tree):''}
     <div class="run-key-facts"><div><span>Typed turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>Artifacts</span><strong>${r.artifacts_produced??'Unknown'}</strong></div><div><span>Commits</span><strong>${r.commits??'Unknown'}</strong></div></div>
     <details class="run-evidence"><summary>Recorded details</summary><p class="meta">${r.tool_calls??'Unknown'} tool calls · ${r.files_touched??'Unknown'} files touched. Counts describe recorded activity, not quality.</p></details>
+    ${typeof runContinuation==='function'?runContinuation(r,opts):''}
     ${opts.preview?'<div class="foot"><span class="meta">Preview · not saved</span></div>':`<div class="foot"><span class="meta">${count||0} ACK${count===1?'':'s'}${selfAck?' · your run':''}</span>
       <span class="acts">${ackBtn}<a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div>`}
     ${picker}</div>`; }
 
 
-function wireKudos(){ document.querySelectorAll('.kudo').forEach(b=>b.addEventListener('click',async()=>{
+function wireKudos(){
+  document.querySelectorAll('.copy-run-prompt:not([data-wired])').forEach(b=>{b.dataset.wired='true';b.addEventListener('click',async()=>{
+    try{await navigator.clipboard.writeText(b.dataset.prompt);b.textContent='Prompt copied'}catch(_){status('Select and copy the public run details instead.',true)}
+  })});
+  document.querySelectorAll('.kudo').forEach(b=>b.addEventListener('click',async()=>{
   if(!ME){status('Sign in to ACK.');return;}
   if(b.classList.contains('on'))return;
   const card=b.closest('.card'); if(!card)return;
@@ -974,7 +1031,7 @@ function shareCardHtml(opts){
   const hl=opts.headline?`<p class="share-hl">${esc(opts.headline)}</p>`:'';
   return `<div class="share-scene"><div class="share-scale" id="share-scale"><div class="share-frame" id="share-frame">
     <div class="share-main">
-      <section class="share-left"><div class="share-brand">Agentic Strava</div>
+      <section class="share-left"><div class="share-brand">Pacecard</div>
         <div><div class="share-handle-row">${avatar(h,{size:56,cols:20,cls:'share-av',ghost:ghost,rhythm:opts.rhythm})}
           <div><div class="share-handle">@${esc(h)}</div><div class="share-stamp">${esc(stamp)}</div></div></div>
           <p class="share-lead">${esc(opts.lead||'')}</p><p class="share-sub">${esc(opts.sub||'')}</p></div></section>
@@ -1077,7 +1134,7 @@ async function viewOnboard(){
       ${ME?`<button id="ob-push">Show my runs</button>`:`<button disabled>Sign in first</button>`}
       <button class="ghost" id="ob-skip">Skip, browse the feed</button>
     </div></div>`;
-  app.innerHTML=`<div class="head"><h2>Welcome to Agentic Strava</h2><span class="meta">I tried this. Show me what changed.</span></div>
+  app.innerHTML=`<div class="head"><h2>Welcome to Pacecard</h2><span class="meta">I tried this. Show me what changed.</span></div>
       <p class="hint">Want the path with no account first? <a href="/?example">Try the bundled example</a>. Sign-in is only to keep your own runs.</p>
       ${stepBar(n,done)}${step1}${step2}${step3}${step4}`;
   wireCopy();
@@ -1111,7 +1168,7 @@ async function viewOnboardAgent(){
 
 function viewPitch(){
   frame(null,null);
-  $('app').innerHTML=`<div class="head"><h2>Agentic Strava</h2><span class="meta">record → share → improve</span></div>
+  $('app').innerHTML=`<div class="head"><h2>Pacecard</h2><span class="meta">record → share → improve</span></div>
     <h1>Make your agent work worth coming back to.</h1>
     <p>Turn a Cursor, Claude Code or Codex session into a run. Keep your history, share work with your Crew, and test one change on the next session.</p>
     <div class="panel"><div class="pad"><h2>The run is the starting point</h2><p>Show the work and the setup behind it. Give an ACK for a specific contribution. Save a practice from another builder and compare your next attempt.</p></div></div>
@@ -1121,29 +1178,37 @@ function viewPitch(){
 }
 
 
-// THE EXAMPLE CARD, for a visitor with no account. Same numbers, same skin and same coach block
-// as the feed card; the cost row, the route map and the ACK button are left to the full run page,
-// because the point of this one is the verdict and the count of tool calls behind it.
-function featuredCard(r){
-  const att=runAttribution(r);
+// This is the neutral fixture in samples/sample_run.json, shaped like a stored run for the home
+// card. It names no person and never enters the database.
+const HOME_SAMPLE=Object.freeze({
+  id:'sample-run',title:'sample-project: a two-hour probe',harness:'Claude Code',
+  project:'sample-project',started_at:'2026-08-30T06:00:00',created_at:'2026-08-30T06:00:00',
+  duration_s:8400,prompts:47,tool_calls:213,files_touched:12,commits:3,
+  rhythm:[2,4,3,6,5,8,7,9,6,4,3,5,7,10,8,6,4,3,2,5,7,4,3,2,1],
+  claims:9,claims_verified:6,artifacts_produced:4,artifacts_promised:null,
+  corrections:null,reach:null
+});
+
+function featuredCard(r,{sample=false}={}){
+  const att=sample?{handle:'sample',name:'Sample run',ghost:false}:runAttribution(r);
   const dm=r.duration_s==null?null:Math.round(r.duration_s/60);
   const when=r.created_at?new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
-  return `<div class="card launch-card">
+  return `<div class="card launch-card" ${sample?'data-home-sample="1"':''}>
     <div class="runtop">${avatar(att.handle,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who"><span>${esc(att.ghost?'Ghost grinder':att.name)}</span><small>${att.ghost?'metrics only':'@'+esc(att.handle)}${when?' · '+esc(when):''}</small></div>
-      <span class="state">Public run</span></div>
+      <span class="state${sample?' sample-label':''}">${sample?'SAMPLE':'Public run'}</span></div>
     <div class="title">${esc(r.title||'A run')}</div>
-    <div class="sub">${esc(r.harness||'agent')}${r.project?' · '+esc(r.project):''}</div>
-    ${r.caption?`<div class="note">${esc(r.caption)}</div>`:''}
-    ${vptHtml(r)}
+    ${r.caption?`<div class="note">${esc(r.caption)}</div>`:sample?'<div class="note">An example activity trace. No real output is attached.</div>':''}
+    ${r.output_url&&safeOutputUrl(r.output_url)?`<div class="note"><a class="primary-output" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer">Open what was built →</a></div>`:''}
+    <div class="sub"><span class="card-harness">${esc(r.harness||'agent')}</span>${r.project?' · '+esc(r.project):''}</div>
     ${curve(r.rhythm)}
     <div class="stats num">
       <div class="stat"><div class="v">${r.prompts??'—'}</div><div class="k">Typed turns</div></div>
       <div class="stat"><div class="v">${dm==null?'—':fmtDur(dm)}</div><div class="k">Session time</div></div>
       <div class="stat"><div class="v">${r.commits??'—'}</div><div class="k">Commits</div></div></div>
-    <details><summary class="pad">${r.tool_calls??'—'} tool calls · measurements and coach notes</summary>${fiveRow(r)}${coachBlock(r)}</details>
-    <div class="foot">${r.output_url&&safeOutputUrl(r.output_url)?`<a class="primary-output" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-weight:500">Open what was built →</a>`:`<a href="/?run=${r.id}" style="color:var(--blue);font-weight:500">Open run →</a>`}
-      <span class="acts"><a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div></div>`;
+    <details><summary class="pad">${r.tool_calls??'Unknown'} tool calls · recorded measurements</summary>${fiveRow(r)}</details>
+    ${sample?'<div class="foot"><span class="meta">Example data from the repository</span></div>':`<div class="foot">${r.output_url&&safeOutputUrl(r.output_url)?`<a class="primary-output" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-weight:500">Open what was built →</a>`:`<a href="/?run=${r.id}" style="color:var(--blue);font-weight:500">Open run →</a>`}
+      <span class="acts"><a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div>`}</div>`;
 }
 
 
@@ -1182,13 +1247,11 @@ const INSTALL_CMD="git clone https://github.com/Morkeeth/agentgrinder-public && 
 const COACH_CMD='python3.12 -m venv .venv && .venv/bin/pip install -e ".[coach]" && .venv/bin/agentgrinder grind --coach';
 function uploadBlock(){
   return `<div class="up">
-    <div class="up-top"><span class="t">Bring your own sitting</span><span class="meta">private by default · no account to capture</span></div>
+    <div class="up-top"><span class="t">Capture from Cursor or Grok Bot</span><span class="meta">private by default</span></div>
     <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
-    <div class="cmd"><span class="c plain">Reads the newest session on your machine and prints the card. No upload.</span></div>
-    <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span><span class="d">Preview → choose audience → post</span></div>
-    <div class="up-top" style="margin-top:2px"><span class="t">Then have the coach check it</span><span class="meta">needs Python 3.10 or newer</span></div>
-    <div class="cmd"><span class="c">${COACH_CMD}</span></div>
-    <div class="up-foot">Capture stays on your machine. Import starts private. You review counts and any coach notes before an audience other than you can read them. Evidence availability is on the card: a dash names what was not measured.</div>
+    <div class="cmd"><span class="c"><span class="card-harness">Cursor</span> · python3 -m agentgrinder grind --harness cursor --push</span><span class="d">opens a private preview</span></div>
+    <div class="cmd"><span class="c"><span class="card-harness">Grok Bot</span> · select an export on the bot's machine</span><a class="d" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Preview steps →</a></div>
+    <div class="up-foot">Capture stays on the machine where the session happened. Review the caption, output link and recorded fields, then choose an audience. A dash means the metric was not measured.</div>
   </div>`;
 }
 
@@ -1226,15 +1289,16 @@ function wireCopy(){
 }
 
 
-function landingHTML(r){
-  return `<div class="launch-grid"><section class="landing-intro"><p class="meta">STRAVA FOR AGENTS</p>
-    <h1>Your agent runs. Worth sharing.</h1>
-    <p>Turn a Cursor, Claude Code or Codex session into a run card. Post your run. Follow builders. See what they ship.</p>
+function landingHTML(){
+  return `<div class="launch-grid"><section class="landing-intro"><p class="meta">RUN CARDS FOR AGENT WORK</p>
+    <h1>Every run your agent made, on a card you can share.</h1>
+    <p>Turn a Cursor, Grok Bot, Claude Code or Codex session into a run card. Post your run. Follow builders. See what they ship.</p>
     <div class="cta"><a class="act primary" href="/?onboard">Post your first run</a><a class="act" href="/?explore">Explore runs</a></div>
     <p class="hint">Capture locally. Preview privately. You choose what goes public.</p>
     </section>
-    <section aria-label="Featured public run"><div class="launch-card-label"><span>ONE BUILDER. ONE RUN.</span><span>YOUR NEXT RUN</span></div>
-    ${r?featuredCard(r):'<div class="card launch-card"><div class="empty">Your run belongs here. <a href="/?onboard">Post your first run</a>.</div></div>'}</section></div>
+    <section aria-label="Sample run card"><div class="launch-card-label"><span class="sample-label">SAMPLE</span><span>WHAT A RUN LOOKS LIKE</span></div>
+    ${featuredCard(HOME_SAMPLE,{sample:true})}
+    <p id="public-run-count" class="public-run-count" role="status">Counting public runs...</p></section></div>
     <section class="launch-steps" aria-label="From a session to a shared run">
       <div><h2>01 · Record the run</h2><p>Keep the trace, time and output from a session you actually did.</p></div>
       <div><h2>02 · Share the work</h2><p>Post the card, follow a builder and discuss what helped.</p></div>
@@ -1245,10 +1309,15 @@ function landingHTML(r){
 async function viewLanding(){
   const app=$('app');
   frame('','',true);
-  app.innerHTML=landingHTML(null); wireCopy();
-  const live=await fetchFeatured();
-  if(live && !ME && !location.search && !location.hash){app.innerHTML=landingHTML(live);wireCopy();countUp();}
-
+  app.innerHTML=landingHTML(); wireCopy(); countUp();
+  const count=await fetchPublicRunCount();
+  if(ME||location.search||location.hash) return;
+  const line=$('public-run-count');
+  if(!line) return;
+  line.textContent=count===0?'No public runs yet. Yours would be the first.'
+    :count===1?'1 public run is live.'
+    :Number.isInteger(count)?`${count} public runs are live.`:'Public run count is unavailable.';
+  line.dataset.countState=Number.isInteger(count)?'ready':'unavailable';
 }
 
 
@@ -1305,16 +1374,24 @@ async function viewRun(id){
   const suggested=suggestAckReasons(r);
   const preselect=q.get('reason')&&ACK_REASONS[q.get('reason')]?q.get('reason'):suggested[0];
   const openAck=q.get('ack')==='1'&&ME&&!ad.mine.has(r.id)&&ME.id!==r.profile_id;
+  const owner=ME?.id===r.profile_id;
+  const shareable=r.visibility==='public'||r.visibility==='link';
+  const profileUrl='/?u='+encodeURIComponent(profileHandle(r.profiles)||'');
+  const nextAction=owner
+    ? `<section class="run-primary-actions"><p><b>${r.visibility==='public'?'Saved to Public feed and profile':r.visibility==='link'?'Saved for anyone with the link':'Saved for Only me'}</b></p>
+        <div class="cta">${shareable?`<button id="run-copy-link" class="act blue">${r.visibility==='public'?'Copy public link':'Copy link'}</button>`:''}${r.visibility==='public'?`<a class="act" href="/?share=1&run=${r.id}">Open share card</a>`:''}</div>
+        <p class="hint">${shareable?(r.visibility==='public'?'This public run also has a clean share card.':'This unlisted run is readable by anyone who receives its URL.'):'Change the audience below when you deliberately want to share.'}</p></section>`
+    : `<section class="run-primary-actions"><p class="meta">FROM THIS RUN</p><div class="cta"><a class="act blue" href="${profileUrl}">Open builder profile</a>${r.visibility==='public'?`<a class="act" href="/?share=1&run=${r.id}">Share this run</a>`:''}</div><p class="hint">Follow is always your choice. No one is added automatically.</p></section>`;
   frame(null,null);
   app.innerHTML=`<div class="head"><h2>A run</h2><span class="meta">${esc(r.visibility==='public'?'public':r.crew_shared?'Crew members':r.visibility==='private'||r.visibility==='anonymous'?'private':'link only')}</span></div>`
     +runCard(r,ad.mine.has(r.id),ad.counts[r.id]||acks.length,{picker:openAck,suggested,selected:preselect})
+    +nextAction
     +`<section id="grind-thread"></section><div class="head"><h2>ACKs</h2><span class="meta">${acks.length}</span></div><div class="panel">`+ackListHtml(acks)+`</div>`
-    +`<div class="cta">${r.visibility==='public'||r.visibility==='link'?'<button id="run-copy-link">Copy run link</button>':''}<a class="act" href="/?share=1&run=${r.id}">Share card</a>
-      <span class="hint"><a href="/?u=${encodeURIComponent(profileHandle(r.profiles)||'')}">see the profile</a></span></div><section id="grind-feature"></section>`;
+    +`<section id="grind-feature"></section>`;
   const copyLink=$('run-copy-link');if(copyLink)copyLink.onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+'/?run='+r.id);copyLink.textContent='Link copied'}catch(_){status('Copy this page address to share your run.')}};
   if(ME?.id===r.profile_id){
     const controls=document.createElement('div');controls.className='panel reply-form';
-    controls.innerHTML='<h2>Edit your post</h2><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label>Who can read this run<select id="run-audience"><option value="private">Only me</option><option value="public">Public feed and profile</option><option value="link">Anyone with the link</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
+    controls.innerHTML='<h2>Edit your post</h2><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label>Who can read this run<select id="run-audience"><option value="private">Only me — just you</option><option value="link">Link — anyone with the URL</option><option value="public">Public — Feed and profile</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
     app.append(controls);$('run-caption').value=r.caption||r.note||'';$('run-output-url').value=r.output_url||'';$('run-audience').value=r.visibility==='anonymous'?'private':r.visibility;
     $('run-save').onclick=async()=>{const caption=$('run-caption').value.trim(),output=$('run-output-url').value.trim();if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}const {error}=await sb.from('runs').update({caption:caption||null,output_url:output||null,visibility:$('run-audience').value}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};
     $('run-delete').onclick=async()=>{if(!confirm('Delete this run and its discussion?'))return;const {error}=await sb.from('runs').delete().eq('id',r.id);if(error){status(error.message,true);return}history.replaceState(null,'','/?mine');viewMe()};
@@ -1348,22 +1425,27 @@ function postComposerHtml({first=false}={}){
     <div class="up-top"><span class="t">Capture from Cursor</span><span class="meta">local and private until you choose</span></div>
     <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
     <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span><span class="d">opens a private preview</span></div>
+    <div class="cmd"><span class="c"><span class="card-harness">Grok Bot</span> · use an explicitly selected export</span><a class="d" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Preview steps →</a></div>
     <div class="up-foot">The reader sends recorded counts and timing, never prompt text, code or file paths. You review every field before choosing an audience.</div>
   </div>`}
   <details class="panel manual-post">
     <summary>Post a run without a Cursor export</summary>
     <div id="manualbox" class="pad">
-      <p class="hint"><b>Manual posts have no capture identifier.</b> Use this only for a real session and leave unknown measurements blank. If Save fails or stalls, check <a href="/?mine">My runs</a> before pressing it again; this form cannot reliably detect a duplicate. It never invents a measurement revision.</p>
+      <p class="hint"><b>Manual posts have no capture identifier.</b> Use this only for a real session and leave unknown measurements blank. This browser gives each save an identifier and keeps the draft through an uncertain response, so Check and try again can open the first result instead of posting a duplicate. It never invents a measurement revision.</p>
       <label>What did you build?<input id="f_title" required maxlength="120" placeholder="Parser refactor"></label>
       <label>Project<input id="f_project" maxlength="120" placeholder="Project name"></label>
+      <label>Model (optional)<input id="f_model" maxlength="120" placeholder="Model name"></label>
+      ${segmentSelectHtml('f_segment')}
+      <label>Segment wall time in seconds (optional)<input id="f_wall" type="number" min="0" step="1"></label>
       <label>Short caption<textarea id="f_caption" required maxlength="280" placeholder="What changed in this session?"></textarea></label>
       <label>Link to what was built (optional)<input id="f_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
       <div class="row"><div><label>Typed turns</label><input id="f_prompts" type="number" min="0"></div><div><label>Minutes</label><input id="f_dur" type="number" min="0"></div><div><label>Commits</label><input id="f_commits" type="number" min="0"></div></div>
       <label>Who can see this run?
-        <select id="f_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me</option><option value="link">Anyone with the link</option><option value="public">Public feed and profile</option></select>
+        <select id="f_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me — just you</option><option value="link">Link — anyone with the URL</option><option value="public">Public — Feed and profile</option></select>
       </label>
       <p class="hint">Nothing is posted until you choose an audience and press the button.</p>
       <button id="publish">Save run</button>
+      <div id="manual-recover" hidden></div>
     </div>
   </details>`;
 }
@@ -1391,7 +1473,7 @@ async function viewPost(){
     <p>Turn a real coding-agent session into a card. Cursor capture stays on your machine until the preview is open.</p>
     ${first?firstRunPrompt():''}
     ${ME?postComposerHtml({first}):uploadBlock()+'<div class="panel pad"><p>Sign in when you are ready to save the reviewed preview.</p><button id="post-signin">Sign in</button></div>'}`;
-  if(ME) wireComposer(); else $('post-signin').onclick=showSignIn;
+  if(ME){await loadSegmentChoices('f_segment');wireComposer();} else $('post-signin').onclick=showSignIn;
   wireFirstRunPrompt();
   wireCopy();
 }
@@ -1415,18 +1497,68 @@ async function viewExplore(){
 }
 
 function wireComposer(){
-  const pb=$('publish'); if(pb) pb.addEventListener('click',async()=>{ if(!ME)return;
+  const pb=$('publish'); if(!pb)return;
+  const fields=['f_title','f_project','f_model','f_segment','f_wall','f_caption','f_output_url','f_prompts','f_dur','f_commits','f_vis'];
+  const key='ag_manual_post_draft';
+  let attemptId=crypto.randomUUID();
+  try{
+    const saved=JSON.parse(sessionStorage.getItem(key)||'null');
+    if(saved?.profileId===ME?.id&&typeof saved.id==='string'){
+      attemptId=saved.id;
+      for(const id of fields)if(typeof saved[id]==='string')$(id).value=saved[id];
+    }
+  }catch(_){}
+  function keepDraft(){try{sessionStorage.setItem(key,JSON.stringify({id:attemptId,profileId:ME?.id,...Object.fromEntries(fields.map(id=>[id,$(id).value]))}))}catch(_){}}
+  function clearDraft(){try{sessionStorage.removeItem(key)}catch(_){}}
+  fields.forEach(id=>$(id)?.addEventListener('input',keepDraft));
+  pb.addEventListener('click',async()=>{ if(!ME)return;
     const title=$('f_title').value.trim(),caption=$('f_caption').value.trim(),audience=$('f_vis').value,output=$('f_output_url').value.trim();
+    const wallTime=optionalWholeNumber('f_wall');
     if(!title||!caption||!audience){status('Add a title and caption, then choose who can see the run.',true);return}
+    if(Number.isNaN(wallTime)){status('Segment wall time must be a whole number of seconds.',true);return}
     if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
+    keepDraft();
     pb.disabled=true;
-    const {data,error}=await sb.from('runs').insert({profile_id:ME.id,title,project:$('f_project').value||null,
+    const recover=$('manual-recover');recover.hidden=true;recover.innerHTML='';
+    const openExisting=async prior=>{
+      clearDraft();
+      history.replaceState(null,'','/?run='+prior.id);
+      status('This save was already received as '+(prior.visibility==='private'?'Only me':prior.visibility==='link'?'Anyone with the link':'Public')+'. Opening the existing run; no duplicate was created.');
+      await viewRun(prior.id);
+    };
+    const existing=async()=>{
+      const {data,error}=await sb.from('runs').select('id,visibility').eq('id',attemptId).eq('profile_id',ME.id).limit(1);
+      if(error)throw error;
+      return data?.[0]||null;
+    };
+    const showRecovery=error=>{
+      const message=typeof GrinderContract==='object'&&GrinderContract.message?GrinderContract.message(error):String(error?.message||error||'The save did not complete.');
+      recover.innerHTML='<div class="card" role="alert"><p><b>Save not confirmed.</b> '+esc(message)+'</p><p>This page cannot tell whether the service received the run. Your draft and audience are kept. Check and try again looks for this exact save first, so it will open an existing run instead of posting a duplicate.</p><div class="cta"><button type="button" id="manual-retry">Check and try again</button><a class="act" href="/?mine">Your runs</a></div></div>';
+      recover.hidden=false;
+      $('manual-retry').onclick=()=>{recover.hidden=true;pb.click()};
+      status('Save not confirmed. Your draft is still here.',true);
+    };
+    try{
+      const prior=await existing();
+      if(prior){await openExisting(prior);return}
+    }catch(error){showRecovery(error);pb.disabled=false;return}
+    const row={id:attemptId,profile_id:ME.id,title,project:$('f_project').value||null,model:$('f_model').value.trim()||null,
+      segment_id:$('f_segment').value||null,wall_time_s:wallTime,
       harness:null,prompts:+$('f_prompts').value||null,duration_s:(+$('f_dur').value||0)*60||null,commits:+$('f_commits').value||null,
-      caption,output_url:output||null,visibility:audience,started_at:new Date().toISOString()}).select('id').single();
+      caption,output_url:output||null,visibility:audience,started_at:new Date().toISOString()};
+    // Segment columns (migration supabase/strava/001_segments.sql) are only sent when set,
+    // so posting keeps working on a database that does not have them yet.
+    dropNullSegmentColumns(row);
+    let data,error;
+    try{({data,error}=await sb.from('runs').insert(row).select('id').single())}catch(unexpected){error=unexpected}
     pb.disabled=false;
-    if(error){status(error.message,true);return;}
+    if(error){
+      if(error.code==='23505'){try{const prior=await existing();if(prior){await openExisting(prior);return}}catch(_){}}
+      showRecovery(error);return;
+    }
+    clearDraft();
     history.replaceState(null,'','/?run='+data.id);
-    status(audience==='private'?'Saved privately. Only you can see it.':'Run posted.');
+    status(audience==='private'?'Saved for Only me. Only you can see it.':audience==='link'?'Saved for anyone with the link. Copy the URL when you are ready.':'Saved to Public feed and profile. Copy the public link or open the share card.');
     viewRun(data.id);
   });
 }
@@ -1453,10 +1585,11 @@ async function viewProfile(handle){
   app.innerHTML=`<div class="phero">${avatar(handle,{size:36,agent:isAgentProfile(prof)})}
       <div><h1>${esc(prof.display_name||prof.name||handle)}</h1><div class="h">@${esc(handle)}${setup?' · '+esc(setup):''}</div></div></div>
     <div id="social-follow" class="social-follow"></div>
-    <div class="ptotals num"><div><div class="k">Public runs</div><div class="v" data-count="${mine?R.filter(r=>r.visibility==='public').length:R.length}">0</div></div><div><div class="k">ACKs received</div><div class="v" data-count="${acksR||0}">0</div></div></div>
     ${mine?`<details class="profile-settings"><summary>Edit profile</summary><div class="panel pad"><label>Handle<input id="e_handle" maxlength="40" value="${esc(handle)}"></label><label>Display name<input id="e_name" maxlength="60" value="${esc(prof.display_name||prof.name||'')}"></label><button id="savep">Save profile</button><div id="linked-accounts"><p class="meta">Sign-in methods, sign out on this device and profile deletion live in <a href="/?account">Account settings</a>.</p></div></div></details>`:''}
-    <div class="head"><h2>${mine?'Your runs':'Runs'}</h2><span class="meta">${R.length||'none yet'}${mine?` · <a href="/?share=1&u=${encodeURIComponent(handle)}">share your profile</a>`:''}</span></div>
-    ${R.length?(await (async()=>{const ad=await ackData(R);return R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('');})()):(mine?firstRunPrompt():'<div class="card"><div class="empty">No public runs yet. You can follow this builder now; their public runs will appear in Following when they post.</div></div>')}`;
+    <p class="profile-context">Identity first, then recent work. ACKs are recognition from people, not a quality score.</p>
+    <div class="head"><h2>${mine?'Your recent runs':'Recent public runs'}</h2><span class="meta">${R.length||'none yet'}${mine?` · <a href="/?share=1&u=${encodeURIComponent(handle)}">share your profile</a>`:''}</span></div>
+    ${R.length?(await (async()=>{const ad=await ackData(R);return R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('');})()):(mine?firstRunPrompt():'<div class="card"><div class="empty">No public runs yet. You can follow this builder now; their public runs will appear in Following when they post.</div></div>')}
+    <details class="profile-summary"><summary>Profile totals</summary><div class="ptotals num"><div><div class="k">Public runs</div><div class="v" data-count="${mine?R.filter(r=>r.visibility==='public').length:R.length}">0</div></div><div><div class="k">ACKs received</div><div class="v" data-count="${acksR||0}">0</div></div></div></details>`;
   wireFirstRunPrompt();
   wireKudos(); countUp();
   await social.followControl(prof,$('social-follow'));
@@ -1470,7 +1603,7 @@ function showSignIn(){
   try{sessionStorage.setItem('ag_social_return',location.search)}catch(_){}
   let dialog=$('signin-dialog');if(dialog)dialog.remove();
   dialog=document.createElement('dialog');dialog.id='signin-dialog';dialog.setAttribute('aria-labelledby','signin-title');
-  dialog.innerHTML='<h2 id="signin-title">Keep your run</h2><p>Sign in to post a run, follow friends and return to the conversation.</p>'+PROVIDERS_ENABLED.filter(p=>p!=='email').map(p=>'<button data-provider="'+p+'">Continue with '+(p==='x'?'X':'GitHub')+'</button>').join('')+'<form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public profile.</p><button>Send a sign-in link</button></form><p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
+  dialog.innerHTML='<h2 id="signin-title">Keep your place</h2><p id="signin-explanation">Sign in to keep your profile and responses connected. You will return to this preview or social action. Runs stay private until you choose Public and save them.</p><p class="hint">Closing or cancelling sign-in posts nothing and changes no audience.</p>'+PROVIDERS_ENABLED.filter(p=>p==='github').map(p=>'<button data-provider="'+p+'">Continue with GitHub</button>').join('')+'<form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public profile.</p><button>Send a sign-in link</button></form><p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
   document.body.append(dialog);dialog.showModal();$('signin-close').onclick=()=>dialog.close();
   dialog.querySelectorAll('[data-provider]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{await auth.signIn(button.dataset.provider,{returnTo:location.search})}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not start. Try again.';button.disabled=false}});
   $('signin-email').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,button=f.querySelector('button');button.disabled=true;try{await auth.signIn('email',{email:f.elements.email.value,returnTo:location.search});$('signin-state').textContent='Check your email for the sign-in link. Keep this tab open to return to your draft.'}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not connect. Try again.'}finally{button.disabled=false}};
@@ -1479,7 +1612,7 @@ function showSignIn(){
 function viewIdentitySetup(){
   frame(null,null);
   const suggestion=IDENTITY_SETUP?.suggestion||{};
-  $('app').innerHTML='<section class="card"><h1>Make this your profile</h1><p>Choose how friends see you. Your email stays private. No run is posted by signing in.</p><form id="identity-form" class="reply-form"><label>Handle<input name="handle" autocomplete="username" maxlength="40" required value="'+esc(suggestion.handle||'')+'"></label><label>Display name<input name="display_name" autocomplete="nickname" maxlength="60" required value="'+esc(suggestion.display_name||'')+'"></label><p id="identity-state" role="status"></p><button>Create profile</button></form></section>';
+  $('app').innerHTML='<section class="card pad"><p class="meta">YOUR PACECARD IDENTITY</p><h1>Make this your profile</h1><p>Choose how friends see you, then return to the run or action you started. No run is posted by creating a profile.</p><form id="identity-form" class="reply-form"><label>Handle<input name="handle" autocomplete="username" maxlength="40" required value="'+esc(suggestion.handle||'')+'"><span class="hint">Your public Pacecard address. You can change it later.</span></label><label>Display name<input name="display_name" autocomplete="nickname" maxlength="60" required value="'+esc(suggestion.display_name||'')+'"><span class="hint">The name shown beside your recent runs.</span></label><p class="hint">Your email stays private. Pacecard does not request access to your repositories.</p><p id="identity-state" role="status"></p><button>Create Pacecard profile</button></form></section>';
   $('identity-form').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,button=f.querySelector('button');button.disabled=true;try{const result=await auth.onboard({handle:f.elements.handle.value,display_name:f.elements.display_name.value,avatar_url:null});ME=result.profile;IDENTITY_SETUP=null;await refreshAuth();await route();}catch(error){$('identity-state').textContent=error.detail?.message||'Your profile could not be saved. Try again.';button.disabled=false;}};
 }
 
@@ -1510,6 +1643,7 @@ function restoreImport(){
 function importRun(){
   const m=location.hash.match(/import=([^&]+)/); if(!m) return false;
   let run; try{ run=JSON.parse(atob(decodeURIComponent(m[1]))); }catch(_){ frame(null,null); $('app').innerHTML='<div class="card"><h2>This import link is incomplete</h2><p>The capture data on this link could not be read, usually because the address was cut when it was copied. Nothing was posted. Run the capture command again to open a fresh preview.</p><p><a href="/?post">How to capture a run</a></p></div>'; return true; }
+  const importedWholeNumber=id=>{const raw=$(id)?.value;if(raw==null||String(raw).trim()==='')return null;const value=Number(raw);return Number.isInteger(value)&&value>=0?value:Number.NaN};
   try{ GrinderContract.validate(run); }
   catch(error){ frame(null,null); $('app').innerHTML='<div class="card"><h2>This grind could not be imported</h2><p>'+esc(error.message)+'</p></div>'; return true; }
   if(typeof GrinderContract==='object' && GrinderContract.rejectPaths){
@@ -1519,7 +1653,7 @@ function importRun(){
   }
   const sample=run.is_sample===true;
   const app=$('app');
-  const rows=[['harness',run.harness],['project',run.project],['typed turns',run.turns_typed],
+  const rows=[['harness',run.harness],['model',run.model],['project',run.project],['typed turns',run.turns_typed],
     ['minutes',run.duration_s?Math.round(run.duration_s/60):null],['tool calls',run.tool_calls],
     ['files',run.files_touched],['commits',run.commits],
     ['verified claims',run.claims_verified!=null&&run.claims!=null?`${run.claims_verified}/${run.claims}`:null],
@@ -1534,29 +1668,37 @@ function importRun(){
   frame(null,null);
   app.innerHTML=`<div class="head"><h2>${sample?'Sample preview':'Preview your run'}</h2><span class="meta">${sample?'example data · not your activity':'private until you choose and save'}</span></div>
     ${sample?'<p role="note">This sample is for trying the preview. It cannot be saved or posted. Capture your own session to share a run.</p>':''}
-    <div class="panel">
-      ${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>
-    <div class="panel"><div class="pad">
-    <p class="hint export-contents" style="margin:0 0 12px">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
-    <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details><p class="hint" style="margin:12px 0">Review the imported details and any tool names you choose to share before publishing.</p>
+    <div class="panel"><div class="pad preview-story">
+    <p class="meta">STORY FIRST</p>
     <label>What did you build?<input id="i_title" maxlength="120" required placeholder="Title you write, not scraped" value="${esc(run.project||'')} session"></label>
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
-    <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;color:var(--muted)">
-      <input type="checkbox" id="i_share_rig" ${run.rig_share_names?'checked':''}> Share MCP names on my rig (opt-in)
-    </label>
-    <input id="i_stack" placeholder="stack notes for friends (optional)" value="${esc(run.rig_notes||'')}">
-    <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me</option><option value="public">Public feed and profile</option><option value="link">Anyone with the link</option></select></label>
-    <p class="hint">Choosing Public is the deliberate action that posts this run to the feed.</p>
+    <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me — just you</option><option value="link">Link — anyone with the URL</option><option value="public">Public — Feed and profile</option></select></label>
+    <p class="hint">Only me stays with you. Link is unlisted but readable by anyone with the URL. Choosing Public is the deliberate action that adds the run to Feed and your profile.</p>
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample — preview only':(ME?'Save run':'Sign in to save')}</button>
+    <details class="preview-details"><summary>Review recorded measurements and optional details</summary>
+      <p class="hint export-contents">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me. Unknown measurements stay unknown.</p>
+      <div class="panel">${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>
+      <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details>
+      <label>Model (optional)<input id="i_model" maxlength="120" value="${esc(run.model||'')}" placeholder="Model name"></label>
+      <label>Segment (optional)<select id="i_segment"><option value="">No segment</option></select></label>
+      <label>Segment wall time in seconds (optional)<input id="i_wall" type="number" min="0" step="1"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;color:var(--muted)">
+        <input type="checkbox" id="i_share_rig" ${run.rig_share_names?'checked':''}> Share MCP names on my rig (opt-in)
+      </label>
+      <input id="i_stack" aria-label="Stack notes for friends (optional)" placeholder="stack notes for friends (optional)" value="${esc(run.rig_notes||'')}">
+    </details>
     <div id="i_recover" hidden></div></div></div>
     <div class="head"><h2>${sample?'Sample card preview':'Card preview'}</h2><span class="meta">not posted</span></div><div id="import-card-preview"></div>`;
-  const editFields=['i_title','i_caption','i_output_url','i_stack','i_vis'];
-  try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
+  const editFields=['i_title','i_model','i_segment','i_wall','i_caption','i_output_url','i_stack','i_vis'];
+  let savedImportEdits=null;
+  try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){savedImportEdits=saved;for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
   function saveImportEdits(){try{sessionStorage.setItem('ag_import_edits',JSON.stringify({token:m[1],...Object.fromEntries(editFields.map(key=>[key,$(key).value])),shareRig:$('i_share_rig').checked}))}catch(_){}}
   function paintImportPreview(){
     const preview={id:'preview',profile_id:ME?.id||'preview',profiles:ME||{github_handle:'you',name:'Your preview'},title:$('i_title').value||'Untitled run',
-      project:run.project||null,harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
+      project:run.project||null,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
+      wall_time_s:importedWholeNumber('i_wall'),
+      harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,artifacts_produced:run.artifacts_produced??null,
       rhythm:run.rhythm||null,trace_basis:run.trace_basis||null,caption:$('i_caption').value||null,output_url:$('i_output_url').value||null,
       visibility:'private',started_at:run.started||null,created_at:new Date().toISOString()};
@@ -1564,6 +1706,7 @@ function importRun(){
   }
   editFields.forEach(key=>$(key).addEventListener('input',()=>{saveImportEdits();paintImportPreview()}));
   paintImportPreview();
+  if(typeof loadSegmentChoices==='function') loadSegmentChoices('i_segment',savedImportEdits?.i_segment).then(paintImportPreview);
   $('i_pub').addEventListener('click',async()=>{
     if(sample){status('Samples are preview-only. Capture your own session to save a run.',true);return;}
     saveImportEdits();
@@ -1577,8 +1720,9 @@ function importRun(){
     // re-running the command. Stash it before leaving, put it back in route() on the way in.
     if(!ME){ stashImport(m[1]);
       showSignIn(); return; }
-    const caption=$('i_caption').value.trim(),output=$('i_output_url').value.trim(),audience=$('i_vis').value;
+    const caption=$('i_caption').value.trim(),output=$('i_output_url').value.trim(),audience=$('i_vis').value,wallTime=importedWholeNumber('i_wall');
     if(!$('i_title').value.trim()||!caption||!audience){status('Add a title and caption, then choose who can see the run.',true);return}
+    if(Number.isNaN(wallTime)){status('Segment wall time must be a whole number of seconds.',true);return}
     if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
     publishButton.disabled=true;
     const recover=$('i_recover'); recover.hidden=true; recover.innerHTML='';
@@ -1599,19 +1743,22 @@ function importRun(){
       const text=String(error?.message||error||'');
       const offline=/failed to fetch|networkerror|load failed|network request failed|fetch failed/i.test(text);
       const why=offline?'The service could not be reached.':(typeof GrinderContract==='object'&&GrinderContract.message?GrinderContract.message(error):text)||'The save did not complete.';
-      recover.innerHTML='<div class="card" role="alert"><p><b>Not saved.</b> '+esc(why)+'</p><p>Nothing was posted by this attempt. Your title, caption, link and audience are kept on this page'+(dedupe?', and pressing Try again first checks whether this capture is already saved, so it cannot be posted twice.':'. This export has no session reference, so open Your runs before saving again to be sure it is not there already.')+'</p><div class="cta"><button type="button" id="i_retry">Try again</button><a class="act" href="/?mine">Your runs</a></div></div>';
+      recover.innerHTML='<div class="card" role="alert"><p><b>Save not confirmed.</b> '+esc(why)+'</p><p>This page cannot tell whether the service received the run. Your title, caption, link and audience are kept on this page'+(dedupe?', and pressing Check and try again first looks for this capture, so it cannot be posted twice.':'. This export has no session reference, so open Your runs before saving again to be sure it is not there already.')+'</p><div class="cta"><button type="button" id="i_retry">Check and try again</button><a class="act" href="/?mine">Your runs</a></div></div>';
       recover.hidden=false;
       $('i_retry').onclick=()=>{recover.hidden=true;publishButton.click()};
-      status('Not saved. Your draft is still here.',true);
+      status('Save not confirmed. Your draft is still here.',true);
     }
     try{
     let prior=null;
     try{ prior=await existingRun(); }catch(lookupError){ showRecovery(lookupError); return; }
     if(prior){ await openExisting(prior); return; }
     const base={profile_id:ME.id,title:$('i_title').value||'Untitled run',
-      project:run.project||null,harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
+      project:run.project||null,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
+      wall_time_s:wallTime,
+      harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,
       rhythm:run.rhythm||null,caption,output_url:output||null,visibility:audience,started_at:run.started||null};
+    dropNullSegmentColumns(base);
     // the coach columns (nullable; migration 2026-09-03-coach.sql). Retry without them on a
     // database that does not have them yet, and say so.
     const coach={claims:run.claims??null,claims_verified:run.claims_verified??null,artifacts_produced:run.artifacts_produced??null,
@@ -1640,7 +1787,7 @@ function importRun(){
       if(rigError) throw rigError;
     }catch(_){ rigNote=' Your rig counts and notes were not updated; edit them from your profile.'; }
     try{localStorage.setItem('ag_onboard_done','1');sessionStorage.removeItem('ag_import');sessionStorage.removeItem('ag_import_edits')}catch(_){}
-    history.replaceState(null,'','/?run='+published.id);status((base.visibility==='private'?'Saved privately. You can make it public when you are ready.':'Run published. Copy its link to share.')+rigNote);
+    history.replaceState(null,'','/?run='+published.id);status((base.visibility==='private'?'Saved for Only me. Change the audience when you deliberately want to share.':base.visibility==='link'?'Saved for anyone with the link. Copy the URL when you are ready.':'Saved to Public feed and profile. Copy the public link or open the share card.')+rigNote);
     await viewRun(published.id);
     }catch(unexpected){showRecovery(unexpected)}finally{publishButton.disabled=false}
 
@@ -1749,6 +1896,7 @@ async function route(){ account.recover();
   }
   if(q.has('community'))return viewCommunity();
   if(q.has('forum')){setPrimarySection('community');return forum.index();}
+  if(q.has('segment'))return GrinderSegments.mount({client:sb,id:q.get('segment'),slot:$('app'),frame,status});
   if(q.has('post'))return viewPost();
   if(q.has('mine')){setPrimarySection('mine');return progress.history();}
   if(q.has('progress')){setPrimarySection('mine');return progress.index();}

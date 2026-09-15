@@ -64,6 +64,8 @@ def test_cli_loads_grokbot_fixture_and_renders_unknowns_as_dashes(tmp_path, caps
     output = capsys.readouterr().out
     html = card.read_text(encoding="utf-8")
 
+    assert "selected session -> Grok Bot · session" in output
+    assert f"{FIXTURE.name} · sitting 1 of 1" in output
     assert "Grok Bot" in output
     assert "—" in output
     assert "bot activity" in html

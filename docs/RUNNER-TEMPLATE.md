@@ -4,7 +4,7 @@ Status: reviewed plan, 14 September 2026. Adapter and published template are not
 
 ## One feed
 
-A Grok Bot user finishes a real build, previews a run card, adds a caption and output link, then deliberately posts to the same Agentic Strava app used by Cursor builders. Preserve the white card and blue trace.
+A Grok Bot user finishes a real build, previews a run card, adds a caption and output link, then deliberately posts to the same Pacecard app used by Cursor builders. Preserve the white card and blue trace.
 
 The source repository is for code and safe test fixtures. It is not the social feed. Do not commit generated user cards or transcripts. Human ACKs and replies provide recognition; do not schedule automatic ACKs or bot-to-bot engagement.
 

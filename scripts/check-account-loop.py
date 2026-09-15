@@ -265,7 +265,46 @@ def main():
             page.screenshot(path=str(ARTIFACTS / "signed-out-account-mobile.png"), full_page=True)
             context.close()
 
-            # 3. Casey (GitHub + email) on a phone: panel, duplicate handle, free variant, name edit.
+            # 3. A GitHub-only Auth user has no Strava row yet: onboarding creates exactly that
+            # profile, then Origin appears only inside the signed-in account as an honest empty
+            # repository-connection state.
+            github_new = "11000000-0000-0000-0000-000000000003"
+            github_identity = insert_identity(
+                disposable,
+                github_new,
+                "github",
+                {"user_name": "test-github-new", "full_name": "TEST DATA GitHub New"},
+            )
+            github_ids = [{
+                "identity_id": github_identity,
+                "id": github_identity,
+                "user_id": github_new,
+                "provider": "github",
+                "identity_data": {"user_name": "test-github-new", "full_name": "TEST DATA GitHub New"},
+            }]
+            context = context_for(github_new, "test-github-new", github_ids)
+            page = context.new_page()
+            page.goto(base + "/")
+            page.wait_for_selector("#identity-form")
+            check("Make this your profile" in page.inner_text("#app"), "GitHub-only: first sign-in opens Pacecard onboarding")
+            check(page.query_selector("#origin-connection") is None, "GitHub-only: Origin is not mixed into onboarding")
+            page.screenshot(path=str(ARTIFACTS / "github-only-onboarding-mobile.png"), full_page=True)
+            page.fill("[name=handle]", "test-github-builder")
+            page.fill("[name=display_name]", "TEST DATA GitHub Builder")
+            page.click("#identity-form button")
+            settle(page, "test-github-builder")
+            after_onboard = snapshot(disposable)
+            created = [p for p in after_onboard["strava"] if p["auth_uid"] == github_new]
+            check(len(created) == 1 and created[0]["handle"] == "test-github-builder", "GitHub-only: one dedicated Pacecard profile created")
+            check(after_onboard["grinder"] == before["grinder"], "GitHub-only: Grinder public profile data unchanged")
+            page.goto(base + "/?account")
+            page.wait_for_selector("#account-signout")
+            check(page.query_selector("#origin-connection") is None, "Origin: no panel in Account until a connector exists")
+            check(page.query_selector("[data-origin-connect]") is None, "Origin: no action before app review")
+            page.screenshot(path=str(ARTIFACTS / "account-no-origin-mobile.png"), full_page=True)
+            context.close()
+
+            # 4. Casey (GitHub + email) on a phone: panel, duplicate handle, free variant, name edit.
             context = context_for(casey, "test-casey", casey_ids)
             page = context.new_page()
             page.goto(base + "/?account")
@@ -314,7 +353,8 @@ def main():
                 "(async(id)=>{const {error}=await sb.auth.unlinkIdentity({identity_id:id});return error?GrinderAuth.explain(error).code:null})('" + last_id + "')"
             )
             check(denial == "last_identity", "last identity: server refuses unlink and maps to last_identity, got " + str(denial))
-            check(len(snapshot(disposable)["identities"]) == len(before["identities"]) - 1, "last identity: only the deliberate unlink changed auth.identities")
+            existing_actor_ids = [i for i in snapshot(disposable)["identities"] if i["user_id"] != github_new]
+            check(len(existing_actor_ids) == len(before["identities"]) - 1, "last identity: only the deliberate unlink changed existing actors' auth.identities")
             page.screenshot(path=str(ARTIFACTS / "sign-in-methods-mobile.png"), full_page=True)
             # Delete: typed confirmation, then Strava row gone, Grinder and Auth untouched.
             page.goto(base + "/")
@@ -327,9 +367,9 @@ def main():
             page.wait_for_function("!document.getElementById('account-delete-go').disabled")
             page.screenshot(path=str(ARTIFACTS / "delete-confirm-mobile.png"), full_page=True)
             page.click("#account-delete-go")
-            page.wait_for_selector("text=Your Strava profile was deleted")
+            page.wait_for_selector("text=Your Pacecard profile was deleted")
             after = snapshot(disposable)
-            check(all(r["auth_uid"] != casey for r in after["strava"]), "delete: Strava profile row removed")
+            check(all(r["auth_uid"] != casey for r in after["strava"]), "delete: Pacecard profile row removed")
             check(after["grinder"] == before["grinder"], "delete: Grinder public.profiles unchanged")
             expected_ids = sorted(i["id"] for i in before["identities"] if i["user_id"] == casey and i["provider"] == "github")
             check(sorted(i["id"] for i in after["identities"] if i["user_id"] == casey) == expected_ids and expected_ids, "delete: Auth identities for the user remain (all but the one deliberately unlinked)")

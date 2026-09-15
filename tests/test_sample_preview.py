@@ -16,6 +16,8 @@ def preview(path):
     result = subprocess.run([sys.executable, str(HELPER), str(path)],
                             check=True, capture_output=True, text=True)
     data = json.loads(result.stdout)
+    assert data['selected_export'] == str(path.resolve())
+    assert data['selected_sitting'] == 'latest sitting in selected export'
     token = urlsplit(data['preview_url']).fragment.removeprefix('import=')
     payload = json.loads(base64.b64decode(unquote(token)))
     assert payload == data['metrics']
