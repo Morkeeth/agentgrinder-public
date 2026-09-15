@@ -17,10 +17,14 @@ bounded card → post → response → return loop. It does not replace
   title `Pacecard`.
 - Live `/api/health`: HTTP 200, 41 bytes,
   `{"service":"pacecard","database":"ready"}`.
+- Receipt-backed deployment: `726f8a57c4e95f6c1d62c789f8e0ddeb437e11b6`, Vercel
+  `dpl_3MayWTLoGMc4VsC5wrhrPDDrLxBg`. That release includes merged PR 21 identity and PR 22
+  first-minute work.
 - After injecting the public deployment configuration, the live index was byte-identical to
   `a01f251da44b7bcee2ae3d6a2b1e48bd0193cad9` and to the unchanged index at the starting merge
-  SHA. Thus Pacecard rename and Continue in Cursor are hosted. This comparison says nothing
-  about whether the unapplied segment SQL exists in production.
+  SHA when this review fetched it. This is a later byte observation, not a Vercel deployment
+  receipt: it does not establish which post-`726f8a5` commits were deployed. `726f8a5` remains
+  the only receipt-backed deployed commit supplied to this review.
 - No production identity, post, follow, ACK, reply, message, SQL or Auth setting was used or
   changed. Browser integration used disposable identities labelled `TEST DATA`.
 - The shared Auth redirect allowlist entry `https://agentic-strava.vercel.app/**` remains
@@ -209,8 +213,8 @@ no message was sent.
 - **User problem:** healthy bytes and disposable fixtures do not prove a private draft survives
   real Auth or that one person can respond to another and bring them back.
 - **Evidence / route:** live `/api/health` is ready; `/?post`, `/?u=`, `/?run=` and `/?inbox`
-  exist. PRs 21/22 are merged. The exact Auth allowlist and two-person acceptance remain
-  unverified; PR 23 owns the checklist.
+  exist. Deployment receipt `726f8a5` includes merged PRs 21/22. The exact Auth allowlist and
+  two-person acceptance remain unverified; PR 23 owns the checklist.
 - **Desired behavior:** two consenting people each save one reviewed safe run, open the other's
   profile, follow, ACK/reply, and return through Responses to the exact conversation. One returns
   later because of that response and may capture a genuinely new sitting.
@@ -229,15 +233,31 @@ assignment even though that PR is open; this review neither adopts its audience 
 The same applies to the reserved card ridge, friends/sharing lanes and Grok capture/template
 implementation.
 
-PR 20's segment client is present in current main/live despite the earlier hold. This map records
-that coordination mismatch only; it does not add a segment build item, touch leaderboard code or
-run its SQL.
+PR 20's segment client is present in current main despite the earlier hold. No deployment receipt
+for that later main commit is claimed. This map records the coordination mismatch only; it does
+not add a segment build item, touch leaderboard code or run its SQL.
+
+## Delivery states
+
+- **Running:** this Cursor Cloud review run is
+  `bc-521cf5c3-2609-4e09-959f-321690c9d56b`. Grok Bot's capture/template work remains in its
+  separate owner lane `bc-21f9d59a`; it is not merged into this PR.
+- **Built:** this branch contains the map and unowned Save-continuity fix. Grok capture/template,
+  friends, sharing, card-ridge, Close friends/OG and segments are not built here.
+- **Tested:** required contributor checks, 359-test Python suite, production build, 37-check
+  disposable Save recovery, disposable exact Responses return, and phone/desktop browser
+  screenshots passed. These use labelled test data where writes are required.
+- **Deployed:** only `726f8a5` / Vercel `dpl_3MayWTLoGMc4VsC5wrhrPDDrLxBg` has a supplied
+  deployment receipt. This PR is not deployed. Later live bytes are an observation with
+  unresolved deployment provenance.
+- **Used:** no two-consenting-user or later-day return is established. PR 23 remains the
+  acceptance script; fixtures and owner-only checks do not count.
 
 ## State ledger
 
 | Capability | Exists in source | Tested locally in this run | Hosted | Used by real consenting people |
 |---|---:|---:|---:|---:|
-| Pacecard landing/feed/Post/Profile shell | Yes | Yes, phone/desktop cold and fixture paths | Yes, byte-matched | Unverified |
+| Pacecard landing/feed/Post/Profile shell | Yes | Yes, phone/desktop cold and fixture paths | `726f8a5` receipt; later bytes observed, provenance unresolved | Unverified |
 | Cursor explicit-path + sitting capture | Yes | Yes, safe TEST DATA session | CLI is local; import destination is hosted | Unverified |
 | Cursor friendly own-project exact selector | Partial | CLI primitives only | No separate hosted component | No |
 | Grok adapter/source kit | Yes | Labelled samples only | Hosted import URL generated | Second-bot install/use unverified |
@@ -247,8 +267,8 @@ run its SQL.
 | Public/link/private policy paths | Yes | Disposable data | Database healthy; exact live use not performed | Unverified |
 | Follow/Following/ACK/reply | Yes | Disposable two-account fixture | Source is hosted | Unverified |
 | Exact Responses return/unavailable target | Yes | Disposable two-account fixture passed | Source is hosted | Unverified |
-| Continue in Cursor | Yes | PR 24 local evidence; not relaunched here | Yes | Unverified |
-| Segment leaderboard | Yes | Not exercised; outside scope | Client source hosted; SQL state unknown/unapplied by this run | Held pending real use |
+| Continue in Cursor | Yes | PR 24 local evidence; not relaunched here | No deployment receipt claimed | Unverified |
+| Segment leaderboard | Yes | Not exercised; outside scope | No deployment receipt claimed; SQL unverified/unapplied by this run | Held pending real use |
 | Close friends/OG | Reserved PR 26, not this base | Owner reports disposable tests | Not established | No |
 | Two-person acceptance and day-two return | Checklist in PR 23 | Fixtures do not count | Not established | No |
 
