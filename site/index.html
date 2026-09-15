@@ -400,7 +400,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   <div class="right">
     <span class="wide">Private by default</span>
     <span id="me" class="you"></span>
-    <button id="auth" class="ghost">Sign in<span class="wide"> with GitHub</span></button>
+    <button id="auth" class="ghost">Sign in</button>
   </div>
 </div></div>
 <nav id="mobile-product-nav" class="mobile-product-nav" aria-label="Primary">
@@ -903,10 +903,10 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
     <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
-    ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
-    ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
     ${output?`<div class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open what was built ↗</a></div>`:''}
+    ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
+    ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
     <div class="sub">${r.project?esc(r.project)+' · ':''}<span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
     <div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
     ${r.tree?GrinderContract.tree(r.tree):''}
@@ -1233,7 +1233,6 @@ function howItWorks(){
 // line any more, because the package needs none: it runs from the clone on the python macOS
 // already has. The coach is a second, honest line — it needs Python 3.10 or newer, and says so.
 const INSTALL_CMD="git clone https://github.com/Morkeeth/agentgrinder-public && cd agentgrinder-public && python3 -m agentgrinder grind --harness cursor";
-const COACH_CMD='python3.12 -m venv .venv && .venv/bin/pip install -e ".[coach]" && .venv/bin/agentgrinder grind --coach';
 function uploadBlock(){
   return `<div class="up">
     <div class="up-top"><span class="t">Capture from Cursor or Grok Bot</span><span class="meta">private by default</span></div>
