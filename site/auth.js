@@ -335,7 +335,11 @@
       const u = await user();
       const p = await profile();
       if (!u || !p) return p;
-      const gh = githubHandleOf(u);
+      // getSession() may still contain the pre-link identity snapshot after the OAuth return.
+      // Ask Auth for its current server-owned identities before claiming the compatibility alias.
+      const { data: identityData, error: identityError } = await client.auth.getUserIdentities();
+      if (identityError) throw fail(identityError);
+      const gh = githubHandleOf({ identities: identityData?.identities || [] });
       if (!gh || p.github_handle) return p;
       const { data, error } = await client.from("profiles").update({ github_handle: gh }).eq("id", p.id).eq("auth_uid", u.id).select("*").single();
       if (error) {

@@ -213,7 +213,7 @@ assert.equal(GrinderAuth.explain({ code: '23505', message: 'handle_taken' }).cod
 assert.equal(GrinderAuth.explain({ code: '23505', message: 'duplicate key value violates unique constraint "profiles_auth_uid_key"' }).code, 'profile_exists');
 
 // Mock client: an in-memory profiles table keyed by auth_uid, and an auth surface that records effects.
-function mockClient({ user, rows = [] }) {
+function mockClient({ user, rows = [], authIdentities = null }) {
   const calls = [];
   const table = rows.map((r) => ({ ...r }));
   const q = (name) => {
@@ -242,7 +242,7 @@ function mockClient({ user, rows = [] }) {
     };
     return api;
   };
-  let identities = user ? [...(user.identities || [])] : [];
+  let identities = authIdentities ? [...authIdentities] : user ? [...(user.identities || [])] : [];
   const auth = {
     async getSession() { return { data: { session: user ? { user: { ...user, identities } } : null }, error: null }; },
     async signInWithOAuth(args) { calls.push(['oauth', args]); return { data: { url: 'https://auth.test/' + args.provider }, error: null }; },
@@ -288,7 +288,20 @@ assert.equal(edited.id, first.profile.id); assert.equal(edited.avatar_url, 'http
 assert.deepEqual(m.calls.at(-1), ['profiles', 'update', [['id', first.profile.id], ['auth_uid', 'u-x']]]);
 await assert.rejects(A.updateProfile({ avatar_url: 'ftp://x' }), (e) => e.detail.code === 'avatar_invalid');
 assert.equal((await A.byHandle('@XPERSON')).id, first.profile.id); assert.equal((await A.byHandle('taken')).id, 'legacy-1');
+
+// GitHub-only first sign-in creates one provider-neutral profile while retaining the verified
+// GitHub label solely as a compatibility alias.
+m = mockClient({ user: ghUser });
+A = GrinderAuth.create({ client: m.client, storage });
+const githubOnly = await A.onboard({ handle: 'g-person', display_name: 'G Person' });
+assert.equal(githubOnly.profile.handle, 'g-person');
+assert.equal(githubOnly.profile.display_name, 'G Person');
+assert.equal(githubOnly.profile.github_handle, 'GHPerson');
+assert.equal((await A.onboard({ handle: 'different' })).profile.id, githubOnly.profile.id);
+
 // Linking: effect recorded, redirect target passed; documented failures map to codes.
+m = mockClient({ user: xUser, rows: [{ ...first.profile }] });
+A = GrinderAuth.create({ client: m.client, storage });
 assert.deepEqual(await A.link('github'), { provider: 'github', url: 'https://auth.test/link', started: true });
 assert.equal(m.calls.at(-1)[1].provider, 'github');
 await assert.rejects(A.link('email'), (e) => e.detail.code === 'provider_unavailable');
@@ -299,13 +312,15 @@ await assert.rejects(A.link('github'), (e) => e.detail.code === 'identity_taken'
 // Unlinking the only identity is refused before any provider call; with two it proceeds.
 await assert.rejects(A.unlink('i1'), (e) => e.detail.code === 'last_identity');
 await assert.rejects(A.unlink('nope'), (e) => e.detail.code === 'identity_missing');
-const twoIds = { id: 'u-x', identities: [...xUser.identities, { identity_id: 'i9', provider: 'github', identity_data: { user_name: 'XPersonGH', avatar_url: 'https://avatars.test/x.png' } }] };
-m = mockClient({ user: twoIds, rows: [{ ...first.profile }] });
+const linkedIds = [...xUser.identities, { identity_id: 'i9', provider: 'github', identity_data: { user_name: 'XPersonGH', avatar_url: 'https://avatars.test/x.png' } }];
+// The session deliberately remains X-only; getUserIdentities is the authoritative post-link read.
+m = mockClient({ user: xUser, authIdentities: linkedIds, rows: [{ ...first.profile }] });
 A = GrinderAuth.create({ client: m.client, storage });
 assert.deepEqual((await A.identities()).map((i) => [i.provider, i.handle]), [['x', 'XPerson'], ['github', 'XPersonGH']]);
 // A real GitHub identity fills the legacy column once; a chosen handle never does.
 const synced = await A.syncGithubHandle();
 assert.equal(synced.github_handle, 'XPersonGH'); assert.equal(synced.id, first.profile.id);
+assert.equal((await A.current()).profile.id, first.profile.id, 'GitHub + X keep one stable Strava profile id');
 assert.deepEqual(await A.unlink('i9'), { removed: 'i9' });
 assert.equal((await A.identities()).length, 1);
 // Local sign-out only, then the profile row is still there for the next sign-in.
