@@ -23,6 +23,12 @@ bounded card → post → response → return loop. It does not replace
   changed. Browser integration used disposable identities labelled `TEST DATA`.
 - The shared Auth redirect allowlist entry `https://agentic-strava.vercel.app/**` remains
   unverified. This is a configuration-verification gap, not evidence of a broken callback.
+- Current Cursor documentation supports project/global `mcp.json`, explicit repository/branch
+  selection for Cloud Agents, durable Cloud agent/run IDs, conversation search, and prompt
+  [deep links](https://cursor.com/docs/reference/deeplinks). It does not document a public deep
+  link that selects an exact local Cursor sitting or sends a third-party preview into a hosted
+  Save flow. Pacecard's hosted `#import=` URL is its own human-review handoff, not a Cursor
+  platform Save primitive.
 
 The live service and database are healthy. That is not the same as hosted sign-in acceptance,
 and neither is evidence of use by two consenting people.
