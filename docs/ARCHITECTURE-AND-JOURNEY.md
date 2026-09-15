@@ -1,6 +1,6 @@
 # AGENT GRINDER — architecture + user journey (2026-08-30)
 
-Screens: `docs/screens/` — 01 landing · 02 feed-card · 03 profile.
+Screens: `../archive/hackathon-2026-09/docs/screens/`: 01 landing · 02 feed-card · 03 profile.
 
 ## Architecture (4 pieces)
 ```

@@ -367,7 +367,7 @@ def render_route_svg(run: dict):
 # card. It was measuring the wrong box. The phone trace is 360 user units painted into 344 CSS
 # px, so a stamp centred at 350 has its right half OUTSIDE the svg and is cut by the svg's own
 # viewport at x=360 -- 30 units before the page edge the check was watching. It is visible in
-# the committed shot `docs/shots/nightrun-card-phone-light.png`, which prints "06:0".
+# the committed shot `archive/hackathon-2026-09/docs/shots/nightrun-card-phone-light.png`, which prints "06:0".
 #
 # Character widths are MEASURED, not assumed: at .gl (9px monospace) one character is 5.41 user
 # units on this machine (routemap) and 5.50 (soloroute); .slabel (9.5px) is 6.19. The constants

@@ -15,7 +15,7 @@
 !agentgrinder.egg-info/**
 
 # non-public fleet shots (real repo names incl. repo C) — ship --public variant only
-!docs/shots/nightrun-card-dark.png
-!docs/shots/nightrun-card-light.png
-!docs/shots/nightrun-card-phone-dark.png
-!docs/shots/nightrun-card-phone-light.png
+!archive/hackathon-2026-09/docs/shots/nightrun-card-dark.png
+!archive/hackathon-2026-09/docs/shots/nightrun-card-light.png
+!archive/hackathon-2026-09/docs/shots/nightrun-card-phone-dark.png
+!archive/hackathon-2026-09/docs/shots/nightrun-card-phone-light.png

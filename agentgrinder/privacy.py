@@ -53,7 +53,7 @@ Two deliberate properties:
 
 Run it:
 
-    python3 -m agentgrinder privacycheck grind.html docs/shots/six/*.html
+    python3 -m agentgrinder privacycheck grind.html archive/hackathon-2026-09/docs/shots/six/*.html
 """
 
 from __future__ import annotations
