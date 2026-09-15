@@ -417,6 +417,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 <script src="/auth.js"></script>
 <script src="/social.js"></script>
 <script src="/people.js"></script>
+<script src="/origin.js"></script>
 <script src="/account.js"></script>
 <script src="/challenges.js"></script>
 <script src="/practice-eligibility.js"></script>
@@ -554,7 +555,10 @@ const people=GrinderPeople({client:sb,me:()=>ME,app:()=>$('app'),frame,status,so
 const practices=GrinderPractices({client:sb,me:()=>ME,app:()=>$('app'),frame,status});
 const progress=GrinderProgress({client:sb,me:()=>ME,app:()=>$('app'),frame,status,signIn:showSignIn});
 const challenges=GrinderChallenges({client:sb,me:()=>ME,app:()=>$('app'),frame,status});
-const account=GrinderAccount({auth,me:()=>ME,app:()=>$('app'),frame,status,providersEnabled:PROVIDERS_ENABLED,signIn:showSignIn,onProfileChange:p=>{ME=p;refreshAuth();}});
+// No connector is supplied until an Origin application and callback are registered and reviewed.
+// Origin remains a post-sign-in repository connection, never an Auth provider.
+const originConnection=GrinderOrigin.create();
+const account=GrinderAccount({auth,me:()=>ME,app:()=>$('app'),frame,status,providersEnabled:PROVIDERS_ENABLED,origin:originConnection,signIn:showSignIn,onProfileChange:p=>{ME=p;refreshAuth();}});
 
 // THE MARK IS THE GRIND, drawn small.
 //

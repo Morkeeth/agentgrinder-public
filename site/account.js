@@ -18,6 +18,7 @@ window.GrinderAccount = function ({
   frame,
   status,
   providersEnabled,
+  origin,
   onProfileChange,
   signIn,
   onDeleted,
@@ -111,6 +112,7 @@ window.GrinderAccount = function ({
       <section class="card pad account-section" aria-labelledby="account-methods-title"><h2 id="account-methods-title">Sign-in methods</h2>
         <div id="account-identities">${identitiesHtml(ids)}</div>
         <p id="account-identities-state" class="account-state" role="status" aria-live="polite"></p></section>
+      ${origin ? origin.html({ signedIn: true }) : ""}
       <section class="card pad account-section" aria-labelledby="account-signout-title"><h2 id="account-signout-title">Sign out on this device</h2>
         <p>Signs you out of Agentic Strava in this browser only. Other devices, and Agent Grinder if you use it with the same sign-in, stay signed in.</p>
         <div class="account-actions"><button type="button" class="act" id="account-signout">Sign out here</button></div></section>
@@ -159,6 +161,7 @@ window.GrinderAccount = function ({
     root.innerHTML = panelHtml(profile, ids, recovered, pend, current.user);
     wireCommon();
     wirePanel(profile);
+    origin?.mount?.(root, { signedIn: true });
     if (location.hash === "#danger") byId("danger")?.scrollIntoView();
   }
 
