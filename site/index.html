@@ -854,6 +854,12 @@ function safeOutputUrl(value){
 function segmentSelectHtml(id){
   return `<label>Segment (optional)<select id="${id}"><option value="">No segment</option></select></label>`;
 }
+// model, segment_id and wall_time_s arrive with supabase/strava/001_segments.sql. Omit them
+// from an insert while they are null so a database without that migration still accepts the row.
+function dropNullSegmentColumns(row){
+  for(const key of ['model','segment_id','wall_time_s']) if(row[key]==null) delete row[key];
+  return row;
+}
 function optionalWholeNumber(id){
   const raw=$(id)?.value;
   if(raw==null||String(raw).trim()==='') return null;
@@ -1440,10 +1446,14 @@ function wireComposer(){
     if(Number.isNaN(wallTime)){status('Segment wall time must be a whole number of seconds.',true);return}
     if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
     pb.disabled=true;
-    const {data,error}=await sb.from('runs').insert({profile_id:ME.id,title,project:$('f_project').value||null,model:$('f_model').value.trim()||null,
+    const row={profile_id:ME.id,title,project:$('f_project').value||null,model:$('f_model').value.trim()||null,
       segment_id:$('f_segment').value||null,wall_time_s:wallTime,
       harness:null,prompts:+$('f_prompts').value||null,duration_s:(+$('f_dur').value||0)*60||null,commits:+$('f_commits').value||null,
-      caption,output_url:output||null,visibility:audience,started_at:new Date().toISOString()}).select('id').single();
+      caption,output_url:output||null,visibility:audience,started_at:new Date().toISOString()};
+    // Segment columns (migration supabase/strava/001_segments.sql) are only sent when set,
+    // so posting keeps working on a database that does not have them yet.
+    dropNullSegmentColumns(row);
+    const {data,error}=await sb.from('runs').insert(row).select('id').single();
     pb.disabled=false;
     if(error){status(error.message,true);return;}
     history.replaceState(null,'','/?run='+data.id);
@@ -1644,6 +1654,7 @@ function importRun(){
       harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,
       rhythm:run.rhythm||null,caption,output_url:output||null,visibility:audience,started_at:run.started||null};
+    dropNullSegmentColumns(base);
     // the coach columns (nullable; migration 2026-09-03-coach.sql). Retry without them on a
     // database that does not have them yet, and say so.
     const coach={claims:run.claims??null,claims_verified:run.claims_verified??null,artifacts_produced:run.artifacts_produced??null,

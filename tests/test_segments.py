@@ -4,6 +4,8 @@ import json
 import subprocess
 import sys
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,6 +37,7 @@ process.stdout.write(JSON.stringify(ranked.map(run=>[run.id,run.rank])));
 
 
 def test_segment_page_renders_three_labelled_fixture_runs():
+    pytest.importorskip("playwright")
     subprocess.run(
         [sys.executable, str(ROOT / "scripts/check-segment-fixtures.py")],
         cwd=ROOT,
@@ -55,3 +58,4 @@ def test_segment_schema_stays_in_strava_and_public_reads_are_filtered():
     assert "segment_id:$('f_segment').value||null" in index
     assert "segment_id:$('i_segment').value||null" in index
     assert "wall_time_s:wallTime" in index
+    assert index.count("dropNullSegmentColumns(") == 3, "both run inserts omit unset segment columns"
