@@ -4,10 +4,11 @@ Status: source kit only. It is not evidence that the skill has been installed on
 used on a real export, or published as a template. Those three states must be observed and
 reported separately.
 
-## Install on a second bot
+## Install on a bot computer
 
-On the bot's shared cloud computer, clone or update this public repository. The skill source to
-install is the complete directory:
+Keep this capture-tool checkout separate from the owner’s project. On the bot’s shared cloud
+computer, clone or update this public repository once. The skill source to install is the complete
+directory:
 
 ```text
 templates/grokbot/post-agent-run/
@@ -48,30 +49,27 @@ and 3 tool calls. The URL must start with `http://localhost:8000/#import=`. The 
 network request and does not publish. This fixture is synthetic, labelled sample bot activity;
 running it proves only that the source kit works locally.
 
-## Then verify one real export
+## Then preview one selected real export on the hosted app
 
 1. Explicitly select a JSONL export already present on this bot's cloud computer. A bot cannot
-   read a person's laptop, and discovery must not guess private paths.
-2. Run the same helper with that selected file:
-
-   ```sh
-   python3 templates/grokbot/post-agent-run/scripts/preview.py path/to/selected-export.jsonl
-   ```
-
-3. Compare the allowlisted counts with the export. Keep duration, file writes, successful commits
-   and other unsupported metrics unknown.
-4. Open only the localhost preview while no approved hosted product URL exists. The preview is
-   not a saved run or a post.
-5. Once the owner supplies an approved HTTPS product origin, it may be passed explicitly:
+   read a person's laptop, discovery must not guess private paths, and “newest file” is not a
+   substitute for the owner’s selection.
+2. Run the helper with that exact selected file and hosted origin:
 
    ```sh
    python3 templates/grokbot/post-agent-run/scripts/preview.py \
-     path/to/selected-export.jsonl \
-     --base-url https://approved-product.example
+     /exact/path/to/selected-grokbot-export.jsonl \
+     --base-url https://agentic-strava.vercel.app
    ```
 
-   This still creates only a private import URL. The owner must review the exact card, sign in,
-   deliberately choose an audience and save it. Never use the hackathon service.
+3. Confirm `selected_export` in the output, then compare the allowlisted counts with the export.
+   Keep duration, file writes, successful commits and other unsupported metrics unknown.
+4. Open the returned hosted `#import` URL. It is a private preview, not a saved run or post.
+5. The owner reviews the exact white card and blue trace, signed-in account and destination,
+   deliberately chooses an audience and presses **Save run**. The helper never chooses or saves.
+
+For local kit development only, omit `--base-url`, start `python3 scripts/dev.py serve`, and open
+the localhost preview. Never use the hackathon service.
 
 Report the milestones literally:
 
