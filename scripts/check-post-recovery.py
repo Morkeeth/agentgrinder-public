@@ -252,6 +252,10 @@ def main():
             check(len(my_runs(cp)) == before_manual + 1, "manual retry: existing save opened and no duplicate was created")
             check("Anyone with the link" in cp.inner_text("#status"), "manual retry: status names the existing audience")
             shot(cp, "06-manual-lost-response-found-mobile.png")
+            cp.set_viewport_size({"width": 1280, "height": 900})
+            shot(cp, "06-manual-lost-response-found-desktop.png")
+            check(not cp.evaluate("document.documentElement.scrollWidth > innerWidth + 1"), "desktop: manual recovery result has no horizontal overflow")
+            cp.set_viewport_size({"width": 390, "height": 844})
 
             # 5. A chopped import link.
             cp.goto(base + "/" + first[:-40])

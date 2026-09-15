@@ -27,6 +27,35 @@ bounded card → post → response → return loop. It does not replace
 The live service and database are healthy. That is not the same as hosted sign-in acceptance,
 and neither is evidence of use by two consenting people.
 
+## Cold live walkthrough
+
+The first pass used only the live UI, before implementation inspection, at desktop and 400 px.
+No sign-in or write was attempted.
+
+- `/` clearly says “Every run your agent made, on a card you can share,” shows a labelled sample,
+  and offers **Post your first run** and **Explore runs**.
+- Explore had no public runs. The UI consistently called the card sample data and said a real
+  card would put builder, project, caption, output and measured cost together. It did not
+  fabricate social proof.
+- Find people allowed signed-out public-profile search and explained that sign-in is required to
+  follow. There was no profile or public run reachable through the UI during this pass.
+- Post led to a clone-and-run command for the Pacecard repository, then a separate sign-in action.
+  That is the first material stop for the intended technical builder: the UI has switched from
+  “share work from my project” to “clone this product,” and it has not asked which sitting to
+  share. This review does not treat a command line as inherently out of scope; Cursor/Grok
+  builders are the target. The defect is destination and selection clarity.
+- The sign-in dialog accurately said that sign-in keeps profile/responses connected and that a
+  run remains private until Public is chosen and saved. It offered GitHub and email; it did not
+  imply Cursor is an identity provider.
+- Phone retained Feed/Post navigation, readable cards and the same actions with no observed
+  horizontal overflow. Desktop exposed the same product path. Representative cold screenshots:
+  landing `/tmp/computer-use/f8880.webp`, empty feed `/tmp/computer-use/545f2.webp`, Post
+  `/tmp/computer-use/b2334.webp`, sign-in `/tmp/computer-use/9cf51.webp`, phone landing
+  `/tmp/computer-use/437ee.webp`, and phone Post `/tmp/computer-use/0b67d.webp`.
+
+The cold pass did not establish that there are zero rows in production; it established only that
+the live discovery surfaces returned no public runs or profiles to this signed-out browser.
+
 ## The complete journey in plain language
 
 A builder completes useful work in their own project. On the same computer, they deliberately
@@ -137,8 +166,10 @@ no message was sent.
 - **Owner request:** Pacecard hook/ridge run
   `bc-d22ad316-cdde-45dd-9094-c094a8b1eec1` (running when rechecked) for capture hook/ridge;
   Cursor integration owner for exact-session selector/docs.
-- **Dependency:** reconcile workspace MCP installation with Cursor's documented project/user MCP
-  configuration. Do not require cloning Pacecard as the active work project.
+- **Dependency:** reconcile workspace MCP installation with Cursor's documented
+  [project and user MCP configuration](https://cursor.com/docs/mcp). Project `.cursor/mcp.json`
+  is rooted in the person's workspace; `~/.cursor/mcp.json` is global. Do not require cloning
+  Pacecard as the active work project.
 - **Acceptance proof:** clean machine, two eligible sittings in different projects, chosen
   non-latest sitting appears in preview, no prompt/code/path is exported, hosted Save remains a
   human click.
@@ -156,8 +187,9 @@ no message was sent.
   follow, ACK or reply.
 - **Owner request:** Grok Bot owner.
 - **Dependency:** current official Grok docs establish a persistent shared cloud computer with
-  filesystem/browser/terminal and skills as files; they do not establish Pacecard-native export
-  or one-click marketplace installation.
+  filesystem/browser/terminal ([Grok Bot](https://cursor.com/docs/grok-bot)) and
+  [skills as files](https://cursor.com/docs/skills); they do not establish Pacecard-native export
+  or one-click marketplace installation for this source directory.
 - **Acceptance proof:** separate receipts for source available, installed on a second bot, real
   export previewed, and owner-saved hosted run. Only the first is established.
 
