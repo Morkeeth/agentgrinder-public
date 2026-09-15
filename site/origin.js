@@ -2,8 +2,8 @@
  * sign-in; it is not an Auth provider and never participates in account matching.
  *
  * No Origin application is registered today, so the shipped controller has no connector and
- * renders an honest empty state. A reviewed connector can later implement connect/disconnect
- * without changing the account or identity contracts.
+ * the Account page shows no Origin panel at all. A reviewed connector can later implement
+ * connect/disconnect without changing the account or identity contracts.
  */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
@@ -13,12 +13,12 @@
     String(x ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
   function state({ signedIn, configured, connections = [], outcome = null, error = null } = {}) {
-    if (!signedIn) return { kind: "hidden", connections: [] };
+    if (!signedIn || !configured) return { kind: "hidden", connections: [] };
     if (outcome === "cancelled") return { kind: "cancelled", connections };
     if (error) return { kind: "error", connections, message: String(error.message || error) };
     if (outcome === "disconnected") return { kind: "disconnected", connections };
     if (connections.length) return { kind: "connected", connections };
-    return { kind: configured ? "connect" : "empty", connections: [] };
+    return { kind: "connect", connections: [] };
   }
 
   function html(value) {
@@ -38,12 +38,8 @@
     const notice = notices[value.kind]
       ? `<div class="account-notice" role="status" aria-live="polite"><p>${notices[value.kind]}</p></div>`
       : "";
-    const empty = value.connections?.length ? "" : value.kind === "empty"
-      ? '<p class="account-hint">No Origin repositories are connected. Connection is unavailable until an Origin application and callback have been registered and reviewed.</p>'
-      : '<p class="account-hint">No Origin repositories are connected.</p>';
-    const connect = value.kind !== "empty"
-      ? '<div class="account-actions"><button type="button" class="act" data-origin-connect>Connect Origin repositories</button></div>'
-      : "";
+    const empty = value.connections?.length ? "" : '<p class="account-hint">No Origin repositories are connected.</p>';
+    const connect = '<div class="account-actions"><button type="button" class="act" data-origin-connect>Connect Origin repositories</button></div>';
     return `<section class="card pad account-section" id="origin-connection" aria-labelledby="origin-title"><h2 id="origin-title">Origin repositories</h2>
       <p>Connect selected repositories after signing in to Strava. Origin is Cursor&rsquo;s code forge, not a sign-in method.</p>
       ${notice}${rows ? `<ul class="account-identities">${rows}</ul>` : ""}${empty}${connect}

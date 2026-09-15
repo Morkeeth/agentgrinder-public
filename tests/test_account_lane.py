@@ -29,7 +29,7 @@ def test_no_cursor_or_origin_login_and_x_is_gated():
 def test_origin_is_a_post_sign_in_repository_connection_only():
     assert "not a sign-in method" in ORIGIN
     assert "Continue with Origin" not in ORIGIN and "Sign in with Origin" not in ORIGIN
-    for state in ("hidden", "empty", "connect", "cancelled", "error", "connected", "disconnected"):
+    for state in ("hidden", "connect", "cancelled", "error", "connected", "disconnected"):
         assert f'"{state}"' in ORIGIN
     assert 'origin.html({ signedIn: true })' in ACCOUNT
     assert '{ id: "origin"' not in AUTH.lower(), "Origin must not become a Supabase Auth provider"
