@@ -1379,7 +1379,7 @@ async function viewRun(id){
   const nextAction=owner
     ? `<section class="run-primary-actions"><p><b>${r.visibility==='public'?'Saved to Public feed and profile':r.visibility==='link'?'Saved for anyone with the link':'Saved for Only me'}</b></p>
         <div class="cta">${shareable?`<button id="run-copy-link" class="act blue">${r.visibility==='public'?'Copy public link':'Copy link'}</button>`:''}${r.visibility==='public'?`<a class="act" href="/?share=1&run=${r.id}">Open share card</a>`:''}</div>
-        <p class="hint">${shareable?(r.visibility==='public'?'This public run can also use a clean message preview.':'This unlisted run is readable by anyone who receives its URL.'):'Change the audience below when you deliberately want to share.'}</p></section>`
+        <p class="hint">${shareable?(r.visibility==='public'?'This public run also has a clean share card.':'This unlisted run is readable by anyone who receives its URL.'):'Change the audience below when you deliberately want to share.'}</p></section>`
     : `<section class="run-primary-actions"><p class="meta">FROM THIS RUN</p><div class="cta"><a class="act blue" href="${profileUrl}">Open builder profile</a>${r.visibility==='public'?`<a class="act" href="/?share=1&run=${r.id}">Share this run</a>`:''}</div><p class="hint">Follow is always your choice. No one is added automatically.</p></section>`;
   frame(null,null);
   app.innerHTML=`<div class="head"><h2>A run</h2><span class="meta">${esc(r.visibility==='public'?'public':r.crew_shared?'Crew members':r.visibility==='private'||r.visibility==='anonymous'?'private':'link only')}</span></div>`
