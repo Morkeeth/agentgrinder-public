@@ -868,6 +868,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
     ${output?`<div class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open what was built ↗</a></div>`:''}
     <div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
+    ${r.tree?GrinderContract.tree(r.tree):''}
     <div class="run-key-facts"><div><span>Typed turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>Artifacts</span><strong>${r.artifacts_produced??'Unknown'}</strong></div><div><span>Commits</span><strong>${r.commits??'Unknown'}</strong></div></div>
     <details class="run-evidence"><summary>Recorded details</summary><p class="meta">${r.tool_calls??'Unknown'} tool calls · ${r.files_touched??'Unknown'} files touched. Counts describe recorded activity, not quality.</p></details>
     ${opts.preview?'<div class="foot"><span class="meta">Preview · not saved</span></div>':`<div class="foot"><span class="meta">${count||0} ACK${count===1?'':'s'}${selfAck?' · your run':''}</span>
@@ -1743,6 +1744,7 @@ async function route(){ account.recover();
   const q=new URLSearchParams(location.search);
   if(q.has('example')){
     if(q.get('example')==='share') return GrinderExample.viewShare();
+    if(q.get('example')==='tree') return GrinderExample.viewTree();
     return GrinderExample.view();
   }
   if(q.has('community'))return viewCommunity();

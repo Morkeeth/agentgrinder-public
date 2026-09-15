@@ -303,5 +303,33 @@
       app.prepend(hint);
     }
   }
-  root.GrinderExample = { view, viewShare, KEY };
+  /* /?example=tree: the orchestration tree sample, rendered through the same runCard as a real
+     run. It is a preview: no ACK, no Discuss, no Share, and nothing can be saved from it. */
+  async function viewTree() {
+    const app = $("app");
+    if (typeof frame === "function") frame(null, null);
+    if (typeof setPrimarySection === "function") setPrimarySection("feed");
+    app.innerHTML = '<p class="hint">Loading the tree sample…</p>';
+    let data;
+    try {
+      const res = await fetch("/tree-sample.json", { cache: "no-store" });
+      if (!res.ok) throw Error("The tree sample could not load.");
+      data = await res.json();
+    } catch (e) {
+      app.innerHTML = `<div class="card"><h2>Tree sample unavailable</h2><p>${esc(e.message)}</p></div>`;
+      return;
+    }
+    const run = Object.assign({ id: "tree-sample", profile_id: "sample", created_at: data.generated_on || new Date().toISOString(),
+      profiles: { github_handle: "sample", handle: "sample", display_name: "Sample" } }, data.run || {}, { tree: data.tree || null });
+    const tree = data.tree || {};
+    const workers = Array.isArray(tree.children) ? tree.children : [];
+    app.innerHTML = `<div class="head"><h2>Orchestration tree sample</h2><span class="meta">example data · redacted · not your activity</span></div>
+      <p role="note">${esc(data.label || "Sample.")}</p>
+      <div class="up"><div class="up-top"><span class="t">Read your own Cursor tree</span><span class="meta">local only</span></div>
+        <div class="cmd"><span class="c">python3 -m agentgrinder.cursor_tree --list</span></div>
+        <div class="up-foot">Lists every Cursor session that delegated to workers. Nothing leaves your machine. ${esc(data.cannot_show || "")}</div></div>
+      ${typeof runCard === "function" ? runCard(run, false, 0, { preview: true }) : ""}
+      <p class="hint">${workers.length} workers · source: ${esc(data.source || "unknown")}</p>`;
+  }
+  root.GrinderExample = { view, viewShare, viewTree, KEY };
 })(window);
