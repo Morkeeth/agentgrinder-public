@@ -21,8 +21,8 @@ def test_fresh_signed_in_builder_lands_on_first_post_not_a_tour():
 
 
 def test_zero_run_surfaces_explain_deliberate_save():
-    assert "Nothing is posted until you write the title and caption" in INDEX
-    assert "Only me, Link or Public" in INDEX
+    assert "Your first post defaults to Only me." in INDEX
+    assert "Review the title, caption and audience" in INDEX
     assert "Your first run starts with a private preview" in PROGRESS
     assert "Grok Bot push guide" in PROGRESS
 
