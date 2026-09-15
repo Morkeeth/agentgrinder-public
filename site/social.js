@@ -275,7 +275,7 @@ window.GrinderSocial = function ({
   async function following() {
     start(
       "Following",
-      "Public runs from people you follow. Follow works before they post.",
+      "Recent public runs from people you chose to follow. Follow works before they post.",
       "feed",
     );
     if (!signedIn()) return;
@@ -289,8 +289,8 @@ window.GrinderSocial = function ({
       if (!follows.length) {
         byId("social-body").innerHTML =
           empty(
-            "You are not following anyone yet. Share your profile link or paste a friend’s handle in Find people; you do not need to wait for Discover.",
-            `<div class="cta"><a class="act blue" href="/?people">Find people</a><a class="act" href="/?explore">Discover runs</a></div>`,
+            "Find one builder by handle or open a profile from a real run. Following is deliberate: nobody is imported or followed automatically.",
+            `<div class="cta"><a class="act blue" href="/?people">Find people</a><a class="act" href="/?post">Post your first run</a><a class="act" href="/?explore">Discover runs</a></div>`,
           );
         return;
       }
@@ -325,8 +325,8 @@ window.GrinderSocial = function ({
         .join("");
       byId("social-body").innerHTML =
         empty(
-          "You follow these builders, but none have public runs yet. Open a profile to respond when they post.",
-          `<div class="cta"><a class="act blue" href="/?people">Find more people</a><a class="act" href="/?explore">Discover runs</a></div>`,
+          "You follow these builders, but none has a public run yet. Their next public run will appear here; you can post your own in the meantime.",
+          `<div class="cta"><a class="act blue" href="/?post">Post a run</a><a class="act" href="/?people">Find more people</a><a class="act" href="/?explore">Discover runs</a></div>`,
         ) +
         (list
           ? `<article class="card"><h3>People you follow</h3><ul class="following-people">${list}</ul></article>`
@@ -490,7 +490,7 @@ window.GrinderSocial = function ({
     const focusReply = replyTargetId();
     slot.innerHTML =
       responseReturnBar() +
-      '<div class="head"><h2>Talk about this grind</h2></div><div class="thread-items" aria-live="polite">Loading replies…</div>';
+      '<div class="head"><h2>Talk about this run</h2><span class="meta">ask about the work</span></div><div class="thread-items" aria-live="polite">Loading replies…</div>';
     const items = slot.querySelector(".thread-items");
     let cursor = null;
     let sawFocus = false;
@@ -753,7 +753,7 @@ window.GrinderSocial = function ({
   async function inbox() {
     start(
       "Responses",
-      "ACKs, replies and new followers. Unread stays unread until you actually see it.",
+      "Open the exact conversation, then come back here. Unread stays unread until you actually see it.",
       "inbox",
     );
     if (!signedIn()) return;
@@ -790,8 +790,8 @@ window.GrinderSocial = function ({
         body.innerHTML =
           filters +
           empty(
-            "Responses to your public runs will appear here. Follow someone from Find people to start the loop.",
-            `<div class="cta"><a class="act" href="/?people">Find people</a><a class="act" href="/?post">Post a run</a></div>`,
+            "Post a real run and share it with a friend. Their ACKs and replies will bring you back to the exact conversation.",
+            `<div class="cta"><a class="act blue" href="/?post">Post your first run</a><a class="act" href="/?people">Find people</a></div>`,
           );
         await refreshUnread();
         return;
@@ -879,7 +879,8 @@ window.GrinderSocial = function ({
               <p class="response-item-actions">${returnLinks || "<span class=\"meta\">Nothing to open</span>"}</p>
             </article>`;
           })
-          .join("");
+          .join("") +
+        `<section class="run-primary-actions response-next"><p><b>Ready for the next real run?</b></p><p class="hint">Respond first, then capture a genuinely new sitting. No streak required.</p><div class="cta"><a class="act blue" href="/?post">Post your next run</a></div></section>`;
 
       body.querySelectorAll("[data-response-nav]").forEach((anchor) => {
         anchor.addEventListener("click", () => {

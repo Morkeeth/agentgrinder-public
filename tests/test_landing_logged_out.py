@@ -44,7 +44,11 @@ def test_landing_reads_the_public_count_without_using_it_as_sample_content():
 
 def test_sign_in_explains_github_and_private_runs():
     assert 'id="signin-explanation"' in HTML
-    assert "runs stay private until you choose Public and post them" in HTML
+    assert "return to this preview or social action" in HTML
+    assert "Closing or cancelling sign-in posts nothing" in HTML
+    assert "Runs stay private until you choose Public and save them" in HTML
+    assert '<button id="auth" class="ghost">Sign in</button>' in HTML
+    assert "Sign in with GitHub" not in HTML
     assert "Continue with X" not in HTML
 
 

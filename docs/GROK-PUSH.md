@@ -20,6 +20,8 @@ The hosted Pacecard URL for this flow is `https://agentic-strava.vercel.app`.
 
    Confirm that `selected_export` in the output is the intended file. The helper selects the
    latest sitting inside that file and reports that choice.
+   For kit development only, omit `--base-url`, start `python3 scripts/dev.py serve`, and use
+   localhost as a local-only preview.
 4. Open the generated hosted `#import` URL. Inspect every imported field, including fields shown
    as unknown. The helper makes no network request and no post.
 5. Write the title, caption and optional HTTPS link to what was built.

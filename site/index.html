@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pacecard</title>
-<meta name="description" content="Turn a Cursor, Claude Code or Codex session into a run card. Post your runs and see what other builders are making. Private until you choose to share.">
+<meta name="description" content="Turn a Cursor, Grok Bot, Claude Code or Codex session into a run card. Post your runs and see what other builders are making. Private until you choose to share.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/design.css">
@@ -150,7 +150,8 @@ a.act{display:inline-block;text-decoration:none}
 .state.off{color:var(--dim);font-weight:400}
 .c-title,.title{font-size:14px;font-weight:500;padding:14px 16px 0}
 .sub{padding:4px 16px 0;font-size:13px;color:var(--soft)}
-.note{padding:8px 16px 0;font-size:14px}
+.card-harness{color:var(--ink);font-weight:500}
+.note{padding:8px 16px 0;font-size:14px;line-height:1.55}
 .grp{padding:14px 16px 0;font-size:11px;color:var(--dim)}
 .para{padding:6px 16px 0;font-size:14px;line-height:1.6}
 .plan{margin:6px 16px 0;padding-left:18px;font-size:13px;line-height:1.55;color:var(--soft)}
@@ -189,6 +190,10 @@ a.act{display:inline-block;text-decoration:none}
 .c-foot .acts,.foot .acts{margin-left:auto;display:flex;gap:8px}
 .run-continuation{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 16px 0}
 .run-continuation .acts{display:flex;flex-wrap:wrap;gap:8px}
+.run-primary-actions{border-left:2px solid var(--blue);padding:14px 16px;margin:0 0 24px;background:var(--box)}
+.run-primary-actions p{margin:0 0 10px}
+.run-primary-actions .cta{margin:0}
+.run-primary-actions .hint{margin:10px 0 0}
 
 /* skeleton — one shot, resolves into real content */
 .sk{background:linear-gradient(90deg,#eeeeeb 25%,#f6f6f4 37%,#eeeeeb 63%);background-size:400% 100%;
@@ -235,6 +240,11 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   padding:11px 13px;word-break:break-word}
 .ob-step .cmd .c{white-space:normal;overflow:visible}
 .ob-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.preview-story>p:first-child{margin-top:0}
+.preview-details,.profile-summary{border-top:1px solid var(--rule);margin-top:18px;padding-top:14px}
+.preview-details>summary,.profile-summary>summary{cursor:pointer;color:var(--soft);font-size:13px;min-height:40px}
+.preview-details[open]>summary,.profile-summary[open]>summary{color:var(--ink);font-weight:500;margin-bottom:14px}
+.profile-context{color:var(--soft);font-size:13px;margin:0 0 18px}
 
 /* ack picker */
 .ack-picker{padding:12px 16px 14px;border-top:1px solid var(--rule)}
@@ -351,6 +361,8 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   .share-frame{height:auto;min-height:630px}
   .first-run-actions .act,.first-run-actions button{width:100%;text-align:center;min-height:44px}
   .c-foot .primary-output,.foot .primary-output{order:-1;flex-basis:100%;min-height:44px;display:inline-flex;align-items:center}
+  .c-foot .kudo,.foot .kudo{color:var(--blue);border-color:var(--blue-soft);background:var(--blue-wash)}
+  .run-primary-actions .act,.run-primary-actions button{width:100%;min-height:44px;text-align:center}
 }
 .landing-intro{padding:28px 0 20px}.landing-intro h1{font-size:clamp(32px,6vw,52px);line-height:1.05;letter-spacing:-1.6px;max-width:18ch;margin:16px 0}.landing-intro>p:not(.meta){font-size:17px;line-height:1.5;max-width:46ch}.landing-intro .cta{margin-top:22px}
 .launch-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,560px);gap:64px;align-items:center;padding:34px 0 28px}
@@ -399,7 +411,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   <div class="right">
     <span class="wide">Private by default</span>
     <span id="me" class="you"></span>
-    <button id="auth" class="ghost">Sign in<span class="wide"> with GitHub</span></button>
+    <button id="auth" class="ghost">Sign in</button>
   </div>
 </div></div>
 <nav id="mobile-product-nav" class="mobile-product-nav" aria-label="Primary">
@@ -902,11 +914,11 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
     <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
-    ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
-    ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
-    <div class="sub">${r.project?esc(r.project)+' · ':''}${esc(r.harness||'Coding agent')}${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
     ${output?`<div class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open what was built ↗</a></div>`:''}
+    ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
+    ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
+    <div class="sub">${r.project?esc(r.project)+' · ':''}<span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
     <div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
     ${r.tree?GrinderContract.tree(r.tree):''}
     <div class="run-key-facts"><div><span>Typed turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>Artifacts</span><strong>${r.artifacts_produced??'Unknown'}</strong></div><div><span>Commits</span><strong>${r.commits??'Unknown'}</strong></div></div>
@@ -1186,9 +1198,9 @@ function featuredCard(r,{sample=false}={}){
       <div class="who"><span>${esc(att.ghost?'Ghost grinder':att.name)}</span><small>${att.ghost?'metrics only':'@'+esc(att.handle)}${when?' · '+esc(when):''}</small></div>
       <span class="state${sample?' sample-label':''}">${sample?'SAMPLE':'Public run'}</span></div>
     <div class="title">${esc(r.title||'A run')}</div>
-    <div class="sub">${esc(r.harness||'agent')}${r.project?' · '+esc(r.project):''}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:sample?'<div class="note">An example activity trace. No real output is attached.</div>':''}
     ${r.output_url&&safeOutputUrl(r.output_url)?`<div class="note"><a class="primary-output" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer">Open what was built →</a></div>`:''}
+    <div class="sub"><span class="card-harness">${esc(r.harness||'agent')}</span>${r.project?' · '+esc(r.project):''}</div>
     ${curve(r.rhythm)}
     <div class="stats num">
       <div class="stat"><div class="v">${r.prompts??'—'}</div><div class="k">Typed turns</div></div>
@@ -1235,13 +1247,11 @@ const INSTALL_CMD="git clone https://github.com/Morkeeth/agentgrinder-public && 
 const COACH_CMD='python3.12 -m venv .venv && .venv/bin/pip install -e ".[coach]" && .venv/bin/agentgrinder grind --coach';
 function uploadBlock(){
   return `<div class="up">
-    <div class="up-top"><span class="t">Bring your own sitting</span><span class="meta">private by default · no account to capture</span></div>
+    <div class="up-top"><span class="t">Capture from Cursor or Grok Bot</span><span class="meta">private by default</span></div>
     <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
-    <div class="cmd"><span class="c plain">Reads the newest session on your machine and prints the card. No upload.</span></div>
-    <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span><span class="d">Preview → choose audience → post</span></div>
-    <div class="up-top" style="margin-top:2px"><span class="t">Then have the coach check it</span><span class="meta">needs Python 3.10 or newer</span></div>
-    <div class="cmd"><span class="c">${COACH_CMD}</span></div>
-    <div class="up-foot">Capture stays on your machine. Import starts private. You review counts and any coach notes before an audience other than you can read them. Evidence availability is on the card: a dash names what was not measured.</div>
+    <div class="cmd"><span class="c"><span class="card-harness">Cursor</span> · python3 -m agentgrinder grind --harness cursor --push</span><span class="d">opens a private preview</span></div>
+    <div class="cmd"><span class="c"><span class="card-harness">Grok Bot</span> · select an export on the bot's machine</span><a class="d" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Preview steps →</a></div>
+    <div class="up-foot">Capture stays on the machine where the session happened. Review the caption, output link and recorded fields, then choose an audience. A dash means the metric was not measured.</div>
   </div>`;
 }
 
@@ -1282,7 +1292,7 @@ function wireCopy(){
 function landingHTML(){
   return `<div class="launch-grid"><section class="landing-intro"><p class="meta">RUN CARDS FOR AGENT WORK</p>
     <h1>Every run your agent made, on a card you can share.</h1>
-    <p>Turn a Cursor, Claude Code or Codex session into a run card. Post your run. Follow builders. See what they ship.</p>
+    <p>Turn a Cursor, Grok Bot, Claude Code or Codex session into a run card. Post your run. Follow builders. See what they ship.</p>
     <div class="cta"><a class="act primary" href="/?onboard">Post your first run</a><a class="act" href="/?explore">Explore runs</a></div>
     <p class="hint">Capture locally. Preview privately. You choose what goes public.</p>
     </section>
@@ -1364,16 +1374,24 @@ async function viewRun(id){
   const suggested=suggestAckReasons(r);
   const preselect=q.get('reason')&&ACK_REASONS[q.get('reason')]?q.get('reason'):suggested[0];
   const openAck=q.get('ack')==='1'&&ME&&!ad.mine.has(r.id)&&ME.id!==r.profile_id;
+  const owner=ME?.id===r.profile_id;
+  const shareable=r.visibility==='public'||r.visibility==='link';
+  const profileUrl='/?u='+encodeURIComponent(profileHandle(r.profiles)||'');
+  const nextAction=owner
+    ? `<section class="run-primary-actions"><p><b>${r.visibility==='public'?'Saved to Public feed and profile':r.visibility==='link'?'Saved for anyone with the link':'Saved for Only me'}</b></p>
+        <div class="cta">${shareable?`<button id="run-copy-link" class="act blue">${r.visibility==='public'?'Copy public link':'Copy link'}</button>`:''}${r.visibility==='public'?`<a class="act" href="/?share=1&run=${r.id}">Open share card</a>`:''}</div>
+        <p class="hint">${shareable?(r.visibility==='public'?'This public run also has a clean share card.':'This unlisted run is readable by anyone who receives its URL.'):'Change the audience below when you deliberately want to share.'}</p></section>`
+    : `<section class="run-primary-actions"><p class="meta">FROM THIS RUN</p><div class="cta"><a class="act blue" href="${profileUrl}">Open builder profile</a>${r.visibility==='public'?`<a class="act" href="/?share=1&run=${r.id}">Share this run</a>`:''}</div><p class="hint">Follow is always your choice. No one is added automatically.</p></section>`;
   frame(null,null);
   app.innerHTML=`<div class="head"><h2>A run</h2><span class="meta">${esc(r.visibility==='public'?'public':r.crew_shared?'Crew members':r.visibility==='private'||r.visibility==='anonymous'?'private':'link only')}</span></div>`
     +runCard(r,ad.mine.has(r.id),ad.counts[r.id]||acks.length,{picker:openAck,suggested,selected:preselect})
+    +nextAction
     +`<section id="grind-thread"></section><div class="head"><h2>ACKs</h2><span class="meta">${acks.length}</span></div><div class="panel">`+ackListHtml(acks)+`</div>`
-    +`<div class="cta">${r.visibility==='public'||r.visibility==='link'?'<button id="run-copy-link">Copy run link</button>':''}<a class="act" href="/?share=1&run=${r.id}">Share card</a>
-      <span class="hint"><a href="/?u=${encodeURIComponent(profileHandle(r.profiles)||'')}">see the profile</a></span></div><section id="grind-feature"></section>`;
+    +`<section id="grind-feature"></section>`;
   const copyLink=$('run-copy-link');if(copyLink)copyLink.onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+'/?run='+r.id);copyLink.textContent='Link copied'}catch(_){status('Copy this page address to share your run.')}};
   if(ME?.id===r.profile_id){
     const controls=document.createElement('div');controls.className='panel reply-form';
-    controls.innerHTML='<h2>Edit your post</h2><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label>Who can read this run<select id="run-audience"><option value="private">Only me</option><option value="public">Public feed and profile</option><option value="link">Anyone with the link</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
+    controls.innerHTML='<h2>Edit your post</h2><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label>Who can read this run<select id="run-audience"><option value="private">Only me — just you</option><option value="link">Link — anyone with the URL</option><option value="public">Public — Feed and profile</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
     app.append(controls);$('run-caption').value=r.caption||r.note||'';$('run-output-url').value=r.output_url||'';$('run-audience').value=r.visibility==='anonymous'?'private':r.visibility;
     $('run-save').onclick=async()=>{const caption=$('run-caption').value.trim(),output=$('run-output-url').value.trim();if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}const {error}=await sb.from('runs').update({caption:caption||null,output_url:output||null,visibility:$('run-audience').value}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};
     $('run-delete').onclick=async()=>{if(!confirm('Delete this run and its discussion?'))return;const {error}=await sb.from('runs').delete().eq('id',r.id);if(error){status(error.message,true);return}history.replaceState(null,'','/?mine');viewMe()};
@@ -1407,6 +1425,7 @@ function postComposerHtml({first=false}={}){
     <div class="up-top"><span class="t">Capture from Cursor</span><span class="meta">local and private until you choose</span></div>
     <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
     <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span><span class="d">opens a private preview</span></div>
+    <div class="cmd"><span class="c"><span class="card-harness">Grok Bot</span> · use an explicitly selected export</span><a class="d" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Preview steps →</a></div>
     <div class="up-foot">The reader sends recorded counts and timing, never prompt text, code or file paths. You review every field before choosing an audience.</div>
   </div>`}
   <details class="panel manual-post">
@@ -1422,7 +1441,7 @@ function postComposerHtml({first=false}={}){
       <label>Link to what was built (optional)<input id="f_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
       <div class="row"><div><label>Typed turns</label><input id="f_prompts" type="number" min="0"></div><div><label>Minutes</label><input id="f_dur" type="number" min="0"></div><div><label>Commits</label><input id="f_commits" type="number" min="0"></div></div>
       <label>Who can see this run?
-        <select id="f_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me</option><option value="link">Anyone with the link</option><option value="public">Public feed and profile</option></select>
+        <select id="f_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me — just you</option><option value="link">Link — anyone with the URL</option><option value="public">Public — Feed and profile</option></select>
       </label>
       <p class="hint">Nothing is posted until you choose an audience and press the button.</p>
       <button id="publish">Save run</button>
@@ -1539,7 +1558,7 @@ function wireComposer(){
     }
     clearDraft();
     history.replaceState(null,'','/?run='+data.id);
-    status(audience==='private'?'Saved privately. Only you can see it.':'Run posted.');
+    status(audience==='private'?'Saved for Only me. Only you can see it.':audience==='link'?'Saved for anyone with the link. Copy the URL when you are ready.':'Saved to Public feed and profile. Copy the public link or open the share card.');
     viewRun(data.id);
   });
 }
@@ -1566,10 +1585,11 @@ async function viewProfile(handle){
   app.innerHTML=`<div class="phero">${avatar(handle,{size:36,agent:isAgentProfile(prof)})}
       <div><h1>${esc(prof.display_name||prof.name||handle)}</h1><div class="h">@${esc(handle)}${setup?' · '+esc(setup):''}</div></div></div>
     <div id="social-follow" class="social-follow"></div>
-    <div class="ptotals num"><div><div class="k">Public runs</div><div class="v" data-count="${mine?R.filter(r=>r.visibility==='public').length:R.length}">0</div></div><div><div class="k">ACKs received</div><div class="v" data-count="${acksR||0}">0</div></div></div>
     ${mine?`<details class="profile-settings"><summary>Edit profile</summary><div class="panel pad"><label>Handle<input id="e_handle" maxlength="40" value="${esc(handle)}"></label><label>Display name<input id="e_name" maxlength="60" value="${esc(prof.display_name||prof.name||'')}"></label><button id="savep">Save profile</button><div id="linked-accounts"><p class="meta">Sign-in methods, sign out on this device and profile deletion live in <a href="/?account">Account settings</a>.</p></div></div></details>`:''}
-    <div class="head"><h2>${mine?'Your runs':'Runs'}</h2><span class="meta">${R.length||'none yet'}${mine?` · <a href="/?share=1&u=${encodeURIComponent(handle)}">share your profile</a>`:''}</span></div>
-    ${R.length?(await (async()=>{const ad=await ackData(R);return R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('');})()):(mine?firstRunPrompt():'<div class="card"><div class="empty">No public runs yet. You can follow this builder now; their public runs will appear in Following when they post.</div></div>')}`;
+    <p class="profile-context">Identity first, then recent work. ACKs are recognition from people, not a quality score.</p>
+    <div class="head"><h2>${mine?'Your recent runs':'Recent public runs'}</h2><span class="meta">${R.length||'none yet'}${mine?` · <a href="/?share=1&u=${encodeURIComponent(handle)}">share your profile</a>`:''}</span></div>
+    ${R.length?(await (async()=>{const ad=await ackData(R);return R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('');})()):(mine?firstRunPrompt():'<div class="card"><div class="empty">No public runs yet. You can follow this builder now; their public runs will appear in Following when they post.</div></div>')}
+    <details class="profile-summary"><summary>Profile totals</summary><div class="ptotals num"><div><div class="k">Public runs</div><div class="v" data-count="${mine?R.filter(r=>r.visibility==='public').length:R.length}">0</div></div><div><div class="k">ACKs received</div><div class="v" data-count="${acksR||0}">0</div></div></div></details>`;
   wireFirstRunPrompt();
   wireKudos(); countUp();
   await social.followControl(prof,$('social-follow'));
@@ -1583,7 +1603,7 @@ function showSignIn(){
   try{sessionStorage.setItem('ag_social_return',location.search)}catch(_){}
   let dialog=$('signin-dialog');if(dialog)dialog.remove();
   dialog=document.createElement('dialog');dialog.id='signin-dialog';dialog.setAttribute('aria-labelledby','signin-title');
-  dialog.innerHTML='<h2 id="signin-title">Keep your run</h2><p id="signin-explanation">GitHub sign-in keeps your profile and responses connected, and runs stay private until you choose Public and post them.</p>'+PROVIDERS_ENABLED.filter(p=>p==='github').map(p=>'<button data-provider="'+p+'">Continue with GitHub</button>').join('')+'<form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public profile.</p><button>Send a sign-in link</button></form><p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
+  dialog.innerHTML='<h2 id="signin-title">Keep your place</h2><p id="signin-explanation">Sign in to keep your profile and responses connected. You will return to this preview or social action. Runs stay private until you choose Public and save them.</p><p class="hint">Closing or cancelling sign-in posts nothing and changes no audience.</p>'+PROVIDERS_ENABLED.filter(p=>p==='github').map(p=>'<button data-provider="'+p+'">Continue with GitHub</button>').join('')+'<form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public profile.</p><button>Send a sign-in link</button></form><p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
   document.body.append(dialog);dialog.showModal();$('signin-close').onclick=()=>dialog.close();
   dialog.querySelectorAll('[data-provider]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{await auth.signIn(button.dataset.provider,{returnTo:location.search})}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not start. Try again.';button.disabled=false}});
   $('signin-email').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,button=f.querySelector('button');button.disabled=true;try{await auth.signIn('email',{email:f.elements.email.value,returnTo:location.search});$('signin-state').textContent='Check your email for the sign-in link. Keep this tab open to return to your draft.'}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not connect. Try again.'}finally{button.disabled=false}};
@@ -1592,7 +1612,7 @@ function showSignIn(){
 function viewIdentitySetup(){
   frame(null,null);
   const suggestion=IDENTITY_SETUP?.suggestion||{};
-  $('app').innerHTML='<section class="card"><h1>Make this your profile</h1><p>Choose how friends see you. Your email stays private. No run is posted by signing in.</p><form id="identity-form" class="reply-form"><label>Handle<input name="handle" autocomplete="username" maxlength="40" required value="'+esc(suggestion.handle||'')+'"></label><label>Display name<input name="display_name" autocomplete="nickname" maxlength="60" required value="'+esc(suggestion.display_name||'')+'"></label><p id="identity-state" role="status"></p><button>Create profile</button></form></section>';
+  $('app').innerHTML='<section class="card pad"><p class="meta">YOUR PACECARD IDENTITY</p><h1>Make this your profile</h1><p>Choose how friends see you, then return to the run or action you started. No run is posted by creating a profile.</p><form id="identity-form" class="reply-form"><label>Handle<input name="handle" autocomplete="username" maxlength="40" required value="'+esc(suggestion.handle||'')+'"><span class="hint">Your public Pacecard address. You can change it later.</span></label><label>Display name<input name="display_name" autocomplete="nickname" maxlength="60" required value="'+esc(suggestion.display_name||'')+'"><span class="hint">The name shown beside your recent runs.</span></label><p class="hint">Your email stays private. Pacecard does not request access to your repositories.</p><p id="identity-state" role="status"></p><button>Create Pacecard profile</button></form></section>';
   $('identity-form').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,button=f.querySelector('button');button.disabled=true;try{const result=await auth.onboard({handle:f.elements.handle.value,display_name:f.elements.display_name.value,avatar_url:null});ME=result.profile;IDENTITY_SETUP=null;await refreshAuth();await route();}catch(error){$('identity-state').textContent=error.detail?.message||'Your profile could not be saved. Try again.';button.disabled=false;}};
 }
 
@@ -1648,24 +1668,26 @@ function importRun(){
   frame(null,null);
   app.innerHTML=`<div class="head"><h2>${sample?'Sample preview':'Preview your run'}</h2><span class="meta">${sample?'example data · not your activity':'private until you choose and save'}</span></div>
     ${sample?'<p role="note">This sample is for trying the preview. It cannot be saved or posted. Capture your own session to share a run.</p>':''}
-    <div class="panel">
-      ${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>
-    <div class="panel"><div class="pad">
-    <p class="hint export-contents" style="margin:0 0 12px">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
-    <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details><p class="hint" style="margin:12px 0">Review the imported details and any tool names you choose to share before publishing.</p>
+    <div class="panel"><div class="pad preview-story">
+    <p class="meta">STORY FIRST</p>
     <label>What did you build?<input id="i_title" maxlength="120" required placeholder="Title you write, not scraped" value="${esc(run.project||'')} session"></label>
-    <label>Model (optional)<input id="i_model" maxlength="120" value="${esc(run.model||'')}" placeholder="Model name"></label>
-    <label>Segment (optional)<select id="i_segment"><option value="">No segment</option></select></label>
-    <label>Segment wall time in seconds (optional)<input id="i_wall" type="number" min="0" step="1"></label>
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
-    <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;color:var(--muted)">
-      <input type="checkbox" id="i_share_rig" ${run.rig_share_names?'checked':''}> Share MCP names on my rig (opt-in)
-    </label>
-    <input id="i_stack" placeholder="stack notes for friends (optional)" value="${esc(run.rig_notes||'')}">
-    <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me</option><option value="public">Public feed and profile</option><option value="link">Anyone with the link</option></select></label>
-    <p class="hint">Choosing Public is the deliberate action that posts this run to the feed.</p>
+    <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me — just you</option><option value="link">Link — anyone with the URL</option><option value="public">Public — Feed and profile</option></select></label>
+    <p class="hint">Only me stays with you. Link is unlisted but readable by anyone with the URL. Choosing Public is the deliberate action that adds the run to Feed and your profile.</p>
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample — preview only':(ME?'Save run':'Sign in to save')}</button>
+    <details class="preview-details"><summary>Review recorded measurements and optional details</summary>
+      <p class="hint export-contents">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me. Unknown measurements stay unknown.</p>
+      <div class="panel">${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>
+      <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details>
+      <label>Model (optional)<input id="i_model" maxlength="120" value="${esc(run.model||'')}" placeholder="Model name"></label>
+      <label>Segment (optional)<select id="i_segment"><option value="">No segment</option></select></label>
+      <label>Segment wall time in seconds (optional)<input id="i_wall" type="number" min="0" step="1"></label>
+      <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;color:var(--muted)">
+        <input type="checkbox" id="i_share_rig" ${run.rig_share_names?'checked':''}> Share MCP names on my rig (opt-in)
+      </label>
+      <input id="i_stack" aria-label="Stack notes for friends (optional)" placeholder="stack notes for friends (optional)" value="${esc(run.rig_notes||'')}">
+    </details>
     <div id="i_recover" hidden></div></div></div>
     <div class="head"><h2>${sample?'Sample card preview':'Card preview'}</h2><span class="meta">not posted</span></div><div id="import-card-preview"></div>`;
   const editFields=['i_title','i_model','i_segment','i_wall','i_caption','i_output_url','i_stack','i_vis'];
@@ -1765,7 +1787,7 @@ function importRun(){
       if(rigError) throw rigError;
     }catch(_){ rigNote=' Your rig counts and notes were not updated; edit them from your profile.'; }
     try{localStorage.setItem('ag_onboard_done','1');sessionStorage.removeItem('ag_import');sessionStorage.removeItem('ag_import_edits')}catch(_){}
-    history.replaceState(null,'','/?run='+published.id);status((base.visibility==='private'?'Saved privately. You can make it public when you are ready.':'Run published. Copy its link to share.')+rigNote);
+    history.replaceState(null,'','/?run='+published.id);status((base.visibility==='private'?'Saved for Only me. Change the audience when you deliberately want to share.':base.visibility==='link'?'Saved for anyone with the link. Copy the URL when you are ready.':'Saved to Public feed and profile. Copy the public link or open the share card.')+rigNote);
     await viewRun(published.id);
     }catch(unexpected){showRecovery(unexpected)}finally{publishButton.disabled=false}
 

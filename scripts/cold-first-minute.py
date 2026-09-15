@@ -16,8 +16,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT = Path("/tmp/agentgrinder-cold-first-minute")
 EXPLANATION = (
-    "GitHub sign-in keeps your profile and responses connected, and runs stay "
-    "private until you choose Public and post them."
+    "Sign in to keep your profile and responses connected. You will return to "
+    "this preview or social action. Runs stay private until you choose Public and save them."
 )
 
 SUPABASE_FIXTURE = """

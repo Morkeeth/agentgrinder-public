@@ -68,6 +68,7 @@ On the hosted page, review the white card and blue trace. Missing measurements r
 Write only public-facing title, caption and optional HTTPS output link. Leave the audience unset
 to stop at preview. Saving requires an intentional choice of **Only me**, **Anyone with the
 link**, or **Public feed and profile**, followed by **Save run**.
+Production Auth allowlisting for this origin remains a separate configuration check.
 
 The equivalent explicit-origin command is:
 
