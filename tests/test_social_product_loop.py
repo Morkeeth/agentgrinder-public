@@ -8,10 +8,12 @@ SOCIAL = (ROOT / "site" / "social.js").read_text()
 MIGRATION = (ROOT / "supabase" / "migrations" / "2026-09-14-run-post-fields.sql").read_text()
 
 
-def test_post_page_exposes_cursor_capture_and_private_preview():
+def test_post_page_exposes_priority_harnesses_and_private_preview():
     block = INDEX[INDEX.index("async function viewPost()") : INDEX.index("async function viewExplore()")]
     assert "Capture from Cursor" in INDEX
     assert "python3 -m agentgrinder grind --harness cursor --push" in INDEX
+    assert "Grok Bot" in block
+    assert "docs/GROK-PUSH.md" in block
     assert "capture → preview → choose audience" in block
     assert "private until you choose" in INDEX
 
@@ -22,6 +24,9 @@ def test_card_shows_builder_project_session_caption_and_output():
     for field in ("project", "started_at", "duration_s", "caption", "output_url"):
         assert field in card
     assert "Open what was built" in card
+    assert card.index("${r.caption?") < card.index('<div class="sub">${r.project?')
+    assert card.index("${output?") < card.index('<div class="sub">${r.project?')
+    assert "card-harness" in card
     assert "Counts describe recorded activity, not quality." in card
     assert "vptHtml(r)" not in card
 

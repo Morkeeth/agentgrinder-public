@@ -4,6 +4,29 @@ Reviewed with the active Grok Bot on 14 September 2026. This is a proposed execu
 
 A builder finishes something with an agent, posts a card they want to show, gets a specific response from another builder, and comes back to continue the conversation. The ambition is a daily social home for agent builders, with a simple first experience.
 
+## Tonight's core handoff · 15 September
+
+Merge the reviewable core in dependency order: **#27 capture from the builder's own project → #28
+journey map and idempotent Save → #23 two-person checklist**, resolving only the conflicts needed
+to preserve that path. Then deploy the merged tip and record a new deployment receipt. The latest
+supplied receipt remains `726f8a57`; a live-source observation is not a newer Vercel receipt.
+
+After deployment, Codex confirms that the Auth allowlist accepts
+`https://agentic-strava.vercel.app`. Only then do Oscar and one consenting friend walk capture →
+private preview → deliberate audience/Save → follow/ACK/reply → Responses return with their own
+safe runs. Keep local, tested, deployed and used evidence separate.
+
+#26 Close friends and Pacecard OG and #29 the private Cursor hook/ridge are next after the core.
+Close friends still needs its migration before that audience can ship; the public-only OG slice can
+land independently if reviewed. Keep #29 local-only unless storage is separately decided. #20 was
+merged despite the hold: do not expand segments.
+
+Exact Codex paste:
+
+```text
+merge #27+#28+#23, deploy tip, confirm Auth allowlist, then two-person walk.
+```
+
 ## 1. Land the social loop
 
 Merge the reviewed post, caption, output link, profile and Responses work with the contributor setup. Keep the white card and blue trace. Verify private/public/link audience behaviour, owner-only edits and deletion, captions and safe output links, and desktop/mobile layouts. Record exact tested commits. Keep the Grok adapter in a separate PR so an active worker cannot change the object being reviewed.

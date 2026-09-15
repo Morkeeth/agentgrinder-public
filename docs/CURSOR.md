@@ -53,6 +53,20 @@ local-only checkout. A configured hosted product origin and sign-in are separate
 do not substitute the hackathon service. The workspace MCP config also disables inherited
 agent-write credentials.
 
+## Open a reviewed preview on the live product
+
+After checking the card locally, point the import URL at the approved Pacecard origin:
+
+```sh
+AGENTGRINDER_URL=https://agentic-strava.vercel.app \
+python3 -m agentgrinder grind --harness cursor --push
+```
+
+This changes the preview URL only. It does not upload the session, choose an audience or save a
+run. In the browser, confirm the account, caption, output link and recorded fields before choosing
+**Only me**, **Anyone with the link** or **Public feed and profile** and pressing **Save run**.
+Production Auth allowlisting for this origin remains a separate configuration check.
+
 The MCP protocol and reader tests can be exercised without a personal session:
 
 ```sh

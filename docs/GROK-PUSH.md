@@ -9,10 +9,11 @@ Save is available only on the approved hosted Pacecard URL. Localhost can previe
    ```sh
    python3 templates/grokbot/post-agent-run/scripts/preview.py \
      path/to/selected-export.jsonl \
-     --base-url https://<approved-agentic-strava-origin>
+     --base-url https://agentic-strava.vercel.app
    ```
 
-   Until that hosted URL exists, omit `--base-url`, start `python3 scripts/dev.py serve`, and use the localhost URL for preview only.
+   The approved live origin is `https://agentic-strava.vercel.app`. Omit `--base-url`, start
+   `python3 scripts/dev.py serve`, and use localhost when you want a local-only preview.
 4. Open the generated import URL. Inspect every imported field. The helper makes no post.
 5. Write the title, caption and optional HTTPS link to what was built.
 6. Deliberately choose **Only me**, **Anyone with the link** or **Public feed and profile**, then press **Save run**.

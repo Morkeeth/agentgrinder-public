@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pacecard</title>
-<meta name="description" content="Turn a Cursor, Claude Code or Codex session into a run card. Post your runs and see what other builders are making. Private until you choose to share.">
+<meta name="description" content="Turn a Cursor, Grok Bot, Claude Code or Codex session into a run card. Post your runs and see what other builders are making. Private until you choose to share.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/design.css">
@@ -150,7 +150,8 @@ a.act{display:inline-block;text-decoration:none}
 .state.off{color:var(--dim);font-weight:400}
 .c-title,.title{font-size:14px;font-weight:500;padding:14px 16px 0}
 .sub{padding:4px 16px 0;font-size:13px;color:var(--soft)}
-.note{padding:8px 16px 0;font-size:14px}
+.card-harness{color:var(--ink);font-weight:500}
+.note{padding:8px 16px 0;font-size:14px;line-height:1.55}
 .grp{padding:14px 16px 0;font-size:11px;color:var(--dim)}
 .para{padding:6px 16px 0;font-size:14px;line-height:1.6}
 .plan{margin:6px 16px 0;padding-left:18px;font-size:13px;line-height:1.55;color:var(--soft)}
@@ -904,9 +905,9 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
     ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
     ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
-    <div class="sub">${r.project?esc(r.project)+' · ':''}${esc(r.harness||'Coding agent')}${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
     ${output?`<div class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open what was built ↗</a></div>`:''}
+    <div class="sub">${r.project?esc(r.project)+' · ':''}<span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
     <div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
     ${r.tree?GrinderContract.tree(r.tree):''}
     <div class="run-key-facts"><div><span>Typed turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>Artifacts</span><strong>${r.artifacts_produced??'Unknown'}</strong></div><div><span>Commits</span><strong>${r.commits??'Unknown'}</strong></div></div>
@@ -1186,9 +1187,9 @@ function featuredCard(r,{sample=false}={}){
       <div class="who"><span>${esc(att.ghost?'Ghost grinder':att.name)}</span><small>${att.ghost?'metrics only':'@'+esc(att.handle)}${when?' · '+esc(when):''}</small></div>
       <span class="state${sample?' sample-label':''}">${sample?'SAMPLE':'Public run'}</span></div>
     <div class="title">${esc(r.title||'A run')}</div>
-    <div class="sub">${esc(r.harness||'agent')}${r.project?' · '+esc(r.project):''}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:sample?'<div class="note">An example activity trace. No real output is attached.</div>':''}
     ${r.output_url&&safeOutputUrl(r.output_url)?`<div class="note"><a class="primary-output" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer">Open what was built →</a></div>`:''}
+    <div class="sub"><span class="card-harness">${esc(r.harness||'agent')}</span>${r.project?' · '+esc(r.project):''}</div>
     ${curve(r.rhythm)}
     <div class="stats num">
       <div class="stat"><div class="v">${r.prompts??'—'}</div><div class="k">Typed turns</div></div>
@@ -1235,13 +1236,11 @@ const INSTALL_CMD="git clone https://github.com/Morkeeth/agentgrinder-public && 
 const COACH_CMD='python3.12 -m venv .venv && .venv/bin/pip install -e ".[coach]" && .venv/bin/agentgrinder grind --coach';
 function uploadBlock(){
   return `<div class="up">
-    <div class="up-top"><span class="t">Bring your own sitting</span><span class="meta">private by default · no account to capture</span></div>
+    <div class="up-top"><span class="t">Capture from Cursor or Grok Bot</span><span class="meta">private by default</span></div>
     <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
-    <div class="cmd"><span class="c plain">Reads the newest session on your machine and prints the card. No upload.</span></div>
-    <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span><span class="d">Preview → choose audience → post</span></div>
-    <div class="up-top" style="margin-top:2px"><span class="t">Then have the coach check it</span><span class="meta">needs Python 3.10 or newer</span></div>
-    <div class="cmd"><span class="c">${COACH_CMD}</span></div>
-    <div class="up-foot">Capture stays on your machine. Import starts private. You review counts and any coach notes before an audience other than you can read them. Evidence availability is on the card: a dash names what was not measured.</div>
+    <div class="cmd"><span class="c"><span class="card-harness">Cursor</span> · python3 -m agentgrinder grind --harness cursor --push</span><span class="d">opens a private preview</span></div>
+    <div class="cmd"><span class="c"><span class="card-harness">Grok Bot</span> · select an export on the bot's machine</span><a class="d" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Preview steps →</a></div>
+    <div class="up-foot">Capture stays on the machine where the session happened. Review the caption, output link and recorded fields, then choose an audience. A dash means the metric was not measured.</div>
   </div>`;
 }
 
@@ -1282,7 +1281,7 @@ function wireCopy(){
 function landingHTML(){
   return `<div class="launch-grid"><section class="landing-intro"><p class="meta">RUN CARDS FOR AGENT WORK</p>
     <h1>Every run your agent made, on a card you can share.</h1>
-    <p>Turn a Cursor, Claude Code or Codex session into a run card. Post your run. Follow builders. See what they ship.</p>
+    <p>Turn a Cursor, Grok Bot, Claude Code or Codex session into a run card. Post your run. Follow builders. See what they ship.</p>
     <div class="cta"><a class="act primary" href="/?onboard">Post your first run</a><a class="act" href="/?explore">Explore runs</a></div>
     <p class="hint">Capture locally. Preview privately. You choose what goes public.</p>
     </section>
@@ -1407,6 +1406,7 @@ function postComposerHtml({first=false}={}){
     <div class="up-top"><span class="t">Capture from Cursor</span><span class="meta">local and private until you choose</span></div>
     <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
     <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span><span class="d">opens a private preview</span></div>
+    <div class="cmd"><span class="c"><span class="card-harness">Grok Bot</span> · use an explicitly selected export</span><a class="d" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Preview steps →</a></div>
     <div class="up-foot">The reader sends recorded counts and timing, never prompt text, code or file paths. You review every field before choosing an audience.</div>
   </div>`}
   <details class="panel manual-post">
