@@ -18,19 +18,26 @@ Free posting and browsing. Recognition comes from real people seeing and respond
 
 ## First useful test
 
-Two people each post a safe real run to the independent service. Each can open the other’s profile, follow and respond. A stranger understands the card without a tour. The current clone still needs its dedicated database schema and hosting before this can be tested publicly.
+Two people each post a safe real run to the hosted app. Each can open the other’s profile, follow and respond. A stranger understands the card without a tour. The service exists; this test still needs two people who are not the owner.
 
 ## Two repositories
 
-This repository is the public product. Morkeeth/agentgrinder remains the hackathon build. Historical code and docs are retained for reference; they do not define this product’s scope.
+This repository is the public product. Morkeeth/agentgrinder remains the hackathon build. Historical code and docs are retained under `archive/hackathon-2026-09/` for reference; they do not define this product’s scope.
 
-## Public release requirements · 14 September
+## What exists · 15 September
 
-- Dedicated `strava` schema in the shared Grinder Supabase project, with separate website hosting under an approved product brand and domain. Auth and infrastructure are shared; app data and profiles are separate.
-- GitHub and X sign-in with linked identities belonging to one profile. Origin means Cursor’s code forge. Plan repository connection; ordinary personal sign-in support still needs verification.
-- Find and follow friends, browse their runs in Following, open their profiles and continue conversations from Responses. Make these paths useful even with a small personal network.
-- A reusable Grok Bot post-run template is required. Source lives in `templates/grokbot/`; second-bot installation and real hosted posting must be verified before calling it released.
+- Hosted at [agentic-strava.vercel.app](https://agentic-strava.vercel.app) on Vercel. App data lives in a dedicated `strava` schema in a Supabase project whose Auth is shared with the hackathon build; app data and profiles are separate. `/api/health` reports the database state.
+- Sign-in with GitHub or an email link. One profile per account, with a handle and display name you can edit.
+- Feed, post a run, My runs, profiles, follow, Following, ACK, reply and a Responses inbox. The public feed is new and mostly empty.
+- Local capture: `python3 -m agentgrinder grind --harness cursor` reads a real Cursor session with no keys and writes a card to `./grind.html`.
+- A Grok Bot post-run template in `templates/grokbot/`. It is source to install; no second bot has been observed using it.
 
-Proposed extension for review: privately mark close friends and offer a Close friends posting audience. Ordinary follows already exist; a private audience needs its own server-enforced access and revocation tests, not just a client-side feed filter. No contact upload or automatic social-network following is implied.
+## Open
 
-Brand direction for review: “See what your friends are building.” Keep the white cards and blue activity trace. Final name/domain and purchase cost need owner approval. No name has been changed or domain purchased.
+- X sign-in. The account panel says it is not available; no provider is configured.
+- Origin (Cursor’s code forge) repository linking. No app is registered and no button is enabled.
+- Close friends: privately mark people and post to a Close friends audience. Needs server-enforced access and revocation tests, not a client-side filter. No contact upload or automatic following is implied.
+- Grok Bot verification: a second bot installing the kit and previewing its own export.
+- A verified first useful test with two people who are not the owner.
+
+Brand direction: “See what your friends are building.” Keep the white cards and blue activity trace. The name and domain are the owner’s call; none has been purchased.

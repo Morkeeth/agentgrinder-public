@@ -25,7 +25,7 @@ python3 scripts/dev.py setup
 python3 scripts/dev.py check
 ```
 
-**Current status:** local capture, cards and UI are available. This public repo does not yet have its hosted Strava schema or service. Sign-in, public posting and social interactions need that setup. The localhost defaults stay offline from production. The approved deployment shares Supabase Auth and infrastructure with Grinder, using a separate `strava` schema for all app data.
+**Current status:** the app is live at [agentic-strava.vercel.app](https://agentic-strava.vercel.app). Sign in with GitHub or an email link, post a run, follow people and reply. The feed is new and mostly empty; the first runs you see may be your own. Local capture works offline with no account. This checkout defaults to localhost and does not connect to the hosted database unless you configure it. The hosted app runs on Vercel with a Supabase `strava` schema; see [CONTRIBUTING.md](CONTRIBUTING.md) for the setup notes.
 
 ## Build in Cursor or Grok Bot
 
@@ -41,11 +41,11 @@ To capture your own Cursor session locally:
 python3 -m agentgrinder grind --harness cursor
 ```
 
-No model API key is required for local capture. Review generated cards before sharing. A sample can help with development; it must stay labelled as sample data.
+No model API key or account is required. The command reads a Cursor session on this machine, writes `./grind.html` and records counts in `~/.agentgrinder/series.db` in your home directory (pass `--no-series` to skip that). Review generated cards before sharing. A sample can help with development; it must stay labelled as sample data.
 
 ## What help matters now?
 
-Make first-run instructions easier, improve the card on a phone, test keyboard access, report a reproducible bug, or help connect the independent social preview. [First contributions](docs/FIRST-PR.md) give starting files and a clear outcome. [Open issues](https://github.com/Morkeeth/agentgrinder-public/issues) show reported work; check before starting something large.
+Make first-run instructions easier, improve the card on a phone, test keyboard access, report a reproducible bug, or improve the empty states a new user meets in a feed with few runs. [First contributions](docs/FIRST-PR.md) and [issues to open](docs/ISSUES-TO-OPEN.md) give starting files and a clear outcome. [Open issues](https://github.com/Morkeeth/agentgrinder-public/issues) show reported work; check before starting something large.
 
 Small fixes can go straight to a PR. Discuss new features in an issue first. Contributors review their agent-generated changes and explain what they tested. [Maintainer process](docs/MAINTAINING.md) explains how changes are triaged and reviewed.
 
@@ -53,6 +53,6 @@ Small fixes can go straight to a PR. Discuss new features in an issue first. Con
 
 The main loop is **capture → preview → post → browse**. Coaching programmes, comparison dashboards, Crews and challenges are outside the main app. Free posting and browsing must not require paid inference.
 
-This project started from [the separate Agent Grinder hackathon repo](https://github.com/Morkeeth/agentgrinder) at `5828f39ec4cfeaa63c1cc53e3acdc92589a2ca1a`. History and attribution are preserved. Historical docs and screenshots describe that source release, not a new hosted service. [Technical history](docs/TECHNICAL-HISTORY.md).
+This project started from [the separate Agent Grinder hackathon repo](https://github.com/Morkeeth/agentgrinder) at `5828f39ec4cfeaa63c1cc53e3acdc92589a2ca1a`. History and attribution are preserved. Hackathon docs and screenshots live under `archive/hackathon-2026-09/` and describe that source release, not this service. [Technical history](docs/TECHNICAL-HISTORY.md).
 
 [MIT license](LICENSE). Contributions are distributed under the same license.

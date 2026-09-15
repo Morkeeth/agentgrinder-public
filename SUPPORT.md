@@ -24,6 +24,6 @@ A short, redacted error or screenshot is enough. Never paste API keys, sign-in l
 - **“Run setup first”:** run `python3 scripts/dev.py setup` from your checkout, then retry `check`.
 - **JavaScript checks not run:** install Node 20+ and retry `python3 scripts/dev.py check`.
 - **No Cursor session found:** the reader needs a supported session on the machine where it runs. A cloud bot cannot see your laptop’s files. Report a redacted format mismatch; do not attach the full session.
-- **Sign-in or feed does not work locally:** this checkout is not connected to a working database. See the current status in README and the independent deployment section in CONTRIBUTING.
+- **Sign-in or feed does not work locally:** a local checkout is not connected to a database. Use the hosted app at https://agentic-strava.vercel.app, or set up your own database as described in CONTRIBUTING.
 
 If a missing instruction caused the problem, a small documentation PR is a useful contribution too.

@@ -18,10 +18,10 @@ Start: `site/index.html` (`runCard`), `site/sharing.js`, `server/public-run.mjs`
 
 Improve phone layout and make the project, caption and link to the output easy to understand. Success: someone who did not build the project can tell what the run produced. Keep the white card and blue trace.
 
-## 3. Independent social preview
+## 3. Empty states in a new feed
 
-Start: `CONTRIBUTING.md` deployment section, `scripts/migration-order.txt`, `site/social.js`.
+Start: `site/index.html` (feed, Following and profile views), `site/social.js`.
 
-Connect a separate development database and preview deployment. Success: two labelled test accounts can post, follow and reply, and private runs stay private. This needs project access; never use the hackathon service. Do not publish test users as real adoption.
+The hosted app at https://agentic-strava.vercel.app is new and its feed is mostly empty. Make the empty feed, empty Following list and empty profile explain what to do next. Success: a first visitor with no follows knows how to post a run or find a person. No database is needed; the local shell shows the same states. More starting points with files and done-when lines: [docs/ISSUES-TO-OPEN.md](ISSUES-TO-OPEN.md).
 
 Use a branch, show the changed path, and open a PR. Small copy/design fixes are welcome without an issue. The bot can implement; the contributor still reviews what it built.
