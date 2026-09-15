@@ -128,20 +128,31 @@ Both hand the human to the same Pacecard account, audience control and saved-run
 Each item stays inside the locked core loop. “Owner request” means a precise handoff recorded here;
 no message was sent.
 
-### 1. Prove hosted auth and two-person return
+### 1. Capture from the builder's own project into one private hosted preview
 
-- **User problem:** healthy pages do not prove that a private draft survives real Auth or that
-  one person can respond to another.
-- **Evidence / route:** live `/api/health` is ready; `/?post`, `/?inbox`, `/?run=` and `/?u=` exist.
-  The exact Auth allowlist remains unverified and no two-consenting-user receipt exists.
-- **Desired behavior:** two people each save one reviewed safe run, open the other profile,
-  follow, ACK/reply, and later return through Responses to the exact conversation.
-- **Boundary:** no production SQL/Auth changes in this assignment; follow PR 23's owned script.
-- **Owner:** Oscar for approval/config access; Grok Bot for test coordination and first-user polish.
-- **Dependency:** verify `https://agentic-strava.vercel.app/**` in the shared callback allowlist
-  without changing Site URL; agree identities, safe sessions and audience.
-- **Acceptance proof:** PR 23's checklist completed by two consenting people, with redacted
-  device/step evidence. Fixtures do not count.
+- **User problem:** current Cursor onboarding starts in the Pacecard source repository and
+  “latest” can select a different sitting than the one the builder intends to share. Grok source
+  exists, but a second bot installation and explicit real export remain unverified.
+- **Evidence / route:** `docs/CURSOR.md`, `.cursor/mcp.json`, CLI `--list`, explicit session and
+  `--pick`; `docs/GROK-BOT.md`, `docs/GROK-PUSH.md`, `templates/grokbot/` and its preview helper.
+  Safe local walks proved exact Cursor CLI selection and labelled Grok sample preview, not the
+  complete owner workflow.
+- **Desired behavior:** from the person's own project, list and deliberately choose one exact
+  Cursor project/session/sitting; or explicitly select one Grok JSONL export on the bot's cloud
+  computer. Both return a private
+  `https://agentic-strava.vercel.app/#import=…` preview to the human.
+- **Boundary:** no capture or template implementation in this PR; no laptop-session claim from
+  Cloud; no raw transcript in an agent payload; no automatic publish.
+- **Owner request:** Grok Bot owns Cursor session selection and Grok export → private hosted
+  preview implementation. Existing capture lanes remain separate.
+- **Dependency:** Cursor's documented
+  [project/global MCP configuration](https://cursor.com/docs/mcp), and Grok's documented
+  [persistent cloud computer](https://cursor.com/docs/grok-bot). Neither documents a Pacecard
+  native Save or a public deep link selecting an exact local Cursor sitting.
+- **Acceptance proof:** clean machine with two Cursor sittings in different own projects selects
+  the requested non-latest sitting; a second Grok Bot invokes the installed complete source kit
+  on an explicitly selected real export; both previews use the live origin, expose only
+  allowlisted fields, keep unknowns unknown and stop before Save.
 
 ### 2. Make every Save retry honest and idempotent
 
@@ -159,49 +170,27 @@ no message was sent.
 - **Acceptance proof:** forced offline and committed-but-response-lost tests each create at most
   one row, preserve fields/audience, and name the final audience.
 
-### 3. Put Cursor capture in the user's own project and require exact selection
+### 3. Make the first post understandable and deliberate
 
-- **User problem:** current onboarding starts in the Pacecard source repository and “latest”
-  can select a different sitting than the one the builder intends to share.
-- **Evidence / route:** `docs/CURSOR.md` steps 1–4; `.cursor/mcp.json`;
-  `agentgrinder/mcp_server.py` `list_sessions`/`preview_run`; CLI `--list`, explicit session and
-  `--pick`. Safe local walk proved exact CLI selection works but is undocumented.
-- **Desired behavior:** from the user's own project, install/enable the local MCP or CLI, list
-  eligible sittings, select one exact project/session/sitting, preview, then hand off to the
-  approved hosted origin.
-- **Boundary:** local metadata only; no cloud claim about laptop files; no raw transcript in an
-  agent payload.
-- **Owner request:** Pacecard hook/ridge run
-  `bc-d22ad316-cdde-45dd-9094-c094a8b1eec1` (running when rechecked) for capture hook/ridge;
-  Cursor integration owner for exact-session selector/docs.
-- **Dependency:** reconcile workspace MCP installation with Cursor's documented
-  [project and user MCP configuration](https://cursor.com/docs/mcp). Project `.cursor/mcp.json`
-  is rooted in the person's workspace; `~/.cursor/mcp.json` is global. Do not require cloning
-  Pacecard as the active work project.
-- **Acceptance proof:** clean machine, two eligible sittings in different projects, chosen
-  non-latest sitting appears in preview, no prompt/code/path is exported, hosted Save remains a
-  human click.
+- **User problem:** the cold Post route switches from “share my work” to cloning Pacecard, before
+  clearly showing own-project selection. With no public runs visible, the first builder also
+  cannot rely on social proof to explain why the card is useful.
+- **Evidence / route:** live `/`, `/?post`, `/?explore`; `importRun()` preview; `runCard()`. The
+  cold browser saw only a labelled sample and empty discovery. It did see accurate private-first
+  and sign-in copy.
+- **Desired behavior:** preview the exact white card/blue trace before any write; put the
+  builder-authored caption and optional output link first; show account and non-default
+  Only me/Link/Public choice; Save once and name the resulting audience.
+- **Boundary:** no invented public content, new discovery feature, auto-follow/ACK, ranking,
+  Close friends or card-ridge work. Grok-owned first-user/capture polish stays separate.
+- **Owner:** this PR owns the journey evidence and unowned Save/first-post boundary; Grok Bot owns
+  capture-side first-user clarity.
+- **Dependency:** item 1 supplies one exact reviewed preview; item 2 supplies safe Save.
+- **Acceptance proof:** at phone and desktop widths, a fresh signed-in TEST DATA account can
+  inspect all imported fields, cannot save without caption/audience, sees unknown metrics as
+  unknown, and lands on one saved run whose status names its audience.
 
-### 4. Complete the Grok owner handoff
-
-- **User problem:** a source kit is not an installed workflow, and placeholder origin text makes
-  the final destination ambiguous.
-- **Evidence / route:** `docs/GROK-BOT.md`, `docs/GROK-PUSH.md`,
-  `templates/grokbot/INSTALL.md`, skill `SKILL.md`, and `scripts/preview.py`.
-- **Desired behavior:** bot explicitly exports/selects one sitting on its own cloud computer,
-  invokes the complete installed source kit, and returns
-  `https://agentic-strava.vercel.app/#import=…` to its human for account/audience review.
-- **Boundary:** no template rebuild in this PR; no laptop access claim; no automatic publish,
-  follow, ACK or reply.
-- **Owner request:** Grok Bot owner.
-- **Dependency:** current official Grok docs establish a persistent shared cloud computer with
-  filesystem/browser/terminal ([Grok Bot](https://cursor.com/docs/grok-bot)) and
-  [skills as files](https://cursor.com/docs/skills); they do not establish Pacecard-native export
-  or one-click marketplace installation for this source directory.
-- **Acceptance proof:** separate receipts for source available, installed on a second bot, real
-  export previewed, and owner-saved hosted run. Only the first is established.
-
-### 5. Preserve exact Responses navigation under all target states
+### 4. Preserve respond → exact conversation → return
 
 - **User problem:** a response is useful only if it returns the builder to what the friend said.
 - **Evidence / route:** `site/social.js` `notificationHref`, `thread`, `inbox`;
@@ -215,47 +204,34 @@ no message was sent.
 - **Acceptance proof:** existing disposable two-account browser check passes deep reply beyond
   325 loaded rows, missing reply, missing/private run, unread marking and return.
 
-### 6. Turn zero-content/friend discovery into the first real conversation
+### 5. Prove the hosted loop with two people and one later return
 
-- **User problem:** without another builder, Feed and Responses cannot demonstrate why to return.
-- **Evidence / route:** `/?explore`, `/?people`, `/?following`, empty `/?inbox`.
-- **Desired behavior:** explicit find/follow/profile-share choices and truthful empty states lead
-  to one consenting friend's response.
-- **Boundary:** no invented users, contact upload, auto-follow, auto-ACK or broad outreach.
-- **Owner request:** Grok Bot's reserved friends/first-user polish.
-- **Dependency:** item 1's consenting participant; public or link-visible safe runs.
-- **Acceptance proof:** observed friend arrival and deliberate response, not seeded fixture data.
-
-### 7. Validate day-two behavior before adding motivation surfaces
-
-- **User problem:** the product promise is return for people, not one-time card generation.
-- **Evidence / route:** Responses → exact thread → Post/My runs; no real later-day observation.
-- **Desired behavior:** builder returns because a person responded, continues the conversation,
-  and optionally posts a genuinely new sitting.
-- **Boundary:** no streak, ranking-as-quality, coaching, challenge or Crew.
-- **Owner:** product coordinator after item 1.
-- **Dependency:** a real response and a later visit.
-- **Acceptance proof:** one participant later opens Responses and reaches the exact conversation;
-  a second post, if made, has a distinct capture revision.
-
-### 8. Resolve current scope/repository conflicts without reverting owners
-
-- **User problem:** current main and live bytes contain the PR 20 segment leaderboard, while the
-  governing completion plan explicitly holds comparison/ranking until real two-person use.
-- **Evidence / route:** merged PR 20, `/?segment=`, `site/segments.js`,
-  `supabase/strava/001_segments.sql`; the migration is intentionally unapplied.
-- **Desired behavior:** the locked core remains the priority and ranking is not presented as
-  quality or the reason to return.
-- **Boundary:** this PR does not revert PR 20, expand it, invoke the route in acceptance, or run
-  its SQL.
-- **Owner:** Oscar resolves the product-state mismatch.
-- **Dependency:** item 1 real-use evidence and explicit decision.
-- **Acceptance proof:** recorded owner decision: continue holding the surface or deliberately
-  reopen scope after acceptance.
+- **User problem:** healthy bytes and disposable fixtures do not prove a private draft survives
+  real Auth or that one person can respond to another and bring them back.
+- **Evidence / route:** live `/api/health` is ready; `/?post`, `/?u=`, `/?run=` and `/?inbox`
+  exist. PRs 21/22 are merged. The exact Auth allowlist and two-person acceptance remain
+  unverified; PR 23 owns the checklist.
+- **Desired behavior:** two consenting people each save one reviewed safe run, open the other's
+  profile, follow, ACK/reply, and return through Responses to the exact conversation. One returns
+  later because of that response and may capture a genuinely new sitting.
+- **Boundary:** no production SQL/Auth changes or contact from this PR; no fixture counted as
+  acceptance; no leaderboard, streak or invented engagement as a return reason.
+- **Owner:** Codex owns exact Auth redirect confirmation; Grok Bot coordinates the real
+  two-person test; Oscar approves participants/accounts/audiences and records the product result.
+- **Dependency:** confirm `https://agentic-strava.vercel.app/**` without changing the shared Site
+  URL, then follow PR 23 with two approved identities and safe sessions.
+- **Acceptance proof:** PR 23's checklist completed in both directions with redacted
+  device/step evidence, plus one later Responses visit that reaches the exact reply. A second
+  post, if made, has a distinct capture revision.
 
 PR 26 now owns Close friends and OG implementation. Close friends remains later/outside this
 assignment even though that PR is open; this review neither adopts its audience nor edits its SQL.
-The same applies to the reserved card ridge and Grok capture/template lanes.
+The same applies to the reserved card ridge, friends/sharing lanes and Grok capture/template
+implementation.
+
+PR 20's segment client is present in current main/live despite the earlier hold. This map records
+that coordination mismatch only; it does not add a segment build item, touch leaderboard code or
+run its SQL.
 
 ## State ledger
 
@@ -267,7 +243,7 @@ The same applies to the reserved card ridge and Grok capture/template lanes.
 | Grok adapter/source kit | Yes | Labelled samples only | Hosted import URL generated | Second-bot install/use unverified |
 | Draft through cancelled/failed auth | Yes | Disposable fixture | Allowlist/callback unverified | Unverified |
 | Imported idempotent save/recovery | Yes | Baseline passed; wording changed here | Prior implementation hosted | Unverified |
-| Manual idempotent save/recovery | This PR | Final disposable check required | Not hosted | No |
+| Manual idempotent save/recovery | This PR | 37-check disposable recovery walk passed | Not hosted | No |
 | Public/link/private policy paths | Yes | Disposable data | Database healthy; exact live use not performed | Unverified |
 | Follow/Following/ACK/reply | Yes | Disposable two-account fixture | Source is hosted | Unverified |
 | Exact Responses return/unavailable target | Yes | Disposable two-account fixture passed | Source is hosted | Unverified |
