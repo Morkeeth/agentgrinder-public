@@ -18,7 +18,7 @@
     if (error) return { kind: "error", connections, message: String(error.message || error) };
     if (outcome === "disconnected") return { kind: "disconnected", connections };
     if (connections.length) return { kind: "connected", connections };
-    return { kind: configured ? "connect" : "empty", connections: [] };
+    return { kind: configured ? "connect" : "hidden", connections: [] };
   }
 
   function html(value) {

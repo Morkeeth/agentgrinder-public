@@ -9,7 +9,7 @@ assert.equal(Origin.state({ signedIn: false, configured: true }).kind, "hidden")
 assert.equal(Origin.html(Origin.state({ signedIn: false, configured: true })), "", "Origin is absent before Strava sign-in");
 
 const empty = Origin.state({ signedIn: true, configured: false });
-assert.equal(empty.kind, "empty");
+assert.equal(empty.kind, "hidden");
 let markup = Origin.html(empty);
 assert.match(markup, /No Origin repositories are connected/);
 assert.match(markup, /not a sign-in method/);
