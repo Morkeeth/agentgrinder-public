@@ -187,6 +187,8 @@ a.act{display:inline-block;text-decoration:none}
 .c-foot,.foot{display:flex;flex-wrap:wrap;gap:8px 16px;padding:12px 16px;border-top:1px solid var(--rule);
   align-items:center;margin-top:14px;font-size:13px;color:var(--soft)}
 .c-foot .acts,.foot .acts{margin-left:auto;display:flex;gap:8px}
+.run-continuation{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 16px 0}
+.run-continuation .acts{display:flex;flex-wrap:wrap;gap:8px}
 
 /* skeleton — one shot, resolves into real content */
 .sk{background:linear-gradient(90deg,#eeeeeb 25%,#f6f6f4 37%,#eeeeeb 63%);background-size:400% 100%;
@@ -416,6 +418,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
+<script src="/fork-run.js"></script>
 <script src="/auth.js"></script>
 <script src="/segments.js"></script>
 <script src="/social.js"></script>
@@ -877,6 +880,15 @@ async function loadSegmentChoices(id,selected){
   if(!select||typeof GrinderSegments!=='object') return [];
   return GrinderSegments.loadChoices(sb,select,selected);
 }
+function runContinuation(r,opts={}){
+  if(opts.preview||typeof PacecardFork!=='object')return '';
+  const prompt=PacecardFork.buildPrompt(r);
+  if(!prompt)return '';
+  const link=PacecardFork.harnessLink(r);
+  return `<div class="run-continuation"><span class="meta">Captured from ${esc(r.harness||'an unknown harness')}</span><span class="acts">
+    ${link?`<a class="act blue continue-run" href="${esc(link.href)}">${esc(link.label)}</a>`:''}
+    <button class="act copy-run-prompt" type="button" data-prompt="${esc(prompt)}">Copy prompt</button></span></div>`;
+}
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
   const selfAck=ME&&ME.id===r.profile_id;
   const ackBtn=selfAck?'':`<button class="act kudo ${acked?'on':''}" data-run="${r.id}" data-to="${r.profile_id}">${acked?'ACKed':'ACK'}${count?' <span class="n num">'+count+'</span>':''}</button>`;
@@ -899,12 +911,17 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     ${r.tree?GrinderContract.tree(r.tree):''}
     <div class="run-key-facts"><div><span>Typed turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>Artifacts</span><strong>${r.artifacts_produced??'Unknown'}</strong></div><div><span>Commits</span><strong>${r.commits??'Unknown'}</strong></div></div>
     <details class="run-evidence"><summary>Recorded details</summary><p class="meta">${r.tool_calls??'Unknown'} tool calls · ${r.files_touched??'Unknown'} files touched. Counts describe recorded activity, not quality.</p></details>
+    ${typeof runContinuation==='function'?runContinuation(r,opts):''}
     ${opts.preview?'<div class="foot"><span class="meta">Preview · not saved</span></div>':`<div class="foot"><span class="meta">${count||0} ACK${count===1?'':'s'}${selfAck?' · your run':''}</span>
       <span class="acts">${ackBtn}<a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div>`}
     ${picker}</div>`; }
 
 
-function wireKudos(){ document.querySelectorAll('.kudo').forEach(b=>b.addEventListener('click',async()=>{
+function wireKudos(){
+  document.querySelectorAll('.copy-run-prompt:not([data-wired])').forEach(b=>{b.dataset.wired='true';b.addEventListener('click',async()=>{
+    try{await navigator.clipboard.writeText(b.dataset.prompt);b.textContent='Prompt copied'}catch(_){status('Select and copy the public run details instead.',true)}
+  })});
+  document.querySelectorAll('.kudo').forEach(b=>b.addEventListener('click',async()=>{
   if(!ME){status('Sign in to ACK.');return;}
   if(b.classList.contains('on'))return;
   const card=b.closest('.card'); if(!card)return;
