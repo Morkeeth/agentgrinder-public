@@ -16,6 +16,7 @@ python3 scripts/dev.py setup
 python3 templates/grokbot/post-agent-run/scripts/preview.py samples/sample_grokbot_bot_activity.jsonl
 python3 templates/grokbot/post-agent-run/scripts/preview.py samples/sample_grokbot_safe_real_shape.jsonl
 python3 scripts/dev.py serve
+python3 scripts/dev.py check
 ```
 
 The first setup failed because this Ubuntu image did not include
@@ -97,6 +98,13 @@ Opened the second generated localhost import URL.
   and the stack-notes input also accepted edits. No sign-in or Save action was
   attempted.
 - The sample action was disabled and read `Sample — preview only`.
+- After the copy fix, a reload confirmed the stack-notes input remained
+  editable beneath the visible `Stack notes for friends (optional)` label and
+  showed the `Libraries, services or setup details` placeholder. Audience was
+  still unset and the sample action was still disabled.
+
+`python3 scripts/dev.py check` passed: 4 tests, MCP launch and onboarding, and
+the contributor checks. It does not test hosted sign-in or social writes.
 
 ## Friction and clarity gaps
 
