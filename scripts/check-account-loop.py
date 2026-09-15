@@ -355,7 +355,8 @@ def main():
                 "(async(id)=>{const {error}=await sb.auth.unlinkIdentity({identity_id:id});return error?GrinderAuth.explain(error).code:null})('" + last_id + "')"
             )
             check(denial == "last_identity", "last identity: server refuses unlink and maps to last_identity, got " + str(denial))
-            check(len(snapshot(disposable)["identities"]) == len(before["identities"]) - 1, "last identity: only the deliberate unlink changed auth.identities")
+            existing_actor_ids = [i for i in snapshot(disposable)["identities"] if i["user_id"] != github_new]
+            check(len(existing_actor_ids) == len(before["identities"]) - 1, "last identity: only the deliberate unlink changed existing actors' auth.identities")
             page.screenshot(path=str(ARTIFACTS / "sign-in-methods-mobile.png"), full_page=True)
             # Delete: typed confirmation, then Strava row gone, Grinder and Auth untouched.
             page.goto(base + "/")
