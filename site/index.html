@@ -1342,13 +1342,13 @@ function trendingBlock(repos){ if(!repos.length) return '';
       <span class="meta num">${r.stargazers_count.toLocaleString()} stars</span></a>`).join('')}</div>`;
 }
 
-function postComposerHtml(){
-  return `<div class="up post-panel">
+function postComposerHtml({first=false}={}){
+  return `${first?'':`<div class="up post-panel">
     <div class="up-top"><span class="t">Capture from Cursor</span><span class="meta">local and private until you choose</span></div>
     <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
     <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span><span class="d">opens a private preview</span></div>
     <div class="up-foot">The reader sends recorded counts and timing, never prompt text, code or file paths. You review every field before choosing an audience.</div>
-  </div>
+  </div>`}
   <details class="panel manual-post">
     <summary>Post a run without a Cursor export</summary>
     <div id="manualbox" class="pad">
@@ -1389,7 +1389,7 @@ async function viewPost(){
   $('app').innerHTML=`<div class="head"><h1>Post a run</h1><span class="meta">capture → preview → choose audience</span></div>
     <p>Turn a real coding-agent session into a card. Cursor capture stays on your machine until the preview is open.</p>
     ${first?firstRunPrompt():''}
-    ${ME?postComposerHtml():uploadBlock()+'<div class="panel pad"><p>Sign in when you are ready to save the reviewed preview.</p><button id="post-signin">Sign in</button></div>'}`;
+    ${ME?postComposerHtml({first}):uploadBlock()+'<div class="panel pad"><p>Sign in when you are ready to save the reviewed preview.</p><button id="post-signin">Sign in</button></div>'}`;
   if(ME) wireComposer(); else $('post-signin').onclick=showSignIn;
   wireFirstRunPrompt();
   wireCopy();
