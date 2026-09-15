@@ -14,6 +14,7 @@ def store(tmp_path):
     path = tmp_path / "state.vscdb"
     db = sqlite3.connect(path)
     db.execute("create table cursorDiskKV(key text primary key,value blob)")
+    db.execute("create table composerHeaders(composerId text primary key,isSubagent integer)")
     db.execute(
         "insert into cursorDiskKV values(?,?)",
         ("composerData:" + COMPOSER, json.dumps({
@@ -23,6 +24,7 @@ def store(tmp_path):
             "name": "PRIVATE MESSAGE TEXT",
         })),
     )
+    db.execute("insert into composerHeaders values(?,0)", (COMPOSER,))
     db.commit()
     db.close()
     return path
@@ -60,9 +62,10 @@ def test_subagent_and_unfinished_composers_are_not_captured(tmp_path):
     db.execute(
         "insert into cursorDiskKV values(?,?)",
         ("composerData:worker", json.dumps({
-            "status": "completed", "subagentInfo": {"parentComposerId": COMPOSER},
+            "status": "completed",
         })),
     )
+    db.execute("insert into composerHeaders values('worker',1)")
     db.execute(
         "insert into cursorDiskKV values(?,?)",
         ("composerData:active", json.dumps({"status": "running"})),
@@ -78,13 +81,28 @@ def test_automatic_capture_drops_message_and_path_derived_fields(tmp_path, monke
     transcript = tmp_path / "session.jsonl"
     transcript.write_text("{}\n")
     monkeypatch.setattr(hook, "_transcript", lambda _composer_id: transcript)
-    monkeypatch.setattr(ingest, "parse_cursor_session", lambda _path: {
+    monkeypatch.setattr(ingest, "parse_cursor_session", lambda _path, **_kwargs: {
         "title": "Safe title",
         "private_title_prompt": "PRIVATE MESSAGE",
         "route_legend": ["private-folder"],
     })
     run = hook._capture(COMPOSER)
     assert run == {"title": "Safe title", "composer_id": COMPOSER}
+
+
+def test_automatic_capture_passes_custom_database_to_ridge_reader(tmp_path, monkeypatch):
+    from agentgrinder import ingest
+    transcript = tmp_path / "session.jsonl"
+    transcript.write_text("{}\n")
+    selected = tmp_path / "custom.vscdb"
+    observed = []
+    monkeypatch.setattr(hook, "_transcript", lambda _composer_id: transcript)
+    monkeypatch.setattr(
+        ingest, "parse_cursor_session",
+        lambda _path, cursor_db=None, **_kwargs: observed.append(cursor_db) or {},
+    )
+    hook._capture(COMPOSER, selected)
+    assert observed == [selected]
 
 
 def test_concurrent_timer_runs_claim_composer_once(tmp_path, monkeypatch):

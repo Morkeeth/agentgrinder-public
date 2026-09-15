@@ -47,6 +47,13 @@ def _state(root: Path) -> sqlite3.Connection:
 def finished_composers(conn: sqlite3.Connection) -> list[str]:
     """Completed top-level composers, oldest first. No composer text is returned."""
     out = []
+    try:
+        subagents = {
+            row[0] for row in conn.execute(
+                "select composerId from composerHeaders where isSubagent=1")
+        }
+    except sqlite3.DatabaseError:
+        subagents = set()
     for key, raw in conn.execute(
             "select key,value from cursorDiskKV where key like 'composerData:%'"):
         try:
@@ -55,10 +62,12 @@ def finished_composers(conn: sqlite3.Connection) -> list[str]:
             continue
         if not isinstance(composer, dict) or composer.get("status") != "completed":
             continue
+        composer_id = key.split(":", 1)[1]
+        if composer_id in subagents:
+            continue
         info = composer.get("subagentInfo")
         if isinstance(info, dict) and info.get("parentComposerId"):
             continue
-        composer_id = key.split(":", 1)[1]
         updated = composer.get("lastUpdatedAt") or composer.get("createdAt") or 0
         out.append((updated, composer_id))
     out.sort(key=lambda item: (item[0], item[1]))
@@ -71,12 +80,12 @@ def _transcript(composer_id: str) -> Path | None:
     return max(files, key=lambda path: path.stat().st_mtime) if files else None
 
 
-def _capture(composer_id: str) -> dict | None:
+def _capture(composer_id: str, db=None) -> dict | None:
     path = _transcript(composer_id)
     if path is None:
         return None
     from .ingest import parse_cursor_session
-    run = parse_cursor_session(str(path))
+    run = parse_cursor_session(str(path), cursor_db=db)
     # Message excerpts and path-derived region labels have no place in an automatic card.
     run.pop("private_title_prompt", None)
     run.pop("route_legend", None)
@@ -154,9 +163,9 @@ def _ensure_server(root: Path, port: int) -> None:
 def run_once(directory=None, db=None, port: int = DEFAULT_PORT,
              capture_one=None, open_one=None) -> dict:
     root = _root(directory)
-    capture_one = capture_one or _capture
-    open_one = open_one or (lambda url: webbrowser.open(url))
     source = Path(db).expanduser() if db else cursor_tree.db_path()
+    capture_one = capture_one or (lambda composer_id: _capture(composer_id, source))
+    open_one = open_one or (lambda url: webbrowser.open(url))
     created = []
     with cursor_tree.CopiedDb(source) as cursor_db:
         finished = finished_composers(cursor_db)

@@ -287,7 +287,7 @@ def latest_cursor_session() -> str | None:
     files = glob.glob(os.path.expanduser(CURSOR_GLOB))
     return max(files, key=os.path.getmtime) if files else None
 
-def parse_cursor_session(path: str, athlete: str = "you", records=None) -> dict:
+def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_db=None) -> dict:
     typed = 0
     tool_calls = 0
     commits = 0
@@ -424,7 +424,7 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None) -> dict:
     ridge = cursor_tree.ridge_from_calls(
         [None] * tool_calls, commit_call_indices=commit_call_indices)
     composer_id = Path(path).parent.name
-    source = cursor_tree.db_path()
+    source = Path(cursor_db).expanduser() if cursor_db is not None else cursor_tree.db_path()
     if source.is_file():
         try:
             with cursor_tree.CopiedDb(source) as conn:
