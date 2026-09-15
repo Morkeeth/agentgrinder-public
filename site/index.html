@@ -1431,7 +1431,7 @@ function postComposerHtml({first=false}={}){
   <details class="panel manual-post">
     <summary>Post a run without a Cursor export</summary>
     <div id="manualbox" class="pad">
-      <p class="hint"><b>Manual posts have no capture identifier.</b> Use this only for a real session and leave unknown measurements blank. If Save fails or stalls, check <a href="/?mine">My runs</a> before pressing it again; this form cannot reliably detect a duplicate. It never invents a measurement revision.</p>
+      <p class="hint"><b>Manual posts have no capture identifier.</b> Use this only for a real session and leave unknown measurements blank. This browser gives each save an identifier and keeps the draft through an uncertain response, so Check and try again can open the first result instead of posting a duplicate. It never invents a measurement revision.</p>
       <label>What did you build?<input id="f_title" required maxlength="120" placeholder="Parser refactor"></label>
       <label>Project<input id="f_project" maxlength="120" placeholder="Project name"></label>
       <label>Model (optional)<input id="f_model" maxlength="120" placeholder="Model name"></label>
@@ -1445,6 +1445,7 @@ function postComposerHtml({first=false}={}){
       </label>
       <p class="hint">Nothing is posted until you choose an audience and press the button.</p>
       <button id="publish">Save run</button>
+      <div id="manual-recover" hidden></div>
     </div>
   </details>`;
 }
@@ -1496,23 +1497,66 @@ async function viewExplore(){
 }
 
 function wireComposer(){
-  const pb=$('publish'); if(pb) pb.addEventListener('click',async()=>{ if(!ME)return;
+  const pb=$('publish'); if(!pb)return;
+  const fields=['f_title','f_project','f_model','f_segment','f_wall','f_caption','f_output_url','f_prompts','f_dur','f_commits','f_vis'];
+  const key='ag_manual_post_draft';
+  let attemptId=crypto.randomUUID();
+  try{
+    const saved=JSON.parse(sessionStorage.getItem(key)||'null');
+    if(saved?.profileId===ME?.id&&typeof saved.id==='string'){
+      attemptId=saved.id;
+      for(const id of fields)if(typeof saved[id]==='string')$(id).value=saved[id];
+    }
+  }catch(_){}
+  function keepDraft(){try{sessionStorage.setItem(key,JSON.stringify({id:attemptId,profileId:ME?.id,...Object.fromEntries(fields.map(id=>[id,$(id).value]))}))}catch(_){}}
+  function clearDraft(){try{sessionStorage.removeItem(key)}catch(_){}}
+  fields.forEach(id=>$(id)?.addEventListener('input',keepDraft));
+  pb.addEventListener('click',async()=>{ if(!ME)return;
     const title=$('f_title').value.trim(),caption=$('f_caption').value.trim(),audience=$('f_vis').value,output=$('f_output_url').value.trim();
     const wallTime=optionalWholeNumber('f_wall');
     if(!title||!caption||!audience){status('Add a title and caption, then choose who can see the run.',true);return}
     if(Number.isNaN(wallTime)){status('Segment wall time must be a whole number of seconds.',true);return}
     if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
+    keepDraft();
     pb.disabled=true;
-    const row={profile_id:ME.id,title,project:$('f_project').value||null,model:$('f_model').value.trim()||null,
+    const recover=$('manual-recover');recover.hidden=true;recover.innerHTML='';
+    const openExisting=async prior=>{
+      clearDraft();
+      history.replaceState(null,'','/?run='+prior.id);
+      status('This save was already received as '+(prior.visibility==='private'?'Only me':prior.visibility==='link'?'Anyone with the link':'Public')+'. Opening the existing run; no duplicate was created.');
+      await viewRun(prior.id);
+    };
+    const existing=async()=>{
+      const {data,error}=await sb.from('runs').select('id,visibility').eq('id',attemptId).eq('profile_id',ME.id).limit(1);
+      if(error)throw error;
+      return data?.[0]||null;
+    };
+    const showRecovery=error=>{
+      const message=typeof GrinderContract==='object'&&GrinderContract.message?GrinderContract.message(error):String(error?.message||error||'The save did not complete.');
+      recover.innerHTML='<div class="card" role="alert"><p><b>Save not confirmed.</b> '+esc(message)+'</p><p>This page cannot tell whether the service received the run. Your draft and audience are kept. Check and try again looks for this exact save first, so it will open an existing run instead of posting a duplicate.</p><div class="cta"><button type="button" id="manual-retry">Check and try again</button><a class="act" href="/?mine">Your runs</a></div></div>';
+      recover.hidden=false;
+      $('manual-retry').onclick=()=>{recover.hidden=true;pb.click()};
+      status('Save not confirmed. Your draft is still here.',true);
+    };
+    try{
+      const prior=await existing();
+      if(prior){await openExisting(prior);return}
+    }catch(error){showRecovery(error);pb.disabled=false;return}
+    const row={id:attemptId,profile_id:ME.id,title,project:$('f_project').value||null,model:$('f_model').value.trim()||null,
       segment_id:$('f_segment').value||null,wall_time_s:wallTime,
       harness:null,prompts:+$('f_prompts').value||null,duration_s:(+$('f_dur').value||0)*60||null,commits:+$('f_commits').value||null,
       caption,output_url:output||null,visibility:audience,started_at:new Date().toISOString()};
     // Segment columns (migration supabase/strava/001_segments.sql) are only sent when set,
     // so posting keeps working on a database that does not have them yet.
     dropNullSegmentColumns(row);
-    const {data,error}=await sb.from('runs').insert(row).select('id').single();
+    let data,error;
+    try{({data,error}=await sb.from('runs').insert(row).select('id').single())}catch(unexpected){error=unexpected}
     pb.disabled=false;
-    if(error){status(error.message,true);return;}
+    if(error){
+      if(error.code==='23505'){try{const prior=await existing();if(prior){await openExisting(prior);return}}catch(_){}}
+      showRecovery(error);return;
+    }
+    clearDraft();
     history.replaceState(null,'','/?run='+data.id);
     status(audience==='private'?'Saved for Only me. Only you can see it.':audience==='link'?'Saved for anyone with the link. Copy the URL when you are ready.':'Saved to Public feed and profile. Copy the public link or open the share card.');
     viewRun(data.id);
@@ -1699,10 +1743,10 @@ function importRun(){
       const text=String(error?.message||error||'');
       const offline=/failed to fetch|networkerror|load failed|network request failed|fetch failed/i.test(text);
       const why=offline?'The service could not be reached.':(typeof GrinderContract==='object'&&GrinderContract.message?GrinderContract.message(error):text)||'The save did not complete.';
-      recover.innerHTML='<div class="card" role="alert"><p><b>Not saved.</b> '+esc(why)+'</p><p>Nothing was posted by this attempt. Your title, caption, link and audience are kept on this page'+(dedupe?', and pressing Try again first checks whether this capture is already saved, so it cannot be posted twice.':'. This export has no session reference, so open Your runs before saving again to be sure it is not there already.')+'</p><div class="cta"><button type="button" id="i_retry">Try again</button><a class="act" href="/?mine">Your runs</a></div></div>';
+      recover.innerHTML='<div class="card" role="alert"><p><b>Save not confirmed.</b> '+esc(why)+'</p><p>This page cannot tell whether the service received the run. Your title, caption, link and audience are kept on this page'+(dedupe?', and pressing Check and try again first looks for this capture, so it cannot be posted twice.':'. This export has no session reference, so open Your runs before saving again to be sure it is not there already.')+'</p><div class="cta"><button type="button" id="i_retry">Check and try again</button><a class="act" href="/?mine">Your runs</a></div></div>';
       recover.hidden=false;
       $('i_retry').onclick=()=>{recover.hidden=true;publishButton.click()};
-      status('Not saved. Your draft is still here.',true);
+      status('Save not confirmed. Your draft is still here.',true);
     }
     try{
     let prior=null;

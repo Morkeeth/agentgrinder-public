@@ -1,76 +1,85 @@
-# Cursor setup
+# Capture a Cursor run from your own project
 
-The project `.cursor/mcp.json` launches the local Agent Grinder MCP server from this
-checkout. It installs no global configuration, needs no account for capture and contains no
-publishing credential.
+Agent Grinder reads Cursor sessions already on your computer. Your project remains the Cursor
+workspace; do not clone Agentic Strava as the project you are trying to capture. Capture is local
+and keyless. The hosted page receives only allowlisted card metrics in the URL fragment.
 
-## Capture and inspect locally
+## Set up once on this computer
 
-1. Open this repository as the workspace in Cursor.
-2. Open **Customize**, find the workspace MCP server named **agentgrinder**, and enable it.
-   If it does not start, confirm that `python3` is available, then open **Output → MCP Logs**.
-   The presence of `.cursor/mcp.json` alone does not mean the server is enabled.
-3. In Cursor chat, make the discovery call:
+Keep the capture tool outside your own project:
+
+```sh
+git clone https://github.com/Morkeeth/agentgrinder-public.git ~/.agentgrinder/agentgrinder-public
+python3 -m venv ~/.agentgrinder/venv
+~/.agentgrinder/venv/bin/pip install -e ~/.agentgrinder/agentgrinder-public
+```
+
+To make the local MCP tools available in one of your projects, run this once for that project:
+
+```sh
+cd /path/to/your-own-project
+~/.agentgrinder/venv/bin/agentgrinder connect cursor --install
+```
+
+The command adds a machine-local `.cursor/mcp.json` and excludes an untracked config from that
+repository. It refuses to replace a tracked or conflicting config. Reload Cursor, enable
+**agentgrinder** under **Customize**, then ask:
 
 ```text
 Use the agentgrinder a2a_onboard tool. Summarize the local-only capture and human approval rules. Do not publish anything.
 ```
 
-4. After doing some work in this workspace, ask for the metrics-only harness preview:
+MCP setup is optional for the command-line capture below. Neither setup adds credentials.
 
-```text
-Use the agentgrinder preview_run tool with harness set to cursor. Show the measured metrics and fields that remain unknown. Do not export, propose, or publish the run.
-```
+## Select the session before opening a preview
 
-`preview_run` reads the latest eligible Cursor sitting on this machine and returns an allowlisted
-metrics preview. It sends nothing and excludes prompts, code and file paths. The server can read
-only sessions on the machine where it runs; a Cloud Agent or Grok Bot cannot infer sessions from
-your laptop.
-
-## Open the private card preview
-
-Start the local site in one terminal:
+After working in your own project, stay in that project’s terminal and inspect the candidate:
 
 ```sh
-python3 scripts/dev.py serve
+cd /path/to/your-own-project
+~/.agentgrinder/venv/bin/agentgrinder grind --harness cursor --list --show-paths
 ```
 
-Then, in another terminal in this repository, build and open the import preview:
+The receipt names the selected project and source transcript, then lists its sittings. Confirm
+that the project is yours and choose the intended `sitting` number. If the newest transcript is
+from another workspace, stop and pass the explicitly selected Cursor JSONL path as the first
+argument:
 
 ```sh
-python3 -m agentgrinder grind --harness cursor --push --push-url http://localhost:8000
+~/.agentgrinder/venv/bin/agentgrinder grind \
+  /exact/path/to/selected-cursor-session.jsonl \
+  --harness cursor --list
 ```
 
-Despite the historical `--push` flag name, this command makes a metrics-only URL fragment and
-opens it on localhost. It does not upload to a hosted service or save a run. The page says **not
-posted** and keeps the card private until you sign in, write public-facing text, choose an
-audience and press **Save run**. Leave the audience unset to stop at preview. Choose **Only me**
-for a deliberately saved private run; **Anyone with the link** and **Public feed and profile**
-are broader audiences and must be selected deliberately.
-
-The clone does not provision a database, so saving and social actions are unavailable in a
-local-only checkout. A configured hosted product origin and sign-in are separate prerequisites;
-do not substitute the hackathon service. The workspace MCP config also disables inherited
-agent-write credentials.
-
-## Open a reviewed preview on the live product
-
-After checking the card locally, point the import URL at the approved Pacecard origin:
+Now open that exact sitting as a private preview on the live app:
 
 ```sh
 AGENTGRINDER_URL=https://agentic-strava.vercel.app \
-python3 -m agentgrinder grind --harness cursor --push
+~/.agentgrinder/venv/bin/agentgrinder grind \
+  /exact/path/to/selected-cursor-session.jsonl \
+  --harness cursor --pick 2 --push
 ```
 
-This changes the preview URL only. It does not upload the session, choose an audience or save a
-run. In the browser, confirm the account, caption, output link and recorded fields before choosing
-**Only me**, **Anyone with the link** or **Public feed and profile** and pressing **Save run**.
+Replace `2` with the sitting you selected. `--push` is a historical flag name: it builds and
+opens a metrics-only `#import` URL. It does not upload or save the run. The terminal prints the
+selected harness, project, source filename and sitting again before opening the page.
+
+On the hosted page, review the white card and blue trace. Missing measurements remain unknown.
+Write only public-facing title, caption and optional HTTPS output link. Leave the audience unset
+to stop at preview. Saving requires an intentional choice of **Only me**, **Anyone with the
+link**, or **Public feed and profile**, followed by **Save run**.
 Production Auth allowlisting for this origin remains a separate configuration check.
 
-The MCP protocol and reader tests can be exercised without a personal session:
+The equivalent explicit-origin command is:
 
 ```sh
-python3 scripts/dev.py check
+~/.agentgrinder/venv/bin/agentgrinder grind \
+  /exact/path/to/selected-cursor-session.jsonl \
+  --harness cursor --pick 2 --push \
+  --push-url https://agentic-strava.vercel.app
 ```
+
+The server can read only sessions on the computer where it runs. A Cloud Agent or Grok Bot cannot
+infer sessions from your laptop.
 
 Reference: [Cursor MCP documentation](https://prod.cursor.com/docs/mcp), checked 14 September 2026.

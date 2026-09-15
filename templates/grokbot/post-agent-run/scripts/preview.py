@@ -13,8 +13,16 @@ from agentgrinder.push import export_run, import_url
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('export', type=Path)
-    parser.add_argument('--base-url', default='http://localhost:8000')
+    parser.add_argument(
+        'export',
+        type=Path,
+        help='explicitly selected JSONL export on this bot computer',
+    )
+    parser.add_argument(
+        '--base-url',
+        default='http://localhost:8000',
+        help='private preview origin (hosted: https://agentic-strava.vercel.app)',
+    )
     args = parser.parse_args()
     url = urlsplit(args.base_url)
     local = url.hostname in ('localhost', '127.0.0.1', '::1')
@@ -24,8 +32,13 @@ def main():
         parser.error('Use the independent public-product origin, not the hackathon service.')
     try:
         run = read_sitting(str(args.export), 'grokbot')
-        print(json.dumps({'status': 'private preview; not posted', 'metrics': export_run(run),
-                          'preview_url': import_url(run, args.base_url)}, indent=2))
+        print(json.dumps({
+            'status': 'private preview; not posted',
+            'selected_export': str(args.export.resolve()),
+            'selected_sitting': 'latest sitting in selected export',
+            'metrics': export_run(run),
+            'preview_url': import_url(run, args.base_url),
+        }, indent=2))
     except (OSError, ValueError):
         parser.exit(1, 'Could not read a supported Grok Bot sitting. Check the selected export.\n')
 

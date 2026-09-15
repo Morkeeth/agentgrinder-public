@@ -70,6 +70,19 @@ def test_a_cursor_only_machine_gets_a_card_from_the_advertised_one_liner(tmp_pat
     assert (tmp_path / "card.html").exists()
 
 
+def test_cursor_list_identifies_project_source_and_sittings(tmp_path):
+    home = cursor_home(tmp_path / "home")
+    proc = run_grind(home, tmp_path, "--harness", "cursor", "--list", "--show-paths")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    receipt = json.loads(proc.stdout)
+    assert receipt[0]["selected_session"]["harness"] == "cursor"
+    assert receipt[0]["selected_session"]["project"] == "code-myapp"
+    assert receipt[0]["selected_session"]["source"].endswith("/t.jsonl")
+    assert receipt[0]["selected_session"]["source_path_hidden"] is False
+    assert [row["sitting"] for row in receipt] == [1]
+    assert "rerun with --pick N" in receipt[0]["next"]
+
+
 def test_a_codex_only_machine_gets_a_card_from_the_advertised_one_liner(tmp_path):
     proc = run_grind(codex_home(tmp_path / "home"), tmp_path)
     assert proc.returncode == 0, proc.stdout + proc.stderr
