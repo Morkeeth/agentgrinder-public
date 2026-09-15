@@ -10,7 +10,9 @@ Merge the reviewed post, caption, output link, profile and Responses work with t
 
 ## 2. Give people one shared place
 
-Create an independent public-product database and app deployment, with its own authentication callbacks and stable preview URL. Apply the complete ordered migrations. Point capture, preview, card links and sign-in back to that same service. Do not reuse the hackathon database or accounts.
+Current decision (14 September): use the existing Supabase project for infrastructure and shared Auth, but keep every Strava profile, run and social row in the dedicated `strava` schema. Grinder's public tables, functions and Auth triggers are out of bounds. The browser, server and capture clients already have explicit Strava schema adapters; the Grok export adapter and source template kit are in this repository. That is code readiness only: second-bot installation, a real export and a deliberately saved hosted post remain unverified.
+
+Codex owns the pending production work: review/apply the Strava-only bootstrap, expose `strava` through the Data API, configure a separate Vercel project and append the Strava callbacks without changing the shared Site URL. Follow `docs/HOSTED-CUTOVER.md`. Point capture, preview, card links and sign-in to that one approved origin. Do not reuse Grinder app data or claim the app is hosted from local checks.
 
 Deliver a stranger path: open a shared card without signing in → understand what was built → open the output → see the builder → sign in to follow or respond → post a first run. Test errors, cancelled sign-in and empty states as well as success. Public link previews must show only public content; withdrawing/deleting a run must remove access.
 
@@ -20,7 +22,7 @@ Acceptance is two consenting people using their own accounts and safe real sessi
 
 Run Cursor onboarding from a clean contributor machine. Make the command choose Cursor explicitly and point at the correct service. Show the card before any social write. Preserve unknown measurements and let the builder explain the output.
 
-In parallel, the existing Grok worker owns a separate adapter PR using the real export shape it identified. Codex reviews it before merge. Then verify the post-run skill and installable template on another bot. Native adapter support and template availability need separate receipts. Both publish to the same feed.
+The Grok export adapter and installable source kit are merged. Next, verify the post-run skill and complete template directory on another bot using an explicitly selected real export. Adapter support, installation, real use and deliberate hosted publication need separate receipts. Both Cursor and Grok previews must lead to the same approved feed.
 
 ## 4. Make the response worth returning for
 
@@ -30,7 +32,9 @@ No artificial engagement, activity rankings presented as quality, or automatic s
 
 ## 5. Eric's product and launch contribution
 
-Send Eric the repository, this plan and the live preview when available. Until then label the handoff as code and product direction, not a finished app. Ask him to try posting one safe run and critique three things: would he show this card; does a stranger understand it; what would make him return tomorrow?
+Hosting and real use are still pending in Codex's lane. Do not contact Eric until the owner approves the recipient, channel and exact message and the stable preview is actually available. Until then the handoff is repository code, the Grok source kit and product direction—not a finished or used app.
+
+When approved and live, send Eric the repository, this plan and the live preview. Ask him to try posting one safe run and critique three things: would he show this card; does a stranger understand it; what would make him return tomorrow?
 
 Invite him to own a small product slice through a normal PR: first-post friction, card hierarchy or response navigation. CONTRIBUTING.md has the local setup; docs/FIRST-PR.md provides starting points. Ask him which initial builder group he would personally bring in and why. Do not treat that as an agreed launch commitment.
 

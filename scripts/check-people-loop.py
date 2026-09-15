@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import shutil
 import threading
 import urllib.error
 import urllib.request
@@ -156,12 +157,12 @@ def session_script(session):
 def main():
     environment = os.environ.copy()
     environment["GRINDER_DISPOSABLE_TEST"] = "1"
-    environment["PATH"] = "/Users/morkeeth/.nvm/versions/node/v22.22.3/bin:" + environment.get(
-        "PATH", ""
-    )
+    node = shutil.which("node")
+    if not node:
+        raise RuntimeError("Node 20+ is required")
     process = Popen(
         [
-            "/Users/morkeeth/.nvm/versions/node/v22.22.3/bin/node",
+            node,
             str(ROOT / "scripts" / "disposable-supabase.mjs"),
             "--serve",
         ],
@@ -201,6 +202,15 @@ def main():
             riley_context = context_for(info["riley"], "test-riley", 390, 844)
             riley = riley_context.new_page()
             riley.on("pageerror", lambda error: errors.append("riley: " + str(error)))
+            riley.goto(base + "/?post", wait_until="networkidle")
+            riley.get_by_role("heading", name="Start with a private preview").wait_for()
+            riley.get_by_text(
+                "python3 -m agentgrinder grind --harness cursor --push", exact=True
+            ).first.wait_for()
+            riley.screenshot(
+                path=str(ARTIFACTS / "first-post-empty-mobile.png"), full_page=True
+            )
+
             riley.goto(base + "/?following", wait_until="networkidle")
             riley.get_by_text("You are not following anyone yet", exact=False).wait_for()
             riley.screenshot(path=str(ARTIFACTS / "following-empty-mobile.png"), full_page=True)
@@ -282,6 +292,7 @@ def main():
                         "fixture": "TEST DATA · disposable PGlite · people lane",
                         "run_id": run_id,
                         "find_people": True,
+                        "first_post_empty": True,
                         "follow_before_post": True,
                         "following_empty": True,
                         "following_feed": True,

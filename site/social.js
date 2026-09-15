@@ -289,7 +289,7 @@ window.GrinderSocial = function ({
       if (!follows.length) {
         byId("social-body").innerHTML =
           empty(
-            "You are not following anyone yet. Find a friend by handle or open a profile from Discover.",
+            "You are not following anyone yet. Share your profile link or paste a friend’s handle in Find people; you do not need to wait for Discover.",
             `<div class="cta"><a class="act blue" href="/?people">Find people</a><a class="act" href="/?explore">Discover runs</a></div>`,
           );
         return;

@@ -11,7 +11,8 @@
     "build": "node scripts/build-site.mjs",
     "test:identity": "node scripts/test-identity.mjs",
     "test:people": "node scripts/test-people-schema.mjs",
-    "test:account": "node scripts/test-account.mjs"
+    "test:account": "node scripts/test-account.mjs",
+    "check:hosted-config": "node scripts/check-hosted-config.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8"
