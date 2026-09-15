@@ -12,6 +12,7 @@ export const RILEY = "11000000-0000-0000-0000-000000000002";
 const TABLES = new Set([
   "profiles",
   "runs",
+  "segments",
   "acks",
   "grinder_follows",
   "grinder_blocks",

@@ -415,6 +415,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
 <script src="/auth.js"></script>
+<script src="/segments.js"></script>
 <script src="/social.js"></script>
 <script src="/people.js"></script>
 <script src="/account.js"></script>
@@ -850,6 +851,14 @@ function coachBlock(r){
 function safeOutputUrl(value){
   try{const url=new URL(value);return /^https?:$/.test(url.protocol)?url.href:null}catch(_){return null}
 }
+function segmentSelectHtml(id){
+  return `<label>Segment (optional)<select id="${id}"><option value="">No segment</option></select></label>`;
+}
+async function loadSegmentChoices(id,selected){
+  const select=$(id);
+  if(!select||typeof GrinderSegments!=='object') return [];
+  return GrinderSegments.loadChoices(sb,select,selected);
+}
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
   const selfAck=ME&&ME.id===r.profile_id;
   const ackBtn=selfAck?'':`<button class="act kudo ${acked?'on':''}" data-run="${r.id}" data-to="${r.profile_id}">${acked?'ACKed':'ACK'}${count?' <span class="n num">'+count+'</span>':''}</button>`;
@@ -864,6 +873,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
     <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
     ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
+    ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
     <div class="sub">${r.project?esc(r.project)+' · ':''}${esc(r.harness||'Coding agent')}${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
     ${output?`<div class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open what was built ↗</a></div>`:''}
@@ -1355,6 +1365,8 @@ function postComposerHtml({first=false}={}){
       <p class="hint"><b>Manual posts have no capture identifier.</b> Use this only for a real session and leave unknown measurements blank. If Save fails or stalls, check <a href="/?mine">My runs</a> before pressing it again; this form cannot reliably detect a duplicate. It never invents a measurement revision.</p>
       <label>What did you build?<input id="f_title" required maxlength="120" placeholder="Parser refactor"></label>
       <label>Project<input id="f_project" maxlength="120" placeholder="Project name"></label>
+      <label>Model (optional)<input id="f_model" maxlength="120" placeholder="Model name"></label>
+      ${segmentSelectHtml('f_segment')}
       <label>Short caption<textarea id="f_caption" required maxlength="280" placeholder="What changed in this session?"></textarea></label>
       <label>Link to what was built (optional)<input id="f_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
       <div class="row"><div><label>Typed turns</label><input id="f_prompts" type="number" min="0"></div><div><label>Minutes</label><input id="f_dur" type="number" min="0"></div><div><label>Commits</label><input id="f_commits" type="number" min="0"></div></div>
@@ -1390,7 +1402,7 @@ async function viewPost(){
     <p>Turn a real coding-agent session into a card. Cursor capture stays on your machine until the preview is open.</p>
     ${first?firstRunPrompt():''}
     ${ME?postComposerHtml({first}):uploadBlock()+'<div class="panel pad"><p>Sign in when you are ready to save the reviewed preview.</p><button id="post-signin">Sign in</button></div>'}`;
-  if(ME) wireComposer(); else $('post-signin').onclick=showSignIn;
+  if(ME){await loadSegmentChoices('f_segment');wireComposer();} else $('post-signin').onclick=showSignIn;
   wireFirstRunPrompt();
   wireCopy();
 }
@@ -1419,7 +1431,8 @@ function wireComposer(){
     if(!title||!caption||!audience){status('Add a title and caption, then choose who can see the run.',true);return}
     if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
     pb.disabled=true;
-    const {data,error}=await sb.from('runs').insert({profile_id:ME.id,title,project:$('f_project').value||null,
+    const {data,error}=await sb.from('runs').insert({profile_id:ME.id,title,project:$('f_project').value||null,model:$('f_model').value.trim()||null,
+      segment_id:$('f_segment').value||null,
       harness:null,prompts:+$('f_prompts').value||null,duration_s:(+$('f_dur').value||0)*60||null,commits:+$('f_commits').value||null,
       caption,output_url:output||null,visibility:audience,started_at:new Date().toISOString()}).select('id').single();
     pb.disabled=false;
@@ -1518,7 +1531,7 @@ function importRun(){
   }
   const sample=run.is_sample===true;
   const app=$('app');
-  const rows=[['harness',run.harness],['project',run.project],['typed turns',run.turns_typed],
+  const rows=[['harness',run.harness],['model',run.model],['project',run.project],['typed turns',run.turns_typed],
     ['minutes',run.duration_s?Math.round(run.duration_s/60):null],['tool calls',run.tool_calls],
     ['files',run.files_touched],['commits',run.commits],
     ['verified claims',run.claims_verified!=null&&run.claims!=null?`${run.claims_verified}/${run.claims}`:null],
@@ -1539,6 +1552,8 @@ function importRun(){
     <p class="hint export-contents" style="margin:0 0 12px">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
     <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details><p class="hint" style="margin:12px 0">Review the imported details and any tool names you choose to share before publishing.</p>
     <label>What did you build?<input id="i_title" maxlength="120" required placeholder="Title you write, not scraped" value="${esc(run.project||'')} session"></label>
+    <label>Model (optional)<input id="i_model" maxlength="120" value="${esc(run.model||'')}" placeholder="Model name"></label>
+    <label>Segment (optional)<select id="i_segment"><option value="">No segment</option></select></label>
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
     <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;color:var(--muted)">
@@ -1550,12 +1565,14 @@ function importRun(){
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample — preview only':(ME?'Save run':'Sign in to save')}</button>
     <div id="i_recover" hidden></div></div></div>
     <div class="head"><h2>${sample?'Sample card preview':'Card preview'}</h2><span class="meta">not posted</span></div><div id="import-card-preview"></div>`;
-  const editFields=['i_title','i_caption','i_output_url','i_stack','i_vis'];
-  try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
+  const editFields=['i_title','i_model','i_segment','i_caption','i_output_url','i_stack','i_vis'];
+  let savedImportEdits=null;
+  try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){savedImportEdits=saved;for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
   function saveImportEdits(){try{sessionStorage.setItem('ag_import_edits',JSON.stringify({token:m[1],...Object.fromEntries(editFields.map(key=>[key,$(key).value])),shareRig:$('i_share_rig').checked}))}catch(_){}}
   function paintImportPreview(){
     const preview={id:'preview',profile_id:ME?.id||'preview',profiles:ME||{github_handle:'you',name:'Your preview'},title:$('i_title').value||'Untitled run',
-      project:run.project||null,harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
+      project:run.project||null,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
+      harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,artifacts_produced:run.artifacts_produced??null,
       rhythm:run.rhythm||null,trace_basis:run.trace_basis||null,caption:$('i_caption').value||null,output_url:$('i_output_url').value||null,
       visibility:'private',started_at:run.started||null,created_at:new Date().toISOString()};
@@ -1563,6 +1580,7 @@ function importRun(){
   }
   editFields.forEach(key=>$(key).addEventListener('input',()=>{saveImportEdits();paintImportPreview()}));
   paintImportPreview();
+  if(typeof loadSegmentChoices==='function') loadSegmentChoices('i_segment',savedImportEdits?.i_segment).then(paintImportPreview);
   $('i_pub').addEventListener('click',async()=>{
     if(sample){status('Samples are preview-only. Capture your own session to save a run.',true);return;}
     saveImportEdits();
@@ -1608,7 +1626,8 @@ function importRun(){
     try{ prior=await existingRun(); }catch(lookupError){ showRecovery(lookupError); return; }
     if(prior){ await openExisting(prior); return; }
     const base={profile_id:ME.id,title:$('i_title').value||'Untitled run',
-      project:run.project||null,harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
+      project:run.project||null,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
+      harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,
       rhythm:run.rhythm||null,caption,output_url:output||null,visibility:audience,started_at:run.started||null};
     // the coach columns (nullable; migration 2026-09-03-coach.sql). Retry without them on a
@@ -1747,6 +1766,7 @@ async function route(){ account.recover();
   }
   if(q.has('community'))return viewCommunity();
   if(q.has('forum')){setPrimarySection('community');return forum.index();}
+  if(q.has('segment'))return GrinderSegments.mount({client:sb,id:q.get('segment'),slot:$('app'),frame,status});
   if(q.has('post'))return viewPost();
   if(q.has('mine')){setPrimarySection('mine');return progress.history();}
   if(q.has('progress')){setPrimarySection('mine');return progress.index();}
