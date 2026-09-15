@@ -1143,14 +1143,14 @@ function featuredCard(r,{sample=false}={}){
       <span class="state${sample?' sample-label':''}">${sample?'SAMPLE':'Public run'}</span></div>
     <div class="title">${esc(r.title||'A run')}</div>
     <div class="sub">${esc(r.harness||'agent')}${r.project?' · '+esc(r.project):''}</div>
-    ${r.caption?`<div class="note">${esc(r.caption)}</div>`:''}
-    ${vptHtml(r)}
+    ${r.caption?`<div class="note">${esc(r.caption)}</div>`:sample?'<div class="note">An example activity trace. No real output is attached.</div>':''}
+    ${r.output_url&&safeOutputUrl(r.output_url)?`<div class="note"><a class="primary-output" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer">Open what was built →</a></div>`:''}
     ${curve(r.rhythm)}
     <div class="stats num">
       <div class="stat"><div class="v">${r.prompts??'—'}</div><div class="k">Typed turns</div></div>
       <div class="stat"><div class="v">${dm==null?'—':fmtDur(dm)}</div><div class="k">Session time</div></div>
       <div class="stat"><div class="v">${r.commits??'—'}</div><div class="k">Commits</div></div></div>
-    <details><summary class="pad">${r.tool_calls??'Unknown'} tool calls · recorded measurements</summary>${fiveRow(r)}${coachBlock(r)}</details>
+    <details><summary class="pad">${r.tool_calls??'Unknown'} tool calls · recorded measurements</summary>${fiveRow(r)}</details>
     ${sample?'<div class="foot"><span class="meta">Example data from the repository</span></div>':`<div class="foot">${r.output_url&&safeOutputUrl(r.output_url)?`<a class="primary-output" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-weight:500">Open what was built →</a>`:`<a href="/?run=${r.id}" style="color:var(--blue);font-weight:500">Open run →</a>`}
       <span class="acts"><a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div>`}</div>`;
 }
