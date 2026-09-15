@@ -9,10 +9,10 @@ assert.equal(Origin.state({ signedIn: false, configured: true }).kind, "hidden")
 assert.equal(Origin.html(Origin.state({ signedIn: false, configured: true })), "", "Origin is absent before Strava sign-in");
 
 const unconfigured = Origin.state({ signedIn: true, configured: false });
-assert.equal(unconfigured.kind, "hidden", "no connector means no panel");
-let markup = Origin.html(unconfigured);
-assert.equal(markup, "", "Origin panel is absent until a connector exists");
-assert.doesNotMatch(markup, /Continue with Origin|Sign in with Origin/);
+assert.equal(unconfigured.kind, "hidden", "no connector means no Origin panel");
+assert.equal(Origin.html(unconfigured), "", "Origin panel is absent until a connector exists");
+assert.equal(Origin.create().html(), "", "shipped controller without a connector renders nothing");
+let markup;
 
 assert.equal(Origin.state({ signedIn: true, configured: true }).kind, "connect");
 assert.match(Origin.html(Origin.state({ signedIn: true, configured: true })), /data-origin-connect/);
@@ -48,4 +48,4 @@ state = await failed.connect();
 assert.equal(state.kind, "error");
 assert.match(state.message, /Invalid installation receipt/);
 
-console.log("PASS Origin: post-sign-in-only empty, connect, cancel, error, connected and disconnect states");
+console.log("PASS Origin: hidden without sign-in or connector, connect, cancel, error, connected and disconnect states");

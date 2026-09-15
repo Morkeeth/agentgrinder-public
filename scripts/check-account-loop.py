@@ -298,12 +298,10 @@ def main():
             check(len(created) == 1 and created[0]["handle"] == "test-github-builder", "GitHub-only: one dedicated Strava profile created")
             check(after_onboard["grinder"] == before["grinder"], "GitHub-only: Grinder public profile data unchanged")
             page.goto(base + "/?account")
-            page.wait_for_selector("#origin-connection")
-            origin_text = page.inner_text("#origin-connection")
-            check("No Origin repositories are connected" in origin_text, "Origin: signed-in empty state is explicit")
-            check("not a sign-in method" in origin_text, "Origin: repository connection is separate from Auth")
+            page.wait_for_selector("#account-signout")
+            check(page.query_selector("#origin-connection") is None, "Origin: no panel in Account until a connector exists")
             check(page.query_selector("[data-origin-connect]") is None, "Origin: no action before app review")
-            page.screenshot(path=str(ARTIFACTS / "origin-empty-mobile.png"), full_page=True)
+            page.screenshot(path=str(ARTIFACTS / "account-no-origin-mobile.png"), full_page=True)
             context.close()
 
             # 4. Casey (GitHub + email) on a phone: panel, duplicate handle, free variant, name edit.
