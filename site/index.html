@@ -898,6 +898,16 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   const started=r.started_at&&Number.isFinite(Date.parse(r.started_at))?new Date(r.started_at).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}):'Session time unknown';
   const output=safeOutputUrl(r.output_url);
   const date=new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  const ridge=typeof GrinderContract==='object'&&GrinderContract.ridge?GrinderContract.ridge(r):'';
+  const ridgeOutput=output?(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(output)?'PR':/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(output)?'Screenshot':'Output'):null;
+  const recorded=`<details class="run-evidence"><summary>Recorded details</summary><p class="meta">${r.tool_calls??'Unknown'} tool calls · ${r.files_touched??'Unknown'} files touched. Counts describe recorded activity, not quality.</p></details>`;
+  const ridgeBody=ridge?`${ridge}
+    <div class="run-key-facts"><div><span>Wall time</span><strong>${r.ridge_wall_seconds==null?'Unknown':esc(fmtDur(Math.round(r.ridge_wall_seconds/60)))}</strong></div><div><span>Turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>${(r.commits||0)>0?'Commits':'Output'}</span><strong>${(r.commits||0)>0?r.commits:(ridgeOutput||'Unknown')}</strong></div></div>
+    <details class="ridge-more"><summary>More</summary>${fiveRow(r)}${coachBlock(r)}${r.tree?GrinderContract.tree(r.tree):''}${recorded}${output?`<p class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open ${esc(ridgeOutput||'output')} ↗</a></p>`:''}</details>`
+    :`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
+    ${r.tree?GrinderContract.tree(r.tree):''}
+    <div class="run-key-facts"><div><span>Typed turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>Artifacts</span><strong>${r.artifacts_produced??'Unknown'}</strong></div><div><span>Commits</span><strong>${r.commits??'Unknown'}</strong></div></div>
+    ${recorded}`;
   return `<div class="card" id="card-${r.id}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
@@ -906,11 +916,8 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
     <div class="sub">${r.project?esc(r.project)+' · ':''}${esc(r.harness||'Coding agent')}${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
-    ${output?`<div class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open what was built ↗</a></div>`:''}
-    <div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
-    ${r.tree?GrinderContract.tree(r.tree):''}
-    <div class="run-key-facts"><div><span>Typed turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>Artifacts</span><strong>${r.artifacts_produced??'Unknown'}</strong></div><div><span>Commits</span><strong>${r.commits??'Unknown'}</strong></div></div>
-    <details class="run-evidence"><summary>Recorded details</summary><p class="meta">${r.tool_calls??'Unknown'} tool calls · ${r.files_touched??'Unknown'} files touched. Counts describe recorded activity, not quality.</p></details>
+    ${ridge?'':output?`<div class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open what was built ↗</a></div>`:''}
+    ${ridgeBody}
     ${typeof runContinuation==='function'?runContinuation(r,opts):''}
     ${opts.preview?'<div class="foot"><span class="meta">Preview · not saved</span></div>':`<div class="foot"><span class="meta">${count||0} ACK${count===1?'':'s'}${selfAck?' · your run':''}</span>
       <span class="acts">${ackBtn}<a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div>`}
@@ -1607,7 +1614,7 @@ function importRun(){
     <div class="panel">
       ${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>
     <div class="panel"><div class="pad">
-    <p class="hint export-contents" style="margin:0 0 12px">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
+    <p class="hint export-contents" style="margin:0 0 12px">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.ridge?', ridge bins and worker counts':''}${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
     <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details><p class="hint" style="margin:12px 0">Review the imported details and any tool names you choose to share before publishing.</p>
     <label>What did you build?<input id="i_title" maxlength="120" required placeholder="Title you write, not scraped" value="${esc(run.project||'')} session"></label>
     <label>Model (optional)<input id="i_model" maxlength="120" value="${esc(run.model||'')}" placeholder="Model name"></label>
@@ -1635,6 +1642,8 @@ function importRun(){
       harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,artifacts_produced:run.artifacts_produced??null,
       rhythm:run.rhythm||null,trace_basis:run.trace_basis||null,caption:$('i_caption').value||null,output_url:$('i_output_url').value||null,
+      ridge:run.ridge||null,ridge_basis:run.ridge_basis||null,ridge_wall_seconds:run.ridge_wall_seconds??null,
+      worker_bins:run.worker_bins||null,commit_bins:run.commit_bins||null,
       visibility:'private',started_at:run.started||null,created_at:new Date().toISOString()};
     $('import-card-preview').innerHTML=runCard(preview,false,0,{preview:true});
   }
