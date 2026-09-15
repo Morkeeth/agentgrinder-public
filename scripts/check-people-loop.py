@@ -207,6 +207,9 @@ def main():
             riley.get_by_text(
                 "python3 -m agentgrinder grind --harness cursor --push", exact=True
             ).first.wait_for()
+            riley.get_by_text("Post a run without a Cursor export").click()
+            assert riley.get_by_label("Who can see this run?").input_value() == "private"
+            assert riley.get_by_label("Who can see this run?").locator("option").count() == 3
             riley.screenshot(
                 path=str(ARTIFACTS / "first-post-empty-mobile.png"), full_page=True
             )
@@ -236,10 +239,40 @@ def main():
             casey.get_by_label("Short caption").fill(
                 "TEST DATA: friend lookup and follow before the run existed."
             )
+            assert casey.get_by_label("Who can see this run?").input_value() == "private"
             casey.get_by_label("Who can see this run?").select_option("public")
             casey.get_by_role("button", name="Save run").click()
             casey.wait_for_url("**/?run=*", timeout=20_000)
             run_id = casey.url.split("run=", 1)[1].split("&", 1)[0]
+
+            # Casey privately adds Riley, then posts a run for that audience.
+            casey.goto(base + "/?u=test-casey", wait_until="networkidle")
+            casey.get_by_text("Close friends", exact=True).click()
+            casey.get_by_label("Add by handle").fill("@test-riley")
+            casey.get_by_role("button", name="Add close friend").click()
+            casey.wait_for_timeout(1_000)
+            assert casey.get_by_role("button", name="Remove").count() == 1, {
+                "status": casey.locator("#status").inner_text(),
+                "panel": casey.locator("#close-friends-management").inner_text(),
+            }
+            casey.screenshot(
+                path=str(ARTIFACTS / "close-friends-management-desktop.png"),
+                full_page=True,
+            )
+            casey.goto(base + "/?post", wait_until="networkidle")
+            casey.get_by_text("Post a run without a Cursor export").click()
+            casey.get_by_label("What did you build?").fill(
+                "TEST DATA close friends lane"
+            )
+            casey.get_by_label("Short caption").fill(
+                "TEST DATA: a run visible to one privately selected profile."
+            )
+            casey.get_by_label("Who can see this run?").select_option(
+                "close_friends"
+            )
+            casey.get_by_role("button", name="Save run").click()
+            casey.wait_for_url("**/?run=*", timeout=20_000)
+
             casey.goto(base + "/?people", wait_until="networkidle")
             casey.get_by_text("Your shareable profile").wait_for()
             casey.screenshot(path=str(ARTIFACTS / "people-share-desktop.png"), full_page=True)
@@ -250,6 +283,7 @@ def main():
             riley.screenshot(path=str(ARTIFACTS / "following-feed-mobile.png"), full_page=True)
             riley.goto(base + "/?u=test-casey", wait_until="networkidle")
             riley.get_by_role("button", name="Following · unfollow", exact=True).wait_for()
+            riley.get_by_text("TEST DATA close friends lane", exact=True).wait_for()
             riley.get_by_text("TEST DATA people lane", exact=True).click()
             riley.wait_for_url("**/?run=*", timeout=20_000)
             riley.get_by_label("Your reply").fill(
@@ -271,6 +305,9 @@ def main():
             anon.on("pageerror", lambda error: errors.append("anon: " + str(error)))
             anon.goto(base + "/?u=test-casey", wait_until="networkidle")
             anon.get_by_text("TEST DATA people lane", exact=True).wait_for()
+            assert anon.get_by_text(
+                "TEST DATA close friends lane", exact=True
+            ).count() == 0
             anon.goto(base + "/?u=not-a-real-handle-xyz", wait_until="networkidle")
             anon.get_by_text("Profile not found.", exact=True).wait_for()
             anon.screenshot(path=str(ARTIFACTS / "signed-out-missing-profile-mobile.png"), full_page=True)
@@ -297,6 +334,9 @@ def main():
                         "following_empty": True,
                         "following_feed": True,
                         "profile_run_response": True,
+                        "close_friends_management": True,
+                        "close_friends_run_visible_to_friend": True,
+                        "close_friends_run_hidden_from_anonymous": True,
                         "responses_return": True,
                         "signed_out_profile": True,
                         "keyboard_escape_clear": True,

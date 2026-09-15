@@ -63,9 +63,9 @@ def test_every_avatar_carries_the_handle_for_a_screen_reader():
     assert "'@'+handle" in AVATAR_SRC
 
 
-def test_an_anonymous_run_never_writes_its_authors_trace():
-    # a shape that matched a public card would undo the anonymity of a ghost grind
-    assert "if(!r||r.visibility==='anonymous') return;" in AVATAR_SRC
+def test_nonpublic_runs_never_write_their_authors_profile_trace():
+    # A reusable profile mark must not preserve a revoked private audience trace.
+    assert "if(!r||r.visibility!=='public') return;" in AVATAR_SRC
 
 
 def test_the_agent_rule_reads_a_row_and_never_a_name():
@@ -111,6 +111,9 @@ out.chosen=avatar('email-builder');
 noteTraces([{visibility:'anonymous',created_at:'2026-09-03T00:00:00Z',rhythm:[5,5,5],
              profiles:{github_handle:'shy'}}]);
 out.anon=avatar('shy');
+noteTraces([{visibility:'close_friends',created_at:'2026-09-03T00:00:00Z',rhythm:[8,1,8],
+             profiles:{github_handle:'close-builder'}}]);
+out.close=avatar('close-builder');
 out.ghost=avatar('ghost',{ghost:true});
 // an agent account, flagged by its own row
 noteTraces([{visibility:'public',created_at:'2026-09-02T00:00:00Z',rhythm:[3,1,4],
@@ -173,6 +176,12 @@ def test_an_anonymous_grind_leaves_no_mark_on_anyone():
     assert '<line class="trace empty"' in o["ghost"]
     assert 'aria-label="anonymous grinder, no trace"' in o["ghost"]
     assert "grind yet" not in o["ghost"]                # we never looked, so we never claim
+
+
+def test_a_close_friends_grind_leaves_no_reusable_profile_mark():
+    o = render()
+    assert '<line class="trace empty"' in o["close"]
+    assert "<polyline" not in o["close"]
 
 
 def test_an_agent_account_is_one_extra_hairline_not_a_badge_or_a_colour():
