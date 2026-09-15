@@ -49,6 +49,9 @@ No model API key is required. The command reads that session on this machine, wr
 `./grind.html`, and opens an unsaved metrics-only import. Review the card, account and destination;
 choosing an audience and pressing **Save run** are deliberate later actions.
 
+With the tool installed in the active Python environment, the equivalent command prefix is
+`python3 -m agentgrinder grind`.
+
 ## What help matters now?
 
 Make first-run instructions easier, improve the card on a phone, test keyboard access, report a reproducible bug, or improve the empty states a new user meets in a feed with few runs. [First contributions](docs/FIRST-PR.md) and [issues to open](docs/ISSUES-TO-OPEN.md) give starting files and a clear outcome. [Open issues](https://github.com/Morkeeth/agentgrinder-public/issues) show reported work; check before starting something large.

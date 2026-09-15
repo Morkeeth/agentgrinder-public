@@ -892,26 +892,25 @@ def _grind(args) -> int:
 
 def _list_native_selection(path, harness, groups, parser, show_paths=False):
     """Print enough local provenance to deliberately choose a sitting."""
+    project = parser(path, records=groups[-1]).get("project") if groups else None
+    selection = {
+        "harness": harness,
+        "project": project,
+        "source": str(Path(path).resolve()) if show_paths else Path(path).name,
+        "source_path_hidden": not show_paths,
+    }
     rows = []
     for index, group in enumerate(groups, 1):
         run = parser(path, records=group)
         rows.append({
+            "selected_session": selection,
             "sitting": index,
             "started": run.get("started"),
             "typed_turns": run.get("turns_typed"),
             "tool_calls": run.get("tool_calls"),
+            "next": "rerun with --pick N after confirming the project and sitting",
         })
-    project = parser(path, records=groups[-1]).get("project") if groups else None
-    print(json.dumps({
-        "selected_session": {
-            "harness": harness,
-            "project": project,
-            "source": str(Path(path).resolve()) if show_paths else Path(path).name,
-            "source_path_hidden": not show_paths,
-        },
-        "sittings": rows,
-        "next": "rerun with --pick N after confirming the project and sitting",
-    }, indent=2))
+    print(json.dumps(rows, indent=2))
     return 0
 
 
