@@ -16,12 +16,26 @@ IMPORT = INDEX[INDEX.index("function importRun(){") : INDEX.index("async functio
 
 def test_failed_save_keeps_the_draft_and_offers_an_explicit_retry():
     assert 'id="i_recover"' in IMPORT
-    assert "Nothing was posted by this attempt." in IMPORT
-    assert 'id="i_retry"' in IMPORT and "Try again" in IMPORT
+    assert "Save not confirmed." in IMPORT
+    assert "cannot tell whether the service received the run" in IMPORT
+    assert 'id="i_retry"' in IMPORT and "Check and try again" in IMPORT
     assert 'href="/?mine">Your runs' in IMPORT
     # no timer or loop re-sends the insert; the only retry is the person's click
     assert "setTimeout" not in IMPORT and "setInterval" not in IMPORT
     assert "Check Your runs before retrying" not in IMPORT
+
+
+def test_manual_save_has_a_stable_browser_id_and_checks_before_retry():
+    manual = INDEX[INDEX.index("function wireComposer(){") : INDEX.index("async function viewProfile(")]
+    assert "ag_manual_post_draft" in manual
+    assert "crypto.randomUUID()" in manual
+    assert "id:attemptId" in manual
+    assert "const prior=await existing()" in manual
+    assert "Save not confirmed." in manual
+    assert "cannot tell whether the service received the run" in manual
+    assert "Check and try again" in manual
+    assert "no duplicate was created" in manual
+    assert "setTimeout" not in manual and "setInterval" not in manual
 
 
 def test_same_capture_is_one_run_not_two():
@@ -94,6 +108,7 @@ def test_the_browser_walk_covers_the_journey():
         'route.abort("connectionfailed")',
         "no automatic retry fired",
         "lost response: Try again found the saved run by measurement revision",
+        "manual retry: existing save opened and no duplicate was created",
         "re-save: opens the existing run",
         "This import link is incomplete",
         "cap: the exact reply past the 12-page load is rendered directly",

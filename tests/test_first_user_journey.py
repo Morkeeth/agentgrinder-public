@@ -30,8 +30,8 @@ def test_zero_run_surfaces_explain_deliberate_save():
 def test_manual_post_names_its_duplicate_limit():
     composer = INDEX[INDEX.index("function postComposerHtml(") : INDEX.index("async function viewPost()")]
     assert "Manual posts have no capture identifier." in composer
-    assert "check <a href=\"/?mine\">My runs</a> before pressing it again" in composer
-    assert "cannot reliably detect a duplicate" in composer
+    assert "browser gives each save an identifier" in composer
+    assert "Check and try again" in composer
     assert "never invents a measurement revision" in composer
 
 
