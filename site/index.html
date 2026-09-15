@@ -1244,6 +1244,7 @@ function howItWorks(){
 // line any more, because the package needs none: it runs from the clone on the python macOS
 // already has. The coach is a second, honest line — it needs Python 3.10 or newer, and says so.
 const INSTALL_CMD="git clone https://github.com/Morkeeth/agentgrinder-public && cd agentgrinder-public && python3 -m agentgrinder grind --harness cursor";
+const COACH_CMD='python3.12 -m venv .venv && .venv/bin/pip install -e ".[coach]" && .venv/bin/agentgrinder grind --coach';
 function uploadBlock(){
   return `<div class="up">
     <div class="up-top"><span class="t">Capture from Cursor or Grok Bot</span><span class="meta">private by default</span></div>
@@ -1629,10 +1630,10 @@ function importRun(){
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
     <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me — just you</option><option value="link">Link — anyone with the URL</option><option value="public">Public — Feed and profile</option></select></label>
-    <p class="hint">Only me stays with you. Link is unlisted but readable by anyone with the URL. Public adds the run to Feed and your profile.</p>
+    <p class="hint">Only me stays with you. Link is unlisted but readable by anyone with the URL. Choosing Public is the deliberate action that adds the run to Feed and your profile.</p>
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample — preview only':(ME?'Save run':'Sign in to save')}</button>
     <details class="preview-details"><summary>Review recorded measurements and optional details</summary>
-      <p class="hint export-contents">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. Unknown measurements stay unknown.</p>
+      <p class="hint export-contents">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me. Unknown measurements stay unknown.</p>
       <div class="panel">${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>
       <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details>
       <label>Model (optional)<input id="i_model" maxlength="120" value="${esc(run.model||'')}" placeholder="Model name"></label>
