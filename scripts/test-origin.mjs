@@ -8,12 +8,10 @@ const Origin = createRequire(import.meta.url)("../site/origin.js");
 assert.equal(Origin.state({ signedIn: false, configured: true }).kind, "hidden");
 assert.equal(Origin.html(Origin.state({ signedIn: false, configured: true })), "", "Origin is absent before Strava sign-in");
 
-const empty = Origin.state({ signedIn: true, configured: false });
-assert.equal(empty.kind, "hidden");
-let markup = Origin.html(empty);
-assert.match(markup, /No Origin repositories are connected/);
-assert.match(markup, /not a sign-in method/);
-assert.doesNotMatch(markup, /data-origin-connect/, "unreviewed app exposes no connection action");
+const unconfigured = Origin.state({ signedIn: true, configured: false });
+assert.equal(unconfigured.kind, "hidden", "no connector means no panel");
+let markup = Origin.html(unconfigured);
+assert.equal(markup, "", "Origin panel is absent until a connector exists");
 assert.doesNotMatch(markup, /Continue with Origin|Sign in with Origin/);
 
 assert.equal(Origin.state({ signedIn: true, configured: true }).kind, "connect");
