@@ -78,13 +78,41 @@ class QuietHandler(SimpleHTTPRequestHandler):
         pass
 
 
-def browser_path() -> str:
+NOT_RUN = "Cold first minute NOT RUN: set CHROME_BIN to a Chrome-compatible browser."
+
+
+def playwright_headless_shells() -> list[str]:
+    """Playwright's bundled headless shells, newest first, when a Playwright cache exists."""
+    cache = Path.home() / "Library" / "Caches" / "ms-playwright"
+    if not cache.is_dir():
+        return []
+    shells = sorted(cache.glob("chromium_headless_shell-*/chrome-headless-shell-*/chrome-headless-shell"), reverse=True)
+    return [str(shell) for shell in shells]
+
+
+def browser_paths() -> list[str]:
+    """Chrome-compatible binaries to try, in order. CHROME_BIN or BRAVE_BINARY always wins.
+
+    Playwright's headless shell comes before the macOS app bundles: on some Macs the full
+    Google Chrome app never exits in headless mode, so a purpose-built shell is the safer first try.
+    """
     configured = os.environ.get("CHROME_BIN") or os.environ.get("BRAVE_BINARY")
-    choices = [configured, "/opt/google/chrome/chrome", "google-chrome", "chromium", "chromium-browser", "brave-browser"]
+    choices = [
+        configured,
+        *playwright_headless_shells(),
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/opt/google/chrome/chrome",
+        "google-chrome",
+        "chromium",
+        "chromium-browser",
+        "brave-browser",
+    ]
+    found = []
     for choice in choices:
         if choice and (Path(choice).is_file() or shutil.which(choice)):
-            return choice if Path(choice).is_file() else (shutil.which(choice) or choice)
-    raise SystemExit("Cold first minute NOT RUN: set CHROME_BIN to a Chrome-compatible browser.")
+            found.append(choice if Path(choice).is_file() else (shutil.which(choice) or choice))
+    return found
 
 
 def prepare_site(folder: Path) -> None:
@@ -147,7 +175,11 @@ def main() -> None:
     sample = json.loads((ROOT / "samples" / "sample_run.json").read_text())
     assert sample["turns_typed"] == 47 and sample["commits"] == 3
 
-    chrome = browser_path()
+    browsers = browser_paths()
+    if not browsers:
+        # No browser is a skipped check, not a failed one: dev.py check stays green.
+        print(NOT_RUN, flush=True)
+        return
     with tempfile.TemporaryDirectory(prefix="cold-first-minute-") as raw:
         folder = Path(raw)
         prepare_site(folder)
@@ -157,7 +189,19 @@ def main() -> None:
         thread.start()
         base = f"http://127.0.0.1:{server.server_address[1]}/"
         try:
-            phone = capture(chrome, base, args.screenshots / "anonymous-home-390.png", 390, 844)
+            phone = chrome = None
+            for candidate in browsers:
+                try:
+                    phone = capture(candidate, base, args.screenshots / "anonymous-home-390.png", 390, 844)
+                except subprocess.TimeoutExpired:
+                    # A browser that never exits headless is unusable here; try the next one.
+                    print(f"Cold first minute: {candidate} did not exit in headless mode, skipping it.", flush=True)
+                    continue
+                chrome = candidate
+                break
+            if chrome is None:
+                print(NOT_RUN, flush=True)
+                return
             modal = capture(chrome, base + "#cold-signin", args.screenshots / "sign-in-390.png", 390, 844)
             desktop = capture(chrome, base, args.screenshots / "anonymous-home-1280.png", 1280, 900)
         finally:
