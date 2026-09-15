@@ -42,6 +42,40 @@
       run.claims_verified > run.claims
     )
       throw new Error("Verified claims cannot exceed the claims counted.");
+    if (run.ridge != null) {
+      if (
+        !Array.isArray(run.ridge) ||
+        run.ridge.length < 40 ||
+        run.ridge.length > 60 ||
+        run.ridge.some((v) => !Number.isSafeInteger(v) || v < 0)
+      )
+        throw new Error(
+          "ridge must contain 40 to 60 non-negative whole-number bins.",
+        );
+      if (
+        !Array.isArray(run.worker_bins) ||
+        run.worker_bins.length !== run.ridge.length ||
+        run.worker_bins.some((v) => !Number.isSafeInteger(v) || v < 0)
+      )
+        throw new Error("worker_bins must match ridge.");
+      if (
+        !Array.isArray(run.commit_bins || []) ||
+        (run.commit_bins || []).some(
+          (v) =>
+            !Number.isSafeInteger(v) || v < 0 || v >= run.ridge.length,
+        )
+      )
+        throw new Error("commit_bins must contain valid ridge indexes.");
+      if (!["wall-time", "call-index"].includes(run.ridge_basis))
+        throw new Error("ridge_basis must be wall-time or call-index.");
+      if (
+        run.ridge_wall_seconds != null &&
+        (typeof run.ridge_wall_seconds !== "number" ||
+          !Number.isFinite(run.ridge_wall_seconds) ||
+          run.ridge_wall_seconds < 0)
+      )
+        throw new Error("Invalid ridge wall time.");
+    }
     for (const field of ["measurement_revision", "baseline_revision"]) {
       if (
         run[field] != null &&
@@ -81,6 +115,58 @@
       points +
       '" stroke="currentColor" fill="none" stroke-width="2"/></svg>'
     );
+  }
+  function ridge(snapshot) {
+    const values = snapshot?.ridge;
+    const workers = snapshot?.worker_bins;
+    if (
+      !Array.isArray(values) ||
+      values.length < 40 ||
+      values.length > 60 ||
+      values.some((v) => !Number.isSafeInteger(v) || v < 0) ||
+      !Array.isArray(workers) ||
+      workers.length !== values.length ||
+      workers.some((v) => !Number.isSafeInteger(v) || v < 0)
+    )
+      return "";
+    const w = 800, h = 150, base = 132, top = 16;
+    const x = (i) => (i * w) / Math.max(1, values.length - 1);
+    const max = Math.max(1, ...values);
+    const y = (v) => base - (v / max) * (base - top);
+    const line = values
+      .map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`)
+      .join(" ");
+    const area = `0,${base} ${line} ${w},${base}`;
+    const workerMax = Math.max(0, ...workers);
+    let backs = "";
+    for (let level = Math.min(3, workerMax); level >= 1; level--) {
+      const points = workers
+        .map((v, i) => {
+          const active = Math.min(v, level) / level;
+          const value = active ? Math.max(values[i], max * (0.2 + level * 0.08)) : 0;
+          return `${x(i).toFixed(1)},${y(value).toFixed(1)}`;
+        })
+        .join(" ");
+      backs += `<polygon class="ridge-worker ridge-worker-${level}" points="0,${base} ${points} ${w},${base}"/>`;
+    }
+    const ticks = (snapshot.commit_bins || [])
+      .filter((v) => Number.isSafeInteger(v) && v >= 0 && v < values.length)
+      .map((v) => `<line class="ridge-commit" x1="${x(v).toFixed(1)}" y1="${base}" x2="${x(v).toFixed(1)}" y2="${base - 10}"/>`)
+      .join("");
+    const output = (() => {
+      let label = "";
+      const url = String(snapshot.output_url || "");
+      if (/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(url)) label = "PR";
+      else if (/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(url)) label = "Screenshot";
+      else if (url) label = "Output";
+      else if (Number.isSafeInteger(snapshot.commits) && snapshot.commits > 0)
+        label = snapshot.commits + " commit" + (snapshot.commits === 1 ? "" : "s");
+      if (!label) return "";
+      const width = Math.min(118, 24 + label.length * 7);
+      const chipY = Math.max(2, y(values[values.length - 1]) - 30);
+      return `<g class="ridge-chip" transform="translate(${w - width - 2},${chipY.toFixed(1)})"><rect width="${width}" height="23" rx="2"/><text x="${width / 2}" y="15">${escText(label)}</text></g>`;
+    })();
+    return `<div class="ridge-wrap"><svg class="ridge" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Tool calls across ${escText(snapshot.ridge_basis === "wall-time" ? "wall time" : "call order")}">${backs}<polygon class="ridge-fill" points="${area}"/><line class="ridge-base" x1="0" y1="${base}" x2="${w}" y2="${base}"/>${ticks}<polyline class="ridge-line" points="${line}"/><circle class="ridge-start" cx="0" cy="${y(values[0]).toFixed(1)}" r="5"/><circle class="ridge-end" cx="${w}" cy="${y(values[values.length - 1]).toFixed(1)}" r="5"/>${output}</svg><span class="meta">${snapshot.ridge_basis === "wall-time" ? "Tool calls over wall time" : "Tool calls over call order"}</span></div>`;
   }
   function headlineMetric(snapshot) {
     if (snapshot && snapshot.headline_metric_id) return snapshot.headline_metric_id;
@@ -232,7 +318,7 @@
       "</section>"
     );
   }
-  const api = { validate, message, trace, sittingsComparable, headlineMetric, rejectPaths, tree };
+  const api = { validate, message, trace, ridge, sittingsComparable, headlineMetric, rejectPaths, tree };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

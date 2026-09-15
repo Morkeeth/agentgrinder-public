@@ -41,6 +41,16 @@ To capture your own Cursor session locally:
 python3 -m agentgrinder grind --harness cursor
 ```
 
+To capture each future completed Cursor composer automatically:
+
+```sh
+python3 -m agentgrinder hook install --harness cursor
+```
+
+The hook records private local drafts and opens a card at `127.0.0.1`. It has no keys, makes no
+external request and never posts. Use `python3 -m agentgrinder hook status` to inspect it and
+`python3 -m agentgrinder hook uninstall` to stop it.
+
 No model API key or account is required. The command reads a Cursor session on this machine, writes `./grind.html` and records counts in `~/.agentgrinder/series.db` in your home directory (pass `--no-series` to skip that). Review generated cards before sharing. A sample can help with development; it must stay labelled as sample data.
 
 ## What help matters now?

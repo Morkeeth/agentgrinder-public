@@ -31,8 +31,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import unquote
 
-DEFAULT_DB = Path.home() / 'Library/Application Support/Cursor/User/globalStorage/state.vscdb'
-DEFAULT_WORKSPACE_STORAGE = Path.home() / 'Library/Application Support/Cursor/User/workspaceStorage'
+def _cursor_user_folder() -> Path:
+    if sys.platform == 'darwin':
+        return Path.home() / 'Library/Application Support/Cursor/User'
+    if os.name == 'nt':
+        return Path(os.environ.get('APPDATA') or Path.home() / 'AppData/Roaming') / 'Cursor/User'
+    return Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config') / 'Cursor/User'
+
+
+DEFAULT_DB = _cursor_user_folder() / 'globalStorage/state.vscdb'
+DEFAULT_WORKSPACE_STORAGE = _cursor_user_folder() / 'workspaceStorage'
 ENV_DB = 'AGENTGRINDER_CURSOR_DB'
 ENV_WORKSPACE_STORAGE = 'AGENTGRINDER_CURSOR_WORKSPACES'
 
@@ -40,8 +48,8 @@ ENV_WORKSPACE_STORAGE = 'AGENTGRINDER_CURSOR_WORKSPACES'
 SUBAGENT_TYPES = {'generalPurpose', 'explore', 'cursor-guide', 'browser-use'}
 
 ABSENT_MESSAGE = (
-    'Cursor local store not found at {path}. This reader needs Cursor for macOS; on another '
-    'platform pass --db or set ' + ENV_DB + ' to the state.vscdb file.'
+    'Cursor local store not found at {path}. Pass --db or set ' + ENV_DB +
+    ' if Cursor stores state.vscdb somewhere else.'
 )
 
 
@@ -142,6 +150,108 @@ def _bubble_stats(conn: sqlite3.Connection, composer_id: str) -> dict:
             models[info['modelName']] += 1
     return {'bubbles': bubbles, 'tool_calls': tool_calls, 'tool_errors': tool_errors,
             'first': first, 'last': last, 'models': models}
+
+
+def _bubble_activity(conn: sqlite3.Connection, composer_id: str) -> tuple[list[str | None], list[str]]:
+    """Return tool timestamps and all valid timestamps, with no message or argument fields."""
+    tools: list[str | None] = []
+    stamps: list[str] = []
+    for (raw,) in conn.execute(
+            'select value from cursorDiskKV where key like ?', (f'bubbleId:{composer_id}:%',)):
+        try:
+            bubble = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(bubble, dict):
+            continue
+        stamp = _iso(bubble.get('createdAt'))
+        if stamp:
+            stamps.append(stamp)
+        tool = bubble.get('toolFormerData')
+        if isinstance(tool, dict) and tool:
+            tools.append(stamp)
+    return tools, stamps
+
+
+def _bin_index(value: float, start: float, end: float, bins: int) -> int:
+    if end <= start:
+        return 0
+    return min(bins - 1, max(0, int((value - start) / (end - start) * bins)))
+
+
+def ridge_from_calls(tool_stamps: list[str | None], all_stamps: list[str] | None = None,
+                     workers: list[dict] | None = None, commit_call_indices: list[int] | None = None,
+                     bins: int = 50) -> dict:
+    """Bin tool requests without carrying tool names, arguments, message text, or paths."""
+    if not 40 <= bins <= 60:
+        raise ValueError('Ridge bins must be between 40 and 60.')
+    ridge = [0] * bins
+    worker_bins = [0] * bins
+    commit_bins: list[int] = []
+    valid_tools = [_iso(stamp) for stamp in tool_stamps]
+    timed = bool(tool_stamps) and all(valid_tools)
+    all_valid = [_iso(stamp) for stamp in (all_stamps or [])]
+    timed = timed and all(all_valid)
+    start_dt = end_dt = None
+    if timed:
+        parsed = [datetime.fromisoformat(stamp.replace('Z', '+00:00'))
+                  for stamp in (all_valid or valid_tools)]
+        start_dt, end_dt = min(parsed), max(parsed)
+        ordered = sorted(datetime.fromisoformat(stamp.replace('Z', '+00:00'))
+                         for stamp in valid_tools)
+        for stamp in ordered:
+            ridge[_bin_index(stamp.timestamp(), start_dt.timestamp(), end_dt.timestamp(), bins)] += 1
+    else:
+        for index in range(len(tool_stamps)):
+            ridge[min(bins - 1, index * bins // max(1, len(tool_stamps)))] += 1
+
+    for call_index in commit_call_indices or []:
+        if not isinstance(call_index, int) or call_index < 0 or call_index >= len(tool_stamps):
+            continue
+        if timed:
+            ordered = sorted(datetime.fromisoformat(stamp.replace('Z', '+00:00'))
+                             for stamp in valid_tools)
+            commit_bins.append(_bin_index(
+                ordered[call_index].timestamp(), start_dt.timestamp(), end_dt.timestamp(), bins))
+        else:
+            commit_bins.append(min(bins - 1, call_index * bins // max(1, len(tool_stamps))))
+
+    if timed and start_dt is not None and end_dt is not None:
+        span_start, span_end = start_dt.timestamp(), end_dt.timestamp()
+        for worker in workers or []:
+            try:
+                worker_start = datetime.fromisoformat(
+                    str(worker.get('started_at')).replace('Z', '+00:00')).timestamp()
+                worker_end = datetime.fromisoformat(
+                    str(worker.get('ended_at')).replace('Z', '+00:00')).timestamp()
+            except (TypeError, ValueError):
+                continue
+            for index in range(bins):
+                left = span_start + (span_end - span_start) * index / bins
+                right = span_start + (span_end - span_start) * (index + 1) / bins
+                if worker_start <= right and worker_end >= left:
+                    worker_bins[index] += 1
+
+    wall_seconds = None
+    if timed and start_dt is not None and end_dt is not None:
+        wall_seconds = round(max(0.0, (end_dt - start_dt).total_seconds()), 1)
+    return {
+        'ridge': ridge,
+        'ridge_basis': 'wall-time' if timed else 'call-index',
+        'worker_bins': worker_bins,
+        'commit_bins': sorted(commit_bins),
+        'ridge_wall_seconds': wall_seconds,
+    }
+
+
+def build_ridge(conn: sqlite3.Connection, composer_id: str,
+                commit_call_indices: list[int] | None = None, bins: int = 50) -> dict:
+    """Build the redacted ridge and worker activity for one composer."""
+    tools, stamps = _bubble_activity(conn, composer_id)
+    tree = build_tree(conn, composer_id)
+    result = ridge_from_calls(tools, stamps, tree.get('children'), commit_call_indices, bins)
+    assert_redacted(result)
+    return result
 
 
 def project_name(conn: sqlite3.Connection, composer_id: str, storage: Path | None = None) -> str | None:
@@ -304,7 +414,7 @@ def fmt_seconds(seconds: float | None) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog='python3 -m agentgrinder.cursor_tree', description=__doc__.split('\n\n')[0])
-    parser.add_argument('--db', type=Path, default=None, help='path to state.vscdb (default: the Cursor for macOS location)')
+    parser.add_argument('--db', type=Path, default=None, help='path to state.vscdb (default: the platform Cursor user-data location)')
     parser.add_argument('--workspace-storage', type=Path, default=None, help='Cursor workspaceStorage folder, used for the project name only')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--list', action='store_true', help='print parent composers with worker counts and wall time')

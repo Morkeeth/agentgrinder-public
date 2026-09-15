@@ -114,6 +114,8 @@ def main(argv=None) -> int:
     add_agent_parser(sub)
     from .capture import add_parser as add_capture_parser
     add_capture_parser(sub)
+    from .hook import add_parser as add_hook_parser
+    add_hook_parser(sub)
     from .rig_config import add_parser as add_rig_parser
     add_rig_parser(sub)
     rv = sub.add_parser("return-view",
@@ -274,6 +276,9 @@ def main(argv=None) -> int:
         return run_cli(args)
     if args.cmd == "capture":
         from .capture import run_cli
+        return run_cli(args)
+    if args.cmd == "hook":
+        from .hook import run_cli
         return run_cli(args)
     if args.cmd == "practice":
         from .practices import run_cli

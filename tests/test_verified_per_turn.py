@@ -77,7 +77,7 @@ def test_card_headlines_verified_per_turn_not_prompts():
     assert "verified per turn" in html
     # prompts are still on the card, but grouped as cost, never as Distance
     assert ">Distance<" not in html
-    assert "Cost — what the run spent" in html
+    assert "<summary>More</summary>" in html
     assert "47 prompts" in html
     # every dash carries a tooltip saying which fact is missing, and none of them names a
     # project a stranger cannot install
@@ -237,10 +237,11 @@ def test_web_app_never_headlines_prompts():
     assert "heroN:r.prompts" not in src
     assert "heroK:'prompts typed'" not in src and "heroK:'prompts'" not in src
     card = src[src.index("function runCard("):src.index("function wireKudos(")]
-    assert card.index('${esc(r.title)}') < card.index('run-signature') < card.index('run-key-facts')
+    assert card.index('<div class="title">') < card.index('${ridgeBody}')
+    assert card.index('const ridgeBody=') < card.index('run-key-facts')
     assert '<details class="run-evidence">' in card
     assert 'Counts describe recorded activity, not quality.' in card
-    assert '${vptHtml(r)}' not in card and '${fiveRow(r)}' not in card
+    assert card.index('<summary>More</summary>') < card.index('${fiveRow(r)}')
     assert '<span>Typed turns</span>' in card
     # Share export is exercised by check-moment-fixtures.py; its call signature
     # is not part of the card's headline contract.
