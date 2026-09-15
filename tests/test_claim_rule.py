@@ -23,7 +23,7 @@ from agentgrinder.claims import claims_in, is_claim_line, rule_fingerprint
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CAL = os.path.join(REPO, "docs", "claim-calibration.json")
-DOC = os.path.join(REPO, "docs", "CLAIM-RULE-CALIBRATION-2026-09-03.md")
+DOC = os.path.join(REPO, "archive", "hackathon-2026-09", "docs", "CLAIM-RULE-CALIBRATION-2026-09-03.md")
 PAGE = os.path.join(REPO, "site", "methodology.html")
 
 # ---- 1. the rubric, as fixtures. Every line below was written for this test. ----------------

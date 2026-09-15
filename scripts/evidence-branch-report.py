@@ -4,7 +4,7 @@
 The card's honesty number has two halves and only one of them has ever been measured.
 
   DENOMINATOR: what counts as a claim. `is_claim_line`, measured 3 Sep 2026, precision 0.63 and
-  recall 0.66 on a held-out hand-labelled half. See docs/CLAIM-RULE-CALIBRATION-2026-09-03.md.
+  recall 0.66 on a held-out hand-labelled half. See archive/hackathon-2026-09/docs/CLAIM-RULE-CALIBRATION-2026-09-03.md.
 
   NUMERATOR: whether a claim was matched to the RIGHT evidence. `evidence_matches`. No label set,
   no measurement, and the module docstring and the card tooltip both say so in words.

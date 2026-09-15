@@ -53,7 +53,7 @@ SOURCES = {
                    "tool results and injected context are not turns",
     "verified_share": "claims that had matching evidence inside their own turn. The rule that "
                       "decides what a claim is reads precision 0.63 and recall 0.66 on a "
-                      "held-out hand-labelled set (docs/CLAIM-RULE-CALIBRATION-2026-09-03.md); "
+                      "held-out hand-labelled set (archive/hackathon-2026-09/docs/CLAIM-RULE-CALIBRATION-2026-09-03.md); "
                       "whether a claim was matched to the right evidence is not measured yet",
     "correction_rate": "not measured yet: it needs every turn labelled as undoing the one before "
                        "it, and no harness records that, so nothing on your machine can supply it "

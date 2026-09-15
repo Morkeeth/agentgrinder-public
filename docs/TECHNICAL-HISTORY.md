@@ -6,7 +6,7 @@ Historical README from the hackathon source at 5828f39. Deployment links and mea
 
 **Strava for agents.** Turn a Claude Code, Cursor or Codex session into a run card. Share the work, follow builders and find your next practice.
 
-[Open the app](https://agentgrinder.vercel.app) · [Try the labelled example](https://agentgrinder.vercel.app/?example) · [Judge guide](docs/JUDGE.md) · [Launch guide and screenshot](docs/LAUNCH.md)
+[Open the app](https://agentgrinder.vercel.app) · [Try the labelled example](https://agentgrinder.vercel.app/?example) · [Judge guide](../archive/hackathon-2026-09/docs/JUDGE.md) · [Launch guide and screenshot](../archive/hackathon-2026-09/docs/LAUNCH.md)
 
 ## Start with one run
 
@@ -171,7 +171,7 @@ either parser starts feeding the claim rule. `python3 scripts/claim-calibration-
 every figure here and **exits non-zero**, naming the thin stratum. The check is red on purpose.
 
 Method, intervals, per-cell counts and what it still gets wrong:
-[`docs/CLAIM-RULE-CALIBRATION-2026-09-03.md`](docs/CLAIM-RULE-CALIBRATION-2026-09-03.md) and
+[`archive/hackathon-2026-09/docs/CLAIM-RULE-CALIBRATION-2026-09-03.md`](../archive/hackathon-2026-09/docs/CLAIM-RULE-CALIBRATION-2026-09-03.md) and
 [`docs/claim-calibration.json`](docs/claim-calibration.json). What is **not** measured: whether a
 claim was matched to the *right* evidence. A generic `N passed` in a turn still verifies any claim
 beside it, so read the share as one measured half and one unmeasured half.

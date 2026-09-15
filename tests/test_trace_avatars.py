@@ -1,7 +1,7 @@
 """The avatar is the grind trace, never a stock glyph.
 
 The defect this file pins: on 3 Sep 2026 every avatar on the site was a bordered circle with one
-initial in it (M, a, n). Section 6 of docs/AGENT-GRINDER-BRANDBOOK.md says the opposite in
+initial in it (M, a, n). Section 6 of archive/hackathon-2026-09/docs/AGENT-GRINDER-BRANDBOOK.md says the opposite in
 writing: "The mark is generative: the grind trace, the rhythm of a real session drawn as a
 profile line. Every grind has a different shape, so the logo is never a stock glyph." A letter in
 a circle is a stock glyph, and it is the same glyph for every account whose handle starts with

@@ -65,8 +65,8 @@ remains labelled sample bot data and is not evidence that a second bot was used.
 python3 templates/grokbot/post-agent-run/scripts/preview.py path/to/selected-export.jsonl
 ```
 
-Until an approved hosted Agentic Strava URL exists, omit `--base-url` and stop at the localhost
-preview. Once the owner supplies an approved HTTPS origin, passing it changes only the import URL;
+Omit `--base-url` to stop at the localhost preview. Passing the hosted origin
+(`https://agentic-strava.vercel.app`) changes only the import URL;
 the owner must still review the card, account and destination, choose an audience deliberately,
 and save. Never point the helper at the hackathon service.
 
