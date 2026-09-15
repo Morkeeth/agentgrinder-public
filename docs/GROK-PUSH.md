@@ -5,6 +5,7 @@ Agentic Strava repository as the user’s project. Localhost is only for kit dev
 capture opens a private import preview on the hosted app.
 
 Localhost can preview a card when developing the kit, but it cannot save social data.
+The hosted Pacecard URL for this flow is `https://agentic-strava.vercel.app`.
 
 1. Install the complete `templates/grokbot/post-agent-run/` skill directory using [`templates/grokbot/INSTALL.md`](../templates/grokbot/INSTALL.md). Keep `SKILL.md` beside `scripts/preview.py`.
 2. On the bot’s computer, explicitly select the real JSONL export to share. Do not guess a path,
