@@ -1,6 +1,6 @@
 # Maintainer guidelines
 
-These are the review guidelines for Agentic Strava. Repository maintainers make merge and release decisions; contributors can propose changes through issues and PRs. Do not imply a contributor has maintainer access or assign work without agreement.
+These are the review guidelines for Pacecard. Repository maintainers make merge and release decisions; contributors can propose changes through issues and PRs. Do not imply a contributor has maintainer access or assign work without agreement.
 
 ## Triage
 

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 const Origin = createRequire(import.meta.url)("../site/origin.js");
 
 assert.equal(Origin.state({ signedIn: false, configured: true }).kind, "hidden");
-assert.equal(Origin.html(Origin.state({ signedIn: false, configured: true })), "", "Origin is absent before Strava sign-in");
+assert.equal(Origin.html(Origin.state({ signedIn: false, configured: true })), "", "Origin is absent before Pacecard sign-in");
 
 const empty = Origin.state({ signedIn: true, configured: false });
 assert.equal(empty.kind, "empty");

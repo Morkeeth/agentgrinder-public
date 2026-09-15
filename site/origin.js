@@ -1,4 +1,4 @@
-/* Origin is Cursor's code forge. This module models repository installation after Strava
+/* Origin is Cursor's code forge. This module models repository installation after Pacecard
  * sign-in; it is not an Auth provider and never participates in account matching.
  *
  * No Origin application is registered today, so the shipped controller has no connector and
@@ -33,7 +33,7 @@
     const notices = {
       cancelled: "<strong>Origin connection was cancelled.</strong> Nothing changed.",
       error: `<strong>Origin could not connect.</strong> ${esc(value.message || "Try again.")}`,
-      disconnected: "<strong>Origin repository disconnected.</strong> It no longer has access through Agentic Strava.",
+      disconnected: "<strong>Origin repository disconnected.</strong> It no longer has access through Pacecard.",
     };
     const notice = notices[value.kind]
       ? `<div class="account-notice" role="status" aria-live="polite"><p>${notices[value.kind]}</p></div>`
@@ -45,7 +45,7 @@
       ? '<div class="account-actions"><button type="button" class="act" data-origin-connect>Connect Origin repositories</button></div>'
       : "";
     return `<section class="card pad account-section" id="origin-connection" aria-labelledby="origin-title"><h2 id="origin-title">Origin repositories</h2>
-      <p>Connect selected repositories after signing in to Strava. Origin is Cursor&rsquo;s code forge, not a sign-in method.</p>
+      <p>Connect selected repositories after signing in to Pacecard. Origin is Cursor&rsquo;s code forge, not a sign-in method.</p>
       ${notice}${rows ? `<ul class="account-identities">${rows}</ul>` : ""}${empty}${connect}
       <p id="origin-state" class="account-state" role="status" aria-live="polite"></p></section>`;
   }

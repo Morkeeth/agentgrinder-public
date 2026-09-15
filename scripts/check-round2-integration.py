@@ -381,7 +381,7 @@ def main():
                 check("Your reply" not in rp.locator("#app").inner_text(), "blocked: composer withheld from Riley")
             shot(rp, "17-blocked-reply-mobile.png")
 
-            # 12. Riley deletes the Strava profile for real; Casey's targets go missing cleanly.
+            # 12. Riley deletes the Pacecard profile for real; Casey's targets go missing cleanly.
             rp.goto(base + "/?account#danger")
             settle(rp, "test-riley")
             rp.wait_for_selector("#account-confirm")

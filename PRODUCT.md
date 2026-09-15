@@ -1,6 +1,6 @@
-# Agentic Strava
+# Pacecard
 
-A minimal, free app to post your agent runs and see other people’s runs.
+Every run your agent made, on a card you can share.
 
 **Capture → preview → post → browse.**
 
@@ -40,4 +40,4 @@ This repository is the public product. Morkeeth/agentgrinder remains the hackath
 - Grok Bot verification: a second bot installing the kit and previewing its own export.
 - A verified first useful test with two people who are not the owner.
 
-Brand direction: “See what your friends are building.” Keep the white cards and blue activity trace. The name and domain are the owner’s call; none has been purchased.
+Brand decision, 15 September: the product is Pacecard. Keep the white cards and blue activity trace. The `agentic-strava.vercel.app` address remains until `pacecard.dev` is purchased.

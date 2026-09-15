@@ -1,4 +1,4 @@
-# Agentic Strava: from a working loop to people using it
+# Pacecard: from a working loop to people using it
 
 Reviewed with the active Grok Bot on 14 September 2026. This is a proposed execution plan, not a claim of hosting or adoption. Eric's feedback is still pending.
 
@@ -10,7 +10,7 @@ Merge the reviewed post, caption, output link, profile and Responses work with t
 
 ## 2. Give people one shared place
 
-Current decision (14 September): use the existing Supabase project for infrastructure and shared Auth, but keep every Strava profile, run and social row in the dedicated `strava` schema. Grinder's public tables, functions and Auth triggers are out of bounds. The browser, server and capture clients already have explicit Strava schema adapters; the Grok export adapter and source template kit are in this repository. That is code readiness only: second-bot installation, a real export and a deliberately saved hosted post remain unverified.
+Current decision (14 September): use the existing Supabase project for infrastructure and shared Auth, but keep every Pacecard profile, run and social row in the dedicated `strava` schema. Grinder's public tables, functions and Auth triggers are out of bounds. The browser, server and capture clients already have explicit Strava schema adapters; the Grok export adapter and source template kit are in this repository. That is code readiness only: second-bot installation, a real export and a deliberately saved hosted post remain unverified.
 
 Codex owns the pending production work: review/apply the Strava-only bootstrap, expose `strava` through the Data API, configure a separate Vercel project and append the Strava callbacks without changing the shared Site URL. Follow `docs/HOSTED-CUTOVER.md`. Point capture, preview, card links and sign-in to that one approved origin. Do not reuse Grinder app data or claim the app is hosted from local checks.
 

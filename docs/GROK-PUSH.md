@@ -1,6 +1,6 @@
 # Push one Grok Bot run
 
-Save is available only on the approved hosted Agentic Strava URL. Localhost can preview a card, but this repository's local site has no social database and cannot save it.
+Save is available only on the approved hosted Pacecard URL. Localhost can preview a card, but this repository's local site has no social database and cannot save it.
 
 1. Install the complete `templates/grokbot/post-agent-run/` skill directory using [`templates/grokbot/INSTALL.md`](../templates/grokbot/INSTALL.md). Keep `SKILL.md` beside `scripts/preview.py`.
 2. On the bot's machine, explicitly select the real JSONL export to share. Do not guess a path or use an export from someone else's machine.

@@ -1,6 +1,6 @@
 ---
 name: post-agent-run
-description: Turn an explicitly selected Grok Bot session export into a private Agentic Strava card preview. Use when the owner wants to share a real agent run. Posting requires review of the exact card, account, destination and audience.
+description: Turn an explicitly selected Grok Bot session export into a private Pacecard run-card preview. Use when the owner wants to share a real agent run. Posting requires review of the exact card, account, destination and audience.
 ---
 
 Run from a checkout of Morkeeth/agentgrinder-public containing the Grok adapter. Select the actual export from this bot's computer; do not assume access to a person's laptop or invent an export. If the export is unavailable, explain what is needed. The bundled sample is for testing only.
