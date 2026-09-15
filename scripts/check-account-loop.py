@@ -265,7 +265,48 @@ def main():
             page.screenshot(path=str(ARTIFACTS / "signed-out-account-mobile.png"), full_page=True)
             context.close()
 
-            # 3. Casey (GitHub + email) on a phone: panel, duplicate handle, free variant, name edit.
+            # 3. A GitHub-only Auth user has no Strava row yet: onboarding creates exactly that
+            # profile, then Origin appears only inside the signed-in account as an honest empty
+            # repository-connection state.
+            github_new = "11000000-0000-0000-0000-000000000003"
+            github_identity = insert_identity(
+                disposable,
+                github_new,
+                "github",
+                {"user_name": "test-github-new", "full_name": "TEST DATA GitHub New"},
+            )
+            github_ids = [{
+                "identity_id": github_identity,
+                "id": github_identity,
+                "user_id": github_new,
+                "provider": "github",
+                "identity_data": {"user_name": "test-github-new", "full_name": "TEST DATA GitHub New"},
+            }]
+            context = context_for(github_new, "test-github-new", github_ids)
+            page = context.new_page()
+            page.goto(base + "/")
+            page.wait_for_selector("#identity-form")
+            check("Make this your profile" in page.inner_text("#app"), "GitHub-only: first sign-in opens Strava onboarding")
+            check(page.query_selector("#origin-connection") is None, "GitHub-only: Origin is not mixed into onboarding")
+            page.screenshot(path=str(ARTIFACTS / "github-only-onboarding-mobile.png"), full_page=True)
+            page.fill("[name=handle]", "test-github-builder")
+            page.fill("[name=display_name]", "TEST DATA GitHub Builder")
+            page.click("#identity-form button")
+            settle(page, "test-github-builder")
+            after_onboard = snapshot(disposable)
+            created = [p for p in after_onboard["strava"] if p["auth_uid"] == github_new]
+            check(len(created) == 1 and created[0]["handle"] == "test-github-builder", "GitHub-only: one dedicated Strava profile created")
+            check(after_onboard["grinder"] == before["grinder"], "GitHub-only: Grinder public profile data unchanged")
+            page.goto(base + "/?account")
+            page.wait_for_selector("#origin-connection")
+            origin_text = page.inner_text("#origin-connection")
+            check("No Origin repositories are connected" in origin_text, "Origin: signed-in empty state is explicit")
+            check("not a sign-in method" in origin_text, "Origin: repository connection is separate from Auth")
+            check(page.query_selector("[data-origin-connect]") is None, "Origin: no action before app review")
+            page.screenshot(path=str(ARTIFACTS / "origin-empty-mobile.png"), full_page=True)
+            context.close()
+
+            # 4. Casey (GitHub + email) on a phone: panel, duplicate handle, free variant, name edit.
             context = context_for(casey, "test-casey", casey_ids)
             page = context.new_page()
             page.goto(base + "/?account")
