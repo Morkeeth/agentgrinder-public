@@ -361,13 +361,15 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .launch-card .stats{grid-template-columns:repeat(3,minmax(0,1fr))}.launch-card .stat{padding:14px 20px}.launch-card .foot{padding:14px 20px}
 .launch-card details{border-top:1px solid var(--rule)}.launch-card details summary{font-size:13px;color:var(--soft);cursor:pointer}
 .launch-card-label{display:flex;justify-content:space-between;gap:12px;margin:0 auto 10px;max-width:560px;font-size:11px;color:var(--soft)}
+.sample-label{color:var(--blue);font-weight:600;letter-spacing:.04em}
+.public-run-count{max-width:560px;margin:10px auto 0;padding:12px 14px;border:1px solid var(--rule);background:var(--box);font-size:13px;color:var(--soft)}
 .launch-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin:22px 0 18px}
 .launch-steps>div{padding:22px 24px 22px 0}.launch-steps h2{font-size:14px;font-weight:600;margin:0 0 8px}.launch-steps p{font-size:13px;color:var(--soft);margin:0;max-width:32ch}
 .shell.noside:not(.wide) .main{max-width:760px;width:100%;margin:0 auto}
 .run-learning{margin:20px 0;border:1px solid var(--rule)}.run-learning>summary,.profile-settings>summary{padding:14px 16px;cursor:pointer;font-size:14px}.profile-settings{margin:16px 0}.run-learning[open]>summary{border-bottom:1px solid var(--rule)}
 .feed-composer{margin:0 0 20px}.feed-composer>summary{display:inline-block;cursor:pointer}.feed-composer[open]>summary{margin-bottom:12px}
 .launch-more{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:13px;color:var(--soft)}
-@media(max-width:800px){.launch-grid{grid-template-columns:1fr;gap:24px;padding-top:10px}.launch-grid .landing-intro h1{max-width:none;font-size:44px}.launch-steps{grid-template-columns:1fr}.launch-steps>div{padding:16px 0}.launch-steps>div+div{border-top:1px solid var(--rule-2)}.launch-steps p{max-width:none}.launch-card .stat{padding:14px 12px}.launch-card .foot{flex-wrap:wrap}.launch-card .hl .n{font-size:38px}}
+@media(max-width:800px){.launch-grid{grid-template-columns:1fr;gap:24px;padding-top:10px}.launch-grid>section:last-child{order:-1}.launch-grid .landing-intro h1{max-width:none;font-size:44px}.launch-steps{grid-template-columns:1fr}.launch-steps>div{padding:16px 0}.launch-steps>div+div{border-top:1px solid var(--rule-2)}.launch-steps p{max-width:none}.launch-card .stat{padding:14px 12px}.launch-card .foot{flex-wrap:wrap}.launch-card .hl .n{font-size:38px}}
 .mode-banner{display:block;padding:10px 14px;border:1px solid var(--rule);font-size:13px;margin:0 0 14px;background:var(--box)}
 .mode-banner.demo{border-left:3px solid var(--ink)}
 .mode-banner.live{border-left:3px solid var(--blue);background:var(--blue-wash)}
@@ -430,13 +432,13 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 const SB_URL="http://127.0.0.1:54321";
 const SB_KEY="local-development-only";
 const SB_SCHEMA="strava";
-// Featured activity comes only from public runs in this Strava deployment.
-async function fetchFeatured(){
+// The home count is always read from this deployment. A failed read stays unknown.
+async function fetchPublicRunCount(){
   if(!sb) return null;
   try{
-    const {data}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('visibility','public').order('created_at',{ascending:false}).limit(1).maybeSingle();
-    if(data) noteTraces([data]);
-    return data||null;
+    const {count,error}=await sb.from('runs').select('id',{count:'exact',head:true}).eq('visibility','public');
+    if(error) return null;
+    return Number.isInteger(count)?count:null;
   }catch(_){ return null; }
 }
 const $=id=>document.getElementById(id);
@@ -1120,17 +1122,25 @@ function viewPitch(){
 }
 
 
-// THE EXAMPLE CARD, for a visitor with no account. Same numbers, same skin and same coach block
-// as the feed card; the cost row, the route map and the ACK button are left to the full run page,
-// because the point of this one is the verdict and the count of tool calls behind it.
-function featuredCard(r){
-  const att=runAttribution(r);
+// This is the neutral fixture in samples/sample_run.json, shaped like a stored run for the home
+// card. It names no person and never enters the database.
+const HOME_SAMPLE=Object.freeze({
+  id:'sample-run',title:'sample-project: a two-hour probe',harness:'Claude Code',
+  project:'sample-project',started_at:'2026-08-30T06:00:00',created_at:'2026-08-30T06:00:00',
+  duration_s:8400,prompts:47,tool_calls:213,files_touched:12,commits:3,
+  rhythm:[2,4,3,6,5,8,7,9,6,4,3,5,7,10,8,6,4,3,2,5,7,4,3,2,1],
+  claims:9,claims_verified:6,artifacts_produced:4,artifacts_promised:null,
+  corrections:null,reach:null
+});
+
+function featuredCard(r,{sample=false}={}){
+  const att=sample?{handle:'sample',name:'Sample run',ghost:false}:runAttribution(r);
   const dm=r.duration_s==null?null:Math.round(r.duration_s/60);
   const when=r.created_at?new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
-  return `<div class="card launch-card">
+  return `<div class="card launch-card" ${sample?'data-home-sample="1"':''}>
     <div class="runtop">${avatar(att.handle,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who"><span>${esc(att.ghost?'Ghost grinder':att.name)}</span><small>${att.ghost?'metrics only':'@'+esc(att.handle)}${when?' · '+esc(when):''}</small></div>
-      <span class="state">Public run</span></div>
+      <span class="state${sample?' sample-label':''}">${sample?'SAMPLE':'Public run'}</span></div>
     <div class="title">${esc(r.title||'A run')}</div>
     <div class="sub">${esc(r.harness||'agent')}${r.project?' · '+esc(r.project):''}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:''}
@@ -1140,9 +1150,9 @@ function featuredCard(r){
       <div class="stat"><div class="v">${r.prompts??'—'}</div><div class="k">Typed turns</div></div>
       <div class="stat"><div class="v">${dm==null?'—':fmtDur(dm)}</div><div class="k">Session time</div></div>
       <div class="stat"><div class="v">${r.commits??'—'}</div><div class="k">Commits</div></div></div>
-    <details><summary class="pad">${r.tool_calls??'—'} tool calls · measurements and coach notes</summary>${fiveRow(r)}${coachBlock(r)}</details>
-    <div class="foot">${r.output_url&&safeOutputUrl(r.output_url)?`<a class="primary-output" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-weight:500">Open what was built →</a>`:`<a href="/?run=${r.id}" style="color:var(--blue);font-weight:500">Open run →</a>`}
-      <span class="acts"><a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div></div>`;
+    <details><summary class="pad">${r.tool_calls??'Unknown'} tool calls · recorded measurements</summary>${fiveRow(r)}${coachBlock(r)}</details>
+    ${sample?'<div class="foot"><span class="meta">Example data from the repository</span></div>':`<div class="foot">${r.output_url&&safeOutputUrl(r.output_url)?`<a class="primary-output" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-weight:500">Open what was built →</a>`:`<a href="/?run=${r.id}" style="color:var(--blue);font-weight:500">Open run →</a>`}
+      <span class="acts"><a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div>`}</div>`;
 }
 
 
@@ -1225,15 +1235,16 @@ function wireCopy(){
 }
 
 
-function landingHTML(r){
+function landingHTML(){
   return `<div class="launch-grid"><section class="landing-intro"><p class="meta">STRAVA FOR AGENTS</p>
     <h1>Your agent runs. Worth sharing.</h1>
     <p>Turn a Cursor, Claude Code or Codex session into a run card. Post your run. Follow builders. See what they ship.</p>
     <div class="cta"><a class="act primary" href="/?onboard">Post your first run</a><a class="act" href="/?explore">Explore runs</a></div>
     <p class="hint">Capture locally. Preview privately. You choose what goes public.</p>
     </section>
-    <section aria-label="Featured public run"><div class="launch-card-label"><span>ONE BUILDER. ONE RUN.</span><span>YOUR NEXT RUN</span></div>
-    ${r?featuredCard(r):'<div class="card launch-card"><div class="empty">Your run belongs here. <a href="/?onboard">Post your first run</a>.</div></div>'}</section></div>
+    <section aria-label="Sample run card"><div class="launch-card-label"><span class="sample-label">SAMPLE</span><span>WHAT A RUN LOOKS LIKE</span></div>
+    ${featuredCard(HOME_SAMPLE,{sample:true})}
+    <p id="public-run-count" class="public-run-count" role="status">Counting public runs...</p></section></div>
     <section class="launch-steps" aria-label="From a session to a shared run">
       <div><h2>01 · Record the run</h2><p>Keep the trace, time and output from a session you actually did.</p></div>
       <div><h2>02 · Share the work</h2><p>Post the card, follow a builder and discuss what helped.</p></div>
@@ -1244,10 +1255,15 @@ function landingHTML(r){
 async function viewLanding(){
   const app=$('app');
   frame('','',true);
-  app.innerHTML=landingHTML(null); wireCopy();
-  const live=await fetchFeatured();
-  if(live && !ME && !location.search && !location.hash){app.innerHTML=landingHTML(live);wireCopy();countUp();}
-
+  app.innerHTML=landingHTML(); wireCopy(); countUp();
+  const count=await fetchPublicRunCount();
+  if(ME||location.search||location.hash) return;
+  const line=$('public-run-count');
+  if(!line) return;
+  line.textContent=count===0?'No public runs yet. Yours would be the first.'
+    :count===1?'1 public run is live.'
+    :Number.isInteger(count)?`${count} public runs are live.`:'Public run count is unavailable.';
+  line.dataset.countState=Number.isInteger(count)?'ready':'unavailable';
 }
 
 
@@ -1469,7 +1485,7 @@ function showSignIn(){
   try{sessionStorage.setItem('ag_social_return',location.search)}catch(_){}
   let dialog=$('signin-dialog');if(dialog)dialog.remove();
   dialog=document.createElement('dialog');dialog.id='signin-dialog';dialog.setAttribute('aria-labelledby','signin-title');
-  dialog.innerHTML='<h2 id="signin-title">Keep your run</h2><p>Sign in to post a run, follow friends and return to the conversation.</p>'+PROVIDERS_ENABLED.filter(p=>p!=='email').map(p=>'<button data-provider="'+p+'">Continue with '+(p==='x'?'X':'GitHub')+'</button>').join('')+'<form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public profile.</p><button>Send a sign-in link</button></form><p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
+  dialog.innerHTML='<h2 id="signin-title">Keep your run</h2><p id="signin-explanation">GitHub sign-in keeps your profile and responses connected, and runs stay private until you choose Public and post them.</p>'+PROVIDERS_ENABLED.filter(p=>p==='github').map(p=>'<button data-provider="'+p+'">Continue with GitHub</button>').join('')+'<form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public profile.</p><button>Send a sign-in link</button></form><p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
   document.body.append(dialog);dialog.showModal();$('signin-close').onclick=()=>dialog.close();
   dialog.querySelectorAll('[data-provider]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{await auth.signIn(button.dataset.provider,{returnTo:location.search})}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not start. Try again.';button.disabled=false}});
   $('signin-email').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,button=f.querySelector('button');button.disabled=true;try{await auth.signIn('email',{email:f.elements.email.value,returnTo:location.search});$('signin-state').textContent='Check your email for the sign-in link. Keep this tab open to return to your draft.'}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not connect. Try again.'}finally{button.disabled=false}};
