@@ -57,6 +57,7 @@ def check():
                 run([node, '--check', path])
     for path in sorted((ROOT / 'site').glob('*.js')):
         run([node, '--check', path])
+    run([sys.executable, ROOT / 'scripts/cold-first-minute.py'])
     print('Contributor checks passed. These do not test hosted sign-in or social writes.', flush=True)
 
 
