@@ -50,7 +50,8 @@ on conflict (id) do update set
 
 alter table strava.runs
   add column if not exists segment_id text,
-  add column if not exists model text;
+  add column if not exists model text,
+  add column if not exists wall_time_s integer;
 
 do $$
 begin
@@ -72,6 +73,15 @@ begin
       add constraint runs_model_length
       check (model is null or length(trim(model)) between 1 and 120);
   end if;
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'strava.runs'::regclass
+      and conname = 'runs_wall_time_nonnegative'
+  ) then
+    alter table strava.runs
+      add constraint runs_wall_time_nonnegative
+      check (wall_time_s is null or wall_time_s >= 0);
+  end if;
 end
 $$;
 
@@ -79,5 +89,7 @@ comment on column strava.runs.segment_id is
   'Optional fixed public task this run was recorded against';
 comment on column strava.runs.model is
   'Optional builder-reported model label; unknown when absent';
+comment on column strava.runs.wall_time_s is
+  'Optional elapsed segment task time in seconds; distinct from moving time';
 
 commit;

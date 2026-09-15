@@ -25,13 +25,13 @@
   function rankRuns(runs) {
     const sorted = [...(runs || [])].sort(
       (a, b) =>
-        measured(a.duration_s) - measured(b.duration_s) ||
+        measured(a.wall_time_s) - measured(b.wall_time_s) ||
         measured(a.tool_calls) - measured(b.tool_calls) ||
         String(a.id || "").localeCompare(String(b.id || "")),
     );
     let previous = null;
     return sorted.map((run, index) => {
-      const key = `${measured(run.duration_s)}:${measured(run.tool_calls)}`;
+      const key = `${measured(run.wall_time_s)}:${measured(run.tool_calls)}`;
       const rank = key === previous?.key ? previous.rank : index + 1;
       previous = { key, rank };
       return { ...run, rank };
@@ -79,7 +79,7 @@
             <div class="segment-trace" aria-hidden="true">${trace(run)}</div>
           </div>
           <dl class="segment-metrics">
-            <div><dt>Wall time</dt><dd class="num">${duration(run.duration_s)}</dd></div>
+            <div><dt>Wall time</dt><dd class="num">${duration(run.wall_time_s)}</dd></div>
             <div><dt>Tool calls</dt><dd class="num">${run.tool_calls ?? "Unknown"}</dd></div>
           </dl>
         </article>`,
@@ -112,7 +112,7 @@
       }
       const runsResult = await client
         .from("runs")
-        .select("id,title,project,model,duration_s,tool_calls,rhythm,segment_id,visibility")
+        .select("id,title,project,model,wall_time_s,tool_calls,rhythm,segment_id,visibility")
         .eq("segment_id", id)
         .eq("visibility", "public");
       if (runsResult.error) throw runsResult.error;

@@ -10,10 +10,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_ranking_shares_places_for_equal_wall_time_and_tool_calls():
     runs = [
-        {"id": "later", "duration_s": 70, "tool_calls": 2},
-        {"id": "tie-b", "duration_s": 45, "tool_calls": 3},
-        {"id": "tie-a", "duration_s": 45, "tool_calls": 3},
-        {"id": "more-tools", "duration_s": 45, "tool_calls": 5},
+        {"id": "later", "wall_time_s": 70, "tool_calls": 2},
+        {"id": "tie-b", "wall_time_s": 45, "tool_calls": 3},
+        {"id": "tie-a", "wall_time_s": 45, "tool_calls": 3},
+        {"id": "more-tools", "wall_time_s": 45, "tool_calls": 5},
     ]
     script = """
 const {rankRuns}=require(process.argv[1]);
@@ -45,7 +45,13 @@ def test_segment_page_renders_three_labelled_fixture_runs():
 def test_segment_schema_stays_in_strava_and_public_reads_are_filtered():
     migration = (ROOT / "supabase/strava/001_segments.sql").read_text()
     page = (ROOT / "site/segments.js").read_text()
+    index = (ROOT / "site/index.html").read_text()
     assert "strava.segments" in migration
     assert "strava.runs" in migration
+    assert "wall_time_s" in migration
     assert "public." not in migration
     assert '.eq("visibility", "public")' in page
+    assert "This run was on segment:" in page
+    assert "segment_id:$('f_segment').value||null" in index
+    assert "segment_id:$('i_segment').value||null" in index
+    assert "wall_time_s:wallTime" in index

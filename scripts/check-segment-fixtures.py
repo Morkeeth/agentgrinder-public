@@ -1,6 +1,7 @@
 """Render the public segment leaderboard with labelled local fixture data."""
 from pathlib import Path
 import os
+import re
 
 from playwright.sync_api import sync_playwright
 
@@ -18,13 +19,13 @@ SEGMENT = {
 }
 RUNS = [
     {"id": "test-a", "title": "TEST DATA run A", "project": "TEST DATA alpha",
-     "model": "TEST DATA Model A", "duration_s": 90, "tool_calls": 4,
+     "model": "TEST DATA Model A", "wall_time_s": 90, "tool_calls": 4,
      "rhythm": [0, 2, 1], "segment_id": "segment-01", "visibility": "public"},
     {"id": "test-b", "title": "TEST DATA run B", "project": "TEST DATA beta",
-     "model": "TEST DATA Model B", "duration_s": 90, "tool_calls": 4,
+     "model": "TEST DATA Model B", "wall_time_s": 90, "tool_calls": 4,
      "rhythm": [0, 1, 2], "segment_id": "segment-01", "visibility": "public"},
     {"id": "test-c", "title": "TEST DATA run C", "project": "TEST DATA gamma",
-     "model": "TEST DATA Model C", "duration_s": 130, "tool_calls": 3,
+     "model": "TEST DATA Model C", "wall_time_s": 130, "tool_calls": 3,
      "rhythm": [1, 0, 1], "segment_id": "segment-01", "visibility": "public"},
 ]
 
@@ -37,9 +38,14 @@ with sync_playwright() as playwright:
     page = browser.new_page(viewport={"width": 390, "height": 844})
     errors = []
     page.on("pageerror", lambda error: errors.append(str(error)))
+    inline = re.search(
+        r"<style>(.*?)</style>",
+        (ROOT / "site/index.html").read_text(),
+        re.S,
+    ).group(1)
     page.set_content(
-        "<style>" + (ROOT / "site/design.css").read_text() + "</style>"
-        '<div id="status"></div><main id="app" class="main"></main>'
+        "<style>" + (ROOT / "site/design.css").read_text() + inline + "</style>"
+        '<div id="status"></div><div class="shell solo"><main id="app" class="main"></main></div>'
     )
     page.add_script_tag(content=(ROOT / "site/run-contract.js").read_text())
     page.add_script_tag(content=(ROOT / "site/segments.js").read_text())

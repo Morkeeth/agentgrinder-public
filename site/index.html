@@ -854,6 +854,12 @@ function safeOutputUrl(value){
 function segmentSelectHtml(id){
   return `<label>Segment (optional)<select id="${id}"><option value="">No segment</option></select></label>`;
 }
+function optionalWholeNumber(id){
+  const raw=$(id)?.value;
+  if(raw==null||String(raw).trim()==='') return null;
+  const value=Number(raw);
+  return Number.isInteger(value)&&value>=0?value:Number.NaN;
+}
 async function loadSegmentChoices(id,selected){
   const select=$(id);
   if(!select||typeof GrinderSegments!=='object') return [];
@@ -1367,6 +1373,7 @@ function postComposerHtml({first=false}={}){
       <label>Project<input id="f_project" maxlength="120" placeholder="Project name"></label>
       <label>Model (optional)<input id="f_model" maxlength="120" placeholder="Model name"></label>
       ${segmentSelectHtml('f_segment')}
+      <label>Segment wall time in seconds (optional)<input id="f_wall" type="number" min="0" step="1"></label>
       <label>Short caption<textarea id="f_caption" required maxlength="280" placeholder="What changed in this session?"></textarea></label>
       <label>Link to what was built (optional)<input id="f_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
       <div class="row"><div><label>Typed turns</label><input id="f_prompts" type="number" min="0"></div><div><label>Minutes</label><input id="f_dur" type="number" min="0"></div><div><label>Commits</label><input id="f_commits" type="number" min="0"></div></div>
@@ -1428,11 +1435,13 @@ async function viewExplore(){
 function wireComposer(){
   const pb=$('publish'); if(pb) pb.addEventListener('click',async()=>{ if(!ME)return;
     const title=$('f_title').value.trim(),caption=$('f_caption').value.trim(),audience=$('f_vis').value,output=$('f_output_url').value.trim();
+    const wallTime=optionalWholeNumber('f_wall');
     if(!title||!caption||!audience){status('Add a title and caption, then choose who can see the run.',true);return}
+    if(Number.isNaN(wallTime)){status('Segment wall time must be a whole number of seconds.',true);return}
     if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
     pb.disabled=true;
     const {data,error}=await sb.from('runs').insert({profile_id:ME.id,title,project:$('f_project').value||null,model:$('f_model').value.trim()||null,
-      segment_id:$('f_segment').value||null,
+      segment_id:$('f_segment').value||null,wall_time_s:wallTime,
       harness:null,prompts:+$('f_prompts').value||null,duration_s:(+$('f_dur').value||0)*60||null,commits:+$('f_commits').value||null,
       caption,output_url:output||null,visibility:audience,started_at:new Date().toISOString()}).select('id').single();
     pb.disabled=false;
@@ -1522,6 +1531,7 @@ function restoreImport(){
 function importRun(){
   const m=location.hash.match(/import=([^&]+)/); if(!m) return false;
   let run; try{ run=JSON.parse(atob(decodeURIComponent(m[1]))); }catch(_){ frame(null,null); $('app').innerHTML='<div class="card"><h2>This import link is incomplete</h2><p>The capture data on this link could not be read, usually because the address was cut when it was copied. Nothing was posted. Run the capture command again to open a fresh preview.</p><p><a href="/?post">How to capture a run</a></p></div>'; return true; }
+  const importedWholeNumber=id=>{const raw=$(id)?.value;if(raw==null||String(raw).trim()==='')return null;const value=Number(raw);return Number.isInteger(value)&&value>=0?value:Number.NaN};
   try{ GrinderContract.validate(run); }
   catch(error){ frame(null,null); $('app').innerHTML='<div class="card"><h2>This grind could not be imported</h2><p>'+esc(error.message)+'</p></div>'; return true; }
   if(typeof GrinderContract==='object' && GrinderContract.rejectPaths){
@@ -1554,6 +1564,7 @@ function importRun(){
     <label>What did you build?<input id="i_title" maxlength="120" required placeholder="Title you write, not scraped" value="${esc(run.project||'')} session"></label>
     <label>Model (optional)<input id="i_model" maxlength="120" value="${esc(run.model||'')}" placeholder="Model name"></label>
     <label>Segment (optional)<select id="i_segment"><option value="">No segment</option></select></label>
+    <label>Segment wall time in seconds (optional)<input id="i_wall" type="number" min="0" step="1"></label>
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
     <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;color:var(--muted)">
@@ -1565,13 +1576,14 @@ function importRun(){
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample — preview only':(ME?'Save run':'Sign in to save')}</button>
     <div id="i_recover" hidden></div></div></div>
     <div class="head"><h2>${sample?'Sample card preview':'Card preview'}</h2><span class="meta">not posted</span></div><div id="import-card-preview"></div>`;
-  const editFields=['i_title','i_model','i_segment','i_caption','i_output_url','i_stack','i_vis'];
+  const editFields=['i_title','i_model','i_segment','i_wall','i_caption','i_output_url','i_stack','i_vis'];
   let savedImportEdits=null;
   try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){savedImportEdits=saved;for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
   function saveImportEdits(){try{sessionStorage.setItem('ag_import_edits',JSON.stringify({token:m[1],...Object.fromEntries(editFields.map(key=>[key,$(key).value])),shareRig:$('i_share_rig').checked}))}catch(_){}}
   function paintImportPreview(){
     const preview={id:'preview',profile_id:ME?.id||'preview',profiles:ME||{github_handle:'you',name:'Your preview'},title:$('i_title').value||'Untitled run',
       project:run.project||null,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
+      wall_time_s:importedWholeNumber('i_wall'),
       harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,artifacts_produced:run.artifacts_produced??null,
       rhythm:run.rhythm||null,trace_basis:run.trace_basis||null,caption:$('i_caption').value||null,output_url:$('i_output_url').value||null,
@@ -1594,8 +1606,9 @@ function importRun(){
     // re-running the command. Stash it before leaving, put it back in route() on the way in.
     if(!ME){ stashImport(m[1]);
       showSignIn(); return; }
-    const caption=$('i_caption').value.trim(),output=$('i_output_url').value.trim(),audience=$('i_vis').value;
+    const caption=$('i_caption').value.trim(),output=$('i_output_url').value.trim(),audience=$('i_vis').value,wallTime=importedWholeNumber('i_wall');
     if(!$('i_title').value.trim()||!caption||!audience){status('Add a title and caption, then choose who can see the run.',true);return}
+    if(Number.isNaN(wallTime)){status('Segment wall time must be a whole number of seconds.',true);return}
     if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
     publishButton.disabled=true;
     const recover=$('i_recover'); recover.hidden=true; recover.innerHTML='';
@@ -1627,6 +1640,7 @@ function importRun(){
     if(prior){ await openExisting(prior); return; }
     const base={profile_id:ME.id,title:$('i_title').value||'Untitled run',
       project:run.project||null,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
+      wall_time_s:wallTime,
       harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,
       rhythm:run.rhythm||null,caption,output_url:output||null,visibility:audience,started_at:run.started||null};
