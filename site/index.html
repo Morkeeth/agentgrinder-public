@@ -1544,7 +1544,7 @@ function importRun(){
     <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;color:var(--muted)">
       <input type="checkbox" id="i_share_rig" ${run.rig_share_names?'checked':''}> Share MCP names on my rig (opt-in)
     </label>
-    <input id="i_stack" placeholder="stack notes for friends (optional)" value="${esc(run.rig_notes||'')}">
+    <label>Stack notes for friends (optional)<input id="i_stack" placeholder="Libraries, services or setup details" value="${esc(run.rig_notes||'')}"></label>
     <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me</option><option value="public">Public feed and profile</option><option value="link">Anyone with the link</option></select></label>
     <p class="hint">Choosing Public is the deliberate action that posts this run to the feed.</p>
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample — preview only':(ME?'Save run':'Sign in to save')}</button>
