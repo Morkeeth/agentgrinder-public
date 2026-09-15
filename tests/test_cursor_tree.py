@@ -150,3 +150,38 @@ def test_unknown_workspace_gives_no_project(store, tmp_path):
     with cursor_tree.CopiedDb(store) as conn:
         assert cursor_tree.project_name(conn, PARENT, tmp_path / 'elsewhere') is None
         assert cursor_tree.project_name(conn, 'not-a-composer', tmp_path / 'workspaceStorage') is None
+
+
+def test_worker_bins_come_from_tree_fixture(store):
+    with cursor_tree.CopiedDb(store) as conn:
+        ridge = cursor_tree.build_ridge(conn, PARENT)
+    assert ridge['ridge_basis'] == 'wall-time'
+    assert sum(ridge['ridge']) == 2
+    assert len(ridge['worker_bins']) == len(ridge['ridge']) == 50
+    assert max(ridge['worker_bins']) == 2
+    assert any(value == 0 for value in ridge['worker_bins'])
+
+
+def test_cursor_capture_joins_transcript_counts_to_database_clock(store, tmp_path, monkeypatch):
+    from agentgrinder.ingest import parse_cursor_session
+    transcript_dir = tmp_path / 'project' / 'agent-transcripts' / PARENT
+    transcript_dir.mkdir(parents=True)
+    transcript = transcript_dir / 'session.jsonl'
+    transcript.write_text('\n'.join([
+        json.dumps({'role': 'user', 'message': {'content':
+            '<timestamp>Tuesday, Sep 15, 2026, 10:00 AM (UTC)</timestamp>'
+            '<user_query>PRIVATE MESSAGE</user_query>'}}),
+        json.dumps({'role': 'assistant', 'message': {'content': [
+            {'type': 'tool_use', 'name': 'Read', 'input': {'path': '/private/one'}},
+            {'type': 'tool_use', 'name': 'Shell', 'input': {'command': 'git commit -m safe'}},
+        ]}}),
+    ]))
+    monkeypatch.setenv(cursor_tree.ENV_DB, str(store))
+    run = parse_cursor_session(str(transcript))
+    assert run['ridge_basis'] == 'wall-time'
+    assert run['ridge_wall_seconds'] == run['duration_s'] == 1800.0
+    assert sum(run['ridge']) == run['tool_calls'] == 2
+    assert max(run['worker_bins']) == 2
+    assert len(run['commit_bins']) == run['commits'] == 1
+    assert 'PRIVATE MESSAGE' not in json.dumps({
+        key: value for key, value in run.items() if not key.startswith('private_')})

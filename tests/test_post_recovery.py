@@ -51,6 +51,7 @@ def test_the_preview_names_what_the_export_carries_and_matches_the_allowlist():
     assert 'class="hint export-contents"' in IMPORT
     assert "carries only:" not in IMPORT
     assert "the project folder name, counts, timing, the activity trace" in IMPORT
+    assert "ridge bins and worker counts" in IMPORT
     assert "progress notes" in IMPORT and "a reach flag" in IMPORT and "measurement references" in IMPORT
     assert "coach_experiment" in IMPORT  # disclosure gates on the traveling field
     assert "It never carries prompts, code or file paths." in IMPORT
@@ -63,7 +64,8 @@ def test_the_preview_names_what_the_export_carries_and_matches_the_allowlist():
         "harness", "is_sample", "activity_label", "project", "turns_typed", "duration_s", "tool_calls",
         "files_touched", "commits", "claims", "claims_verified", "artifacts_produced", "reach",
         "reach_reason", "coach_verdict", "coach_plan", "coach_tool_calls", "coach_mode",
-        "coach_experiment", "progress_verdict", "progress_delta", "started", "rhythm", "route",
+        "coach_experiment", "progress_verdict", "progress_delta", "started", "rhythm",
+        "ridge", "ridge_basis", "ridge_wall_seconds", "worker_bins", "commit_bins", "route",
         "trace_basis", "rig_mcps", "rig_skills", "rig_share_names", "rig_mcp_names", "rig_notes",
     }, keys
     assert "No prompt text, no paths" in PUSH

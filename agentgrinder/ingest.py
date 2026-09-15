@@ -10,7 +10,9 @@ from __future__ import annotations
 import glob
 import json
 import os
+import sqlite3
 from datetime import datetime
+from pathlib import Path
 
 from . import gitwork, reach as reachmod
 from .authorship import is_human_turn
@@ -289,6 +291,8 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None) -> dict:
     typed = 0
     tool_calls = 0
     commits = 0
+    commit_call_indices: list[int] = []
+    tool_call_index = 0
     stamps = []
     files: set[str] = set()
     written: set[str] = set()
@@ -323,6 +327,8 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None) -> dict:
             # artifacts, and reach printed "this harness does not name the repository". All
             # three sentences were false at the object: the paths are in the transcript.
             for name, inp in _cursor_tool_uses(msg):
+                this_call_index = tool_call_index
+                tool_call_index += 1
                 if not isinstance(inp, dict):
                     continue
                 if name in _CURSOR_EDIT_TOOLS:
@@ -334,6 +340,7 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None) -> dict:
                 elif name in _CURSOR_SHELL_TOOLS:
                     if "git commit" in (inp.get("command") or ""):
                         commits += 1
+                        commit_call_indices.append(this_call_index)
     if not typed:
         raise ValueError(f"no typed <user_query> turns in {path}")
     # duration from first/last embedded timestamp (best-effort), else None
@@ -391,7 +398,7 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None) -> dict:
         reach_value, reach_reason = None, reachmod.HARNESS_LIMIT["Cursor"]
 
     route = [_region_of(fp, repo_root) for fp in edits]
-    return {
+    run = {
         "athlete": athlete, "title": title, "harness": "Cursor", "project": proj,
         "parser_version": "cursor-claims-unknown-2026-09-14",
         "project_identity": project_identity(repo_root or os.path.dirname(os.path.dirname(os.path.dirname(path)))),
@@ -410,6 +417,31 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None) -> dict:
         "route_legend": _dedupe(route),      # region names, LOCAL only, never pushed
         "private_title_prompt": private_title_prompt,  # LOCAL only — never a share default
     }
+    # Cursor transcript JSONL has no agent event clock. Its local SQLite store does: bubble
+    # createdAt. Read only the allowlisted structure, and fall back to call order if this export
+    # was copied from another machine or any tool bubble lacks a timestamp.
+    from . import cursor_tree
+    ridge = cursor_tree.ridge_from_calls(
+        [None] * tool_calls, commit_call_indices=commit_call_indices)
+    composer_id = Path(path).parent.name
+    source = cursor_tree.db_path()
+    if source.is_file():
+        try:
+            with cursor_tree.CopiedDb(source) as conn:
+                candidate = cursor_tree.build_ridge(
+                    conn, composer_id, commit_call_indices=commit_call_indices)
+                if sum(candidate["ridge"]) == tool_calls:
+                    ridge = candidate
+                    run["tree"] = cursor_tree.build_tree(conn, composer_id)
+        except (KeyError, OSError, sqlite3.DatabaseError, ValueError):
+            pass
+    run.update(ridge)
+    if ridge["ridge_basis"] == "wall-time":
+        run["duration_s"] = ridge["ridge_wall_seconds"]
+        run["capabilities"]["timed_ridge"] = True
+    else:
+        run["capabilities"]["timed_ridge"] = False
+    return run
 
 
 # ---- Grok Bot origin ---------------------------------------------------------

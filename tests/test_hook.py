@@ -1,0 +1,115 @@
+"""A completed synthetic Cursor composer is captured once, then deduped by composer id."""
+import json
+import sqlite3
+import time
+from concurrent.futures import ThreadPoolExecutor
+
+from agentgrinder import hook
+
+
+COMPOSER = "aaaaaaaa-0000-0000-0000-000000000001"
+
+
+def store(tmp_path):
+    path = tmp_path / "state.vscdb"
+    db = sqlite3.connect(path)
+    db.execute("create table cursorDiskKV(key text primary key,value blob)")
+    db.execute(
+        "insert into cursorDiskKV values(?,?)",
+        ("composerData:" + COMPOSER, json.dumps({
+            "composerId": COMPOSER,
+            "status": "completed",
+            "lastUpdatedAt": 1789480800000,
+            "name": "PRIVATE MESSAGE TEXT",
+        })),
+    )
+    db.commit()
+    db.close()
+    return path
+
+
+def test_finished_composer_captures_exactly_once(tmp_path, monkeypatch):
+    source = store(tmp_path)
+    captured = []
+    opened = []
+    monkeypatch.setattr(
+        hook, "_store_private",
+        lambda root, composer_id, run: captured.append(composer_id) or f"{composer_id}.html",
+    )
+    monkeypatch.setattr(hook, "_ensure_server", lambda root, port: None)
+    capture = lambda composer_id: {
+        "composer_id": composer_id,
+        "ridge": [0] * 50,
+        "ridge_basis": "call-index",
+        "worker_bins": [0] * 50,
+        "commit_bins": [],
+    }
+    first = hook.run_once(
+        tmp_path / "private", source, capture_one=capture, open_one=opened.append)
+    second = hook.run_once(
+        tmp_path / "private", source, capture_one=capture, open_one=opened.append)
+    assert first == {"captured": 1, "composer_ids": [COMPOSER]}
+    assert second == {"captured": 0, "composer_ids": []}
+    assert captured == [COMPOSER]
+    assert opened == [f"http://127.0.0.1:8765/{COMPOSER}.html"]
+
+
+def test_subagent_and_unfinished_composers_are_not_captured(tmp_path):
+    source = store(tmp_path)
+    db = sqlite3.connect(source)
+    db.execute(
+        "insert into cursorDiskKV values(?,?)",
+        ("composerData:worker", json.dumps({
+            "status": "completed", "subagentInfo": {"parentComposerId": COMPOSER},
+        })),
+    )
+    db.execute(
+        "insert into cursorDiskKV values(?,?)",
+        ("composerData:active", json.dumps({"status": "running"})),
+    )
+    db.commit()
+    db.close()
+    with hook.cursor_tree.CopiedDb(source) as copied:
+        assert hook.finished_composers(copied) == [COMPOSER]
+
+
+def test_automatic_capture_drops_message_and_path_derived_fields(tmp_path, monkeypatch):
+    from agentgrinder import ingest
+    transcript = tmp_path / "session.jsonl"
+    transcript.write_text("{}\n")
+    monkeypatch.setattr(hook, "_transcript", lambda _composer_id: transcript)
+    monkeypatch.setattr(ingest, "parse_cursor_session", lambda _path: {
+        "title": "Safe title",
+        "private_title_prompt": "PRIVATE MESSAGE",
+        "route_legend": ["private-folder"],
+    })
+    run = hook._capture(COMPOSER)
+    assert run == {"title": "Safe title", "composer_id": COMPOSER}
+
+
+def test_concurrent_timer_runs_claim_composer_once(tmp_path, monkeypatch):
+    source = store(tmp_path)
+    root = tmp_path / "private"
+    state = hook._state(hook._root(root))
+    state.close()
+    captures = []
+    monkeypatch.setattr(hook, "_store_private", lambda *_args: f"{COMPOSER}.html")
+    monkeypatch.setattr(hook, "_ensure_server", lambda *_args: None)
+
+    def capture(composer_id):
+        captures.append(composer_id)
+        time.sleep(0.05)
+        return {"composer_id": composer_id}
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(
+            lambda _: hook.run_once(root, source, capture_one=capture, open_one=lambda _url: None),
+            range(2),
+        ))
+    assert sum(result["captured"] for result in results) == 1
+    assert captures == [COMPOSER]
+
+
+def test_custom_database_is_kept_in_scheduled_command(tmp_path):
+    command = hook._command(tmp_path / "private", 8765, db=tmp_path / "custom.vscdb")
+    assert command[-2:] == ["--db", str(tmp_path / "custom.vscdb")]
