@@ -130,7 +130,7 @@ def capture(chrome: str, url: str, shot: Path, width: int, height: int) -> str:
         url,
     ]
     try:
-        result = subprocess.run(command, text=True, capture_output=True, timeout=7, check=True)
+        result = subprocess.run(command, text=True, capture_output=True, timeout=30, check=True)
     finally:
         shutil.rmtree(profile, ignore_errors=True)
     assert shot.exists(), f"Chrome did not write {shot}"
