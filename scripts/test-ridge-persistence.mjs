@@ -23,6 +23,10 @@ const WORKER_BINS = Array.from({ length: BINS }, (_, i) => (i > 10 && i < 30 ? 2
 const COMMIT_BINS = [3, 17, 42];
 const RIDGE_BASIS = "wall-time";
 const RIDGE_WALL_SECONDS = 1234.5;
+// The store's own count, deliberately different from the transcript's. The two vocabularies
+// never match on real data, so the fixture must disagree or it proves nothing.
+const RIDGE_TOOL_CALLS = 255;
+const TRANSCRIPT_TOOL_CALLS = 226;
 
 const config = runtimeConfig();
 const { db } = await bootDisposable();
@@ -70,6 +74,7 @@ function ridgeFields(row) {
     commit_bins: row.commit_bins,
     ridge_basis: row.ridge_basis,
     ridge_wall_seconds: row.ridge_wall_seconds,
+    ridge_tool_calls: row.ridge_tool_calls,
   };
 }
 
@@ -79,6 +84,7 @@ const SENT = {
   commit_bins: COMMIT_BINS,
   ridge_basis: RIDGE_BASIS,
   ridge_wall_seconds: RIDGE_WALL_SECONDS,
+  ridge_tool_calls: RIDGE_TOOL_CALLS,
 };
 
 // TEST 1: a run saved with a ridge keeps its ridge across a reload.
@@ -91,6 +97,7 @@ const publicRun = await saveRun(CASEY, {
   harness: "Codex",
   prompts: 12,
   commits: 3,
+  tool_calls: TRANSCRIPT_TOOL_CALLS,
   wall_time_s: 1234,
   rhythm: [1, 2, 1],
   ...SENT,
@@ -111,6 +118,9 @@ assert.notEqual(stored.ridge, null, "SQL on strava.runs shows ridge not null");
 assert.equal(stored.ridge.length, BINS, "SQL shows the same bin count");
 assert.equal(stored.ridge_basis, RIDGE_BASIS);
 assert.equal(Number(stored.ridge_wall_seconds), RIDGE_WALL_SECONDS);
+// The disagreement between the two tool counts is recorded, not resolved. The delta is
+// derived from the tool_calls column that already exists.
+assert.equal(reloaded.ridge_tool_calls - reloaded.tool_calls, 29, "the count delta is readable");
 
 // TEST 2: an excluded reader gets neither the ridge nor a ridge image.
 await db.exec("reset role");
@@ -165,7 +175,11 @@ for (const forbidden of ["ridge", "TEST DATA close friends ridge", "TEST DATA pr
 
 const png = async (tree) => {
   const image = new ImageResponse(tree, { width: 1200, height: 630 });
-  return createHash("sha256").update(Buffer.from(await image.arrayBuffer())).digest("hex");
+  const bytes = Buffer.from(await image.arrayBuffer());
+  assert.equal(bytes.subarray(1, 4).toString(), "PNG", "the renderer produced a PNG");
+  assert.equal(bytes.readUInt32BE(16), 1200);
+  assert.equal(bytes.readUInt32BE(20), 630);
+  return createHash("sha256").update(bytes).digest("hex");
 };
 const excludedHash = await png(excludedTree);
 const neutralHash = await png(privateCard());
@@ -193,6 +207,13 @@ const withoutRidge = JSON.stringify(card(legacyRow));
 assert.ok(!withoutRidge.includes('"type":"polygon"'), "no bins means no filled ridge");
 assert.ok(withoutRidge.includes("Session trace"), "a run with no bins keeps the rhythm polyline label");
 assert.ok(!withoutRidge.includes("Agent ridge"), "a run with no bins is not labelled as a ridge");
+
+// Rasterize both. A tree that satori refuses would make /api/run?image=1 return 503 for every
+// public run that has bins, which is worse than the defect this slice fixes.
+const ridgeHash = await png(card(publicRow));
+const legacyHash = await png(card(legacyRow));
+assert.notEqual(ridgeHash, legacyHash, "the persisted ridge changes the rendered pixels");
+assert.notEqual(ridgeHash, neutralHash, "the public ridge image is not the neutral card");
 
 server.close();
 await db.close();

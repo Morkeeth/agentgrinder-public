@@ -1795,7 +1795,7 @@ function importRun(){
     // without the columns must fail the save loudly, not save a run with its ridge removed.
     if(run.ridge) Object.assign(coach,{ridge:run.ridge,ridge_basis:run.ridge_basis||null,
       ridge_wall_seconds:run.ridge_wall_seconds??null,worker_bins:run.worker_bins||null,
-      commit_bins:run.commit_bins||null});
+      commit_bins:run.commit_bins||null,ridge_tool_calls:run.ridge_tool_calls??null});
     let {data:published,error}=await sb.from('runs').insert({...base,...coach}).select('id').single();
     if(error&&error.code==='23505'){ let again=null; try{again=await existingRun()}catch(_){} if(again){ await openExisting(again); return; } }
     if(error){showRecovery(error);return;}

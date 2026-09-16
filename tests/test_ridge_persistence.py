@@ -8,7 +8,8 @@ INDEX = (ROOT / "site" / "index.html").read_text()
 PREVIEW = (ROOT / "server" / "public-run.mjs").read_text()
 MIGRATION = (ROOT / "supabase" / "strava" / "003_ridge_persistence.sql").read_text()
 
-FIELDS = ("ridge", "worker_bins", "commit_bins", "ridge_basis", "ridge_wall_seconds")
+FIELDS = ("ridge", "worker_bins", "commit_bins", "ridge_basis", "ridge_wall_seconds",
+          "ridge_tool_calls")
 # Comments explain the migration. Only the statements are the contract.
 SQL = "\n".join(line for line in MIGRATION.splitlines() if not line.lstrip().startswith("--"))
 

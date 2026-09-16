@@ -47,6 +47,10 @@ def validate_run(run: dict) -> dict:
         if (wall is not None
                 and (type(wall) not in (int, float) or not math.isfinite(wall) or wall < 0)):
             raise ValueError("ridge_wall_seconds must be a finite non-negative number or unknown.")
+        # The store's own count. It is recorded next to tool_calls, never compared against it.
+        store_calls = run.get("ridge_tool_calls")
+        if store_calls is not None and (type(store_calls) is not int or store_calls < 0):
+            raise ValueError("ridge_tool_calls must be a non-negative whole number or unknown.")
     return run
 
 

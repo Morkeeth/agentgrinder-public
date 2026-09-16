@@ -6,7 +6,7 @@ export const validId=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function readPublic(id,fetcher=fetch){
  if(!validId(id))return null;
- const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,title,caption,output_url,project,harness,started_at,duration_s,wall_time_s,prompts,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
+ const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,title,caption,output_url,project,harness,started_at,duration_s,wall_time_s,prompts,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
  const response=await fetcher(config.SB_URL+'/rest/v1/runs?'+query,{headers:{apikey:config.SB_KEY,"Accept-Profile":config.SB_SCHEMA},cache:'no-store',signal:AbortSignal.timeout(8000)});
  if(!response.ok)throw new Error('Public run unavailable');const rows=await response.json();
  return Array.isArray(rows)&&rows.length===1?rows[0]:null;
