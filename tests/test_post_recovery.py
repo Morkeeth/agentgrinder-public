@@ -79,7 +79,10 @@ def test_the_preview_names_what_the_export_carries_and_matches_the_allowlist():
         "files_touched", "commits", "claims", "claims_verified", "artifacts_produced", "reach",
         "reach_reason", "coach_verdict", "coach_plan", "coach_tool_calls", "coach_mode",
         "coach_experiment", "progress_verdict", "progress_delta", "started", "rhythm",
-        "ridge", "ridge_basis", "ridge_wall_seconds", "worker_bins", "commit_bins", "route",
+        "ridge", "ridge_basis", "ridge_wall_seconds", "worker_bins", "commit_bins",
+        # The store's own tool-request count, carried beside tool_calls so the disagreement
+        # between the two tool vocabularies is visible instead of silently vetoing the ridge.
+        "ridge_tool_calls", "route",
         "trace_basis", "rig_mcps", "rig_skills", "rig_share_names", "rig_mcp_names", "rig_notes",
     }, keys
     assert "No prompt text, no paths" in PUSH

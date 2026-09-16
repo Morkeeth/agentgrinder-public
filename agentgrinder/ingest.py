@@ -287,6 +287,30 @@ def latest_cursor_session() -> str | None:
     files = glob.glob(os.path.expanduser(CURSOR_GLOB))
     return max(files, key=os.path.getmtime) if files else None
 
+# A store window this many times longer or shorter than the typed-turn window means the store
+# composer is not the session in front of us. Measured on 26 real sessions with both windows,
+# 16 Sep 2026: the median ratio is 1.02, twenty-five of twenty-six sit inside this band, and the
+# one outside it is 620x, a composer resumed weeks later. The band is wide on purpose. It exists
+# to catch a different session, not to police a few seconds of clock skew.
+_RIDGE_WINDOW_FACTOR = 4
+
+
+def _store_ridge_is_usable(candidate: dict, store_calls: int, typed_window: float | None) -> bool:
+    """Accept the store ridge on structure and on window, never on a count comparison."""
+    if store_calls <= 0:
+        return False
+    if candidate.get("ridge_basis") != "wall-time":
+        return False            # no better than the call-order fallback we already have
+    wall = candidate.get("ridge_wall_seconds")
+    if wall is None or wall <= 0:
+        return False            # a zero-length window cannot be plotted against time
+    if typed_window:
+        ratio = wall / typed_window
+        if ratio > _RIDGE_WINDOW_FACTOR or ratio < 1 / _RIDGE_WINDOW_FACTOR:
+            return False        # this store composer is a different session
+    return True
+
+
 def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_db=None) -> dict:
     typed = 0
     tool_calls = 0
@@ -420,22 +444,41 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
     # Cursor transcript JSONL has no agent event clock. Its local SQLite store does: bubble
     # createdAt. Read only the allowlisted structure, and fall back to call order if this export
     # was copied from another machine or any tool bubble lacks a timestamp.
+    #
+    # THIS USED TO REQUIRE sum(ridge) == tool_calls, AND THAT CAN NEVER HOLD ON REAL DATA.
+    # The store counts tool requests in the store's own vocabulary and the transcript counts
+    # them in the harness vocabulary. One measured session shows the store saying edit_file_v2
+    # 32 times where the transcript says Write 23 plus StrReplace 2. Measured on this author's
+    # real store, 16 Sep 2026, over the 46 transcripts whose composer exists in the store: only
+    # 17 passed the equality, and the relative gap ran from -0.51 to +14.9. Every synthetic
+    # fixture passed because both sides were generated from one list, which is how the defect
+    # shipped. A run that lost the gate printed Wall time Unknown for a real 33 hour session.
     from . import cursor_tree
     ridge = cursor_tree.ridge_from_calls(
         [None] * tool_calls, commit_call_indices=commit_call_indices)
     composer_id = Path(path).parent.name
     source = Path(cursor_db).expanduser() if cursor_db is not None else cursor_tree.db_path()
+    # The typed-turn window, in seconds. The transcript has no agent event clock, but it does
+    # stamp typed turns, and that window is the one quantity both sides measure in the same
+    # unit. It is the only honest cross-check on the store's window.
+    typed_window = round((max(pts) - min(pts)).total_seconds(), 1) if len(pts) >= 2 else None
+    store_calls = None
     if source.is_file():
         try:
             with cursor_tree.CopiedDb(source) as conn:
                 candidate = cursor_tree.build_ridge(
                     conn, composer_id, commit_call_indices=commit_call_indices)
-                if sum(candidate["ridge"]) == tool_calls:
+                store_calls = sum(candidate["ridge"])
+                if _store_ridge_is_usable(candidate, store_calls, typed_window):
                     ridge = candidate
                     run["tree"] = cursor_tree.build_tree(conn, composer_id)
         except (KeyError, OSError, sqlite3.DatabaseError, ValueError):
             pass
     run.update(ridge)
+    # Record the disagreement, never act on it. The store counts tool requests in its own
+    # vocabulary, the transcript counts them in the harness vocabulary, and the two never match
+    # exactly on real data. The delta is derived from tool_calls, so it needs no second field.
+    run["ridge_tool_calls"] = store_calls if ridge.get("ridge_basis") == "wall-time" else None
     if ridge["ridge_basis"] == "wall-time":
         run["duration_s"] = ridge["ridge_wall_seconds"]
         run["capabilities"]["timed_ridge"] = True

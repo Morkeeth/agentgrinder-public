@@ -67,23 +67,32 @@ def test_card_draws_one_primary_ridge_and_three_numbers():
     assert "<span>Output</span><strong>PR</strong>" in output_facts
 
 
-def test_og_renderer_source_is_unchanged_apart_from_the_brand():
-    """The ridge work must not touch the OG renderer. The 2026-09-16 rename is the
-    one allowed difference, so the comparison applies that rename to the main copy
-    first. Any other edit to server/public-run.mjs still turns this red."""
-    expected = subprocess.run(
-        ["git", "show", "origin/main:server/public-run.mjs"],
-        check=True, capture_output=True,
-    ).stdout.decode()
-    renamed = (
-        expected
-        .replace("import {runtimeConfig} from './runtime-config.mjs';",
-                 "import {runtimeConfig} from './runtime-config.mjs';\nimport {BRAND} from './brand.mjs';")
-        .replace("<title>${title} · Pacecard</title>", "<title>${title} · ${BRAND}</title>")
-        .replace('<body><main><a href="/">Pacecard</a>', '<body><main><a href="/">${BRAND}</a>')
-        .replace("fontSize:27,fontWeight:800}},'Pacecard')", "fontSize:27,fontWeight:800}},BRAND)")
-        .replace("fontSize:28,fontWeight:800}},'Pacecard')", "fontSize:28,fontWeight:800}},BRAND)")
-        .replace("marginTop:34}},'This run is private on Pacecard')",
-                 "marginTop:34}},`This run is private on ${BRAND}`)")
-    )
-    assert (ROOT / "server/public-run.mjs").read_text() == renamed
+OG_SCRIPT = r"""
+import {card} from './server/public-run.mjs';
+const legacy={id:'r1',title:'Plain run',caption:'c',project:'p',visibility:'public',prompts:3,
+ commits:1,wall_time_s:600,rhythm:[1,2,1,3,2],profiles:{handle:'sample'}};
+const ridge=Array.from({length:50},(_,i)=>i%9),workers=Array.from({length:50},(_,i)=>i>8&&i<42?(i%4):0);
+const shaped={...legacy,ridge,worker_bins:workers,commit_bins:[12,38],ridge_basis:'wall-time',
+ ridge_wall_seconds:605.5};
+process.stdout.write(JSON.stringify({
+ shaped:JSON.stringify(card(shaped)),
+ legacy:JSON.stringify(card(legacy))}));
+"""
+
+
+def test_og_renderer_keeps_legacy_cards_and_draws_a_persisted_ridge():
+    """PR 29 froze server/public-run.mjs byte for byte. The rename lane had to patch that
+    freeze, and slice S2 changes the file again on purpose so the share image can use the
+    persisted ridge. A byte pin freezes an implementation, it does not test behaviour, so it
+    is replaced here by the property the pin was reaching for: a run with no bins renders the
+    same rhythm polyline it always did, and only a run with bins draws the filled ridge."""
+    result = subprocess.run(
+        ["node", "--input-type=module", "-e", OG_SCRIPT],
+        cwd=ROOT, check=True, capture_output=True, text=True)
+    rendered = json.loads(result.stdout)
+    assert '"type":"polyline"' in rendered["legacy"]
+    assert '"type":"polygon"' not in rendered["legacy"]
+    assert "Session trace" in rendered["legacy"]
+    assert '"type":"polygon"' in rendered["shaped"]
+    assert "Agent ridge" in rendered["shaped"]
+    assert "Session trace" not in rendered["shaped"]

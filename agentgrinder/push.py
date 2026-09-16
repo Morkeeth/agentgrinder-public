@@ -52,6 +52,10 @@ def export_run(run: dict) -> dict:
         "ridge_wall_seconds": run.get("ridge_wall_seconds"),
         "worker_bins": run.get("worker_bins"),
         "commit_bins": run.get("commit_bins"),
+        # The store's own tool-request count, next to tool_calls above. The two use different
+        # tool vocabularies and never match exactly. Carrying both keeps the disagreement
+        # visible instead of letting it silently decide whether a ridge exists.
+        "ridge_tool_calls": run.get("ridge_tool_calls"),
         "route": run.get("route"),
         "trace_basis": run.get("trace_basis"),
         "rig_mcps": rig.get("mcps"),
