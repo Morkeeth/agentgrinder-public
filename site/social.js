@@ -485,6 +485,110 @@ window.GrinderSocial = function ({
     }
   }
 
+  async function closeFriends(slot) {
+    if (!slot || !me()) return;
+    const ownerId = me().id;
+    async function paint(open = false) {
+      try {
+        const rows = await result(
+          db
+            .from("close_friends")
+            .select(
+              "friend_profile_id,created_at,friend:profiles!close_friends_friend_profile_id_fkey(id,github_handle,name,handle,display_name,avatar_url)",
+            )
+            .eq("owner_profile_id", ownerId)
+            .order("created_at", { ascending: true }),
+        );
+        slot.innerHTML = `<details class="profile-settings close-friends-settings"${open ? " open" : ""}>
+          <summary>Close friends</summary>
+          <div class="panel pad">
+            <p class="hint">Only you can see this list. People are not notified when you add or remove them.</p>
+            <form class="reply-form close-friends-form">
+              <label>Add by handle<input name="handle" required maxlength="40" placeholder="@friend"></label>
+              <button>Add close friend</button>
+            </form>
+            <div class="close-friends-list">${
+              rows.length
+                ? rows
+                    .map(
+                      (row) =>
+                        `<p>${link(row.friend)} <button type="button" class="ghost" data-remove-close-friend="${esc(row.friend_profile_id)}">Remove</button></p>`,
+                    )
+                    .join("")
+                : "<p class=\"meta\">No close friends yet.</p>"
+            }</div>
+          </div>
+        </details>`;
+        slot
+          .querySelectorAll("[data-remove-close-friend]")
+          .forEach((button) => {
+            button.onclick = async () => {
+              button.disabled = true;
+              try {
+                await result(
+                  db
+                    .from("close_friends")
+                    .delete()
+                    .eq("owner_profile_id", ownerId)
+                    .eq(
+                      "friend_profile_id",
+                      button.dataset.removeCloseFriend,
+                    ),
+                );
+                status("Removed from Close friends.");
+                await paint(true);
+              } catch (error) {
+                fail(error);
+                button.disabled = false;
+              }
+            };
+          });
+        slot.querySelector("form").onsubmit = async (event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          const button = form.querySelector("button");
+          const handle = form.elements.handle.value.trim().replace(/^@+/, "");
+          button.disabled = true;
+          try {
+            const people = await result(
+              db.rpc("strava_profile_by_handle", { lookup: handle }),
+            );
+            const friend = people[0];
+            if (!friend) {
+              status("No profile has that handle.", true);
+              return;
+            }
+            if (friend.id === ownerId) {
+              status("Choose another profile.", true);
+              return;
+            }
+            const inserted = await db.from("close_friends").insert({
+              owner_profile_id: ownerId,
+              friend_profile_id: friend.id,
+            });
+            if (inserted.error && inserted.error.code !== "23505")
+              throw inserted.error;
+            status(
+              inserted.error
+                ? "That profile is already a close friend."
+                : "Added to Close friends.",
+            );
+            await paint(true);
+          } catch (error) {
+            fail(error);
+          } finally {
+            button.disabled = false;
+          }
+        };
+      } catch (error) {
+        slot.innerHTML =
+          '<p class="meta">Close friends are temporarily unavailable.</p>';
+        fail(error);
+      }
+    }
+    await paint();
+  }
+
   async function thread(runId, slot) {
     if (!slot || !uuid(runId)) return;
     const focusReply = replyTargetId();
@@ -1503,6 +1607,7 @@ window.GrinderSocial = function ({
     askControl,
     following,
     followControl,
+    closeFriends,
     thread,
     inbox,
     refreshUnread,
