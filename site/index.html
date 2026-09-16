@@ -906,37 +906,33 @@ function runContinuation(r,opts={}){
     ${link?`<a class="act blue continue-run" href="${esc(link.href)}">${esc(link.label)}</a>`:''}
     <button class="act copy-run-prompt" type="button" data-prompt="${esc(prompt)}">Copy prompt</button></span></div>`;
 }
-function runSessionSeconds(r){
-  const candidates=[
-    r.ridge_basis==='wall-time'?r.ridge_wall_seconds:null,
-    r.wall_time_s,
-    r.duration_s,
-  ];
-  const value=candidates.find(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0);
-  return value==null?null:value;
-}
-function runSessionText(r){
-  const seconds=runSessionSeconds(r);
-  if(seconds==null)return 'Unknown';
-  if(seconds<60)return `${Math.round(seconds)}s`;
-  const minutes=Math.round(seconds/60);
-  return minutes>=60?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${minutes}m`;
-}
-function runMetricStrip(r){
-  const cells=[
-    ['Session',runSessionText(r),'Measured elapsed or wall time'],
-    ['Turns',r.prompts,'Human turns typed or queued'],
-    ['Tool calls',r.tool_calls,'Tool requests recorded in the session'],
-    ['Files',r.files_touched,'Files the capture recorded as touched'],
-    ['Commits',r.commits,'Commits recorded during the session'],
-  ];
-  const html=cells.map(([label,value,title])=>{
-    const unknown=value==null||value==='Unknown';
-    return `<div class="run-metric${unknown?' is-unknown':''}" title="${esc(title)}"><dt>${esc(label)}</dt><dd class="num">${unknown?'Unknown':esc(value)}</dd></div>`;
-  }).join('');
-  return `<dl class="run-metrics" aria-label="Recorded session metrics">${html}</dl><p class="run-metrics-note">The trace is the shape of this session. Counts show activity, not quality; unknown means not measured.</p>`;
-}
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
+  const sessionSeconds=()=>{
+    const candidates=[r.ridge_basis==='wall-time'?r.ridge_wall_seconds:null,r.wall_time_s,r.duration_s];
+    const value=candidates.find(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0);
+    return value==null?null:value;
+  };
+  const sessionText=()=>{
+    const seconds=sessionSeconds();
+    if(seconds==null)return 'Unknown';
+    if(seconds<60)return `${Math.round(seconds)}s`;
+    const minutes=Math.round(seconds/60);
+    return minutes>=60?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${minutes}m`;
+  };
+  const metricStrip=()=>{
+    const cells=[
+      ['Session',sessionText(),'Measured elapsed or wall time'],
+      ['Turns',r.prompts,'Human turns typed or queued'],
+      ['Tool calls',r.tool_calls,'Tool requests recorded in the session'],
+      ['Files',r.files_touched,'Files the capture recorded as touched'],
+      ['Commits',r.commits,'Commits recorded during the session'],
+    ];
+    const html=cells.map(([label,value,title])=>{
+      const unknown=value==null||value==='Unknown';
+      return `<div class="run-metric${unknown?' is-unknown':''}" title="${esc(title)}"><dt>${esc(label)}</dt><dd class="num">${unknown?'Unknown':esc(value)}</dd></div>`;
+    }).join('');
+    return `<dl class="run-metrics" aria-label="Recorded session metrics">${html}</dl><p class="run-metrics-note">The trace is the shape of this session. Counts show activity, not quality; unknown means not measured.</p>`;
+  };
   const selfAck=ME&&ME.id===r.profile_id;
   const ackBtn=selfAck?'':`<button class="act kudo ${acked?'on':''}" data-run="${r.id}" data-to="${r.profile_id}">${acked?'ACKed':'ACK'}${count?' <span class="n num">'+count+'</span>':''}</button>`;
   const picker=opts.picker?ackPickerHtml(r,opts.suggested||suggestAckReasons(r),opts.selected||null):'';
@@ -949,11 +945,11 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   const ridgeOutput=output?(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(output)?'PR':/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(output)?'Screenshot':'Output'):null;
   const recorded='<details class="run-evidence"><summary>How these numbers work</summary><p class="meta">Captured from the selected session. A zero is a recorded zero; Unknown means the capture could not measure it.</p></details>';
   const ridgeBody=ridge?`${ridge}
-    ${runMetricStrip(r)}
+    ${metricStrip()}
     <details class="ridge-more"><summary>More</summary>${fiveRow(r)}${coachBlock(r)}${r.tree?GrinderContract.tree(r.tree):''}${recorded}${output?`<p class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open ${esc(ridgeOutput||'output')} ↗</a></p>`:''}</details>`
     :`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
     ${r.tree?GrinderContract.tree(r.tree):''}
-    ${runMetricStrip(r)}
+    ${metricStrip()}
     ${recorded}`;
   return `<div class="card" id="card-${r.id}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = r"""
 const fs=require('fs'),vm=require('vm');
 const root=process.argv[1],html=fs.readFileSync(root+'/site/index.html','utf8');
-const fn=html.slice(html.indexOf('function runSessionSeconds('),html.indexOf('function wireKudos('));
+const fn=html.slice(html.indexOf('function runCard('),html.indexOf('function wireKudos('));
 const context={GrinderContract:require(root+'/site/run-contract.js'),ME:null,
  esc:s=>String(s??'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])),
  fmtDur:m=>!m?'-':(m>=60?`${Math.floor(m/60)}h ${m%60}m`:`${m}m`),
