@@ -52,6 +52,16 @@ choosing an audience and pressing **Save run** are deliberate later actions.
 With the tool installed in the active Python environment, the equivalent command prefix is
 `python3 -m agentgrinder grind`.
 
+To capture each future completed Cursor composer automatically:
+
+```sh
+python3 -m agentgrinder hook install --harness cursor
+```
+
+The hook records private local drafts and opens a card at `127.0.0.1`. It has no keys, makes no
+external request and never posts. Use `python3 -m agentgrinder hook status` to inspect it and
+`python3 -m agentgrinder hook uninstall` to stop it.
+
 ## What help matters now?
 
 Make first-run instructions easier, improve the card on a phone, test keyboard access, report a reproducible bug, or improve the empty states a new user meets in a feed with few runs. [First contributions](docs/FIRST-PR.md) and [issues to open](docs/ISSUES-TO-OPEN.md) give starting files and a clear outcome. [Open issues](https://github.com/Morkeeth/agentgrinder-public/issues) show reported work; check before starting something large.

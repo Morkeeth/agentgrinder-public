@@ -40,6 +40,57 @@ def _route_svg(rhythm: list[int], w: int = 720, h: int = 150) -> str:
 </svg>'''
 
 
+def _ridge_svg(a: Activity, w: int = 720, h: int = 150) -> str:
+    values = a.ridge
+    if not 40 <= len(values) <= 60:
+        return ""
+    workers = a.worker_bins if len(a.worker_bins) == len(values) else [0] * len(values)
+    base, top = h - 18, 16
+    maximum = max(values) or 1
+    x = lambda i: i * w / max(1, len(values) - 1)
+    y = lambda value: base - value / maximum * (base - top)
+    line = " ".join(f"{x(i):.1f},{y(value):.1f}" for i, value in enumerate(values))
+    backs = []
+    for level in range(min(3, max(workers, default=0)), 0, -1):
+        points = []
+        for index, active_workers in enumerate(workers):
+            active = min(active_workers, level) / level
+            value = max(values[index], maximum * (0.2 + level * 0.08)) if active else 0
+            points.append(f"{x(index):.1f},{y(value):.1f}")
+        backs.append(
+            f'<polygon class="ridge-worker level-{level}" '
+            f'points="0,{base} {" ".join(points)} {w},{base}"/>')
+    ticks = "".join(
+        f'<line class="ridge-commit" x1="{x(index):.1f}" y1="{base}" '
+        f'x2="{x(index):.1f}" y2="{base - 10}"/>'
+        for index in a.commit_bins if isinstance(index, int) and 0 <= index < len(values))
+    chip = ""
+    label = ""
+    if a.output_url:
+        if "/pull/" in a.output_url and "github.com/" in a.output_url:
+            label = "PR"
+        elif a.output_url.lower().split("?", 1)[0].endswith((".png", ".jpg", ".jpeg", ".webp")):
+            label = "Screenshot"
+        else:
+            label = "Output"
+    elif a.commits not in ("—", "0"):
+        label = f'{a.commits} commit{"s" if a.commits != "1" else ""}'
+    if label:
+        width = min(118, 24 + len(label) * 7)
+        chip_y = max(2, y(values[-1]) - 30)
+        chip = (f'<g class="ridge-chip" transform="translate({w - width - 2},{chip_y:.1f})">'
+                f'<rect width="{width}" height="23" rx="2"/><text x="{width / 2:.1f}" '
+                f'y="15">{escape(label)}</text></g>')
+    return (f'<svg viewBox="0 0 {w} {h}" class="ridge" preserveAspectRatio="none" role="img" '
+            f'aria-label="tool calls across {escape(a.ridge_basis)}">'
+            + "".join(backs)
+            + f'<polygon class="ridge-fill" points="0,{base} {line} {w},{base}"/>'
+            + f'<line class="ridge-base" x1="0" y1="{base}" x2="{w}" y2="{base}"/>{ticks}'
+            + f'<polyline class="ridge-line" points="{line}"/>'
+            + f'<circle class="ridge-start" cx="0" cy="{y(values[0]):.1f}" r="5"/>'
+            + f'<circle class="ridge-end" cx="{w}" cy="{y(values[-1]):.1f}" r="5"/>{chip}</svg>')
+
+
 def _five_row(cells: list[Cell]) -> str:
     out = []
     for c in cells:
@@ -57,7 +108,12 @@ def render_card(a: Activity) -> str:
     a = replace(a, **{f.name: escape(getattr(a, f.name)) for f in fields(a) if isinstance(getattr(a, f.name), str)})
     initial = (a.athlete or "?")[0].upper()
     pb = '<span class="pb" title="high sustained cadence">High cadence</span>' if a.focus_pb else ""
-    if a.trace:
+    has_ridge = 40 <= len(a.ridge) <= 60
+    product_name = "PACECARD" if has_ridge else "AGENTGRINDER"
+    title_separator = ":" if has_ridge else chr(8212)
+    if has_ridge:
+        route = _ridge_svg(a)
+    elif a.trace:
         from .native_trace import svg
         route = svg(a.trace, a.trace_basis)
     else:
@@ -67,10 +123,77 @@ def render_card(a: Activity) -> str:
     tip = (ARTIFACTS_PER_TURN_TIP if a.headline_metric_id == "artifacts_per_turn"
            else HEADLINE_TIP)
     hl_title = escape(tip) + " · " + escape(a.headline_formula)
+    wall = "Unknown"
+    if a.ridge_wall_seconds is not None:
+        seconds = int(a.ridge_wall_seconds)
+        hours, rest = divmod(seconds, 3600)
+        minutes, secs = divmod(rest, 60)
+        wall = f"{hours}h {minutes:02d}m" if hours else f"{minutes}m {secs:02d}s"
+    output_label = "Output"
+    if a.output_url:
+        if "/pull/" in a.output_url and "github.com/" in a.output_url:
+            output_label = "PR"
+        elif a.output_url.lower().split("?", 1)[0].endswith((".png", ".jpg", ".jpeg", ".webp")):
+            output_label = "Screenshot"
+    has_commits = a.commits not in (chr(8212), "0")
+    third_value = a.commits if has_commits else (
+        f'<a href="{a.output_url}">{output_label}</a>' if a.output_url else "Unknown")
+    if has_ridge:
+        basis_label = "wall time" if a.ridge_basis == "wall-time" else "call order"
+        unavailable = ("" if a.ridge_basis == "wall-time" else
+            '<p class="grp" style="text-transform:none;letter-spacing:0">Moving time, pace and cadence are unavailable: this harness trace is turn order, not a measured elapsed clock.</p>')
+        body = f'''<div class="ridgewrap">{route}<small>Tool calls over {basis_label}</small></div>
+    <div class="stats">
+      <div class="stat"><div class="v">{wall}</div><div class="k">Wall time</div></div>
+      <div class="stat"><div class="v">{a.distance}</div><div class="k">Turns</div></div>
+      <div class="stat"><div class="v">{third_value}</div><div class="k">{"Commits" if has_commits else "Output"}</div></div>
+    </div>
+    <details class="more"><summary>More</summary>
+      <div class="hl" title="{hl_title}"><div class="n">{a.headline}</div><div class="lbl">{a.headline_label}<span class="f">{escape(a.headline_formula)}</span></div></div>
+      <div class="fiverow">{five}</div>
+      {unavailable}
+      <div class="sec"><div><span>Tool calls</span><br><b>{a.effort}</b></div><div><span>Files</span><br><b>{a.segments}</b></div></div>
+      {coach}
+    </details>'''
+    else:
+        body = f'''<div class="hl" title="{hl_title}">
+      <div class="n">{a.headline}</div>
+      <div class="lbl">{a.headline_label}<span class="f">{escape(a.headline_formula)}</span></div>
+    </div>
+    <div class="fiverow">{five}</div>
+    <div class="routewrap">{route}</div>
+    <div class="grp">Cost — what the run spent</div>
+    <div class="stats">
+      <div class="stat"><div class="v">{a.distance}</div><div class="k">Typed turns</div></div>
+      <div class="stat"><div class="v">{a.moving_time}</div><div class="k">Moving time</div></div>
+      <div class="stat"><div class="v">{a.pace}</div><div class="k">Pace</div></div>
+    </div>
+    {"" if a.moving_time != "—" or not a.trace_basis else '<p class="grp" style="text-transform:none;letter-spacing:0;padding-top:0">Moving time, pace and cadence are unavailable: this harness trace is turn order, not a measured elapsed clock.</p>'}
+    <div class="sec">
+      <div><span>Effort</span><br><b>{a.effort}</b></div>
+      <div><span>Segments</span><br><b>{a.segments}</b></div>
+      <div><span>Commits</span><br><b>{a.commits}</b></div>
+      <div><span>Cadence</span><br><b>{a.prompts_per_hour}</b></div>
+    </div>
+    {coach}'''
+    ridge_css = """
+  .ridgewrap{padding:12px 20px 4px;border-bottom:1px solid var(--line)}
+  .ridgewrap small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+  .ridge{display:block;width:100%;height:auto;min-height:132px}
+  .ridge-fill{fill:var(--accent);opacity:.12} .ridge-line{fill:none;stroke:var(--accent);
+    stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  .ridge-base{stroke:var(--line);stroke-width:1} .ridge-worker{fill:var(--accent)}
+  .ridge-worker.level-1{opacity:.045} .ridge-worker.level-2{opacity:.065}
+  .ridge-worker.level-3{opacity:.085} .ridge-start{fill:var(--card);stroke:var(--accent);stroke-width:2}
+  .ridge-end{fill:var(--accent);stroke:var(--card);stroke-width:2}
+  .ridge-commit{stroke:var(--accent);stroke-width:2} .ridge-chip rect{fill:var(--accent)}
+  .ridge-chip text{fill:var(--card);font:500 12px sans-serif;text-anchor:middle}
+  .more{border-top:1px solid var(--line)} .more>summary{padding:13px 20px;cursor:pointer;color:var(--muted)}
+""" if has_ridge else ""
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{a.athlete} · {a.title} — AGENTGRINDER</title>
+<title>{a.athlete} · {a.title} {title_separator} {product_name}</title>
 <style>
   {CARD_THEME}
 
@@ -113,7 +236,7 @@ def render_card(a: Activity) -> str:
   .stat .k{{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}}
   .route{{display:block;width:100%;height:150px;background:
     linear-gradient(var(--card),var(--card))}}
-  .routewrap{{border-bottom:1px solid var(--line)}}
+  .routewrap{{border-bottom:1px solid var(--line)}}{ridge_css}
   .sec{{display:flex;flex-wrap:wrap;gap:18px;padding:14px 20px;font-size:13px}}
   .sec div b{{font-weight:650}} .sec div span{{color:var(--muted)}}
   .foot{{display:flex;align-items:center;gap:16px;padding:12px 20px;border-top:1px solid var(--line);
@@ -125,30 +248,11 @@ def render_card(a: Activity) -> str:
     <div class="top">
       <div class="avatar">{initial}</div>
       <div class="who"><b>{a.athlete}</b><small>{a.date_str}</small></div>
-      <div class="brand">AGENTGRINDER</div>
+      <div class="brand">{product_name}</div>
     </div>
     <div class="title">{a.title} {pb}</div>
     <div class="sub">{a.harness}{" · bot activity" if a.harness == "Grok Bot" else ""} · {a.project}</div>
-    <div class="hl" title="{hl_title}">
-      <div class="n">{a.headline}</div>
-      <div class="lbl">{a.headline_label}<span class="f">{escape(a.headline_formula)}</span></div>
-    </div>
-    <div class="fiverow">{five}</div>
-    <div class="routewrap">{route}</div>
-    <div class="grp">Cost — what the run spent</div>
-    <div class="stats">
-      <div class="stat"><div class="v">{a.distance}</div><div class="k">Typed turns</div></div>
-      <div class="stat"><div class="v">{a.moving_time}</div><div class="k">Moving time</div></div>
-      <div class="stat"><div class="v">{a.pace}</div><div class="k">Pace</div></div>
-    </div>
-    {"" if a.moving_time != "—" or not a.trace_basis else '<p class="grp" style="text-transform:none;letter-spacing:0;padding-top:0">Moving time, pace and cadence are unavailable: this harness trace is turn order, not a measured elapsed clock.</p>'}
-    <div class="sec">
-      <div><span>Effort</span><br><b>{a.effort}</b></div>
-      <div><span>Segments</span><br><b>{a.segments}</b></div>
-      <div><span>Commits</span><br><b>{a.commits}</b></div>
-      <div><span>Cadence</span><br><b>{a.prompts_per_hour}</b></div>
-    </div>
-    {coach}
+    {body}
     <div class="foot">
       <div class="kudo">🔥 <b>kudos</b></div>
       <div class="kudo">💬 comment</div>

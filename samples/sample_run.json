@@ -1,6 +1,6 @@
 {
   "athlete": "sample-grinder",
-  "title": "sample-project — a two-hour probe",
+  "title": "sample-project: a two-hour probe",
   "harness": "Claude Code",
   "project": "sample-project",
   "started": "2026-08-30T06:00:00",
@@ -36,6 +36,23 @@
     2,
     1
   ],
+  "ridge": [
+    2, 4, 3, 6, 5, 8, 7, 9, 6, 4,
+    3, 5, 7, 10, 8, 6, 4, 3, 2, 5,
+    7, 4, 3, 2, 1, 1, 2, 2, 4, 3,
+    5, 5, 9, 4, 3, 2, 3, 5, 9, 6,
+    4, 3, 2, 1, 4, 5, 3, 2, 1, 1
+  ],
+  "ridge_basis": "wall-time",
+  "ridge_wall_seconds": 8400,
+  "worker_bins": [
+    0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
+    1, 2, 2, 2, 2, 2, 2, 2, 1, 1,
+    1, 1, 1, 2, 2, 2, 3, 3, 3, 3,
+    3, 3, 3, 2, 2, 2, 2, 2, 2, 1,
+    1, 1, 1, 1, 1, 0, 0, 0, 0, 0
+  ],
+  "commit_bins": [18, 35, 46],
   "route": [
     0,
     0,

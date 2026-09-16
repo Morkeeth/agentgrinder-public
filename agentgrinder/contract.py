@@ -27,6 +27,26 @@ def validate_run(run: dict) -> dict:
         raise ValueError("Verified claims require a counted-claims total.")
     if claims is not None and verified is not None and verified > claims:
         raise ValueError("Verified claims cannot exceed the claims counted.")
+    ridge = run.get("ridge")
+    if ridge is not None:
+        if (not isinstance(ridge, list) or not 40 <= len(ridge) <= 60
+                or any(type(value) is not int or value < 0 for value in ridge)):
+            raise ValueError("ridge must contain 40 to 60 non-negative whole-number bins.")
+        workers = run.get("worker_bins")
+        if (not isinstance(workers, list) or len(workers) != len(ridge)
+                or any(type(value) is not int or value < 0 for value in workers)):
+            raise ValueError("worker_bins must match ridge with non-negative whole-number bins.")
+        commits = run.get("commit_bins", [])
+        if (not isinstance(commits, list)
+                or any(type(value) is not int or value < 0 or value >= len(ridge)
+                       for value in commits)):
+            raise ValueError("commit_bins must contain valid ridge bin indexes.")
+        if run.get("ridge_basis") not in ("wall-time", "call-index"):
+            raise ValueError("ridge_basis must be wall-time or call-index.")
+        wall = run.get("ridge_wall_seconds")
+        if (wall is not None
+                and (type(wall) not in (int, float) or not math.isfinite(wall) or wall < 0)):
+            raise ValueError("ridge_wall_seconds must be a finite non-negative number or unknown.")
     return run
 
 

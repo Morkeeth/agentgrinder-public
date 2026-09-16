@@ -30,6 +30,8 @@ This repository is the public product. Morkeeth/agentgrinder remains the hackath
 - Sign-in with GitHub or an email link. One profile per account, with a handle and display name you can edit.
 - Feed, post a run, My runs, profiles, follow, Following, ACK, reply and a Responses inbox. The public feed is new and mostly empty.
 - Local capture: `python3 -m agentgrinder grind --harness cursor` reads a real Cursor session with no keys and writes a card to `./grind.html`.
+- Private Cursor hook: `python3 -m agentgrinder hook install --harness cursor` watches completed local composers, dedupes by composer id and opens a loopback Pacecard without posting.
+- Pacecard ridge: Cursor bubble timestamps draw tool calls over wall time with worker activity behind one blue line. Captures without that clock use call order and say so.
 - A Grok Bot post-run template in `templates/grokbot/`. It is source to install; no second bot has been observed using it.
 
 ## Open
