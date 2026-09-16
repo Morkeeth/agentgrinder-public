@@ -192,5 +192,6 @@ def test_cursor_capture_joins_transcript_counts_to_database_clock(store, tmp_pat
     # rule read the transcript's call index 1 out of the store's tool order and answered 49.
     assert run['commit_bins'] == [33]
     assert run['commit_basis'] == 'wall-time'
+    assert run['ridge_source'] == 'cursor-global-store'
     assert 'PRIVATE MESSAGE' not in json.dumps({
         key: value for key, value in run.items() if not key.startswith('private_')})

@@ -453,9 +453,20 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
     # 17 passed the equality, and the relative gap ran from -0.51 to +14.9. Every synthetic
     # fixture passed because both sides were generated from one list, which is how the defect
     # shipped. A run that lost the gate printed Wall time Unknown for a real 33 hour session.
-    from . import cursor_tree
+    #
+    # SECOND, AND WHY THIS READS TWO STORES. Cursor stopped writing agent sessions into the one
+    # global state.vscdb. Each session now gets its own file under ~/.cursor/chats. Measured here on
+    # 16 Sep 2026 over 362 transcript composer ids: the global store holds 46 and NONE of the newest
+    # 100, the chat store holds 316 and ALL of the newest 100. The 46 are dated 24 Feb to 16 Aug and
+    # the 316 are dated 10 Aug to today, with zero overlap, so the move was in mid August. A capture
+    # that reads only the global
+    # store is therefore blind to everything a user did this week, which is every session they care
+    # about. The chat store is tried first, the global store second, call order last, and
+    # ridge_source names which one answered so a card never implies a clock it did not read.
+    from . import cursor_chats, cursor_tree
     ridge = cursor_tree.ridge_from_calls(
         [None] * tool_calls, commit_call_indices=commit_call_indices)
+    ridge_source = 'call-index'
     composer_id = Path(path).parent.name
     source = Path(cursor_db).expanduser() if cursor_db is not None else cursor_tree.db_path()
     # The typed-turn window, in seconds. The transcript has no agent event clock, but it does
@@ -463,7 +474,17 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
     # unit. It is the only honest cross-check on the store's window.
     typed_window = round((max(pts) - min(pts)).total_seconds(), 1) if len(pts) >= 2 else None
     store_calls = None
-    if source.is_file():
+    try:
+        candidate = cursor_chats.build_ridge(composer_id)
+    except (KeyError, OSError, sqlite3.DatabaseError, ValueError):
+        candidate = None
+    if candidate is not None:
+        chat_calls = sum(candidate["ridge"])
+        if _store_ridge_is_usable(candidate, chat_calls, typed_window):
+            ridge = candidate
+            store_calls = chat_calls
+            ridge_source = "cursor-chat-store"
+    if ridge_source == "call-index" and source.is_file():
         try:
             with cursor_tree.CopiedDb(source) as conn:
                 candidate = cursor_tree.build_ridge(
@@ -471,10 +492,14 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
                 store_calls = sum(candidate["ridge"])
                 if _store_ridge_is_usable(candidate, store_calls, typed_window):
                     ridge = candidate
+                    ridge_source = "cursor-global-store"
                     run["tree"] = cursor_tree.build_tree(conn, composer_id)
         except (KeyError, OSError, sqlite3.DatabaseError, ValueError):
             pass
     run.update(ridge)
+    # Which store answered. LOCAL only: it is not one of the columns the browser Save path sends,
+    # and migration 003 constrains ridge_basis to wall-time or call-index, so this never travels.
+    run["ridge_source"] = ridge_source
     # Record the disagreement, never act on it. The store counts tool requests in its own
     # vocabulary, the transcript counts them in the harness vocabulary, and the two never match
     # exactly on real data. The delta is derived from tool_calls, so it needs no second field.
