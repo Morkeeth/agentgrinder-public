@@ -64,11 +64,11 @@ window.GrinderAccount = function ({
   }
 
   function deletedHtml() {
-    return `<section class="account-notice" role="status" aria-live="polite"><p><strong>Your Pacecard profile was deleted.</strong> Your sign-in account and any Agent Grinder profile were left as they were. You are signed out of this browser.</p></section>`;
+    return `<section class="account-notice" role="status" aria-live="polite"><p><strong>Your __BRAND__ profile was deleted.</strong> Your sign-in account and any Agent Grinder profile were left as they were. You are signed out of this browser.</p></section>`;
   }
   function signedOutHtml(recovered, pend, deleted) {
     return `<section class="account card pad" id="account-body"><h1>Your account</h1>${deleted ? deletedHtml() : recoveryHtml(recovered, pend, null)}
-      <p>Sign in to edit your handle, manage the sign-in methods on your account, or delete your Pacecard profile.</p>
+      <p>Sign in to edit your handle, manage the sign-in methods on your account, or delete your __BRAND__ profile.</p>
       <div class="account-actions"><button type="button" id="account-signin">Sign in</button><a class="act" href="/?example">Try the bundled example first</a></div>
       <p class="account-hint">Signing in never posts a run. Your email stays off your public profile.</p></section>`;
   }
@@ -114,21 +114,21 @@ window.GrinderAccount = function ({
         <p id="account-identities-state" class="account-state" role="status" aria-live="polite"></p></section>
       ${origin ? origin.html({ signedIn: true }) : ""}
       <section class="card pad account-section" aria-labelledby="account-signout-title"><h2 id="account-signout-title">Sign out on this device</h2>
-        <p>Signs you out of Pacecard in this browser only. Other devices, and Agent Grinder if you use it with the same sign-in, stay signed in.</p>
+        <p>Signs you out of __BRAND__ in this browser only. Other devices, and Agent Grinder if you use it with the same sign-in, stay signed in.</p>
         <div class="account-actions"><button type="button" class="act" id="account-signout">Sign out here</button></div></section>
-      <section class="card pad account-section account-danger" id="danger" aria-labelledby="account-delete-title"><h2 id="account-delete-title">Delete your Pacecard profile</h2>
-        <p><strong>Goes:</strong> this Pacecard profile, your posted runs, and the ACKs and replies you gave or received here. Deleted work cannot be restored.</p>
+      <section class="card pad account-section account-danger" id="danger" aria-labelledby="account-delete-title"><h2 id="account-delete-title">Delete your __BRAND__ profile</h2>
+        <p><strong>Goes:</strong> this __BRAND__ profile, your posted runs, and the ACKs and replies you gave or received here. Deleted work cannot be restored.</p>
         <p><strong>Stays:</strong> your sign-in account, your Agent Grinder profile and runs if you have one, and anything on your own computer.</p>
         <form id="account-delete" class="account-form" novalidate>
           <label for="account-confirm">Type your handle <strong id="account-confirm-handle">${esc(p.handle)}</strong> to confirm</label>
           <input id="account-confirm" autocomplete="off" spellcheck="false" aria-describedby="account-delete-state">
           <p id="account-delete-state" class="account-state" role="status" aria-live="polite"></p>
-          <div class="account-actions"><button type="submit" id="account-delete-go" class="danger" disabled>Delete my Pacecard profile</button></div>
+          <div class="account-actions"><button type="submit" id="account-delete-go" class="danger" disabled>Delete my __BRAND__ profile</button></div>
         </form></section></div>`;
   }
 
   function onboardingHtml(recovered, pend, user) {
-    return `<section class="account card pad" id="account-body">${recoveryHtml(recovered, pend, user)}<h1>Your account</h1><p>You are signed in but have no Pacecard profile yet. Create one to post runs and follow friends.</p><div class="account-actions"><a class="act blue" href="/">Create your profile</a><button type="button" class="act" id="account-signout">Sign out here</button></div></section>`;
+    return `<section class="account card pad" id="account-body">${recoveryHtml(recovered, pend, user)}<h1>Your account</h1><p>You are signed in but have no __BRAND__ profile yet. Create one to post runs and follow friends.</p><div class="account-actions"><a class="act blue" href="/">Create your profile</a><button type="button" class="act" id="account-signout">Sign out here</button></div></section>`;
   }
 
   async function view() {

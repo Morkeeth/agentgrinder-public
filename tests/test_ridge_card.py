@@ -67,9 +67,23 @@ def test_card_draws_one_primary_ridge_and_three_numbers():
     assert "<span>Output</span><strong>PR</strong>" in output_facts
 
 
-def test_og_renderer_source_is_unchanged():
+def test_og_renderer_source_is_unchanged_apart_from_the_brand():
+    """The ridge work must not touch the OG renderer. The 2026-09-16 rename is the
+    one allowed difference, so the comparison applies that rename to the main copy
+    first. Any other edit to server/public-run.mjs still turns this red."""
     expected = subprocess.run(
         ["git", "show", "origin/main:server/public-run.mjs"],
         check=True, capture_output=True,
-    ).stdout
-    assert (ROOT / "server/public-run.mjs").read_bytes() == expected
+    ).stdout.decode()
+    renamed = (
+        expected
+        .replace("import {runtimeConfig} from './runtime-config.mjs';",
+                 "import {runtimeConfig} from './runtime-config.mjs';\nimport {BRAND} from './brand.mjs';")
+        .replace("<title>${title} · Pacecard</title>", "<title>${title} · ${BRAND}</title>")
+        .replace('<body><main><a href="/">Pacecard</a>', '<body><main><a href="/">${BRAND}</a>')
+        .replace("fontSize:27,fontWeight:800}},'Pacecard')", "fontSize:27,fontWeight:800}},BRAND)")
+        .replace("fontSize:28,fontWeight:800}},'Pacecard')", "fontSize:28,fontWeight:800}},BRAND)")
+        .replace("marginTop:34}},'This run is private on Pacecard')",
+                 "marginTop:34}},`This run is private on ${BRAND}`)")
+    )
+    assert (ROOT / "server/public-run.mjs").read_text() == renamed

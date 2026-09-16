@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {writeFile} from 'node:fs/promises';
 import {readFileSync} from 'node:fs';
 import {readPublic,html,card,privateCard} from '../server/public-run.mjs';
+import {BRAND} from '../server/brand.mjs';
 import {ImageResponse} from '@vercel/og';
 const id='28d5d0b7-eda2-4d94-a83c-580d2e3b75b2';let fetches=0;
 assert.equal(await readPublic('bad',()=>{fetches++}),null);assert.equal(fetches,0);
@@ -18,8 +19,9 @@ const renamed=JSON.stringify(card({...chosen,profiles:{...chosen.profiles,github
 assert(renamed.includes('@chosen-builder')&&!renamed.includes('@old-alias'),'chosen identity takes precedence');
 const meta=html(chosen);for(const tag of ['property="og:image"','property="og:title"','property="og:description"','name="twitter:card" content="summary_large_image"'])assert(meta.includes(tag),tag+' missing');
 const render=async(tree,path)=>{const image=new ImageResponse(tree,{width:1200,height:630});const bytes=Buffer.from(await image.arrayBuffer());assert.equal(bytes.subarray(1,4).toString(),'PNG');assert.equal(bytes.readUInt32BE(16),1200);assert.equal(bytes.readUInt32BE(20),630);await writeFile(path,bytes);return bytes};
-await render(card(chosen),'/tmp/pacecard-public-og.png');
-const neutral=JSON.stringify(privateCard());assert(neutral.includes('This run is private on Pacecard'));assert(!neutral.includes('fixture-builder'));
-await render(privateCard(),'/tmp/pacecard-private-og.png');
+await render(card(chosen),'/tmp/strive-public-og.png');
+assert(JSON.stringify(card(chosen)).includes(BRAND),'the public card carries the brand');
+const neutral=JSON.stringify(privateCard());assert(neutral.includes('This run is private on '+BRAND));assert(!neutral.includes('fixture-builder'));
+await render(privateCard(),'/tmp/strive-private-og.png');
 if(process.argv.includes('--live')) {const live=await readPublic(id);assert(live?.id===id);assert(html(live).includes('og:image'));}
 console.log('Preview: sample and neutral PNGs rendered at 1200x630; metadata, public-only query, identity privacy, and private/missing neutral contract passed');
