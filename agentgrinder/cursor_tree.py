@@ -203,6 +203,34 @@ def _bin_index(value: float, start: float, end: float, bins: int) -> int:
     return min(bins - 1, max(0, int((value - start) / (end - start) * bins)))
 
 
+def ridge_from_turn_order(tool_counts_per_turn: list[int], bins: int = 50) -> dict:
+    """Bin tool calls by typed-turn order, not by call index and not by wall time.
+
+    Each typed turn owns one bin. The bin height is the tool-call count for that turn.
+    With fewer turns than bins, the ridge shows the burst sequence as sparse peaks.
+    Spreading the same total evenly across bins (call-index with N under bins) draws a
+    flat 1 and 0 comb. That comb is not a measured shape. Turn order keeps the shape.
+    Measured on brief-v2-export-a.jsonl on 16 Sep 2026: counts 1, 2, 5, 13, 0, 7.
+    """
+    if not 40 <= bins <= 60:
+        raise ValueError('Ridge bins must be between 40 and 60.')
+    if any(type(count) is not int or count < 0 for count in tool_counts_per_turn):
+        raise ValueError('tool_counts_per_turn must be non-negative whole numbers.')
+    ridge = [0] * bins
+    n = len(tool_counts_per_turn)
+    if n:
+        for index, count in enumerate(tool_counts_per_turn):
+            ridge[min(bins - 1, index * bins // n)] += count
+    return {
+        'ridge': ridge,
+        'ridge_basis': 'turn-order',
+        'worker_bins': [0] * bins,
+        'commit_bins': [],
+        'ridge_wall_seconds': None,
+        'commit_basis': 'turn-order',
+    }
+
+
 def ridge_from_calls(tool_stamps: list[str | None], all_stamps: list[str] | None = None,
                      workers: list[dict] | None = None, commit_call_indices: list[int] | None = None,
                      bins: int = 50, commit_stamps: list[str] | None = None) -> dict:

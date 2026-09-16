@@ -139,7 +139,11 @@ def render_card(a: Activity) -> str:
     third_value = a.commits if has_commits else (
         f'<a href="{a.output_url}">{output_label}</a>' if a.output_url else "Unknown")
     if has_ridge:
-        basis_label = "wall time" if a.ridge_basis == "wall-time" else "call order"
+        basis_label = (
+            "wall time" if a.ridge_basis == "wall-time"
+            else "turn order" if a.ridge_basis == "turn-order"
+            else "call order"
+        )
         unavailable = ("" if a.ridge_basis == "wall-time" else
             '<p class="grp" style="text-transform:none;letter-spacing:0">Moving time, pace and cadence are unavailable: this harness trace is turn order, not a measured elapsed clock.</p>')
         body = f'''<div class="ridgewrap">{route}<small>Tool calls over {basis_label}</small></div>
