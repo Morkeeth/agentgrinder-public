@@ -129,6 +129,55 @@ def test_an_absent_session_returns_none_rather_than_a_guess(tmp_path):
     assert cursor_chats.build_ridge("not-here", tmp_path) is None
 
 
+def transcript_for(folder: Path, composer_id: str, ended: bool, age_seconds: float) -> Path:
+    import os
+    import time
+    home = folder / "project" / "agent-transcripts" / composer_id
+    home.mkdir(parents=True)
+    path = home / (composer_id + ".jsonl")
+    lines = ['{"role": "user", "message": {"content": "hello"}}']
+    if ended:
+        lines.append('{"type":"turn_ended","status":"success"}')
+    path.write_text("\n".join(lines))
+    when = time.time() - age_seconds
+    os.utime(path, (when, when))
+    return path
+
+
+def test_the_hook_sees_a_finished_chat_session(tmp_path, monkeypatch):
+    chats, projects = tmp_path / "chats", tmp_path / "projects"
+    write_store(chats, "done", [tool_record("call-0", BASE)])
+    transcript_for(projects, "done", ended=True, age_seconds=600)
+    monkeypatch.setenv(cursor_chats.ENV_PROJECTS, str(projects))
+    assert cursor_chats.finished_chat_composers(chats) == ["done"]
+
+
+def test_a_session_still_being_typed_in_is_not_offered_yet(tmp_path, monkeypatch):
+    """The marker says a TURN ended, not the session. A still warm transcript waits."""
+    chats, projects = tmp_path / "chats", tmp_path / "projects"
+    write_store(chats, "warm", [tool_record("call-0", BASE)])
+    transcript_for(projects, "warm", ended=True, age_seconds=5)
+    monkeypatch.setenv(cursor_chats.ENV_PROJECTS, str(projects))
+    assert cursor_chats.finished_chat_composers(chats) == []
+
+
+def test_a_session_whose_last_turn_never_ended_is_not_offered(tmp_path, monkeypatch):
+    chats, projects = tmp_path / "chats", tmp_path / "projects"
+    write_store(chats, "open", [tool_record("call-0", BASE)])
+    transcript_for(projects, "open", ended=False, age_seconds=600)
+    monkeypatch.setenv(cursor_chats.ENV_PROJECTS, str(projects))
+    assert cursor_chats.finished_chat_composers(chats) == []
+
+
+def test_a_session_with_no_transcript_is_skipped_rather_than_churned(tmp_path, monkeypatch):
+    """`_capture` needs a transcript. Offering one without it makes the hook retry forever."""
+    chats, projects = tmp_path / "chats", tmp_path / "projects"
+    projects.mkdir()
+    write_store(chats, "no-transcript", [tool_record("call-0", BASE)])
+    monkeypatch.setenv(cursor_chats.ENV_PROJECTS, str(projects))
+    assert cursor_chats.finished_chat_composers(chats) == []
+
+
 def test_the_window_beside_the_store_is_read_as_iso(tmp_path):
     write_store(tmp_path, "s5", [tool_record("call-0", BASE)])
     window = cursor_chats.session_window("s5", tmp_path)

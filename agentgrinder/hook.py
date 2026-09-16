@@ -160,6 +160,28 @@ def _ensure_server(root: Path, port: int) -> None:
     raise OSError(f"Could not start the private preview at 127.0.0.1:{port}.")
 
 
+def _finished_everywhere(source: Path) -> list[str]:
+    """Every composer the hook may capture, from BOTH of Cursor's stores, oldest first.
+
+    Until 16 Sep 2026 this read the global store alone. Cursor 3.20.17 stopped writing new sessions
+    there, so on this Mac the global store held none of the newest 100 sessions and the hook could
+    not see a single thing the user did this week. The chat store answers for those. A composer in
+    both is listed once.
+    """
+    from . import cursor_chats
+    found: list[str] = []
+    try:
+        with cursor_tree.CopiedDb(source) as cursor_db:
+            found.extend(finished_composers(cursor_db))
+    except (OSError, sqlite3.DatabaseError, FileNotFoundError):
+        pass                      # the old store may be absent on a fresh install; the new one is not
+    try:
+        found.extend(cursor_chats.finished_chat_composers())
+    except (OSError, sqlite3.DatabaseError):
+        pass
+    return list(dict.fromkeys(found))
+
+
 def run_once(directory=None, db=None, port: int = DEFAULT_PORT,
              capture_one=None, open_one=None) -> dict:
     root = _root(directory)
@@ -167,8 +189,7 @@ def run_once(directory=None, db=None, port: int = DEFAULT_PORT,
     capture_one = capture_one or (lambda composer_id: _capture(composer_id, source))
     open_one = open_one or (lambda url: webbrowser.open(url))
     created = []
-    with cursor_tree.CopiedDb(source) as cursor_db:
-        finished = finished_composers(cursor_db)
+    finished = _finished_everywhere(source)
     state = _state(root)
     try:
         for composer_id in finished:
@@ -207,8 +228,9 @@ def _command(directory: Path, port: int, action: str = "run", db=None) -> list[s
 
 def _seed(root: Path, db=None) -> int:
     source = Path(db).expanduser() if db else cursor_tree.db_path()
-    with cursor_tree.CopiedDb(source) as cursor_db:
-        ids = finished_composers(cursor_db)
+    # Seed from BOTH stores. Seeding from the old store alone would leave every chat store session
+    # unprocessed, so an install would capture hundreds of old sittings on its first tick.
+    ids = _finished_everywhere(source)
     state = _state(root)
     try:
         with state:

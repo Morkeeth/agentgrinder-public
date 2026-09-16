@@ -41,10 +41,19 @@ import shutil
 import sqlite3
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 ENV_CHATS = 'AGENTGRINDER_CURSOR_CHATS'
+ENV_PROJECTS = 'AGENTGRINDER_CURSOR_PROJECTS'
+
+# A session is offered to the hook only after its transcript has been still for this long. The end
+# marker below says a TURN ended, not that the session ended, and a user can type again a second
+# later. Waiting is the difference between a card about a finished sitting and a card about turn
+# three of ten. Measured on this Mac: nothing writes to a transcript after this gap unless the user
+# is still working in it.
+QUIET_SECONDS = 120.0
 
 # Protobuf field numbers inside one tool record, measured, not documented by Cursor.
 FIELD_TOOL_RECORD = 2
@@ -233,6 +242,76 @@ def build_ridge(composer_id: str, root: Path | None = None, bins: int = 50) -> d
         stamps, stamps, None, None, bins, commit_stamps=activity['commit_stamps'])
     cursor_tree.assert_redacted(result)
     return result
+
+
+def projects_root() -> Path:
+    return Path(os.environ.get(ENV_PROJECTS) or (Path.home() / '.cursor' / 'projects')).expanduser()
+
+
+def _transcript_for(composer_id: str) -> Path | None:
+    pattern = str(projects_root() / '*' / 'agent-transcripts' / composer_id / '*.jsonl')
+    import glob as _glob
+    files = [Path(p) for p in _glob.glob(pattern) if Path(p).is_file()]
+    return max(files, key=lambda p: p.stat().st_mtime) if files else None
+
+
+def _last_turn_ended(transcript: Path) -> bool:
+    """True when the transcript's last record is Cursor's end of turn marker.
+
+    Measured on this Mac, 16 Sep 2026: every transcript's last line is
+    `{"type":"turn_ended","status":"success"}` or the same with status error and a reason. It is
+    the only structural record in the file; every other line is a role and a message. It says a
+    TURN ended. It does not say the SESSION ended, which is why QUIET_SECONDS exists.
+    """
+    try:
+        lines = [line for line in transcript.read_text(
+            encoding='utf8', errors='replace').splitlines() if line.strip()]
+    except OSError:
+        return False
+    if not lines:
+        return False
+    try:
+        record = json.loads(lines[-1])
+    except ValueError:
+        return False
+    return isinstance(record, dict) and record.get('type') == 'turn_ended'
+
+
+def finished_chat_composers(root: Path | None = None, quiet_seconds: float = QUIET_SECONDS,
+                            now: float | None = None) -> list[str]:
+    """Composer ids in the chat store whose last turn has ended and whose transcript is still.
+
+    Oldest first, by the `updatedAtMs` Cursor writes beside the store. A session with no transcript
+    is skipped rather than captured, because `_capture` needs one and would otherwise churn.
+    """
+    base = Path(root) if root is not None else chats_root()
+    if not base.is_dir():
+        return []
+    moment = time.time() if now is None else now
+    found: list[tuple[int, str]] = []
+    for store in base.glob('*/*/store.db'):
+        composer_id = store.parent.name
+        transcript = _transcript_for(composer_id)
+        if transcript is None:
+            continue
+        try:
+            if moment - transcript.stat().st_mtime < quiet_seconds:
+                continue
+        except OSError:
+            continue
+        if not _last_turn_ended(transcript):
+            continue
+        updated = 0
+        meta = store.parent / 'meta.json'
+        if meta.is_file():
+            try:
+                value = json.loads(meta.read_text()).get('updatedAtMs')
+                updated = value if isinstance(value, int) else 0
+            except (OSError, ValueError):
+                updated = 0
+        found.append((updated, composer_id))
+    found.sort()
+    return [composer_id for _, composer_id in found]
 
 
 def session_window(composer_id: str, root: Path | None = None) -> tuple[str, str] | None:
