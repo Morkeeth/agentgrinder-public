@@ -86,15 +86,32 @@ def test_cursor_reads_the_files_it_wrote(tmp_path):
     assert len(run["route"]) == 2
 
 
-def test_cursor_counts_a_commit_from_its_shell_tool(tmp_path):
+def test_cursor_counts_shell_calls_but_does_not_treat_command_text_as_a_commit(tmp_path):
     root = _repo(tmp_path)
     run = parse_cursor_session(_cursor(tmp_path, [
         {"type": "tool_use", "name": "Write", "input": {"path": str(root / "src" / "a.py")}},
         {"type": "tool_use", "name": "Shell", "input": {"command": "git commit -m x"}},
         {"type": "tool_use", "name": "Shell", "input": {"command": "ls -la"}},
     ]))
-    assert run["commits"] == 1
+    assert run["commits"] is None
     assert run["shell_calls"] == 2
+
+
+def test_cursor_uses_git_as_commit_witness(tmp_path, monkeypatch):
+    root = _repo(tmp_path)
+    records = [
+        {"role": "user", "message": {"content":
+            "<timestamp>2026-09-03T10:00:00Z</timestamp><user_query>start</user_query>"}},
+        {"role": "user", "message": {"content":
+            "<timestamp>2026-09-03T11:00:00Z</timestamp><user_query>finish</user_query>"}},
+        {"role": "assistant", "message": {"content": [
+            {"type": "tool_use", "name": "Write", "input": {"path": str(root / "src" / "a.py")}},
+        ]}},
+    ]
+    monkeypatch.setattr("agentgrinder.ingest.gitwork.commits_in", lambda *args: [{"hash": "abc"}])
+    run = parse_cursor_session("fixture.jsonl", records=records)
+    assert run["project"] == root.name
+    assert run["commits"] == 1
 
 
 def test_cursor_finds_the_repository_from_the_files_it_wrote(tmp_path):

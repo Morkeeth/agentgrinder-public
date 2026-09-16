@@ -32,9 +32,9 @@ def test_a_name_with_no_home_prefix_is_left_alone():
     assert project_label("Users-alice") == "Users-alice"   # too short to be a home prefix
 
 
-def test_a_strangers_cursor_run_carries_a_clean_project_label(tmp_path):
+def test_cursor_workspace_label_is_not_published_without_git_evidence(tmp_path):
     d = tmp_path / "Users-alice-code-myapp" / "agent-transcripts" / "aaaa"
     d.mkdir(parents=True)
     p = d / "t.jsonl"
     p.write_text(CURSOR_LINES, encoding="utf-8")
-    assert parse_cursor_session(str(p))["project"] == "code-myapp"
+    assert parse_cursor_session(str(p))["project"] is None
