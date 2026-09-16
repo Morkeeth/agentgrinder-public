@@ -103,6 +103,32 @@ is captured once by composer id into `~/.agentgrinder/hook`, then its card opens
 from Cursor's database. Message text, tool arguments and paths do not enter the automatic card.
 There are no credentials and no external requests.
 
+### Where Cursor records a session, and why there are two places
+
+Cursor 3.20.17, confirmed installed on this author's Mac at 2026-09-14T08:08:31Z by Cursor's own
+`update-supervisor` record, stopped writing new sessions into the single global `state.vscdb`.
+Each session now gets its own SQLite file at
+`~/.cursor/chats/<workspace-hash>/<composer-id>/store.db`, with a `meta.json` beside it holding
+`createdAtMs`, `updatedAtMs` and `cwd`.
+
+Measured on that Mac on 16 September 2026, over 362 transcript composer ids:
+
+| store | sessions held | of the newest 100 |
+| --- | --- | --- |
+| `globalStorage/state.vscdb` | 46 | 0 |
+| `~/.cursor/chats/*/*/store.db` | 316 | 100 |
+
+The global store's newest composer row is 14 September. A capture that reads only the global store
+is therefore blind to everything a user did this week. `agentgrinder/cursor_chats.py` reads the new
+store, `agentgrinder/cursor_tree.py` still reads the old one, and `parse_cursor_session` tries the
+new store, then the old store, then call order. `run["ridge_source"]` names which one answered, so
+a card never implies a clock it did not read. Set `AGENTGRINDER_CURSOR_CHATS` to point the reader
+at another chats folder.
+
+What the new store does not give: the worker tree. `subagentComposerIds` is a field of the old
+store's composer rows, and no equivalent has been decoded in the chat store, so a session read from
+the chat store draws a timed ridge with empty worker layers rather than a guess.
+
 ```sh
 python3 -m agentgrinder hook status
 python3 -m agentgrinder hook uninstall
