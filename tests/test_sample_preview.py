@@ -87,6 +87,11 @@ const root=process.argv[1],url=new URL(process.argv[2]),sample=process.argv[3]==
 const html=fs.readFileSync(root+'/site/index.html','utf8');
 const fn=html.slice(html.indexOf('function importRun(){'),html.indexOf('\nasync function viewShareRun('));
 const cardFn=html.slice(html.indexOf('function runCard('),html.indexOf('function wireKudos('));
+// runCard's ridge branch calls fiveRow and coachBlock. A Grok Bot payload now carries a
+// call-order ridge, so the vm needs those two helpers as the page defines them.
+const helper=name=>{const start=html.indexOf('function '+name+'(');return html.slice(start,html.indexOf('\n}\n',start)+3);};
+const constant=name=>{const start=html.indexOf('const '+name+'=');const line=html.indexOf('\n',start);const oneLine=html.slice(start,line);return oneLine.trimEnd().endsWith(';')?oneLine:html.slice(start,html.indexOf('\n};',start)+3);};
+const helpers=constant('cnt')+'\n'+constant('VPT_SRC')+'\n'+helper('fiveRow')+helper('coachBlock');
 const nodes={},events={};let signins=0;
 function $(id){return nodes[id]??=( {value:'',checked:false,disabled:false,innerHTML:'',addEventListener(type,fn){events[id+':'+type]=fn;}} );}
 const context={$: $,GrinderContract:require(root+'/site/run-contract.js'),location:url,ME:null,
@@ -94,12 +99,16 @@ const context={$: $,GrinderContract:require(root+'/site/run-contract.js'),locati
  sessionStorage:{getItem:()=>null,setItem:()=>{}},
  runAttribution:()=>({handle:'preview',name:'Preview',link:'/?u=preview'}),avatar:()=>'',safeOutputUrl:()=>null,
  status:()=>{},stashImport:()=>{},showSignIn:()=>{signins++}};
-vm.createContext(context);vm.runInContext(cardFn+fn+';importRun();',context);
+vm.createContext(context);vm.runInContext(helpers+cardFn+fn+';importRun();',context);
 const preview=nodes['import-card-preview'].innerHTML;
 if(!preview.includes('Preview · not saved')||preview.includes('/?run=preview')||preview.includes('class="act')) throw Error('Preview has saved-run controls');
 const saved=vm.runInContext("runCard({id:'real-run',profile_id:'real-author',created_at:'2026-09-14',title:'Real run'},false,0)",context);
 for(const text of ['ACK','Discuss','Share','/?run=real-run'])if(!saved.includes(text))throw Error('Saved run lost '+text);
-if(!preview.includes('color:var(--blue)'))throw Error('Preview trace lost blue token');
+// The rhythm trace carries the blue token inline. A ridge carries it through design.css
+// (.ridge-line stroke:var(--blue)), so a preview with a ridge is checked against that rule.
+const css=fs.readFileSync(root+'/site/design.css','utf8');
+const ridgeBlue=/\.ridge-line\{[^}]*stroke:var\(--blue\)/.test(css);
+if(!preview.includes('color:var(--blue)')&&!(preview.includes('class="ridge"')&&ridgeBlue))throw Error('Preview trace lost blue token');
 const rendered=nodes.app.innerHTML;
 if(sample){
  if(!rendered.includes('Sample card preview')||!rendered.includes('not your activity')) throw Error('Sample provenance not visible');
