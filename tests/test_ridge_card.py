@@ -8,7 +8,7 @@ from agentgrinder.metrics import build_activity
 from agentgrinder.render import render_card
 
 ROOT = Path(__file__).resolve().parents[1]
-LEGACY_SHA256 = "6e59d18f4cb242dae38e3649eb9fa708cbec46e09baca2f568d80ab2cbb847fa"
+LEGACY_SHA256 = "a026a21714faa3d0716e80ec1e79b114bc178e898770e25624904093a7547800"  # main after PR 30, 16 Sep
 
 SCRIPT = r"""
 const fs=require('fs'),vm=require('vm'),crypto=require('crypto');
