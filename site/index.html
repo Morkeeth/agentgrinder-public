@@ -942,7 +942,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   const picker=opts.picker?ackPickerHtml(r,opts.suggested||suggestAckReasons(r),opts.selected||null):'';
   const whoLink=att.link&&!opts.preview?`<a href="${att.link}">${esc(att.name)}</a>`:`<span>${esc(att.name)}</span>`;
   const anonTag=att.ghost?'<span class="ghost-tag">anon</span>':'';
-  const started=r.started_at&&Number.isFinite(Date.parse(r.started_at))?new Date(r.started_at).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}):'Session time unknown';
+  const started=r.started_at&&Number.isFinite(Date.parse(r.started_at))?new Date(r.started_at).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}):'Start time unknown';
   const output=safeOutputUrl(r.output_url);
   const date=new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'});
   const ridge=typeof GrinderContract==='object'&&GrinderContract.ridge?GrinderContract.ridge(r):'';

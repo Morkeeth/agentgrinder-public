@@ -20,7 +20,7 @@ def test_post_page_exposes_priority_harnesses_and_private_preview():
 
 
 def test_card_shows_builder_project_session_caption_and_output():
-    card = INDEX[INDEX.index("function runCard(") : INDEX.index("function wireKudos()")]
+    card = INDEX[INDEX.index("function runSessionSeconds(") : INDEX.index("function wireKudos()")]
     assert "runAttribution(r)" in card
     for field in ("project", "started_at", "duration_s", "caption", "output_url"):
         assert field in card

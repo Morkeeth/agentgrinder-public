@@ -45,7 +45,7 @@ def render():
 
 
 def test_card_without_ridge_keeps_its_recorded_trace():
-    assert "Recorded session rhythm" in render()["plain"]
+    assert 'class="run-signature"' in render()["plain"]
     activity = build_activity({
         "athlete": "you", "title": "Plain", "harness": "Cursor", "project": "sample",
         "turns_typed": 3, "tool_calls": 2, "commits": 1, "rhythm": [1, 2, 1],
@@ -62,7 +62,7 @@ def test_card_draws_one_primary_ridge_and_five_session_facts():
     assert 'class="ridge-start"' in html and 'class="ridge-end"' in html
     assert html.count('class="ridge-commit"') == 2
     facts = html[html.index('class="run-metrics"'):html.index("</dl>", html.index('class="run-metrics"'))]
-    assert facts.count('class="run-metric') == 5
+    assert facts.count('<div class="run-metric') == 5
     assert all(label in facts for label in ("Session", "Turns", "Tool calls", "Files", "Commits"))
     assert html.index("<summary>More</summary>") < html.index("coaching-cell")
     output_facts = render()["outputOnly"]
