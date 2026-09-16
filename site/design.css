@@ -95,6 +95,16 @@ button,summary{touch-action:manipulation}
   .segment-metrics div{padding:12px 14px}
 }
 
+/* Pacecard ridge. The worker signal is layered behind one primary line, capped at three layers. */
+.ridge-wrap{padding:18px 16px 0}.ridge-wrap svg{display:block;width:100%;height:auto;min-height:132px}
+.ridge-fill{fill:var(--blue);opacity:.12}.ridge-line{fill:none;stroke:var(--blue);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.ridge-base{stroke:var(--rule);stroke-width:1}.ridge-worker{fill:var(--blue)}.ridge-worker-1{opacity:.045}.ridge-worker-2{opacity:.065}.ridge-worker-3{opacity:.085}
+.ridge-start{fill:var(--box);stroke:var(--blue);stroke-width:2}.ridge-end{fill:var(--blue);stroke:var(--box);stroke-width:2}
+.ridge-commit{stroke:var(--blue);stroke-width:2}.ridge-chip rect{fill:var(--blue)}.ridge-chip text{fill:var(--box);font:500 12px 'IBM Plex Sans',system-ui,sans-serif;text-anchor:middle}
+.ridge-wrap>.meta{display:block;margin-top:5px}.ridge-more{border-top:1px solid var(--rule);padding:12px 16px}.ridge-more>summary{cursor:pointer;color:var(--soft);font-size:13px}
+.ridge-more .fiverow{margin-left:-16px;margin-right:-16px}.ridge-more .mode-banner{margin-top:12px}
+@media(min-width:720px){.ridge-wrap{padding-left:20px;padding-right:20px}.ridge-more{padding-left:20px;padding-right:20px}}
+
 .forum-trace{max-width:420px;margin:20px 0}.forum-trace svg{height:90px}.forum-item h3{font-size:23px;line-height:1.3}.forum-item .reply-body{white-space:pre-wrap;overflow-wrap:anywhere}
 
 /* Orchestration tree on a run card: orchestrator on top, workers as rows. Same white card, same

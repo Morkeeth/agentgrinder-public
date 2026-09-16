@@ -83,3 +83,29 @@ The server can read only sessions on the computer where it runs. A Cloud Agent o
 infer sessions from your laptop.
 
 Reference: [Cursor MCP documentation](https://prod.cursor.com/docs/mcp), checked 14 September 2026.
+
+## Capture completed composers automatically
+
+Run this once from the checkout:
+
+```sh
+python3 -m agentgrinder hook install --harness cursor
+```
+
+Cursor does not expose a documented local composer-complete hook. Pacecard therefore checks
+Cursor's local `state.vscdb` on a timer. It installs a launchd agent on macOS, a systemd user timer
+on Linux when a user service manager is available, or a private polling watcher. The watcher is
+the fallback because it keeps the desktop session needed to open the loopback card.
+
+The install records all composers already complete and ignores them. A future completed composer
+is captured once by composer id into `~/.agentgrinder/hook`, then its card opens from
+`http://127.0.0.1:8765`. The reader uses only allowlisted counts, timestamps and worker structure
+from Cursor's database. Message text, tool arguments and paths do not enter the automatic card.
+There are no credentials and no external requests.
+
+```sh
+python3 -m agentgrinder hook status
+python3 -m agentgrinder hook uninstall
+```
+
+Uninstalling stops the timer and loopback preview server. Existing private captures are kept.

@@ -128,6 +128,12 @@ class Activity:
     # THE HEADLINE — verified per turn — and the five numbers of a run
     trace: list = field(default_factory=list)
     trace_basis: str = ""
+    ridge: list = field(default_factory=list)
+    ridge_basis: str = ""
+    ridge_wall_seconds: float | None = None
+    worker_bins: list = field(default_factory=list)
+    commit_bins: list = field(default_factory=list)
+    output_url: str = ""
     coach_verdict: str = ""
     coach_plan: str = ""
     coach_mode: str = ""
@@ -286,6 +292,12 @@ def build_activity(run: dict) -> Activity:
         coach_mode=run.get("coach_mode") or "",
         trace=run.get("trace") or [],
         trace_basis=run.get("trace_basis") or "",
+        ridge=run.get("ridge") or [],
+        ridge_basis=run.get("ridge_basis") or "",
+        ridge_wall_seconds=run.get("ridge_wall_seconds"),
+        worker_bins=run.get("worker_bins") or [],
+        commit_bins=run.get("commit_bins") or [],
+        output_url=run.get("output_url") or "",
         headline=hl.text,
         headline_val=hl.value,
         headline_formula=hl.formula,
