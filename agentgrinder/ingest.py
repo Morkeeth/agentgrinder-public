@@ -582,7 +582,17 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
     # The export timestamps typed turns, not agent events. They establish when the sitting
     # began and can split sittings, but they do not establish duration, pace, or timed trace.
     rhythm = [1] * typed
-    return {
+    # THE RIDGE IS DRAWN ON CALL ORDER, AND ONLY ON CALL ORDER. Measured on three real Grok Bot
+    # exports on 16 Sep 2026: the only clock in the file is the <timestamp> tag on typed user
+    # turns, at minute resolution. No tool_use block carries a time. A few send_message results
+    # carry an epoch, and on the same export those sat 27 days after the typed turns. Two clocks,
+    # neither per call, and they disagree. So the bins below place each tool call by its index,
+    # ridge_basis says call-index, the card labels it "Tool calls over call order", and wall
+    # seconds stay unknown. Spreading calls evenly inside a typed-turn minute would draw a
+    # spacing nobody measured, so it is not done.
+    from . import cursor_tree
+    ridge = cursor_tree.ridge_from_calls([None] * tool_calls)
+    run = {
         "athlete": athlete,
         "title": "Grok Bot session",
         "harness": "Grok Bot",
@@ -615,6 +625,11 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
         "route_legend": [],
         "private_title_prompt": first_prompt,
     }
+    run.update(ridge)
+    run["ridge_source"] = "call-index"   # LOCAL only, never one of the Save columns
+    run["ridge_tool_calls"] = None       # no store was read, so there is no second count
+    run["capabilities"]["timed_ridge"] = False
+    return run
 
 
 # ---- Codex origin ------------------------------------------------------------
