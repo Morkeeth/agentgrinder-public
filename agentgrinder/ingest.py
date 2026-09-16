@@ -423,7 +423,8 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
 
     route = [_region_of(fp, repo_root) for fp in edits]
     run = {
-        "athlete": athlete, "title": title, "harness": "Cursor", "project": public_project,
+        "athlete": athlete, "title": title, "harness": "Cursor", "project": public_project or proj,
+        "project_proven": repo_root is not None,
         "parser_version": "cursor-claims-unknown-2026-09-14",
         "project_identity": project_identity(repo_root),
         "started": (min(pts).isoformat() if pts else None),

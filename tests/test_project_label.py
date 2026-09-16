@@ -8,6 +8,7 @@ person's labels were tidy and everybody else's were not.
 import os
 
 from agentgrinder.ingest import parse_cursor_session, project_label
+from agentgrinder.push import export_run
 
 CURSOR_LINES = ('{"role":"user","message":{"content":"<user_query>build it</user_query>"}}\n'
                 '{"role":"assistant","message":{"content":[{"type":"tool_use"}]}}\n')
@@ -37,4 +38,7 @@ def test_cursor_workspace_label_is_not_published_without_git_evidence(tmp_path):
     d.mkdir(parents=True)
     p = d / "t.jsonl"
     p.write_text(CURSOR_LINES, encoding="utf-8")
-    assert parse_cursor_session(str(p))["project"] is None
+    run = parse_cursor_session(str(p))
+    assert run["project"] == "code-myapp"
+    assert run["project_proven"] is False
+    assert "project" not in export_run(run)
