@@ -1,11 +1,18 @@
 """Cursor's per session chat store, the place recent agent activity is actually recorded.
 
-Cursor 3.20.17 stopped writing new sessions into the one global `state.vscdb`. It now keeps each
-session in its own SQLite file at `~/.cursor/chats/<workspace-hash>/<composer-id>/store.db`, with a
-small `meta.json` beside it. Measured on this author's Mac on 16 Sep 2026: of 362 transcript
-composer ids, the global store holds 46 and none of the newest 100, while the chat store holds 316
-and all of the newest 100. The global store's newest composer row is 14 Sep. Cursor's own update
-record says version 3.20.17 was confirmed at 2026-09-14T08:08:31Z, which is the same day.
+Cursor stopped writing agent sessions into the one global `state.vscdb`. It now keeps each session
+in its own SQLite file at `~/.cursor/chats/<workspace-hash>/<composer-id>/store.db`, with a small
+`meta.json` beside it. Measured on this author's Mac on 16 Sep 2026: of 362 transcript composer
+ids, the global store holds 46 and none of the newest 100, while the chat store holds 316 and all
+of the newest 100.
+
+WHEN it moved, measured rather than assumed. The 46 ids the global store holds have transcripts
+dated 2026-02-24 to 2026-08-16. The 316 the chat store holds have transcripts dated 2026-08-10 to
+today. The two sets do not overlap at all. So agent sessions moved around the middle of August
+2026, and the oldest chat store folder is 10 Aug. The global store's newest COMPOSER row is 14 Sep,
+but no transcript matches it, so that row is not an agent session and the date is not the cutover.
+Cursor's own update record says 3.20.17 was confirmed at 2026-09-14T08:08:31Z; any link between
+that version and this move is UNVERIFIED and the dates above do not support it.
 
 Shape of one chat store, measured on session cc40feba on 16 Sep 2026. Two tables:
 
@@ -262,12 +269,20 @@ def _last_turn_ended(transcript: Path) -> bool:
     `{"type":"turn_ended","status":"success"}` or the same with status error and a reason. It is
     the only structural record in the file; every other line is a role and a message. It says a
     TURN ended. It does not say the SESSION ended, which is why QUIET_SECONDS exists.
+
+    Only the last 8 KB is read. The hook calls this for every session on every timer tick, and a
+    transcript here runs to 155 KB, so reading whole files would put about 50 MB of disk read on a
+    30 second timer. The marker line is under 90 bytes.
     """
     try:
-        lines = [line for line in transcript.read_text(
-            encoding='utf8', errors='replace').splitlines() if line.strip()]
+        with transcript.open('rb') as handle:
+            handle.seek(0, 2)
+            size = handle.tell()
+            handle.seek(max(0, size - 8192))
+            tail = handle.read().decode('utf8', errors='replace')
     except OSError:
         return False
+    lines = [line for line in tail.splitlines() if line.strip()]
     if not lines:
         return False
     try:

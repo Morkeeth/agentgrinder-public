@@ -105,20 +105,24 @@ There are no credentials and no external requests.
 
 ### Where Cursor records a session, and why there are two places
 
-Cursor 3.20.17, confirmed installed on this author's Mac at 2026-09-14T08:08:31Z by Cursor's own
-`update-supervisor` record, stopped writing new sessions into the single global `state.vscdb`.
-Each session now gets its own SQLite file at
-`~/.cursor/chats/<workspace-hash>/<composer-id>/store.db`, with a `meta.json` beside it holding
-`createdAtMs`, `updatedAtMs` and `cwd`.
+Cursor stopped writing agent sessions into the single global `state.vscdb`. Each session now gets
+its own SQLite file at `~/.cursor/chats/<workspace-hash>/<composer-id>/store.db`, with a
+`meta.json` beside it holding `createdAtMs`, `updatedAtMs` and `cwd`.
 
-Measured on that Mac on 16 September 2026, over 362 transcript composer ids:
+Measured on this author's Mac on 16 September 2026, over 362 transcript composer ids:
 
-| store | sessions held | of the newest 100 |
-| --- | --- | --- |
-| `globalStorage/state.vscdb` | 46 | 0 |
-| `~/.cursor/chats/*/*/store.db` | 316 | 100 |
+| store | sessions held | of the newest 100 | transcripts dated |
+| --- | --- | --- | --- |
+| `globalStorage/state.vscdb` | 46 | 0 | 2026-02-24 to 2026-08-16 |
+| `~/.cursor/chats/*/*/store.db` | 316 | 100 | 2026-08-10 to today |
 
-The global store's newest composer row is 14 September. A capture that reads only the global store
+The two sets do not overlap at all, so the move happened around the middle of August 2026. The
+global store's newest COMPOSER row is 14 September, but no transcript matches it, so that row is
+not an agent session and 14 September is not the cutover. Cursor's update record says version
+3.20.17 was confirmed at 2026-09-14T08:08:31Z; any link between that version and this move is
+unverified and the dates do not support it.
+
+A capture that reads only the global store
 is therefore blind to everything a user did this week. `agentgrinder/cursor_chats.py` reads the new
 store, `agentgrinder/cursor_tree.py` still reads the old one, and `parse_cursor_session` tries the
 new store, then the old store, then call order. `run["ridge_source"]` names which one answered, so
