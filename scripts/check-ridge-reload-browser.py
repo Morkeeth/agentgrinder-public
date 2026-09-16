@@ -21,6 +21,7 @@ import base64
 import json
 import os
 import sys
+import tempfile
 import threading
 import urllib.error
 import urllib.request
@@ -185,7 +186,8 @@ def main() -> int:
             elif second["label"] != "Tool calls across wall time":
                 failures.append("the reloaded ridge fell back from wall time: " + str(second["label"]))
 
-            out = Path(os.environ.get("RIDGE_RELOAD_RECEIPTS", "/tmp"))
+            out = Path(os.environ.get("RIDGE_RELOAD_RECEIPTS")
+                       or tempfile.mkdtemp(prefix="ridge-reload-"))
             out.mkdir(parents=True, exist_ok=True)
             page.screenshot(path=str(out / "ridge-after-reload.png"), full_page=False)
             print("screenshot:", out / "ridge-after-reload.png")
