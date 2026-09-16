@@ -33,8 +33,11 @@ def test_mobile_nav_is_four_or_fewer_destinations():
     assert "Progress" not in mobile and "Practices" not in mobile and "Challenges" not in mobile
 
 
-def test_posting_requires_an_explicit_audience():
+def test_posting_defaults_private_and_names_each_audience():
     assert '<option value="" selected disabled>Choose an audience</option>' in INDEX
+    assert '<option value="private">Only me — just you</option>' in INDEX
+    assert '<option value="close_friends">Close friends — people on your private list</option>' in INDEX
+    assert '<option value="public">Public — Feed and profile</option>' in INDEX
     assert "Choosing Public is the deliberate action" in INDEX
 
 
