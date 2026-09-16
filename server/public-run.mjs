@@ -6,7 +6,7 @@ export const validId=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function readPublic(id,fetcher=fetch){
  if(!validId(id))return null;
- const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,title,caption,output_url,project,harness,started_at,duration_s,wall_time_s,prompts,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
+ const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,title,caption,output_url,project,harness,started_at,duration_s,wall_time_s,prompts,tool_calls,files_touched,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
  const response=await fetcher(config.SB_URL+'/rest/v1/runs?'+query,{headers:{apikey:config.SB_KEY,"Accept-Profile":config.SB_SCHEMA},cache:'no-store',signal:AbortSignal.timeout(8000)});
  if(!response.ok)throw new Error('Public run unavailable');const rows=await response.json();
  return Array.isArray(rows)&&rows.length===1?rows[0]:null;
@@ -36,14 +36,22 @@ const series=run=>{
 const duration=value=>{
  if(value==null)return'Unknown';
  const seconds=Number(value);if(!Number.isFinite(seconds)||seconds<0)return'Unknown';
+ if(seconds<60)return`${Math.round(seconds)}s`;
  const minutes=Math.round(seconds/60);return minutes>=60?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${minutes}m`;
 };
 export function card(run){
  const plotted=series(run),max=plotted?Math.max(...plotted.values)||1:1;
  const points=plotted?plotted.values.map((v,i)=>`${i/(plotted.values.length-1)*1030},${125-v/max*105}`).join(' '):'';
  const area=plotted?`0,125 ${points} 1030,125`:'';
- const third=run.commits!=null?['Commits',String(run.commits)]:run.output_url?['Output','Linked']:['Commits','Unknown'];
- const metrics=[['Wall time',duration(run.wall_time_s??run.duration_s)],['Typed turns',run.prompts==null?'Unknown':String(run.prompts)],third];
+ const session=run.ridge_basis==='wall-time'?run.ridge_wall_seconds:null;
+ const metric=(label,value)=>[label,value==null?'Unknown':String(value)];
+ const metrics=[
+  ['Session',duration(session??run.wall_time_s??run.duration_s)],
+  metric('Turns',run.prompts),
+  metric('Tool calls',run.tool_calls),
+  metric('Files',run.files_touched),
+  metric('Commits',run.commits),
+ ];
  const handle=run.visibility==='public'&&(run.profiles?.handle||run.profiles?.github_handle);
  return el('div',{style:{width:'100%',height:'100%',background:'#f5f7fb',color:'#111',display:'flex',padding:'30px',fontFamily:'sans-serif'}},
   el('div',{style:{width:'100%',height:'100%',background:'#fff',border:'1px solid #d9deea',borderRadius:22,display:'flex',flexDirection:'column',padding:'34px 48px'}},
@@ -51,7 +59,8 @@ export function card(run){
     el('div',{style:{display:'flex',color:'#123cff',fontSize:27,fontWeight:800}},BRAND),
     handle?el('div',{style:{display:'flex',fontSize:20,color:'#555'}},'@'+handle):null),
    el('div',{style:{display:'flex',fontSize:42,fontWeight:750,marginTop:18,height:54,overflow:'hidden'}},String(run.title||'Agent run').slice(0,120)),
-   el('div',{style:{display:'flex',fontSize:22,color:'#555',marginTop:7}},String(run.project||'Project unknown').slice(0,120)),
+   run.caption?el('div',{style:{display:'flex',fontSize:20,color:'#333',marginTop:5,height:26,overflow:'hidden'}},String(run.caption).slice(0,160)):null,
+   el('div',{style:{display:'flex',fontSize:17,color:'#687083',marginTop:5}},String(run.project||'Project unknown').slice(0,120)),
    plotted?el('div',{style:{display:'flex',flexDirection:'column',marginTop:18}},
     el('svg',{width:1030,height:130,viewBox:'0 0 1030 130'},...(plotted.filled?[
      el('polygon',{points:area,fill:'#123cff',fillOpacity:0.16}),
@@ -60,11 +69,11 @@ export function card(run){
      el('polyline',{points,stroke:'#123cff',strokeWidth:5,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'})])),
     el('div',{style:{display:'flex',fontSize:15,color:'#687083',marginTop:2}},plotted.label))
     :el('div',{style:{display:'flex',height:151,alignItems:'center',color:'#687083',fontSize:20,marginTop:18}},'Trace unavailable'),
-   el('div',{style:{display:'flex',marginTop:18,borderTop:'1px solid #d9deea',paddingTop:18}},
-    ...metrics.map(([label,value],index)=>el('div',{style:{display:'flex',flexDirection:'column',width:index===2?330:350}},
-     el('div',{style:{display:'flex',fontSize:17,color:'#687083'}},label),
-     el('div',{style:{display:'flex',fontSize:34,fontWeight:700,marginTop:5,color:index===2&&value==='Linked'?'#123cff':'#111'}},value)))),
-   el('div',{style:{display:'flex',fontSize:15,color:'#687083',marginTop:15}},'Recorded activity · open the run for evidence and discussion')));
+   el('div',{style:{display:'flex',marginTop:14,borderTop:'1px solid #d9deea',paddingTop:14}},
+    ...metrics.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',width:206}},
+     el('div',{style:{display:'flex',fontSize:15,color:'#687083'}},label),
+     el('div',{style:{display:'flex',fontSize:value==='Unknown'?20:29,fontWeight:value==='Unknown'?400:700,marginTop:4,color:value==='Unknown'?'#687083':'#111'}},value)))),
+   el('div',{style:{display:'flex',fontSize:15,color:'#687083',marginTop:11}},'The trace is the session shape · counts show activity, not quality · unknown means not measured')));
 }
 export function privateCard(){
  return el('div',{style:{width:'100%',height:'100%',background:'#f5f7fb',display:'flex',padding:'30px',fontFamily:'sans-serif',color:'#111'}},

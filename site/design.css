@@ -64,9 +64,23 @@ button,summary{touch-action:manipulation}
 .post-preview label{display:block;margin-top:20px}.post-preview textarea{width:100%;box-sizing:border-box}
 @media(max-width:720px){.share-studio{grid-template-columns:minmax(0,1fr)}.share-studio .panel{padding:16px}}
 
-.run-signature{padding:26px 0 16px}.run-signature svg{height:120px}.run-signature .meta{display:block;margin-top:8px}
-.run-key-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:18px 0;border-top:1px solid var(--rule)}
-.run-key-facts span{display:block;color:var(--soft);font-size:12px}.run-key-facts strong{font-size:25px;font-weight:500;line-height:1.6}.run-evidence{margin:10px 0 20px}.run-evidence summary{cursor:pointer;color:var(--soft);font-size:13px}.card .title a{color:inherit;text-decoration:none}
+.run-signature{padding:26px 16px 16px}.run-signature svg{height:120px}.run-signature .meta{display:block;margin-top:8px}
+.run-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin:18px 0 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.run-metric{min-width:0;margin:0;padding:13px 16px 14px}
+.run-metric+.run-metric{border-left:1px solid var(--rule)}
+.run-metric dt{color:var(--soft);font-size:11px;line-height:1.25}
+.run-metric dd{margin:5px 0 0;font-size:20px;font-weight:500;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.run-metric.is-unknown dd{color:var(--dim);font-size:14px;font-weight:400;padding-top:4px}
+.run-metrics-note{margin:8px 16px 0;color:var(--soft);font-size:11px}
+.run-evidence{margin:10px 16px 20px}.run-evidence summary{cursor:pointer;color:var(--soft);font-size:13px}.card .title a{color:inherit;text-decoration:none}
+@media(max-width:560px){
+  .run-signature{padding-left:12px;padding-right:12px}
+  .run-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .run-metric{padding:12px}
+  .run-metric:nth-child(4){border-left:0;border-top:1px solid var(--rule)}
+  .run-metric:nth-child(5){border-top:1px solid var(--rule)}
+  .run-metric dd{font-size:18px}
+}
 .run-output{padding:10px 16px 0}.run-output a{color:var(--blue);font-weight:500;overflow-wrap:anywhere}
 @media(max-width:560px){.run-output a{display:flex;align-items:center;min-height:44px}}
 

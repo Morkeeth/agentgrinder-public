@@ -906,6 +906,36 @@ function runContinuation(r,opts={}){
     ${link?`<a class="act blue continue-run" href="${esc(link.href)}">${esc(link.label)}</a>`:''}
     <button class="act copy-run-prompt" type="button" data-prompt="${esc(prompt)}">Copy prompt</button></span></div>`;
 }
+function runSessionSeconds(r){
+  const candidates=[
+    r.ridge_basis==='wall-time'?r.ridge_wall_seconds:null,
+    r.wall_time_s,
+    r.duration_s,
+  ];
+  const value=candidates.find(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0);
+  return value==null?null:value;
+}
+function runSessionText(r){
+  const seconds=runSessionSeconds(r);
+  if(seconds==null)return 'Unknown';
+  if(seconds<60)return `${Math.round(seconds)}s`;
+  const minutes=Math.round(seconds/60);
+  return minutes>=60?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${minutes}m`;
+}
+function runMetricStrip(r){
+  const cells=[
+    ['Session',runSessionText(r),'Measured elapsed or wall time'],
+    ['Turns',r.prompts,'Human turns typed or queued'],
+    ['Tool calls',r.tool_calls,'Tool requests recorded in the session'],
+    ['Files',r.files_touched,'Files the capture recorded as touched'],
+    ['Commits',r.commits,'Commits recorded during the session'],
+  ];
+  const html=cells.map(([label,value,title])=>{
+    const unknown=value==null||value==='Unknown';
+    return `<div class="run-metric${unknown?' is-unknown':''}" title="${esc(title)}"><dt>${esc(label)}</dt><dd class="num">${unknown?'Unknown':esc(value)}</dd></div>`;
+  }).join('');
+  return `<dl class="run-metrics" aria-label="Recorded session metrics">${html}</dl><p class="run-metrics-note">The trace is the shape of this session. Counts show activity, not quality; unknown means not measured.</p>`;
+}
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
   const selfAck=ME&&ME.id===r.profile_id;
   const ackBtn=selfAck?'':`<button class="act kudo ${acked?'on':''}" data-run="${r.id}" data-to="${r.profile_id}">${acked?'ACKed':'ACK'}${count?' <span class="n num">'+count+'</span>':''}</button>`;
@@ -917,13 +947,13 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   const date=new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'});
   const ridge=typeof GrinderContract==='object'&&GrinderContract.ridge?GrinderContract.ridge(r):'';
   const ridgeOutput=output?(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(output)?'PR':/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(output)?'Screenshot':'Output'):null;
-  const recorded=`<details class="run-evidence"><summary>Recorded details</summary><p class="meta">${r.tool_calls??'Unknown'} tool calls · ${r.files_touched??'Unknown'} files touched. Counts describe recorded activity, not quality.</p></details>`;
+  const recorded='<details class="run-evidence"><summary>How these numbers work</summary><p class="meta">Captured from the selected session. A zero is a recorded zero; Unknown means the capture could not measure it.</p></details>';
   const ridgeBody=ridge?`${ridge}
-    <div class="run-key-facts"><div><span>Wall time</span><strong>${r.ridge_wall_seconds==null?'Unknown':esc(fmtDur(Math.round(r.ridge_wall_seconds/60)))}</strong></div><div><span>Turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>${(r.commits||0)>0?'Commits':'Output'}</span><strong>${(r.commits||0)>0?r.commits:(ridgeOutput||'Unknown')}</strong></div></div>
+    ${runMetricStrip(r)}
     <details class="ridge-more"><summary>More</summary>${fiveRow(r)}${coachBlock(r)}${r.tree?GrinderContract.tree(r.tree):''}${recorded}${output?`<p class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open ${esc(ridgeOutput||'output')} ↗</a></p>`:''}</details>`
     :`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
     ${r.tree?GrinderContract.tree(r.tree):''}
-    <div class="run-key-facts"><div><span>Typed turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>Artifacts</span><strong>${r.artifacts_produced??'Unknown'}</strong></div><div><span>Commits</span><strong>${r.commits??'Unknown'}</strong></div></div>
+    ${runMetricStrip(r)}
     ${recorded}`;
   return `<div class="card" id="card-${r.id}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
@@ -933,7 +963,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     ${ridge?'':output?`<div class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open what was built ↗</a></div>`:''}
     ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
     ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
-    <div class="sub">${r.project?esc(r.project)+' · ':''}<span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
+    <div class="sub">${r.project?esc(r.project)+' · ':''}<span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}</div>
     ${ridgeBody}
     ${typeof runContinuation==='function'?runContinuation(r,opts):''}
     ${opts.preview?'<div class="foot"><span class="meta">Preview · not saved</span></div>':`<div class="foot"><span class="meta">${count||0} ACK${count===1?'':'s'}${selfAck?' · your run':''}</span>

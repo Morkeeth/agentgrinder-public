@@ -28,7 +28,7 @@ def test_card_shows_builder_project_session_caption_and_output():
     assert card.index("${r.caption?") < card.index('<div class="sub">${r.project?')
     assert card.index("${output?") < card.index('<div class="sub">${r.project?')
     assert "card-harness" in card
-    assert "Counts describe recorded activity, not quality." in card
+    assert "Counts show activity, not quality; unknown means not measured." in card
     assert "vptHtml(r)" not in card
 
 
