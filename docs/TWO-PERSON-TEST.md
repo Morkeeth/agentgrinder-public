@@ -21,7 +21,7 @@ audience before starting.
 
 Run the following once with Oscar as Person A and the friend as Person B, then swap roles:
 
-- [ ] Person A signs in on the live URL and confirms the Auth redirect returns to Agentic Strava
+- [ ] Person A signs in on the live URL and confirms the Auth redirect returns to STRIVE
       with the private draft intact.
 - [ ] Person A saves the reviewed run with a clear caption and, when safe and available, an HTTPS
       link to what was built.

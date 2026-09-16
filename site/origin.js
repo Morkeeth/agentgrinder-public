@@ -33,7 +33,7 @@
     const notices = {
       cancelled: "<strong>Origin connection was cancelled.</strong> Nothing changed.",
       error: `<strong>Origin could not connect.</strong> ${esc(value.message || "Try again.")}`,
-      disconnected: "<strong>Origin repository disconnected.</strong> It no longer has access through Pacecard.",
+      disconnected: "<strong>Origin repository disconnected.</strong> It no longer has access through __BRAND__.",
     };
     const notice = notices[value.kind]
       ? `<div class="account-notice" role="status" aria-live="polite"><p>${notices[value.kind]}</p></div>`
@@ -41,7 +41,7 @@
     const empty = value.connections?.length ? "" : '<p class="account-hint">No Origin repositories are connected.</p>';
     const connect = '<div class="account-actions"><button type="button" class="act" data-origin-connect>Connect Origin repositories</button></div>';
     return `<section class="card pad account-section" id="origin-connection" aria-labelledby="origin-title"><h2 id="origin-title">Origin repositories</h2>
-      <p>Connect selected repositories after signing in to Pacecard. Origin is Cursor&rsquo;s code forge, not a sign-in method.</p>
+      <p>Connect selected repositories after signing in to __BRAND__. Origin is Cursor&rsquo;s code forge, not a sign-in method.</p>
       ${notice}${rows ? `<ul class="account-identities">${rows}</ul>` : ""}${empty}${connect}
       <p id="origin-state" class="account-state" role="status" aria-live="polite"></p></section>`;
   }

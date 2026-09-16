@@ -1,4 +1,4 @@
-"""Public and private Pacecard OG image contracts."""
+"""Public and private STRIVE OG image contracts."""
 from pathlib import Path
 import subprocess
 
@@ -19,7 +19,7 @@ def test_sample_and_private_og_images_render_to_png():
 def test_private_and_missing_image_requests_share_the_neutral_response():
     assert "run?card(run):privateCard()" in API_RUN
     assert "res.statusCode=200" in API_RUN
-    assert "This run is private on Pacecard" in PUBLIC_RUN
+    assert "This run is private on ${BRAND}" in PUBLIC_RUN
     assert "run.visibility==='public'" in PUBLIC_RUN
     for tag in ("og:image", "og:title", "og:description", "twitter:card"):
         assert tag in PUBLIC_RUN

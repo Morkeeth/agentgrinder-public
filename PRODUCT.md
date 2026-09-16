@@ -1,4 +1,4 @@
-# Pacecard
+# STRIVE
 
 Every run your agent made, on a card you can share.
 
@@ -42,4 +42,4 @@ This repository is the public product. Morkeeth/agentgrinder remains the hackath
 - Grok Bot verification: a second bot installing the kit and previewing its own export.
 - A verified first useful test with two people who are not the owner.
 
-Brand decision, 15 September: the product is Pacecard. Keep the white cards and blue activity trace. The `agentic-strava.vercel.app` address remains until `pacecard.dev` is purchased.
+Brand decision, 16 September: the public product is STRIVE, tagline "Post your strides". Pacecard is rejected. Keep the white cards and blue activity trace. The address remains `agentic-strava.vercel.app`. The name and tagline are held in one place, `server/brand.mjs`; internal identifiers, the package name, the CLI command and the `strava` schema are unchanged.
