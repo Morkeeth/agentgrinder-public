@@ -129,9 +129,11 @@ new store, then the old store, then call order. `run["ridge_source"]` names whic
 a card never implies a clock it did not read. Set `AGENTGRINDER_CURSOR_CHATS` to point the reader
 at another chats folder.
 
-What the new store does not give: the worker tree. `subagentComposerIds` is a field of the old
-store's composer rows, and no equivalent has been decoded in the chat store, so a session read from
-the chat store draws a timed ridge with empty worker layers rather than a guess.
+Worker structure moved too. It is not in the protobuf step records. The hex-encoded JSON at
+`meta['0']` in each worker's own store carries `subagentInfo.parentAgentId`; sibling fields name the
+root parent and Cursor's worker type. The reader matches direct children to their parent and bins
+each child's first-to-last tool request window on the same clock as the ridge. Only the activity
+window leaves the reader. Worker ids, types, messages and tool arguments do not enter the card.
 
 ```sh
 python3 -m agentgrinder hook status
