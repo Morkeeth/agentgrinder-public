@@ -32,6 +32,13 @@ On that session all 170 tool records carried all three, and the JSON store held 
 results, so the two sides count the same population. The tool kind is the payload field number,
 and field 1 is the shell tool, whose request body holds the command string at field 1 of field 1.
 
+The worker relationship is not in those step records. Each worker has its own store, and its
+decoded `meta` row carries `subagentInfo.parentAgentId`, `rootParentAgentId` and `typeName`.
+Direct workers are the sibling stores whose `parentAgentId` is this session's `agentId`. Their
+first and last tool request stamps supply the worker windows, on the same clock as the parent
+ridge. A worker with no tool request uses the created and updated clock in its `meta.json`
+sidecar, so analysis-only workers do not disappear. No worker id or type leaves this module.
+
 What leaves this module: timestamps, and one boolean per shell call saying whether its command
 contained `git commit`. The command string is read in memory and dropped. No message text, no tool
 arguments, no file paths and no ids reach the output. `cursor_tree.assert_redacted` is applied to
@@ -143,6 +150,21 @@ def _iso(milliseconds: int) -> str:
         milliseconds / 1000, tz=timezone.utc).isoformat().replace('+00:00', 'Z')
 
 
+def _store_meta(conn: sqlite3.Connection) -> dict:
+    """Decode the session envelope in meta row 0. It may be hex JSON or plain JSON."""
+    row = conn.execute("select value from meta where key='0'").fetchone()
+    if not row or not isinstance(row[0], str):
+        return {}
+    raw = row[0]
+    try:
+        if raw and len(raw) % 2 == 0 and all(char in '0123456789abcdefABCDEF' for char in raw):
+            raw = bytes.fromhex(raw).decode('utf8')
+        value = json.loads(raw)
+    except (UnicodeDecodeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
 def _shell_command(body: bytes) -> str | None:
     """The command string of a shell tool record. Read in memory, never returned to a caller."""
     request = _fields(body)
@@ -234,6 +256,59 @@ def session_activity(conn: sqlite3.Connection) -> dict:
     return {'tool_stamps': tool_stamps, 'commit_stamps': commit_stamps}
 
 
+def _stores(root: Path) -> list[Path]:
+    """Every per-session store under a chats root, including the direct fixture layout."""
+    found = list(root.glob('*/*/store.db'))
+    found.extend(root.glob('*/store.db'))
+    return list(dict.fromkeys(path for path in found if path.is_file()))
+
+
+def _sidecar_window(store: Path) -> tuple[str, str] | None:
+    try:
+        data = json.loads((store.parent / 'meta.json').read_text())
+    except (OSError, ValueError):
+        return None
+    created, updated = data.get('createdAtMs'), data.get('updatedAtMs')
+    if not isinstance(created, int) or not isinstance(updated, int):
+        return None
+    return _iso(created), _iso(updated)
+
+
+def worker_windows(composer_id: str, root: Path | None = None) -> list[dict]:
+    """Redacted request-time windows for stores that name this composer as their direct parent."""
+    base = Path(root) if root is not None else chats_root()
+    if not base.is_dir():
+        return []
+    children: list[Path] = []
+    for store in _stores(base):
+        try:
+            conn = sqlite3.connect(f'file:{store}?mode=ro', uri=True)
+            try:
+                meta = _store_meta(conn)
+            finally:
+                conn.close()
+        except sqlite3.DatabaseError:
+            continue
+        info = meta.get('subagentInfo')
+        if isinstance(info, dict) and info.get('parentAgentId') == composer_id:
+            children.append(store)
+
+    windows: list[dict] = []
+    for store in children:
+        try:
+            with CopiedChatDb(store) as conn:
+                stamps = session_activity(conn)['tool_stamps']
+        except (OSError, sqlite3.DatabaseError):
+            continue
+        if stamps:
+            windows.append({'started_at': stamps[0], 'ended_at': stamps[-1]})
+            continue
+        sidecar = _sidecar_window(store)
+        if sidecar:
+            windows.append({'started_at': sidecar[0], 'ended_at': sidecar[1]})
+    return windows
+
+
 def build_ridge(composer_id: str, root: Path | None = None, bins: int = 50) -> dict | None:
     """The ridge for one composer from the chat store, or None when this store has no such session."""
     from . import cursor_tree
@@ -246,7 +321,8 @@ def build_ridge(composer_id: str, root: Path | None = None, bins: int = 50) -> d
     if not stamps:
         return None
     result = cursor_tree.ridge_from_calls(
-        stamps, stamps, None, None, bins, commit_stamps=activity['commit_stamps'])
+        stamps, stamps, worker_windows(composer_id, root), None, bins,
+        commit_stamps=activity['commit_stamps'])
     cursor_tree.assert_redacted(result)
     return result
 
@@ -334,17 +410,7 @@ def session_window(composer_id: str, root: Path | None = None) -> tuple[str, str
     source = store_for(composer_id, root)
     if source is None:
         return None
-    meta = source.parent / 'meta.json'
-    if not meta.is_file():
-        return None
-    try:
-        data = json.loads(meta.read_text())
-    except (OSError, ValueError):
-        return None
-    created, updated = data.get('createdAtMs'), data.get('updatedAtMs')
-    if not isinstance(created, int) or not isinstance(updated, int):
-        return None
-    return _iso(created), _iso(updated)
+    return _sidecar_window(source)
 
 
 def main(argv: list[str] | None = None) -> int:

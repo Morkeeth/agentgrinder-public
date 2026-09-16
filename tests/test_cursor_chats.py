@@ -1,4 +1,4 @@
-"""The per session chat store Cursor 3.20.17 writes, and the fallback order around it.
+"""Cursor's per-session chat store and the fallback order around it.
 
 The fixture is built here rather than copied from a real store, so no private bytes enter the
 repository. The encoder below writes the same three fields the real records carry, and
@@ -54,7 +54,7 @@ def tool_record(call_id: str, requested_ms: int, command: str | None = None) -> 
 
 
 def write_store(folder: Path, composer_id: str, records: list[bytes],
-                messages: list[bytes] | None = None) -> Path:
+                messages: list[bytes] | None = None, meta_extra: dict | None = None) -> Path:
     home = folder / "0123456789abcdef0123456789abcdef" / composer_id
     home.mkdir(parents=True)
     db = home / "store.db"
@@ -63,6 +63,14 @@ def write_store(folder: Path, composer_id: str, records: list[bytes],
     conn.execute("create table meta (key TEXT PRIMARY KEY, value TEXT)")
     for index, blob in enumerate(records + (messages or [])):
         conn.execute("insert into blobs values (?,?)", ("%064x" % index, blob))
+    import json
+    meta = {
+        "agentId": composer_id,
+        "latestRootBlobId": "0" * 64,
+        "createdAt": 1789457877614,
+    }
+    meta.update(meta_extra or {})
+    conn.execute("insert into meta values ('0', ?)", (json.dumps(meta).encode().hex(),))
     conn.commit()
     conn.close()
     (home / "meta.json").write_text(
@@ -123,6 +131,45 @@ def test_the_ridge_is_timed_and_its_window_is_the_real_span(tmp_path):
     assert ridge["ridge_wall_seconds"] == pytest.approx(19 * 60.0)
     assert sum(ridge["ridge"]) == 20
     assert len(ridge["ridge"]) == 50
+
+
+def test_worker_bins_come_from_child_store_parent_metadata(tmp_path):
+    parent = "parent-session"
+    write_store(tmp_path, parent, [
+        tool_record("parent-%d" % i, BASE + i * 60_000) for i in range(6)
+    ])
+    link = {"subagentInfo": {
+        "parentAgentId": parent,
+        "rootParentAgentId": parent,
+        "typeName": "generalPurpose",
+    }}
+    write_store(tmp_path, "child-one", [
+        tool_record("child-one-%d" % i, BASE + i * 60_000) for i in (1, 3)
+    ], meta_extra=link)
+    write_store(tmp_path, "child-two", [
+        tool_record("child-two-%d" % i, BASE + i * 60_000) for i in (2, 4)
+    ], meta_extra=link)
+    analysis_store = write_store(tmp_path, "analysis-only", [], meta_extra=link)
+    analysis_store.with_name("meta.json").write_text(
+        '{"createdAtMs":1789000120000,"updatedAtMs":1789000180000}')
+    write_store(tmp_path, "grandchild", [
+        tool_record("grandchild-%d" % i, BASE + i * 60_000) for i in (2, 3)
+    ], meta_extra={"subagentInfo": {
+        "parentAgentId": "child-one",
+        "rootParentAgentId": parent,
+        "typeName": "explore",
+    }})
+
+    ridge = cursor_chats.build_ridge(parent, tmp_path)
+
+    assert max(ridge["worker_bins"]) == 3
+    assert sum(1 for value in ridge["worker_bins"] if value) > 1
+    # The grandchild is not a direct worker of the orchestrator.
+    windows = cursor_chats.worker_windows(parent, tmp_path)
+    assert len(windows) == 3
+    assert all(set(window) == {"started_at", "ended_at"} for window in windows)
+    assert parent not in repr(windows)
+    assert "child-" not in repr(windows)
 
 
 def test_an_absent_session_returns_none_rather_than_a_guess(tmp_path):
