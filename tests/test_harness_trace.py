@@ -94,6 +94,7 @@ def test_cursor_counts_a_commit_from_its_shell_tool(tmp_path):
         {"type": "tool_use", "name": "Shell", "input": {"command": "ls -la"}},
     ]))
     assert run["commits"] == 1
+    assert run["shell_calls"] == 2
 
 
 def test_cursor_finds_the_repository_from_the_files_it_wrote(tmp_path):

@@ -6,7 +6,7 @@ export const validId=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function readPublic(id,fetcher=fetch){
  if(!validId(id))return null;
- const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,title,caption,output_url,project,harness,started_at,duration_s,wall_time_s,prompts,tool_calls,files_touched,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
+ const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,title,caption,output_url,project,harness,started_at,duration_s,wall_time_s,prompts,tool_calls,shell_calls,files_touched,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
  const response=await fetcher(config.SB_URL+'/rest/v1/runs?'+query,{headers:{apikey:config.SB_KEY,"Accept-Profile":config.SB_SCHEMA},cache:'no-store',signal:AbortSignal.timeout(8000)});
  if(!response.ok)throw new Error('Public run unavailable');const rows=await response.json();
  return Array.isArray(rows)&&rows.length===1?rows[0]:null;
@@ -39,41 +39,67 @@ const duration=value=>{
  if(seconds<60)return`${Math.round(seconds)}s`;
  const minutes=Math.round(seconds/60);return minutes>=60?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${minutes}m`;
 };
+const projectName=run=>{
+ const value=typeof run.project==='string'?run.project.trim():'';
+ return value&&!['session','unknown','project unknown'].includes(value.toLowerCase())?value:null;
+};
+const outputKind=run=>{
+ try{
+  const url=new URL(run.output_url);
+  if(!/^https?:$/.test(url.protocol))return null;
+  if(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(url.href))return'PR linked';
+  if(/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(url.href))return'Screenshot linked';
+  return'Output linked';
+ }catch(_){return null}
+};
+const codeFacts=run=>{
+ const facts=[];
+ if(run.shell_calls!=null)facts.push(run.shell_calls+' shell calls');
+ if(run.files_touched!=null)facts.push(run.files_touched+' files changed');
+ if(run.commits!=null)facts.push(run.commits+' commits');
+ if(!facts.length&&run.tool_calls!=null)facts.push(run.tool_calls+' tool calls');
+ return facts.join(' · ')||'Unknown';
+};
 export function card(run){
  const plotted=series(run),max=plotted?Math.max(...plotted.values)||1:1;
  const points=plotted?plotted.values.map((v,i)=>`${i/(plotted.values.length-1)*1030},${125-v/max*105}`).join(' '):'';
  const area=plotted?`0,125 ${points} 1030,125`:'';
  const session=run.ridge_basis==='wall-time'?run.ridge_wall_seconds:null;
  const metric=(label,value)=>[label,value==null?'Unknown':String(value)];
- const metrics=[
+ const effort=[
   ['Session',duration(session??run.wall_time_s??run.duration_s)],
   metric('Turns',run.prompts),
   metric('Tool calls',run.tool_calls),
-  metric('Files',run.files_touched),
-  metric('Commits',run.commits),
  ];
+ const story=[['Project touched',projectName(run)||'Unknown'],['Code activity',codeFacts(run)]];
+ const output=outputKind(run);if(output)story.push(['Output',output]);
  const handle=run.visibility==='public'&&(run.profiles?.handle||run.profiles?.github_handle);
  return el('div',{style:{width:'100%',height:'100%',background:'#f5f7fb',color:'#111',display:'flex',padding:'30px',fontFamily:'sans-serif'}},
   el('div',{style:{width:'100%',height:'100%',background:'#fff',border:'1px solid #d9deea',borderRadius:22,display:'flex',flexDirection:'column',padding:'34px 48px'}},
    el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
     el('div',{style:{display:'flex',color:'#123cff',fontSize:27,fontWeight:800}},BRAND),
     handle?el('div',{style:{display:'flex',fontSize:20,color:'#555'}},'@'+handle):null),
-   el('div',{style:{display:'flex',fontSize:42,fontWeight:750,marginTop:18,height:54,overflow:'hidden'}},String(run.title||'Agent run').slice(0,120)),
-   run.caption?el('div',{style:{display:'flex',fontSize:20,color:'#333',marginTop:5,height:26,overflow:'hidden'}},String(run.caption).slice(0,160)):null,
-   el('div',{style:{display:'flex',fontSize:17,color:'#687083',marginTop:5}},String(run.project||'Project unknown').slice(0,120)),
-   plotted?el('div',{style:{display:'flex',flexDirection:'column',marginTop:18}},
-    el('svg',{width:1030,height:130,viewBox:'0 0 1030 130'},...(plotted.filled?[
+   el('div',{style:{display:'flex',fontSize:13,color:'#123cff',fontWeight:700,letterSpacing:1.2,marginTop:10}},'ACHIEVED'),
+   el('div',{style:{display:'flex',fontSize:38,fontWeight:750,marginTop:3,height:47,overflow:'hidden'}},String(run.title||'Agent run').slice(0,120)),
+   run.caption?el('div',{style:{display:'flex',fontSize:18,color:'#333',marginTop:2,height:24,overflow:'hidden'}},String(run.caption).slice(0,160)):null,
+   el('div',{style:{display:'flex',marginTop:10,borderTop:'1px solid #d9deea',borderBottom:'1px solid #d9deea'}},
+    ...story.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',width:story.length===3?343:515,padding:'9px 8px 10px 0'}},
+     el('div',{style:{display:'flex',fontSize:13,color:'#687083'}},label),
+     el('div',{style:{display:'flex',fontSize:value==='Unknown'?17:19,fontWeight:value==='Unknown'?400:650,marginTop:3,color:value==='Unknown'?'#687083':label==='Output'?'#123cff':'#111',height:26,overflow:'hidden',border:label==='Output'?'1px solid #c4d2ff':'none',background:label==='Output'?'#f2f5ff':'transparent',padding:label==='Output'?'2px 7px':'0'}},value)))),
+   plotted?el('div',{style:{display:'flex',flexDirection:'column',marginTop:9}},
+    el('svg',{width:1030,height:100,viewBox:'0 0 1030 130'},...(plotted.filled?[
      el('polygon',{points:area,fill:'#123cff',fillOpacity:0.16}),
      el('line',{x1:0,y1:125,x2:1030,y2:125,stroke:'#d9deea',strokeWidth:2}),
      el('polyline',{points,stroke:'#123cff',strokeWidth:4,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'})]:[
      el('polyline',{points,stroke:'#123cff',strokeWidth:5,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'})])),
-    el('div',{style:{display:'flex',fontSize:15,color:'#687083',marginTop:2}},plotted.label))
-    :el('div',{style:{display:'flex',height:151,alignItems:'center',color:'#687083',fontSize:20,marginTop:18}},'Trace unavailable'),
-   el('div',{style:{display:'flex',marginTop:14,borderTop:'1px solid #d9deea',paddingTop:14}},
-    ...metrics.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',width:206}},
-     el('div',{style:{display:'flex',fontSize:15,color:'#687083'}},label),
-     el('div',{style:{display:'flex',fontSize:value==='Unknown'?20:29,fontWeight:value==='Unknown'?400:700,marginTop:4,color:value==='Unknown'?'#687083':'#111'}},value)))),
-   el('div',{style:{display:'flex',fontSize:15,color:'#687083',marginTop:11}},'The trace is the session shape · counts show activity, not quality · unknown means not measured')));
+    el('div',{style:{display:'flex',fontSize:13,color:'#687083',marginTop:1}},plotted.label))
+    :el('div',{style:{display:'flex',height:114,alignItems:'center',color:'#687083',fontSize:18,marginTop:9}},'Trace unavailable'),
+   el('div',{style:{display:'flex',fontSize:13,color:'#123cff',fontWeight:700,letterSpacing:1.2,marginTop:7}},'EFFORT'),
+   el('div',{style:{display:'flex',marginTop:3,borderTop:'1px solid #d9deea',paddingTop:8}},
+    ...effort.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',width:343}},
+     el('div',{style:{display:'flex',fontSize:13,color:'#687083'}},label),
+     el('div',{style:{display:'flex',fontSize:value==='Unknown'?18:27,fontWeight:value==='Unknown'?400:700,marginTop:3,color:value==='Unknown'?'#687083':'#111'}},value)))),
+   el('div',{style:{display:'flex',fontSize:13,color:'#687083',marginTop:7}},'Blue trace: this session · counts: activity, not quality · Unknown: not measured')));
 }
 export function privateCard(){
  return el('div',{style:{width:'100%',height:'100%',background:'#f5f7fb',display:'flex',padding:'30px',fontFamily:'sans-serif',color:'#111'}},

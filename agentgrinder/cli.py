@@ -947,7 +947,7 @@ def _native_grind(run, args, path, source_digest, selected=None, total=None):
     )
     print(
         f"  selected session -> {run.get('harness', 'agent')} · "
-        f"{run.get('project', 'unknown project')} · {Path(path).name}{selection}"
+        f"{run.get('project') or 'Unknown project'} · {Path(path).name}{selection}"
     )
     _render(run,Path(args.out),False)
     print('  '+run.get('trace_basis','Trace timing unavailable'))

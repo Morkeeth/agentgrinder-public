@@ -18,6 +18,8 @@ def test_measured_grokbot_export_parses_as_labelled_bot_activity():
     assert run["activity_label"] == "bot activity"
     assert run["turns_typed"] == 2
     assert run["tool_calls"] == 3
+    assert run["shell_calls"] == 2
+    assert run["project"] is None
     assert run["commits"] is None
     assert run["started"] == "2026-09-14T13:00:00+00:00"
 
@@ -64,7 +66,7 @@ def test_cli_loads_grokbot_fixture_and_renders_unknowns_as_dashes(tmp_path, caps
     output = capsys.readouterr().out
     html = card.read_text(encoding="utf-8")
 
-    assert "selected session -> Grok Bot · session" in output
+    assert "selected session -> Grok Bot · Unknown project" in output
     assert f"{FIXTURE.name} · sitting 1 of 1" in output
     assert "Grok Bot" in output
     assert "—" in output
@@ -85,6 +87,7 @@ def test_mcp_preview_uses_grokbot_adapter(monkeypatch):
     assert payload["turns_typed"] == 2
     assert payload["duration_s"] is None
     assert payload["files_touched"] is None
+    assert payload["shell_calls"] == 2
 
 
 def test_shell_text_and_failed_attempts_do_not_prove_commits(tmp_path):
@@ -136,6 +139,7 @@ def test_safe_real_shape_fixture_preserves_structure_without_exporting_labels_or
     assert run["activity_label"] == "bot activity"
     assert run["turns_typed"] == 7
     assert run["tool_calls"] == 7
+    assert run["shell_calls"] == 4
     assert run["commits"] is None
     assert run["files_touched"] is None
 
@@ -143,3 +147,25 @@ def test_safe_real_shape_fixture_preserves_structure_without_exporting_labels_or
     assert "SAFE EXPORT" not in exported
     assert "/SAFE_EXPORT/project" not in exported
     assert "private_title_prompt" not in exported
+
+
+def test_structured_grokbot_workdir_can_prove_project_without_exporting_path(tmp_path):
+    from agentgrinder.push import export_run
+    import subprocess
+
+    repo = tmp_path / "honest-project"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    rows = [json.loads(line) for line in FIXTURE.read_text().splitlines()]
+    for row in rows:
+        message = row.get("message") or {}
+        for block in message.get("content") or []:
+            if isinstance(block, dict) and block.get("type") == "tool_use":
+                inputs = block.get("input") or {}
+                if block.get("name") == "Shell":
+                    inputs["working_directory"] = str(repo)
+    run = parse_grokbot_session("fixture.jsonl", records=rows)
+    payload = export_run(run)
+    assert run["project"] == "honest-project"
+    assert payload["project"] == "honest-project"
+    assert str(tmp_path) not in json.dumps(payload)

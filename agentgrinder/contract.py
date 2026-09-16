@@ -5,7 +5,7 @@ import hashlib
 import math
 
 SCHEMA_VERSION = 1
-COUNT_FIELDS = ("turns_typed", "tool_calls", "files_touched", "commits", "claims",
+COUNT_FIELDS = ("turns_typed", "tool_calls", "shell_calls", "files_touched", "commits", "claims",
                 "claims_verified", "artifacts_produced")
 
 

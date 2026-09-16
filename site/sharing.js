@@ -18,9 +18,31 @@ function metricStrip(run){
   ['Session',duration(sessionSeconds(run))],
   ['Turns',run.prompts??run.turns_typed??null],
   ['Tool calls',run.tool_calls??null],
-  ['Files',run.files_touched??null],
-  ['Commits',run.commits??null],
  ].map(([label,value])=>[label,value==null?'Unknown':String(value)]);
+}
+function projectName(run){
+ const value=typeof run.project==='string'?run.project.trim():'';
+ return value&&!['session','unknown','project unknown'].includes(value.toLowerCase())?value:null;
+}
+function outputKind(run){
+ try{
+  const url=new URL(run.output_url);
+  if(!/^https?:$/.test(url.protocol))return null;
+  if(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(url.href))return'PR linked';
+  if(/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(url.href))return'Screenshot linked';
+  return'Output linked';
+ }catch(_){return null}
+}
+function codeFacts(run){
+ const facts=[];
+ if(run.shell_calls!=null)facts.push(run.shell_calls+' shell calls');
+ if(run.files_touched!=null)facts.push(run.files_touched+' files changed');
+ if(run.commits!=null)facts.push(run.commits+' commits');
+ if(!facts.length&&run.tool_calls!=null)facts.push(run.tool_calls+' tool calls');
+ return facts;
+}
+function storyFacts(run){
+ return {project:projectName(run)||'Unknown',output:outputKind(run),code:codeFacts(run).join(' · ')||'Unknown'};
 }
 function mount({run,slot,status,moment=null,review=null}){
  if(moment&&(moment.run_id!==run.id||moment.measurement_revision!==run.measurement_revision)){
@@ -33,11 +55,11 @@ function mount({run,slot,status,moment=null,review=null}){
  <div class="share-studio"><form id="post-editor" class="panel reply-form">
  <label>What did you build?<input name="title" maxlength="100" required value="${esc(run.title)}"></label>
  <label>Where did the agent help or struggle?<textarea name="contribution" maxlength="240" placeholder="Describe one useful contribution or difficult moment."></textarea></label>
- <label>What was the result?<textarea name="result" maxlength="240" placeholder="Describe what you checked. Keep claims specific."></textarea></label>
+ <label>What was the result?<textarea name="result" maxlength="240" placeholder="Describe what you checked. Keep claims specific.">${esc(run.caption||'')}</textarea></label>
  <label>What will you try next?<input name="next" maxlength="160" placeholder="One change for the next run"></label>
  <label>Image format<select name="format"><option value="square">Square · 1080 × 1080</option><option value="portrait">Portrait · 1080 × 1350</option></select></label>
  <label><input type="checkbox" name="identity" ${handle?'checked':''}> Include public handle and agent name</label>
- <p class="hint">Only these fields, the selected identity, the trace and five recorded session facts appear in the image. Your existing notes and project name are not copied.</p>
+ <p class="hint">The image uses your title and result, a safe output label, the proven project name, measured code activity, the blue trace, and effort counts. It never includes command text, paths, code, prompts, secrets, or tool output.</p>
  <label><input type="checkbox" name="review"> I have reviewed this image and caption for sharing.</label>
  <div class="cta"><button type="button" id="post-download" disabled>Download PNG</button><button type="button" class="ghost" id="post-copy" disabled>Copy caption</button></div>
  </form><div class="post-preview"><canvas aria-label="Exact share image preview" role="img"></canvas><label>Caption<textarea id="post-caption" readonly rows="8"></textarea></label><p class="hint" id="post-message" role="status"></p></div></div>`;
@@ -45,12 +67,16 @@ function mount({run,slot,status,moment=null,review=null}){
  const fields=()=>({title:form.elements.title.value.trim(),contribution:form.elements.contribution.value.trim(),result:form.elements.result.value.trim(),next:form.elements.next.value.trim(),identity:form.elements.identity.checked});
  function lines(text,x,y,width,font,lineHeight,maxLines){ctx.font=font;let words=String(text).split(/\s+/),line='',rows=[];for(const word of words){const candidate=line?line+' '+word:word;if(ctx.measureText(candidate).width>width&&line){rows.push(line);line=word}else line=candidate;}if(line)rows.push(line);rows=rows.flatMap(row=>{if(ctx.measureText(row).width<=width)return[row];const parts=[];let part='';for(const c of row){if(ctx.measureText(part+c).width>width){parts.push(part);part=''}part+=c}if(part)parts.push(part);return parts});const clipped=rows.length>maxLines;rows=rows.slice(0,maxLines);if(clipped){let last=rows.at(-1);while(last&&ctx.measureText(last+'…').width>width)last=last.slice(0,-1);rows[rows.length-1]=last+'…'}rows.forEach((row,i)=>ctx.fillText(row,x,y+i*lineHeight));return clipped;}
  function draw(){const f=fields(),portrait=form.elements.format.value==='portrait';canvas.width=1080;canvas.height=portrait?1350:1080;let clipped=false;ctx.fillStyle='#f8f8f6';ctx.fillRect(0,0,1080,canvas.height);ctx.fillStyle='#123cff';ctx.fillRect(64,64,44,8);ctx.fillStyle='#111';ctx.font='600 23px sans-serif';ctx.fillText('__BRAND__',128,80);ctx.fillStyle='#666';ctx.font='20px sans-serif';ctx.fillText(review?'MY RETURN':'RUN NOTES',820,80);
- ctx.fillStyle='#111';clipped=lines(f.title||'Your run',64,160,952,'600 48px sans-serif',56,2)||clipped;
- ctx.fillStyle='#555';const identity=f.identity&&handle?'@'+handle:'Identity not included';clipped=lines(identity+' · '+(run.harness||'Harness unknown')+(f.identity&&run.agent_name?' · '+run.agent_name:''),64,276,952,'23px sans-serif',28,1)||clipped;
- const values=run.rhythm;ctx.strokeStyle='#123cff';ctx.lineWidth=4;const valid=Array.isArray(values)&&values.length>1&&values.length<=10000&&values.every(v=>Number.isFinite(v)&&v>=0);if(valid){const max=Math.max(...values)||1;ctx.beginPath();values.forEach((v,i)=>{const x=64+i/(values.length-1)*952,y=450-v/max*125;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}else{ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Trace unavailable',64,390)}
- ctx.fillStyle='#666';ctx.font='19px sans-serif';ctx.fillText(run.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':run.trace_basis==='elapsed'?'Session activity · elapsed time':run.trace_basis==='position'?'Session activity · event order':'Session activity · time basis unknown',64,485);
- metricStrip(run).forEach(([name,value],i)=>{const x=64+i*190.4;ctx.fillStyle='#666';ctx.font='18px sans-serif';ctx.fillText(name,x,545);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'22px sans-serif':'600 32px sans-serif';ctx.fillText(value,x,590)});
- let y=665;const blocks=[['THE AGENT',f.contribution],['THE RESULT',f.result],['NEXT RUN',f.next]].filter(([,v])=>v);for(const [label,body] of blocks){ctx.fillStyle='#123cff';ctx.font='600 17px sans-serif';ctx.fillText(label,64,y);ctx.fillStyle='#111';clipped=lines(body,64,y+34,952,'26px sans-serif',32,portrait?3:2)||clipped;y+=portrait?160:110;}
+ ctx.fillStyle='#123cff';ctx.font='600 16px sans-serif';ctx.fillText('ACHIEVED',64,124);
+ ctx.fillStyle='#111';clipped=lines(f.title||'Your run',64,172,952,'600 46px sans-serif',54,2)||clipped;
+ ctx.fillStyle='#444';clipped=lines(f.result||'Achievement caption unknown',64,275,952,'24px sans-serif',31,2)||clipped;
+ ctx.fillStyle='#666';const identity=f.identity&&handle?'@'+handle:'Identity not included';clipped=lines(identity+' · '+(run.harness||'Harness unknown')+(f.identity&&run.agent_name?' · '+run.agent_name:''),64,330,952,'19px sans-serif',24,1)||clipped;
+ const facts=storyFacts(run),story=[['PROJECT TOUCHED',facts.project],['CODE ACTIVITY',facts.code],['OUTPUT',facts.output]].filter(([,value])=>value);story.forEach(([label,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='15px sans-serif';ctx.fillText(label,x,378);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'19px sans-serif':'600 20px sans-serif';clipped=lines(value,x,408,285,'600 20px sans-serif',24,1)||clipped;});
+ const values=run.rhythm;ctx.strokeStyle='#123cff';ctx.lineWidth=4;const valid=Array.isArray(values)&&values.length>1&&values.length<=10000&&values.every(v=>Number.isFinite(v)&&v>=0);if(valid){const max=Math.max(...values)||1;ctx.beginPath();values.forEach((v,i)=>{const x=64+i/(values.length-1)*952,y=560-v/max*105;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}else{ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Trace unavailable',64,520)}
+ ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(run.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':run.trace_basis==='elapsed'?'Session activity · elapsed time':run.trace_basis==='position'?'Session activity · event order':'Session activity · time basis unknown',64,592);
+ ctx.fillStyle='#123cff';ctx.font='600 16px sans-serif';ctx.fillText('EFFORT',64,632);
+ metricStrip(run).forEach(([name,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(name,x,663);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'22px sans-serif':'600 31px sans-serif';ctx.fillText(value,x,705)});
+ let y=770;const blocks=[['THE AGENT',f.contribution],['NEXT RUN',f.next]].filter(([,v])=>v);for(const [label,body] of blocks){ctx.fillStyle='#123cff';ctx.font='600 17px sans-serif';ctx.fillText(label,64,y);ctx.fillStyle='#111';clipped=lines(body,64,y+34,952,'26px sans-serif',32,portrait?3:2)||clipped;y+=portrait?160:110;}
  ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(64,canvas.height-65);ctx.lineTo(1016,canvas.height-65);ctx.stroke();ctx.fillStyle='#666';ctx.font='18px sans-serif';ctx.fillText(review?'My observation · this does not prove the practice caused the result':'Builder’s account · recorded counts are not independent verification',64,canvas.height-30);
  slot.querySelector('#post-caption').value=[f.title,f.contribution&&'Agent: '+f.contribution,f.result&&'Result: '+f.result,f.next&&'Next run: '+f.next,review?'My observation, not proof the practice caused the result.':readable?url:''].filter(Boolean).join('\n\n');
  slot.querySelector('#post-message').textContent=clipped?'Some text is shortened in the image. Shorten your text or choose portrait. Moment and review exports require the complete text to fit; the caption keeps the full text.':'';
@@ -86,5 +112,5 @@ function mountReview({attempt,viewerId,slot,status}){
  if(!value){slot.textContent='Only your own saved review can be exported.';return;}
  return mount({...value,slot,status});
 }
-root.GrinderSharing={mount,reviewExport,mountReview,metricStrip};
+root.GrinderSharing={mount,reviewExport,mountReview,metricStrip,storyFacts};
 })(window);

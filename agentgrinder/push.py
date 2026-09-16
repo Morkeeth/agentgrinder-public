@@ -24,6 +24,7 @@ def export_run(run: dict) -> dict:
         "turns_typed": run.get("turns_typed"),
         "duration_s": run.get("duration_s"),
         "tool_calls": run.get("tool_calls"),
+        "shell_calls": run.get("shell_calls"),
         "files_touched": run.get("files_touched"),
         "commits": run.get("commits"),
         # the five-number parts (counts only). The web app previews them; it cannot store them

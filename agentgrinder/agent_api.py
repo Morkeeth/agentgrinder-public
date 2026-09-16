@@ -11,7 +11,7 @@ from .a2a_client import DEFAULT_URL, DEFAULT_KEY, DEFAULT_SCHEMA
 from .contract import validate_run
 from .push import export_run
 
-RUN_FIELDS = {"title","project","harness","turns_typed","duration_s","tool_calls","files_touched",
+RUN_FIELDS = {"title","project","harness","turns_typed","duration_s","tool_calls","shell_calls","files_touched",
               "commits","claims","claims_verified","artifacts_produced","started","visibility",
               "rhythm","route","schema_version","measurement_revision","baseline_revision","note","trace_basis"}
 

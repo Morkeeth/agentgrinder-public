@@ -25,7 +25,8 @@ const base={id:'r1',profile_id:'p1',created_at:'2026-09-14T00:00:00Z',title:'Pla
 const plain=vm.runInContext('runCard('+JSON.stringify(base)+',false,0)',context);
 const ridge=Array.from({length:50},(_,i)=>i%9),workers=Array.from({length:50},(_,i)=>i>8&&i<42?(i%4):0);
 const shaped=vm.runInContext('runCard('+JSON.stringify({...base,ridge,worker_bins:workers,
- ridge_basis:'wall-time',ridge_wall_seconds:605,commit_bins:[12,38],commits:2,
+ ridge_basis:'wall-time',ridge_wall_seconds:605,commit_bins:[12,38],shell_calls:4,files_touched:5,commits:2,
+ project:'agentgrinder-public',
  output_url:'https://github.com/example/repo/pull/1'})+',false,0)',context);
 const outputOnly=vm.runInContext('runCard('+JSON.stringify({...base,ridge,worker_bins:workers,
  ridge_basis:'wall-time',ridge_wall_seconds:605,commit_bins:[],commits:0,
@@ -33,7 +34,9 @@ const outputOnly=vm.runInContext('runCard('+JSON.stringify({...base,ridge,worker
 const zero=vm.runInContext('runCard('+JSON.stringify({...base,duration_s:0,prompts:0,tool_calls:0,
  files_touched:0,commits:0})+',false,0)',context);
 const unknown=vm.runInContext('runCard('+JSON.stringify({...base,duration_s:null,prompts:null,
- tool_calls:null,files_touched:null,commits:null})+',false,0)',context);
+ tool_calls:null,shell_calls:null,files_touched:null,commits:null,project:'session',
+ private_title_prompt:'PRIVATE PROMPT',command:'PRIVATE COMMAND',path:'/private/secret.py',
+ tool_output:'PRIVATE OUTPUT'})+',false,0)',context);
 process.stdout.write(JSON.stringify({plain,shaped,outputOnly,zero,unknown}));
 """
 
@@ -54,7 +57,7 @@ def test_card_without_ridge_keeps_its_recorded_trace():
         "c4db61d25de3c0be88bd8e1b3916f82fa41b7cd1b8e0b9e2a4d385442eb1b827"
 
 
-def test_card_draws_one_primary_ridge_and_five_session_facts():
+def test_card_draws_one_primary_ridge_and_story_before_effort():
     html = render()["shaped"]
     assert html.count('class="ridge-line"') == 1
     assert html.count('class="ridge-fill"') == 1
@@ -62,12 +65,17 @@ def test_card_draws_one_primary_ridge_and_five_session_facts():
     assert 'class="ridge-start"' in html and 'class="ridge-end"' in html
     assert html.count('class="ridge-commit"') == 2
     facts = html[html.index('class="run-metrics"'):html.index("</dl>", html.index('class="run-metrics"'))]
-    assert facts.count('<div class="run-metric') == 5
-    assert all(label in facts for label in ("Session", "Turns", "Tool calls", "Files", "Commits"))
+    assert facts.count('<div class="run-metric') == 3
+    assert all(label in facts for label in ("Session", "Turns", "Tool calls"))
+    assert html.index("Achieved") < html.index("Open PR") < html.index("Project touched")
+    assert html.index("Project touched") < html.index("Code activity") < html.index('class="ridge-wrap"')
+    assert "4</strong> Shell calls" in html
+    assert "5</strong> Files changed" in html
+    assert html.index('class="ridge-wrap"') < html.index(">Effort</div>")
     assert html.index("<summary>More</summary>") < html.index("coaching-cell")
     output_facts = render()["outputOnly"]
-    output_facts = output_facts[output_facts.index('class="run-metrics"'):]
-    assert "<dt>Commits</dt><dd class=\"num\">0</dd>" in output_facts
+    assert "Open PR" in output_facts
+    assert "<strong class=\"num\">0</strong> Commits" in output_facts
 
 
 def test_card_keeps_recorded_zero_distinct_from_unknown():
@@ -75,10 +83,19 @@ def test_card_keeps_recorded_zero_distinct_from_unknown():
     zero = rendered["zero"][rendered["zero"].index('class="run-metrics"'):]
     unknown = rendered["unknown"][rendered["unknown"].index('class="run-metrics"'):]
     assert "<dt>Session</dt><dd class=\"num\">0s</dd>" in zero
-    assert zero.count('<dd class="num">0</dd>') == 4
+    assert zero.count('<dd class="num">0</dd>') == 2
     assert "is-unknown" not in zero.split("</dl>", 1)[0]
-    assert unknown.split("</dl>", 1)[0].count("is-unknown") == 5
-    assert unknown.split("</dl>", 1)[0].count(">Unknown</dd>") == 5
+    assert unknown.split("</dl>", 1)[0].count("is-unknown") == 3
+    assert unknown.split("</dl>", 1)[0].count(">Unknown</dd>") == 3
+
+
+def test_browser_card_omits_missing_output_and_sensitive_capture_data():
+    unknown = render()["unknown"]
+    assert "<dt>Project touched</dt><dd class=\"is-unknown\">Unknown</dd>" in unknown
+    assert "<dt>Code activity</dt><dd class=\"is-unknown\">Unknown</dd>" in unknown
+    assert 'class="run-output"' not in unknown
+    for private in ("PRIVATE PROMPT", "PRIVATE COMMAND", "/private/", "PRIVATE OUTPUT"):
+        assert private not in unknown
 
 
 OG_SCRIPT = r"""

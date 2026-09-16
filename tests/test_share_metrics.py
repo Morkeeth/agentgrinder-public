@@ -10,12 +10,16 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {card} from './server/public-run.mjs';
 
-const context={window:{}};
+const context={window:{},URL};
 vm.runInNewContext(fs.readFileSync('./site/sharing.js','utf8'),context);
-const strip=context.window.GrinderSharing.metricStrip;
+const {metricStrip:strip,storyFacts:story}=context.window.GrinderSharing;
 const base={id:'r1',title:'A real run',visibility:'public',profiles:{handle:'sample'}};
 const zero={...base,duration_s:0,prompts:0,tool_calls:0,files_touched:0,commits:0};
 const unknown={...base,duration_s:null,prompts:null,tool_calls:null,files_touched:null,commits:null};
+const rich={...base,caption:'Human caption',project:'agentgrinder-public',output_url:'https://github.com/example/repo/pull/34',
+ shell_calls:4,files_touched:7,commits:2,tool_calls:22,private_title_prompt:'PRIVATE PROMPT',
+ command:'PRIVATE COMMAND',path:'/private/repo/secret.py',tool_output:'PRIVATE OUTPUT'};
+const generic={...base,project:'session',tool_calls:9};
 const text=node=>{
   if(node==null)return[];
   if(typeof node==='string'||typeof node==='number')return[String(node)];
@@ -25,6 +29,10 @@ const text=node=>{
 process.stdout.write(JSON.stringify({
   zero:strip(zero),
   unknown:strip(unknown),
+  rich:story(rich),
+  generic:story(generic),
+  ogRich:text(card(rich)),
+  ogGeneric:text(card(generic)),
   ogZero:text(card(zero)),
   ogUnknown:text(card(unknown)),
 }));
@@ -48,10 +56,8 @@ def test_download_share_strip_preserves_zero_and_unknown():
         ["Session", "0s"],
         ["Turns", "0"],
         ["Tool calls", "0"],
-        ["Files", "0"],
-        ["Commits", "0"],
     ]
-    assert [value for _, value in result["unknown"]] == ["Unknown"] * 5
+    assert [value for _, value in result["unknown"]] == ["Unknown"] * 3
 
 
 def test_public_link_preview_preserves_zero_and_unknown():
@@ -59,3 +65,23 @@ def test_public_link_preview_preserves_zero_and_unknown():
     assert result["ogZero"].count("0") == 4
     assert "0s" in result["ogZero"]
     assert result["ogUnknown"].count("Unknown") == 5
+
+
+def test_share_surfaces_tell_output_project_and_code_story_without_raw_data():
+    result = render()
+    assert result["rich"] == {
+        "project": "agentgrinder-public",
+        "output": "PR linked",
+        "code": "4 shell calls · 7 files changed · 2 commits",
+    }
+    assert result["generic"] == {
+        "project": "Unknown",
+        "output": None,
+        "code": "9 tool calls",
+    }
+    joined = " ".join(result["ogRich"])
+    for value in ("PR linked", "agentgrinder-public", "4 shell calls", "7 files changed", "2 commits"):
+        assert value in joined
+    for private in ("PRIVATE PROMPT", "PRIVATE COMMAND", "/private/", "PRIVATE OUTPUT"):
+        assert private not in joined
+    assert "Output" not in result["ogGeneric"]

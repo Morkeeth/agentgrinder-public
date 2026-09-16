@@ -76,7 +76,7 @@ def test_the_preview_names_what_the_export_carries_and_matches_the_allowlist():
     keys = set(re.findall(r'^\s+"([a-z_]+)":', PUSH, re.M))
     assert keys == {
         "harness", "is_sample", "activity_label", "project", "turns_typed", "duration_s", "tool_calls",
-        "files_touched", "commits", "claims", "claims_verified", "artifacts_produced", "reach",
+        "shell_calls", "files_touched", "commits", "claims", "claims_verified", "artifacts_produced", "reach",
         "reach_reason", "coach_verdict", "coach_plan", "coach_tool_calls", "coach_mode",
         "coach_experiment", "progress_verdict", "progress_delta", "started", "rhythm",
         "ridge", "ridge_basis", "ridge_wall_seconds", "worker_bins", "commit_bins",
