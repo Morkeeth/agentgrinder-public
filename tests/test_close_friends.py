@@ -23,11 +23,12 @@ def test_post_forms_offer_three_private_first_audiences():
             INDEX.index(f'<select id="{select_id}"')
             : INDEX.index("</select>", INDEX.index(f'<select id="{select_id}"'))
         ]
-        assert choices.count("<option") == 3
-        assert 'value="private" selected' in choices
+        assert choices.count("<option") == 5
+        assert 'value="" selected disabled' in choices
+        assert 'value="private"' in choices
         assert 'value="close_friends"' in choices
         assert 'value="public"' in choices
-        assert 'value="link"' not in choices
+        assert 'value="link"' in choices
     assert "Your first post defaults to Only me." in INDEX
 
 

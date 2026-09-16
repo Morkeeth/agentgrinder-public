@@ -28,9 +28,9 @@ def test_private_preview_leads_with_story_and_plain_privacy_choices():
     assert preview.index("STORY FIRST") < preview.index('id="i_caption"')
     assert preview.index('id="i_caption"') < preview.index("Review recorded measurements")
     assert preview.index('id="i_output_url"') < preview.index("Review recorded measurements")
-    assert "Only me: visible only to you" in preview
-    assert "Close friends: people on your private list" in preview
-    assert "Everyone: public feed and profile" in preview
+    assert "Only me — just you" in preview
+    assert "Link — anyone with the URL" in preview
+    assert "Public — Feed and profile" in preview
     assert "Unknown measurements stay unknown" in preview
 
 
