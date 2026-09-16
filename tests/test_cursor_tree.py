@@ -11,10 +11,10 @@ PARENT = 'aaaaaaaa-0000-0000-0000-000000000001'
 WORKERS = ['bbbbbbbb-0000-0000-0000-00000000000%d' % i for i in (1, 2, 3)]
 
 
-def bubble(created, tool=None, model=None, text='PRIVATE TEXT MUST NOT LEAK'):
+def bubble(created, tool=None, model=None, text='PRIVATE TEXT MUST NOT LEAK', args='/secret/path.py'):
     row = {'createdAt': created, 'type': 2, 'text': text, 'tokenCount': {'inputTokens': 0, 'outputTokens': 0}}
     if tool:
-        row['toolFormerData'] = {'name': tool, 'status': 'error' if tool == 'bad' else 'completed', 'rawArgs': '/secret/path.py'}
+        row['toolFormerData'] = {'name': tool, 'status': 'error' if tool == 'bad' else 'completed', 'rawArgs': args}
     if model:
         row['modelInfo'] = {'modelName': model}
     return row
@@ -32,7 +32,12 @@ def make_store(folder: Path) -> Path:
         'modelConfig': {'modelName': 'default', 'selectedModels': [{'modelId': 'default'}]},
         'subagentComposerIds': WORKERS + ['cccccccc-0000-0000-0000-000000000009'], 'usageData': {}}
     rows['bubbleId:%s:1' % PARENT] = bubble('2026-01-01T10:00:00.000Z', model='fable-x')
-    rows['bubbleId:%s:2' % PARENT] = bubble('2026-01-01T10:20:00.000Z', tool='task_v2', model='fable-x')
+    # The store's own record of the commit, at 10:20 in a 10:00 to 10:30 window, so bin 33 of 50.
+    # The transcript puts the SAME commit at call index 1 of 2, and looking index 1 up in the
+    # store's tool order lands on the 10:30 bubble, bin 49. The fixture is deliberately built so
+    # the two rules cannot agree. A fixture whose two sides come from one list cannot fail here.
+    rows['bubbleId:%s:2' % PARENT] = bubble('2026-01-01T10:20:00.000Z', tool='run_terminal_command_v2',
+                                            model='fable-x', args='{"command":"git commit -m safe"}')
     rows['bubbleId:%s:3' % PARENT] = bubble('2026-01-01T10:30:00.000Z', tool='bad', model='other-y')
     configs = [
         ({'modelName': 'sonnet-z', 'selectedModels': [{'modelId': 'sonnet-z'}]}, 'explore', 'completed'),
@@ -183,5 +188,9 @@ def test_cursor_capture_joins_transcript_counts_to_database_clock(store, tmp_pat
     assert sum(run['ridge']) == run['tool_calls'] == 2
     assert max(run['worker_bins']) == 2
     assert len(run['commit_bins']) == run['commits'] == 1
+    # The clock, not the transcript index. Bin 33 is 10:20 in a 10:00 to 10:30 window. The old
+    # rule read the transcript's call index 1 out of the store's tool order and answered 49.
+    assert run['commit_bins'] == [33]
+    assert run['commit_basis'] == 'wall-time'
     assert 'PRIVATE MESSAGE' not in json.dumps({
         key: value for key, value in run.items() if not key.startswith('private_')})

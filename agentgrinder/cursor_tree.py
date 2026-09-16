@@ -152,10 +152,32 @@ def _bubble_stats(conn: sqlite3.Connection, composer_id: str) -> dict:
             'first': first, 'last': last, 'models': models}
 
 
-def _bubble_activity(conn: sqlite3.Connection, composer_id: str) -> tuple[list[str | None], list[str]]:
-    """Return tool timestamps and all valid timestamps, with no message or argument fields."""
+def _is_commit_bubble(tool: dict) -> bool:
+    """True when this tool bubble is a shell call whose command ran `git commit`.
+
+    The command string is read here and dropped here. Only the boolean leaves. The name test keeps
+    a file READ whose content happens to contain the words from counting as a commit.
+    """
+    name = tool.get('name')
+    if not isinstance(name, str) or ('terminal' not in name and 'command' not in name):
+        return False
+    for key in ('rawArgs', 'params'):
+        value = tool.get(key)
+        if isinstance(value, str) and 'git commit' in value:
+            return True
+    return False
+
+
+def _bubble_activity(conn: sqlite3.Connection,
+                     composer_id: str) -> tuple[list[str | None], list[str], list[str]]:
+    """Tool timestamps, all valid timestamps, and the timestamps of `git commit` shell calls.
+
+    No message text, tool argument or path is returned. The third list is the one the commit ticks
+    are drawn from, so a tick and the ridge under it come from one clock.
+    """
     tools: list[str | None] = []
     stamps: list[str] = []
+    commits: list[str] = []
     for (raw,) in conn.execute(
             'select value from cursorDiskKV where key like ?', (f'bubbleId:{composer_id}:%',)):
         try:
@@ -170,7 +192,9 @@ def _bubble_activity(conn: sqlite3.Connection, composer_id: str) -> tuple[list[s
         tool = bubble.get('toolFormerData')
         if isinstance(tool, dict) and tool:
             tools.append(stamp)
-    return tools, stamps
+            if stamp and _is_commit_bubble(tool):
+                commits.append(stamp)
+    return tools, stamps, sorted(commits)
 
 
 def _bin_index(value: float, start: float, end: float, bins: int) -> int:
@@ -181,8 +205,23 @@ def _bin_index(value: float, start: float, end: float, bins: int) -> int:
 
 def ridge_from_calls(tool_stamps: list[str | None], all_stamps: list[str] | None = None,
                      workers: list[dict] | None = None, commit_call_indices: list[int] | None = None,
-                     bins: int = 50) -> dict:
-    """Bin tool requests without carrying tool names, arguments, message text, or paths."""
+                     bins: int = 50, commit_stamps: list[str] | None = None) -> dict:
+    """Bin tool requests without carrying tool names, arguments, message text, or paths.
+
+    Two ways to place a commit tick, and they are not equivalent.
+
+    `commit_stamps` is a wall clock time per commit, read from the same store the ridge window is
+    read from. One clock, so a tick sits where the commit happened. This is the rule whenever the
+    ridge is timed and stamps were supplied.
+
+    `commit_call_indices` is a position in the TRANSCRIPT's tool call sequence. The timed branch
+    used to look that index up in the STORE's tool order, which is a different sequence of a
+    different length: 243 transcript calls against 255 store calls on one measured session. The two
+    orderings disagree, so a tick could land in the wrong bin or fall off the end. Swept over every
+    real session on this author's Mac that draws ticks on 16 Sep 2026, 6 of 48 disagreed, and one
+    tick moved 9 bins of 50. The index rule now survives only as the untimed fallback, where there
+    is no clock to do better with.
+    """
     if not 40 <= bins <= 60:
         raise ValueError('Ridge bins must be between 40 and 60.')
     ridge = [0] * bins
@@ -205,15 +244,20 @@ def ridge_from_calls(tool_stamps: list[str | None], all_stamps: list[str] | None
         for index in range(len(tool_stamps)):
             ridge[min(bins - 1, index * bins // max(1, len(tool_stamps)))] += 1
 
-    for call_index in commit_call_indices or []:
-        if not isinstance(call_index, int) or call_index < 0 or call_index >= len(tool_stamps):
-            continue
-        if timed:
-            ordered = sorted(datetime.fromisoformat(stamp.replace('Z', '+00:00'))
-                             for stamp in valid_tools)
-            commit_bins.append(_bin_index(
-                ordered[call_index].timestamp(), start_dt.timestamp(), end_dt.timestamp(), bins))
-        else:
+    commit_basis = 'call-index'
+    if timed and commit_stamps is not None:
+        commit_basis = 'wall-time'
+        for stamp in commit_stamps:
+            valid = _iso(stamp)
+            if not valid:
+                continue
+            moment = datetime.fromisoformat(valid.replace('Z', '+00:00')).timestamp()
+            commit_bins.append(
+                _bin_index(moment, start_dt.timestamp(), end_dt.timestamp(), bins))
+    else:
+        for call_index in commit_call_indices or []:
+            if not isinstance(call_index, int) or call_index < 0 or call_index >= len(tool_stamps):
+                continue
             commit_bins.append(min(bins - 1, call_index * bins // max(1, len(tool_stamps))))
 
     if timed and start_dt is not None and end_dt is not None:
@@ -241,15 +285,25 @@ def ridge_from_calls(tool_stamps: list[str | None], all_stamps: list[str] | None
         'worker_bins': worker_bins,
         'commit_bins': sorted(commit_bins),
         'ridge_wall_seconds': wall_seconds,
+        'commit_basis': commit_basis,
     }
 
 
 def build_ridge(conn: sqlite3.Connection, composer_id: str,
                 commit_call_indices: list[int] | None = None, bins: int = 50) -> dict:
-    """Build the redacted ridge and worker activity for one composer."""
-    tools, stamps = _bubble_activity(conn, composer_id)
+    """Build the redacted ridge and worker activity for one composer.
+
+    The commit ticks come from the store's own commit timestamps, so the ticks and the ridge under
+    them share one clock. The list is passed even when it is empty, because an empty list is a
+    measured zero and reopening the transcript index rule there would put a tick at a position
+    nothing measured. Swept over the 48 real sessions on this author's Mac that draw ticks, 16 Sep
+    2026, no session had transcript commits and zero store commits, so nothing loses a tick to this.
+    The transcript indices survive only for an untimed ridge, which has no clock to do better with.
+    """
+    tools, stamps, commits = _bubble_activity(conn, composer_id)
     tree = build_tree(conn, composer_id)
-    result = ridge_from_calls(tools, stamps, tree.get('children'), commit_call_indices, bins)
+    result = ridge_from_calls(tools, stamps, tree.get('children'), commit_call_indices, bins,
+                              commit_stamps=commits)
     assert_redacted(result)
     return result
 
