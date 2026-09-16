@@ -9,9 +9,9 @@ line 17, and `git merge-base --is-ancestor ee4a5e9 main` returns true in a clone
 This file carries only the findings that PR 13 described and never fixed, and that are still
 true on main today.
 
-Settled and closed on main, for the record: R2-01, R2-02, R2-03, R2-04, A2-01, A2-02, A2-03,
-A2-04, A2-05. The evidence for each is in the sweep note
-`PR-SWEEP-2026-09-16.md` held in Oscar's local day-run state, outside this repo.
+Settled and closed on main, for the record: R2-01, R2-02, R2-03, R2-04, A2-02, A2-03, A2-04,
+A2-05. A2-01 stays unverified on hosted, by the review's own words. The evidence for each item is
+in the closing comment on PR 13, which is public in this repo's pull request history.
 
 ## R2-05, Unread filter keeps a viewport-marked card until remount
 
