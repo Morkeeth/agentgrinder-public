@@ -1788,6 +1788,14 @@ function importRun(){
     if(run.baseline_revision!=null) coach.baseline_revision=run.baseline_revision;
     if(run.schema_version===1) Object.assign(coach,{schema_version:1,trace_basis:run.trace_basis||null,route:run.route||null,
       progress_delta:run.progress_delta??null});
+    // The ridge columns (nullable; migration supabase/strava/003_ridge_persistence.sql). The
+    // preview already drew this ridge from the export. Before 003 the Save dropped it and the
+    // reload fell back to the legacy rhythm trace. These are the same five field names the card
+    // renderer reads back (site/run-contract.js, function ridge). No silent fallback: a database
+    // without the columns must fail the save loudly, not save a run with its ridge removed.
+    if(run.ridge) Object.assign(coach,{ridge:run.ridge,ridge_basis:run.ridge_basis||null,
+      ridge_wall_seconds:run.ridge_wall_seconds??null,worker_bins:run.worker_bins||null,
+      commit_bins:run.commit_bins||null});
     let {data:published,error}=await sb.from('runs').insert({...base,...coach}).select('id').single();
     if(error&&error.code==='23505'){ let again=null; try{again=await existingRun()}catch(_){} if(again){ await openExisting(again); return; } }
     if(error){showRecovery(error);return;}

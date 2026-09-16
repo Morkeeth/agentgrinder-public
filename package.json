@@ -13,6 +13,7 @@
     "test:people": "node scripts/test-people-schema.mjs",
     "test:account": "node scripts/test-account.mjs",
     "test:origin": "node scripts/test-origin.mjs",
+    "test:ridge": "node scripts/test-ridge-persistence.mjs",
     "check:hosted-config": "node scripts/check-hosted-config.mjs"
   },
   "devDependencies": {
