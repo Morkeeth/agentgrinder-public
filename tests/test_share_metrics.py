@@ -62,8 +62,10 @@ def test_download_share_strip_preserves_zero_and_unknown():
 
 def test_public_link_preview_preserves_zero_and_unknown():
     result = render()
-    assert result["ogZero"].count("0") == 4
-    assert "0s" in result["ogZero"]
+    zero = " ".join(result["ogZero"])
+    for value in ("0s", "0 files changed", "0 commits"):
+        assert value in zero
+    assert result["ogZero"].count("0") == 2
     assert result["ogUnknown"].count("Unknown") == 5
 
 

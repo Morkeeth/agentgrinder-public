@@ -158,6 +158,7 @@ def test_structured_grokbot_workdir_can_prove_project_without_exporting_path(tmp
     subprocess.run(["git", "init", "-q", str(repo)], check=True)
     rows = [json.loads(line) for line in FIXTURE.read_text().splitlines()]
     for row in rows:
+        row["agentgrinder_sample"] = False
         message = row.get("message") or {}
         for block in message.get("content") or []:
             if isinstance(block, dict) and block.get("type") == "tool_use":

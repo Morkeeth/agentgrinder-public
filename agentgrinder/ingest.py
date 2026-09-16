@@ -593,11 +593,12 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
     # began and can split sittings, but they do not establish duration, pace, or timed trace.
     rhythm = [1] * typed
     repo_root = None
-    for workdir in workdirs:
-        found = gitwork.repo_of(workdir)
-        if found:
-            repo_root = found[1]
-            break
+    if not sample:
+        for workdir in workdirs:
+            found = gitwork.repo_of(workdir)
+            if found:
+                repo_root = found[1]
+                break
     project = os.path.basename(repo_root) if repo_root else None
     return {
         "athlete": athlete,
