@@ -34,6 +34,36 @@ create policy close_friends_owner_remove
 revoke all on strava.close_friends from public, anon, authenticated;
 grant select, insert, delete on strava.close_friends to authenticated;
 
+create or replace function strava.grinder_require_close_friends_for_run()
+returns trigger
+language plpgsql
+security definer
+set search_path = strava, pg_temp
+as $$
+begin
+  if new.visibility = 'close_friends'
+    and not exists (
+      select 1
+      from strava.close_friends cf
+      where cf.owner_profile_id = new.profile_id
+    )
+  then
+    raise exception using
+      errcode = '23514',
+      message = 'Add at least one close friend before saving for Close friends.';
+  end if;
+  return new;
+end
+$$;
+revoke all on function strava.grinder_require_close_friends_for_run() from public, anon, authenticated;
+
+drop trigger if exists grinder_require_close_friends_for_run on strava.runs;
+create trigger grinder_require_close_friends_for_run
+  before insert or update of visibility, profile_id
+  on strava.runs
+  for each row
+  execute function strava.grinder_require_close_friends_for_run();
+
 create or replace function strava.grinder_close_friend_can_read_run(target uuid)
 returns boolean
 language sql

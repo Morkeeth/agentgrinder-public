@@ -42,3 +42,21 @@ def test_profile_manages_an_owner_only_list_by_handle():
     assert 'db.rpc("strava_profile_by_handle"' in SOCIAL
     assert "People are not notified" in SOCIAL
     assert "social.closeFriends" in INDEX
+
+
+def test_empty_close_friends_save_is_blocked_in_each_client_path():
+    message = "Add at least one close friend before saving for Close friends."
+    assert message in INDEX
+    assert INDEX.count("await requireCloseFriendsForSave(audience)") == 3
+    assert ".from('close_friends').select('*',{count:'exact',head:true})" in INDEX
+    assert message in MIGRATION
+
+
+def test_close_friends_detail_does_not_claim_link_access():
+    detail = INDEX[
+        INDEX.index("async function viewRun(") : INDEX.index(
+            "async function trendingRepos("
+        )
+    ]
+    assert "Saved for Close friends" in detail
+    assert "Only people on your Close friends list can open this run." in detail

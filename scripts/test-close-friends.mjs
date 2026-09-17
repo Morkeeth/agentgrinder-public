@@ -18,6 +18,49 @@ await db.query(
 );
 
 await as(CASEY);
+let emptyInsertError;
+try {
+  await db.query(
+    "insert into strava.runs(profile_id,title,visibility) values($1,'TEST DATA blocked empty audience','close_friends')",
+    [CASEY],
+  );
+} catch (error) {
+  emptyInsertError = error;
+}
+assert.match(
+  String(emptyInsertError?.message || ""),
+  /Add at least one close friend before saving for Close friends/,
+  "the database blocks an empty Close friends audience",
+);
+const privateRun = (
+  await db.query(
+    "insert into strava.runs(profile_id,title,visibility) values($1,'TEST DATA private run','private') returning id",
+    [CASEY],
+  )
+).rows[0].id;
+let emptyUpdateError;
+try {
+  await db.query(
+    "update strava.runs set visibility='close_friends' where id=$1",
+    [privateRun],
+  );
+} catch (error) {
+  emptyUpdateError = error;
+}
+assert.match(
+  String(emptyUpdateError?.message || ""),
+  /Add at least one close friend before saving for Close friends/,
+  "the database blocks an update to an empty Close friends audience",
+);
+assert.equal(
+  (
+    await db.query("select visibility from strava.runs where id=$1", [
+      privateRun,
+    ])
+  ).rows[0].visibility,
+  "private",
+  "a blocked update keeps the prior audience",
+);
 await db.query(
   "insert into strava.close_friends(owner_profile_id,friend_profile_id) values($1,$2)",
   [CASEY, RILEY],
@@ -97,5 +140,5 @@ assert.equal(
 
 await db.close();
 console.log(
-  "PASS: owner-only list, friend read and ACK, non-friend denial, anonymous denial, and removal revocation",
+  "PASS: empty audience denial, owner-only list, friend read and ACK, stranger denial, anonymous denial, and removal revocation",
 );
