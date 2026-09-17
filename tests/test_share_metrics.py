@@ -12,7 +12,7 @@ import {card} from './server/public-run.mjs';
 
 const context={window:{},URL};
 vm.runInNewContext(fs.readFileSync('./site/sharing.js','utf8'),context);
-const {metricStrip:strip,storyFacts:story}=context.window.GrinderSharing;
+const {metricStrip:strip,storyFacts:story,traceSeries:trace}=context.window.GrinderSharing;
 const base={id:'r1',title:'A real run',visibility:'public',profiles:{handle:'sample'}};
 const zero={...base,duration_s:0,prompts:0,tool_calls:0,files_touched:0,commits:0};
 const unknown={...base,duration_s:null,prompts:null,tool_calls:null,files_touched:null,commits:null};
@@ -20,6 +20,10 @@ const rich={...base,caption:'Human caption',project:'agentgrinder-public',output
  shell_calls:4,files_touched:7,commits:2,tool_calls:22,private_title_prompt:'PRIVATE PROMPT',
  command:'PRIVATE COMMAND',path:'/private/repo/secret.py',tool_output:'PRIVATE OUTPUT'};
 const generic={...base,project:'session',tool_calls:9};
+const cursor={...rich,ridge:Array.from({length:50},(_,i)=>i%7),worker_bins:Array(50).fill(0),
+ ridge_basis:'wall-time',ridge_wall_seconds:900,rhythm:[9,9]};
+const grok={...base,harness:'Grok Bot',duration_s:null,rhythm:[1,1,1],
+ trace_basis:'typed-turn order; Grok Bot export has no top-level event timestamps'};
 const text=node=>{
   if(node==null)return[];
   if(typeof node==='string'||typeof node==='number')return[String(node)];
@@ -31,6 +35,8 @@ process.stdout.write(JSON.stringify({
   unknown:strip(unknown),
   rich:story(rich),
   generic:story(generic),
+  cursorTrace:trace(cursor),
+  grokTrace:trace(grok),
   ogRich:text(card(rich)),
   ogGeneric:text(card(generic)),
   ogZero:text(card(zero)),
@@ -87,3 +93,12 @@ def test_share_surfaces_tell_output_project_and_code_story_without_raw_data():
     for private in ("PRIVATE PROMPT", "PRIVATE COMMAND", "/private/", "PRIVATE OUTPUT"):
         assert private not in joined
     assert "Output" not in result["ogGeneric"]
+
+
+def test_download_uses_cursor_timed_ridge_and_keeps_grok_time_unknown():
+    result = render()
+    assert result["cursorTrace"]["label"] == "Tool calls over wall time"
+    assert len(result["cursorTrace"]["values"]) == 50
+    assert result["grokTrace"]["label"] == "Session activity · time basis unknown"
+    assert result["grokTrace"]["values"] == [1, 1, 1]
+    assert result["unknown"][0] == ["Session", "Unknown"]

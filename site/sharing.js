@@ -44,6 +44,24 @@ function codeFacts(run){
 function storyFacts(run){
  return {project:projectName(run)||'Unknown',output:outputKind(run),code:codeFacts(run).join(' · ')||'Unknown'};
 }
+function traceSeries(run){
+ const ridge=run.ridge,workers=run.worker_bins;
+ if(Array.isArray(ridge)&&ridge.length>=40&&ridge.length<=60
+  &&ridge.every(v=>Number.isSafeInteger(v)&&v>=0)
+  &&Array.isArray(workers)&&workers.length===ridge.length){
+  return {values:ridge,label:run.ridge_basis==='wall-time'?'Tool calls over wall time':'Tool calls over call order'};
+ }
+ const rhythm=run.rhythm;
+ if(Array.isArray(rhythm)&&rhythm.length>1&&rhythm.length<=10000
+  &&rhythm.every(v=>Number.isFinite(v)&&v>=0)){
+  const label=run.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time'
+   :run.trace_basis==='elapsed'?'Session activity · elapsed time'
+   :run.trace_basis==='position'?'Session activity · event order'
+   :'Session activity · time basis unknown';
+  return {values:rhythm,label};
+ }
+ return null;
+}
 function mount({run,slot,status,moment=null,review=null}){
  if(moment&&(moment.run_id!==run.id||moment.measurement_revision!==run.measurement_revision)){
   slot.innerHTML='<p>This moment belongs to a different measurement. Return to the grind and choose a current moment before making a card.</p>';return;
@@ -71,9 +89,9 @@ function mount({run,slot,status,moment=null,review=null}){
  ctx.fillStyle='#111';clipped=lines(f.title||'Your run',64,172,952,'600 46px sans-serif',54,2)||clipped;
  ctx.fillStyle='#444';clipped=lines(f.result||'Achievement caption unknown',64,275,952,'24px sans-serif',31,2)||clipped;
  ctx.fillStyle='#666';const identity=f.identity&&handle?'@'+handle:'Identity not included';clipped=lines(identity+' · '+(run.harness||'Harness unknown')+(f.identity&&run.agent_name?' · '+run.agent_name:''),64,330,952,'19px sans-serif',24,1)||clipped;
- const facts=storyFacts(run),story=[['PROJECT TOUCHED',facts.project],['CODE ACTIVITY',facts.code],['OUTPUT',facts.output]].filter(([,value])=>value);story.forEach(([label,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='15px sans-serif';ctx.fillText(label,x,378);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'19px sans-serif':'600 20px sans-serif';clipped=lines(value,x,408,285,'600 20px sans-serif',24,1)||clipped;});
- const values=run.rhythm;ctx.strokeStyle='#123cff';ctx.lineWidth=4;const valid=Array.isArray(values)&&values.length>1&&values.length<=10000&&values.every(v=>Number.isFinite(v)&&v>=0);if(valid){const max=Math.max(...values)||1;ctx.beginPath();values.forEach((v,i)=>{const x=64+i/(values.length-1)*952,y=560-v/max*105;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}else{ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Trace unavailable',64,520)}
- ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(run.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':run.trace_basis==='elapsed'?'Session activity · elapsed time':run.trace_basis==='position'?'Session activity · event order':'Session activity · time basis unknown',64,592);
+ const facts=storyFacts(run),story=[['OUTPUT',facts.output],['PROJECT TOUCHED',facts.project],['CODE ACTIVITY',facts.code]].filter(([,value])=>value);story.forEach(([label,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='15px sans-serif';ctx.fillText(label,x,378);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'19px sans-serif':'600 20px sans-serif';clipped=lines(value,x,408,285,'600 20px sans-serif',24,1)||clipped;});
+ const trace=traceSeries(run),values=trace?.values;ctx.strokeStyle='#123cff';ctx.lineWidth=4;if(trace){const max=Math.max(...values)||1;ctx.beginPath();values.forEach((v,i)=>{const x=64+i/(values.length-1)*952,y=560-v/max*105;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}else{ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Trace unavailable',64,520)}
+ ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(trace?.label||'Session activity · time basis unknown',64,592);
  ctx.fillStyle='#123cff';ctx.font='600 16px sans-serif';ctx.fillText('EFFORT',64,632);
  metricStrip(run).forEach(([name,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(name,x,663);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'22px sans-serif':'600 31px sans-serif';ctx.fillText(value,x,705)});
  let y=770;const blocks=[['THE AGENT',f.contribution],['NEXT RUN',f.next]].filter(([,v])=>v);for(const [label,body] of blocks){ctx.fillStyle='#123cff';ctx.font='600 17px sans-serif';ctx.fillText(label,64,y);ctx.fillStyle='#111';clipped=lines(body,64,y+34,952,'26px sans-serif',32,portrait?3:2)||clipped;y+=portrait?160:110;}
@@ -112,5 +130,5 @@ function mountReview({attempt,viewerId,slot,status}){
  if(!value){slot.textContent='Only your own saved review can be exported.';return;}
  return mount({...value,slot,status});
 }
-root.GrinderSharing={mount,reviewExport,mountReview,metricStrip,storyFacts};
+root.GrinderSharing={mount,reviewExport,mountReview,metricStrip,storyFacts,traceSeries};
 })(window);

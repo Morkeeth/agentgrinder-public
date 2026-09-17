@@ -315,7 +315,9 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
     typed = 0
     tool_calls = 0
     shell_calls = 0
+    commits = 0
     commit_call_indices: list[int] = []
+    tool_call_index = 0
     stamps = []
     files: set[str] = set()
     written: set[str] = set()
@@ -350,6 +352,8 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
             # artifacts, and reach printed "this harness does not name the repository". All
             # three sentences were false at the object: the paths are in the transcript.
             for name, inp in _cursor_tool_uses(msg):
+                this_call_index = tool_call_index
+                tool_call_index += 1
                 if not isinstance(inp, dict):
                     continue
                 if name in _CURSOR_EDIT_TOOLS:
@@ -360,6 +364,9 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
                         edits.append(fp)
                 elif name in _CURSOR_SHELL_TOOLS:
                     shell_calls += 1
+                    if "git commit" in (inp.get("command") or ""):
+                        commits += 1
+                        commit_call_indices.append(this_call_index)
     if not typed:
         raise ValueError(f"no typed <user_query> turns in {path}")
     # duration from first/last embedded timestamp (best-effort), else None
@@ -399,10 +406,6 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
                 repo_root = found[1]
                 break
     public_project = os.path.basename(repo_root) if repo_root else None
-    commits = (
-        len(gitwork.commits_in(repo_root, min(pts), max(pts)))
-        if repo_root and len(pts) >= 2 else None
-    )
 
     # Artifacts produced: a path this session wrote that exists on disk when the transcript is
     # parsed. Same definition as the Claude Code path, deliberately, so the two cards mean the
@@ -433,7 +436,7 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
         "duration_s": dur, "turns_typed": typed, "tool_calls": tool_calls,
         "shell_calls": shell_calls,
         "files_touched": len(files) if files else None,
-        "commits": commits,
+        "commits": commits if edits or commits else None,
         "rhythm": rhythm,
         "artifacts_produced": artifacts_produced,
         "artifacts_promised": None,   # no harness records what a run said it would deliver

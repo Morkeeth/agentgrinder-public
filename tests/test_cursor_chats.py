@@ -133,6 +133,32 @@ def test_the_ridge_is_timed_and_its_window_is_the_real_span(tmp_path):
     assert len(ridge["ridge"]) == 50
 
 
+def test_cursor_capture_prefers_the_per_session_timed_ridge(tmp_path, monkeypatch):
+    from agentgrinder.ingest import parse_cursor_session
+
+    composer = "capture-session"
+    chats = tmp_path / "chats"
+    write_store(chats, composer, [
+        tool_record("call-0", BASE),
+        tool_record("call-1", BASE + 15 * 60_000),
+    ])
+    transcript_dir = tmp_path / "project" / "agent-transcripts" / composer
+    transcript_dir.mkdir(parents=True)
+    transcript = transcript_dir / "session.jsonl"
+    transcript.write_text(
+        '{"role":"user","message":{"content":"<user_query>private</user_query>"}}\n'
+        '{"role":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{}}]}}\n'
+    )
+    monkeypatch.setenv(cursor_chats.ENV_CHATS, str(chats))
+
+    run = parse_cursor_session(str(transcript))
+
+    assert run["ridge_source"] == "cursor-chat-store"
+    assert run["ridge_basis"] == "wall-time"
+    assert run["ridge_wall_seconds"] == run["duration_s"] == 15 * 60
+    assert run["capabilities"]["timed_ridge"] is True
+
+
 def test_worker_bins_come_from_child_store_parent_metadata(tmp_path):
     parent = "parent-session"
     write_store(tmp_path, parent, [

@@ -71,8 +71,9 @@ export function card(run){
   metric('Turns',run.prompts),
   metric('Tool calls',run.tool_calls),
  ];
- const story=[['Project touched',projectName(run)||'Unknown'],['Code activity',codeFacts(run)]];
+ const story=[];
  const output=outputKind(run);if(output)story.push(['Output',output]);
+ story.push(['Project touched',projectName(run)||'Unknown'],['Code activity',codeFacts(run)]);
  const handle=run.visibility==='public'&&(run.profiles?.handle||run.profiles?.github_handle);
  return el('div',{style:{width:'100%',height:'100%',background:'#f5f7fb',color:'#111',display:'flex',padding:'30px',fontFamily:'sans-serif'}},
   el('div',{style:{width:'100%',height:'100%',background:'#fff',border:'1px solid #d9deea',borderRadius:22,display:'flex',flexDirection:'column',padding:'34px 48px'}},

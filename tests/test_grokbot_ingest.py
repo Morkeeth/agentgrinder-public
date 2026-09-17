@@ -21,6 +21,8 @@ def test_measured_grokbot_export_parses_as_labelled_bot_activity():
     assert run["shell_calls"] == 2
     assert run["project"] is None
     assert run["commits"] is None
+    assert "ridge" not in run
+    assert "ridge_wall_seconds" not in run
     assert run["started"] == "2026-09-14T13:00:00+00:00"
 
     # The measured export does not establish these facts. Unknown stays unknown.
