@@ -2,6 +2,7 @@
 import base64
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 from urllib.parse import unquote, urlsplit
@@ -10,6 +11,19 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 HELPER = ROOT / 'templates/grokbot/post-agent-run/scripts/preview.py'
+
+
+def test_copied_kit_runs_without_repository_parent(tmp_path):
+    installed = tmp_path / 'bot-workflow' / 'post-agent-run'
+    shutil.copytree(ROOT / 'templates/grokbot/post-agent-run', installed)
+    result = subprocess.run(
+        [sys.executable, str(installed / 'scripts/smoke_test.py')],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.startswith('PASS:')
 
 
 def preview(path):
