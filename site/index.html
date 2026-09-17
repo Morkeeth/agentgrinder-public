@@ -882,9 +882,9 @@ function audienceLabel(visibility){
 }
 async function requireCloseFriendsForSave(audience){
   if(audience!=='close_friends')return true;
-  const {count,error}=await sb.from('close_friends').select('*',{count:'exact',head:true}).eq('owner_profile_id',ME.id);
+  const {data,error}=await sb.from('close_friends').select('friend_profile_id').eq('owner_profile_id',ME.id).limit(1);
   if(error){status('Close friends could not be checked. Try again.',true);return false}
-  if(!count){status('Add at least one close friend before saving for Close friends.',true);return false}
+  if(!data?.length){status('Add at least one close friend before saving for Close friends.',true);return false}
   return true;
 }
 // model, segment_id and wall_time_s arrive with supabase/strava/001_segments.sql. Omit them

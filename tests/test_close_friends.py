@@ -48,7 +48,7 @@ def test_empty_close_friends_save_is_blocked_in_each_client_path():
     message = "Add at least one close friend before saving for Close friends."
     assert message in INDEX
     assert INDEX.count("await requireCloseFriendsForSave(audience)") == 3
-    assert ".from('close_friends').select('*',{count:'exact',head:true})" in INDEX
+    assert ".from('close_friends').select('friend_profile_id')" in INDEX
     assert message in MIGRATION
 
 
