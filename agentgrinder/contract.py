@@ -33,6 +33,8 @@ def validate_run(run: dict) -> dict:
                 or any(type(value) is not int or value < 0 for value in ridge)):
             raise ValueError("ridge must contain 40 to 60 non-negative whole-number bins.")
         workers = run.get("worker_bins")
+        if workers is None:
+            workers = run["worker_bins"] = [0] * len(ridge)
         if (not isinstance(workers, list) or len(workers) != len(ridge)
                 or any(type(value) is not int or value < 0 for value in workers)):
             raise ValueError("worker_bins must match ridge with non-negative whole-number bins.")

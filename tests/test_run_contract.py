@@ -9,6 +9,15 @@ def test_legacy_runs_remain_readable_without_inventing_missing_counts():
     assert "claims_verified" not in exported
 
 
+def test_ridge_without_worker_bins_defaults_to_zeros():
+    run = {
+        "ridge": [0] * 50,
+        "ridge_basis": "wall-time",
+    }
+
+    assert validate_run(run)["worker_bins"] == [0] * 50
+
+
 @pytest.mark.parametrize("run", [{"schema_version": 2}, {"claims": True},
                                  {"commits": -1}, {"claims": 1, "claims_verified": 2},
                                  {"claims_verified": 1}, {"claims": None, "claims_verified": 0},

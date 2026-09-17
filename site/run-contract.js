@@ -52,6 +52,8 @@
         throw new Error(
           "ridge must contain 40 to 60 non-negative whole-number bins.",
         );
+      if (run.worker_bins == null)
+        run.worker_bins = Array(run.ridge.length).fill(0);
       if (
         !Array.isArray(run.worker_bins) ||
         run.worker_bins.length !== run.ridge.length ||

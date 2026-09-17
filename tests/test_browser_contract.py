@@ -22,6 +22,25 @@ for(const bad of [{...run,claims_verified:4},{...run,turns_typed:true},{...run,s
     subprocess.run(["node", "-e", script, str(module), json.dumps(payload)], check=True)
 
 
+def test_browser_ridge_without_worker_bins_defaults_to_zeros():
+    module = Path(__file__).resolve().parents[1] / "site/run-contract.js"
+    script = """
+const {validate}=require(process.argv[1]);
+const run={ridge:Array(50).fill(0),ridge_basis:'wall-time'};
+validate(run);
+if(run.worker_bins.length!==run.ridge.length || run.worker_bins.some(value=>value!==0))
+  throw new Error('Missing worker bins were not defaulted');
+for(const worker_bins of [Array(49).fill(0),Array(50).fill(0).map((v,i)=>i===49?-1:v)]){
+  let rejected=false;
+  try {validate({...run,worker_bins})} catch(e) {
+    rejected=/worker_bins must match ridge/.test(e.message);
+  }
+  if(!rejected) throw new Error('Mismatched worker bins were accepted');
+}
+"""
+    subprocess.run(["node", "-e", script, str(module)], check=True)
+
+
 def test_sittings_comparable_requires_harness_and_trace_basis():
     module = Path(__file__).resolve().parents[1] / "site/run-contract.js"
     script = r"""
