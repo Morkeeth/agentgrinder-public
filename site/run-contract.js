@@ -53,14 +53,12 @@
         throw new Error(
           "ridge must contain 40 to 60 non-negative whole-number bins.",
         );
-      if (run.worker_bins == null)
-        run.worker_bins = Array(run.ridge.length).fill(0);
       if (
         !Array.isArray(run.worker_bins) ||
         run.worker_bins.length !== run.ridge.length ||
         run.worker_bins.some((v) => !Number.isSafeInteger(v) || v < 0)
       )
-        throw new Error("worker_bins must match ridge.");
+        run.worker_bins = Array(run.ridge.length).fill(0);
       if (
         !Array.isArray(run.commit_bins || []) ||
         (run.commit_bins || []).some(
