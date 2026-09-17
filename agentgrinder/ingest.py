@@ -314,6 +314,7 @@ def _store_ridge_is_usable(candidate: dict, store_calls: int, typed_window: floa
 def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_db=None) -> dict:
     typed = 0
     tool_calls = 0
+    shell_calls = 0
     commits = 0
     commit_call_indices: list[int] = []
     tool_call_index = 0
@@ -362,6 +363,7 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
                         written.add(fp)
                         edits.append(fp)
                 elif name in _CURSOR_SHELL_TOOLS:
+                    shell_calls += 1
                     if "git commit" in (inp.get("command") or ""):
                         commits += 1
                         commit_call_indices.append(this_call_index)
@@ -403,6 +405,7 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
             if found:
                 repo_root = found[1]
                 break
+    public_project = os.path.basename(repo_root) if repo_root else None
 
     # Artifacts produced: a path this session wrote that exists on disk when the transcript is
     # parsed. Same definition as the Claude Code path, deliberately, so the two cards mean the
@@ -423,13 +426,15 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
 
     route = [_region_of(fp, repo_root) for fp in edits]
     run = {
-        "athlete": athlete, "title": title, "harness": "Cursor", "project": proj,
+        "athlete": athlete, "title": title, "harness": "Cursor", "project": public_project or proj,
+        "project_proven": repo_root is not None,
         "parser_version": "cursor-claims-unknown-2026-09-14",
-        "project_identity": project_identity(repo_root or os.path.dirname(os.path.dirname(os.path.dirname(path)))),
+        "project_identity": project_identity(repo_root),
         "started": (min(pts).isoformat() if pts else None),
         "trace_basis": "typed-turn order; spacing is not elapsed time; sessions split on human-turn gaps, not measured idle",
         "capabilities": {"timed_trace": False, "claim_evidence": False, "authorship": True},
         "duration_s": dur, "turns_typed": typed, "tool_calls": tool_calls,
+        "shell_calls": shell_calls,
         "files_touched": len(files) if files else None,
         "commits": commits if edits or commits else None,
         "rhythm": rhythm,
@@ -555,7 +560,9 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
     sample = False
     typed = 0
     tool_calls = 0
+    shell_calls = 0
     stamps: list[datetime] = []
+    workdirs: list[str] = []
     first_prompt = None
     uq_re = _re.compile(r"<user_query>(.*?)</user_query>", _re.S)
 
@@ -575,6 +582,11 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
         elif role == "assistant":
             for name, inputs in _cursor_tool_uses(msg):
                 tool_calls += 1
+                if name in _CURSOR_SHELL_TOOLS:
+                    shell_calls += 1
+                    workdir = inputs.get("working_directory") if isinstance(inputs, dict) else None
+                    if isinstance(workdir, str) and workdir:
+                        workdirs.append(workdir)
 
     if not typed:
         raise ValueError(f"no typed <timestamp> and <user_query> turns in {path}")
@@ -582,14 +594,22 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
     # The export timestamps typed turns, not agent events. They establish when the sitting
     # began and can split sittings, but they do not establish duration, pace, or timed trace.
     rhythm = [1] * typed
+    repo_root = None
+    if not sample:
+        for workdir in workdirs:
+            found = gitwork.repo_of(workdir)
+            if found:
+                repo_root = found[1]
+                break
+    project = os.path.basename(repo_root) if repo_root else None
     return {
         "athlete": athlete,
         "title": "Grok Bot session",
         "harness": "Grok Bot",
         "activity_label": "bot activity",
         "is_sample": sample,
-        "project": "session",
-        "project_identity": None,
+        "project": project,
+        "project_identity": project_identity(repo_root),
         "parser_version": "grokbot-export-2026-09-14",
         "started": min(stamps).isoformat() if stamps else None,
         "trace_basis": "typed-turn order; Grok Bot export has no top-level event timestamps",
@@ -597,6 +617,7 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
         "duration_s": None,
         "turns_typed": typed,
         "tool_calls": tool_calls,
+        "shell_calls": shell_calls,
         # Shell, Read and tool-result blocks are observed. No native edit tool was observed,
         # and parsing shell command text as writes would guess at shell semantics.
         "files_touched": None,

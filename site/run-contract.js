@@ -4,6 +4,7 @@
   const counts = [
     "turns_typed",
     "tool_calls",
+    "shell_calls",
     "files_touched",
     "commits",
     "claims",

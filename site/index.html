@@ -907,33 +907,76 @@ function runContinuation(r,opts={}){
     <button class="act copy-run-prompt" type="button" data-prompt="${esc(prompt)}">Copy prompt</button></span></div>`;
 }
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
+  const projectName=()=>{
+    const value=typeof r.project==='string'?r.project.trim():'';
+    return value&&!['session','unknown','project unknown'].includes(value.toLowerCase())?value:null;
+  };
+  const codeFacts=()=>{
+    const facts=[];
+    if(r.shell_calls!=null)facts.push(['Shell calls',r.shell_calls]);
+    if(r.files_touched!=null)facts.push(['Files changed',r.files_touched]);
+    if(r.commits!=null)facts.push(['Commits',r.commits]);
+    if(!facts.length&&r.tool_calls!=null)facts.push(['Tool calls',r.tool_calls]);
+    return facts;
+  };
+  const sessionSeconds=()=>{
+    const candidates=[r.ridge_basis==='wall-time'?r.ridge_wall_seconds:null,r.wall_time_s,r.duration_s];
+    const value=candidates.find(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0);
+    return value==null?null:value;
+  };
+  const sessionText=()=>{
+    const seconds=sessionSeconds();
+    if(seconds==null)return 'Unknown';
+    if(seconds<60)return `${Math.round(seconds)}s`;
+    const minutes=Math.round(seconds/60);
+    return minutes>=60?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${minutes}m`;
+  };
+  const metricStrip=()=>{
+    const cells=[
+      ['Session',sessionText(),'Measured elapsed or wall time'],
+      ['Turns',r.prompts,'Human turns typed or queued'],
+      ['Tool calls',r.tool_calls,'Tool requests recorded in the session'],
+    ];
+    const html=cells.map(([label,value,title])=>{
+      const unknown=value==null||value==='Unknown';
+      return `<div class="run-metric${unknown?' is-unknown':''}" title="${esc(title)}"><dt>${esc(label)}</dt><dd class="num">${unknown?'Unknown':esc(value)}</dd></div>`;
+    }).join('');
+    return `<div class="run-story-label">Effort</div><dl class="run-metrics" aria-label="Recorded effort">${html}</dl><p class="run-metrics-note">Counts show activity, not quality. Unknown means not measured.</p>`;
+  };
   const selfAck=ME&&ME.id===r.profile_id;
   const ackBtn=selfAck?'':`<button class="act kudo ${acked?'on':''}" data-run="${r.id}" data-to="${r.profile_id}">${acked?'ACKed':'ACK'}${count?' <span class="n num">'+count+'</span>':''}</button>`;
   const picker=opts.picker?ackPickerHtml(r,opts.suggested||suggestAckReasons(r),opts.selected||null):'';
   const whoLink=att.link&&!opts.preview?`<a href="${att.link}">${esc(att.name)}</a>`:`<span>${esc(att.name)}</span>`;
   const anonTag=att.ghost?'<span class="ghost-tag">anon</span>':'';
-  const started=r.started_at&&Number.isFinite(Date.parse(r.started_at))?new Date(r.started_at).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}):'Session time unknown';
+  const started=r.started_at&&Number.isFinite(Date.parse(r.started_at))?new Date(r.started_at).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}):'Start time unknown';
   const output=safeOutputUrl(r.output_url);
   const date=new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'});
   const ridge=typeof GrinderContract==='object'&&GrinderContract.ridge?GrinderContract.ridge(r):'';
   const ridgeOutput=output?(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(output)?'PR':/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(output)?'Screenshot':'Output'):null;
-  const recorded=`<details class="run-evidence"><summary>Recorded details</summary><p class="meta">${r.tool_calls??'Unknown'} tool calls · ${r.files_touched??'Unknown'} files touched. Counts describe recorded activity, not quality.</p></details>`;
+  const code=codeFacts();
+  const story=`${output?`<div class="run-output"><span>Output</span><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open ${esc(ridgeOutput||'output')} ↗</a></div>`:''}
+    <dl class="run-story-facts">
+      <div><dt>Project touched</dt><dd${projectName()?'':' class="is-unknown"'}>${esc(projectName()||'Unknown')}</dd></div>
+      <div><dt>Code activity</dt><dd${code.length?'':' class="is-unknown"'}>${code.length?code.map(([label,value])=>`<span><strong class="num">${esc(value)}</strong> ${esc(label)}</span>`).join(''):'Unknown'}</dd></div>
+    </dl>`;
+  const recorded='<details class="run-evidence"><summary>How these numbers work</summary><p class="meta">Captured from the selected session. A zero is a recorded zero; Unknown means the capture could not measure it.</p></details>';
   const ridgeBody=ridge?`${ridge}
-    <div class="run-key-facts"><div><span>Wall time</span><strong>${r.ridge_wall_seconds==null?'Unknown':esc(fmtDur(Math.round(r.ridge_wall_seconds/60)))}</strong></div><div><span>Turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>${(r.commits||0)>0?'Commits':'Output'}</span><strong>${(r.commits||0)>0?r.commits:(ridgeOutput||'Unknown')}</strong></div></div>
-    <details class="ridge-more"><summary>More</summary>${fiveRow(r)}${coachBlock(r)}${r.tree?GrinderContract.tree(r.tree):''}${recorded}${output?`<p class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open ${esc(ridgeOutput||'output')} ↗</a></p>`:''}</details>`
+    ${metricStrip()}
+    <details class="ridge-more"><summary>More</summary>${fiveRow(r)}${coachBlock(r)}${r.tree?GrinderContract.tree(r.tree):''}${recorded}</details>`
     :`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
     ${r.tree?GrinderContract.tree(r.tree):''}
-    <div class="run-key-facts"><div><span>Typed turns</span><strong>${r.prompts??'Unknown'}</strong></div><div><span>Artifacts</span><strong>${r.artifacts_produced??'Unknown'}</strong></div><div><span>Commits</span><strong>${r.commits??'Unknown'}</strong></div></div>
+    ${metricStrip()}
     ${recorded}`;
   return `<div class="card" id="card-${r.id}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
+    <div class="run-story-label achieved">Achieved</div>
     <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
-    ${ridge?'':output?`<div class="run-output"><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open what was built ↗</a></div>`:''}
     ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
     ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
-    <div class="sub">${r.project?esc(r.project)+' · ':''}<span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}${r.duration_s==null?'':' · '+esc(fmtDur(Math.round(r.duration_s/60)))}</div>
+    ${story}
+    <div class="sub run-effort-context"><span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}</div>
     ${ridgeBody}
     ${typeof runContinuation==='function'?runContinuation(r,opts):''}
     ${opts.preview?'<div class="foot"><span class="meta">Preview · not saved</span></div>':`<div class="foot"><span class="meta">${count||0} ACK${count===1?'':'s'}${selfAck?' · your run':''}</span>
@@ -1667,10 +1710,11 @@ function importRun(){
     run.coach_experiment=GrinderContract.rejectPaths(run.coach_experiment);
   }
   const sample=run.is_sample===true;
+  const importedProject=typeof run.project==='string'&&run.project.trim().toLowerCase()!=='session'?run.project.trim():null;
   const app=$('app');
-  const rows=[['harness',run.harness],['model',run.model],['project',run.project],['typed turns',run.turns_typed],
-    ['minutes',run.duration_s?Math.round(run.duration_s/60):null],['tool calls',run.tool_calls],
-    ['files',run.files_touched],['commits',run.commits],
+  const rows=[['harness',run.harness],['model',run.model],['project',importedProject],['typed turns',run.turns_typed],
+    ['minutes',run.duration_s==null?null:Math.round(run.duration_s/60)],['tool calls',run.tool_calls],
+    ['shell calls',run.shell_calls],['files',run.files_touched],['commits',run.commits],
     ['verified claims',run.claims_verified!=null&&run.claims!=null?`${run.claims_verified}/${run.claims}`:null],
     ['artifacts produced',run.artifacts_produced],
     ['reach',run.reach==null?null:(run.reach?'yes':'no')],
@@ -1685,7 +1729,7 @@ function importRun(){
     ${sample?'<p role="note">This sample is for trying the preview. It cannot be saved or posted. Capture your own session to share a run.</p>':''}
     <div class="panel"><div class="pad preview-story">
     <p class="meta">STORY FIRST</p>
-    <label>What did you build?<input id="i_title" maxlength="120" required placeholder="Title you write, not scraped" value="${esc(run.project||'')} session"></label>
+    <label>What did you achieve?<input id="i_title" maxlength="120" required placeholder="Write the achievement. Prompt text is never used."></label>
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
     <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me — just you</option><option value="close_friends">Close friends — people on your private list</option><option value="link">Link — anyone with the URL</option><option value="public">Public — Feed and profile</option></select></label>
@@ -1711,10 +1755,10 @@ function importRun(){
   function saveImportEdits(){try{sessionStorage.setItem('ag_import_edits',JSON.stringify({token:m[1],...Object.fromEntries(editFields.map(key=>[key,$(key).value])),shareRig:$('i_share_rig').checked}))}catch(_){}}
   function paintImportPreview(){
     const preview={id:'preview',profile_id:ME?.id||'preview',profiles:ME||{github_handle:'you',name:'Your preview'},title:$('i_title').value||'Untitled run',
-      project:run.project||null,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
+      project:importedProject,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
       wall_time_s:importedWholeNumber('i_wall'),
       harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
-      commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,artifacts_produced:run.artifacts_produced??null,
+      commits:run.commits??null,tool_calls:run.tool_calls??null,shell_calls:run.shell_calls??null,files_touched:run.files_touched??null,artifacts_produced:run.artifacts_produced??null,
       rhythm:run.rhythm||null,trace_basis:run.trace_basis||null,caption:$('i_caption').value||null,output_url:$('i_output_url').value||null,
       ridge:run.ridge||null,ridge_basis:run.ridge_basis||null,ridge_wall_seconds:run.ridge_wall_seconds??null,
       worker_bins:run.worker_bins||null,commit_bins:run.commit_bins||null,
@@ -1770,10 +1814,10 @@ function importRun(){
     try{ prior=await existingRun(); }catch(lookupError){ showRecovery(lookupError); return; }
     if(prior){ await openExisting(prior); return; }
     const base={profile_id:ME.id,title:$('i_title').value||'Untitled run',
-      project:run.project||null,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
+      project:importedProject,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
       wall_time_s:wallTime,
       harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
-      commits:run.commits??null,tool_calls:run.tool_calls??null,files_touched:run.files_touched??null,
+      commits:run.commits??null,tool_calls:run.tool_calls??null,shell_calls:run.shell_calls??null,files_touched:run.files_touched??null,
       rhythm:run.rhythm||null,caption,output_url:output||null,visibility:audience,started_at:run.started||null};
     dropNullSegmentColumns(base);
     // the coach columns (nullable; migration 2026-09-03-coach.sql). Retry without them on a

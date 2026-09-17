@@ -20,10 +20,11 @@ def export_run(run: dict) -> dict:
         "harness": run.get("harness"),
         "is_sample": True if run.get("is_sample") is True else None,
         "activity_label": "bot activity" if run.get("harness") == "Grok Bot" else None,
-        "project": run.get("project"),
+        "project": run.get("project") if run.get("project_proven") is not False else None,
         "turns_typed": run.get("turns_typed"),
         "duration_s": run.get("duration_s"),
         "tool_calls": run.get("tool_calls"),
+        "shell_calls": run.get("shell_calls"),
         "files_touched": run.get("files_touched"),
         "commits": run.get("commits"),
         # the five-number parts (counts only). The web app previews them; it cannot store them

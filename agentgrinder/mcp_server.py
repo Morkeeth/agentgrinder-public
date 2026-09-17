@@ -23,7 +23,7 @@ PROTO = "2024-11-05"
 
 SAFE_FIELDS = [
     "harness", "activity_label", "started", "duration_s", "turns_typed",
-    "tool_calls", "files_touched", "commits", "rhythm",
+    "tool_calls", "shell_calls", "files_touched", "commits", "rhythm",
 ]
 
 TOOLS = [
