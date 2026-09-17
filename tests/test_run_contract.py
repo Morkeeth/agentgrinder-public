@@ -9,13 +9,26 @@ def test_legacy_runs_remain_readable_without_inventing_missing_counts():
     assert "claims_verified" not in exported
 
 
-def test_ridge_without_worker_bins_defaults_to_zeros():
+@pytest.mark.parametrize("worker_bins", [None, [1] * 49, [0] * 49 + [-1], "corrupt"])
+def test_ridge_repairs_invalid_worker_bins(worker_bins):
     run = {
         "ridge": [0] * 50,
         "ridge_basis": "wall-time",
+        "worker_bins": worker_bins,
     }
 
     assert validate_run(run)["worker_bins"] == [0] * 50
+
+
+def test_ridge_preserves_valid_worker_bins():
+    worker_bins = [index % 3 for index in range(50)]
+    run = {
+        "ridge": [0] * 50,
+        "ridge_basis": "wall-time",
+        "worker_bins": worker_bins,
+    }
+
+    assert validate_run(run)["worker_bins"] == worker_bins
 
 
 @pytest.mark.parametrize("run", [{"schema_version": 2}, {"claims": True},
