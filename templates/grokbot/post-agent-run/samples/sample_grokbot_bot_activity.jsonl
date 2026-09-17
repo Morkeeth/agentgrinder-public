@@ -1,0 +1,9 @@
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Monday, Sep 14, 2026, 1:00 PM (UTC)</timestamp>\n<user_query>\n[t0u]\nLabel this as sample bot activity. Add a README note in /SAMPLE/project.\n</user_query>"}]},"agentgrinder_sample":true}
+{"role":"assistant","message":{"content":[{"type":"text","text":"Creating the labelled sample note."},{"type":"tool_use","name":"Shell","input":{"command":"printf 'sample\\n'","working_directory":"/SAMPLE/project"}}]},"agentgrinder_sample":true}
+{"role":"tool","message":{"content":[{"type":"tool_result","content":"sample result omitted"}]},"agentgrinder_sample":true}
+{"role":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"path":"/SAMPLE/project/README.md"}}]},"agentgrinder_sample":true}
+{"role":"tool","message":{"content":[{"type":"tool_result","content":"sample result omitted"}]},"agentgrinder_sample":true}
+{"role":"user","message":{"content":[{"type":"text","text":"<timestamp>Monday, Sep 14, 2026, 1:15 PM (UTC)</timestamp>\n<user_query>\n[t1u]\nRecord one more labelled sample tool request.\n</user_query>"}]},"agentgrinder_sample":true}
+{"role":"assistant","message":{"content":[{"type":"tool_use","name":"Shell","input":{"command":"printf 'sample bot activity\\n'","working_directory":"/SAMPLE/project"}}]},"agentgrinder_sample":true}
+{"role":"tool","message":{"content":[{"type":"tool_result","content":"sample result omitted"}]},"agentgrinder_sample":true}
+{"role":"assistant","message":{"content":[{"type":"text","text":"Done. This remains labelled sample bot activity."}]},"agentgrinder_sample":true}

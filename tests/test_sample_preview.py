@@ -2,6 +2,7 @@
 import base64
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 from urllib.parse import unquote, urlsplit
@@ -10,6 +11,39 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 HELPER = ROOT / 'templates/grokbot/post-agent-run/scripts/preview.py'
+
+
+def test_copied_kit_runs_without_repository_parent(tmp_path):
+    installed = tmp_path / 'bot-workflow' / 'post-agent-run'
+    shutil.copytree(ROOT / 'templates/grokbot/post-agent-run', installed)
+    result = subprocess.run(
+        [sys.executable, str(installed / 'scripts/smoke_test.py')],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.startswith('PASS:')
+
+
+def test_handoff_keeps_complete_url_out_of_bot_output(tmp_path):
+    handoff = tmp_path / 'strive-preview-url.txt'
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(HELPER),
+            str(ROOT / 'samples/sample_grokbot_bot_activity.jsonl'),
+            '--handoff',
+            str(handoff),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    receipt = json.loads(result.stdout)
+    assert 'preview_url' not in receipt
+    assert receipt['preview_handoff'] == str(handoff.resolve())
+    assert handoff.read_text().startswith('https://agentic-strava.vercel.app/#import=')
 
 
 def preview(path):
