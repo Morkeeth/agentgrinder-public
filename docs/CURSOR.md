@@ -61,8 +61,24 @@ AGENTGRINDER_URL=https://agentic-strava.vercel.app \
 ```
 
 Replace `2` with the sitting you selected. `--push` is a historical flag name: it builds and
-opens a metrics-only `#import` URL. It does not upload or save the run. The terminal prints the
-selected harness, project, source filename and sitting again before opening the page.
+opens a metrics-only `#import` URL. It does not upload or save the run. Imports at 1,500 bytes or
+more use gzip inside the private fragment. The hosted page expands that payload before applying
+the same run validator. Smaller imports keep the original encoding, so existing links remain
+readable. The terminal prints the selected harness, project, source filename and sitting again
+before opening the page.
+
+The long-hash failure hypothesis is not confirmed here. Chromium documents a 2 MB URL limit and
+a separate 32 KB address-bar display limit in its
+[URL display guidance](https://chromium.googlesource.com/chromium/src/+/main/docs/security/url_display_guidelines/url_display_guidelines.md).
+The compressed path uses the browser's built-in `DecompressionStream`; MDN documents it as
+[available across browsers since May 2023](https://developer.mozilla.org/en-US/docs/Web/API/DecompressionStream/DecompressionStream).
+If the page says the browser cannot expand the import, keep the generated `grind.html` as the
+local file fallback for reviewing the selected card, update the browser, then rerun `--push`.
+The local file does not save a hosted run.
+
+The Grok Bot helper's `--handoff FILE` remains an explicit file fallback when a bot output channel
+would copy, wrap or truncate the complete preview URL. Normal Cursor capture opens the compressed
+hosted preview directly and does not require a handoff file.
 
 On the hosted page, review the white card and blue trace. Missing measurements remain unknown.
 Write only public-facing title, caption and optional HTTPS output link. Leave the audience unset

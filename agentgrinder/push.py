@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import gzip
 import json
 import os
 import urllib.parse
@@ -9,6 +10,7 @@ from .contract import public_revision, validate_run
 from .coach.experiment import public_experiment, public_text
 
 DEFAULT_URL = os.environ.get("AGENTGRINDER_URL", "http://localhost:8000")
+COMPRESS_AT_BYTES = 1500
 
 
 def export_run(run: dict) -> dict:
@@ -73,5 +75,9 @@ def import_url(run: dict, base: str | None = None) -> str:
     base = (base or DEFAULT_URL).rstrip("/")
     payload = export_run(run)
     raw = json.dumps(payload, separators=(",", ":")).encode()
+    if len(raw) >= COMPRESS_AT_BYTES:
+        compressed = gzip.compress(raw, mtime=0)
+        token = base64.urlsafe_b64encode(compressed).decode().rstrip("=")
+        return f"{base}/#import=gz.{token}"
     token = urllib.parse.quote(base64.b64encode(raw).decode(), safe="")
     return f"{base}/#import={token}"
