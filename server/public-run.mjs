@@ -28,6 +28,9 @@ const ridgeSeries=run=>{
 const series=run=>{
  const ridge=ridgeSeries(run);
  if(ridge)return ridge;
+ // A null ridge means the shape was never stored. Do not fall back to a flat rhythm line
+ // that reads as a measured zero. Runs that omit the field still keep the legacy rhythm path.
+ if(run.ridge===null)return null;
  for(const [values,label] of [[run.rhythm,'Session trace'],[run.route,'Project ridge']]){
   if(Array.isArray(values)&&values.length>1&&values.length<=10000&&values.every(v=>Number.isFinite(v)&&v>=0))return{values,label,filled:false};
  }
@@ -39,9 +42,22 @@ const duration=value=>{
  if(seconds<60)return`${Math.round(seconds)}s`;
  const minutes=Math.round(seconds/60);return minutes>=60?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${minutes}m`;
 };
+// Prefer the transcript count. When it is zero or missing and the stored ridge carried a
+// real call count, print that count so the label matches the graph.
+const toolCallCount=run=>{
+ const recorded=run.tool_calls;
+ const fromRidge=run.ridge_tool_calls;
+ if((recorded==null||recorded===0)&&Number.isFinite(fromRidge)&&fromRidge>0)return fromRidge;
+ return recorded;
+};
 const projectName=run=>{
- const value=typeof run.project==='string'?run.project.trim():'';
- return value&&!['session','unknown','project unknown'].includes(value.toLowerCase())?value:null;
+ let value=typeof run.project==='string'?run.project.trim():'';
+ if(!value||['session','unknown','project unknown'].includes(value.toLowerCase()))return null;
+ const cleaned=value.replace(/^CODE-(?:worktrees-)?/i,'').replace(/-\d{8}$/,'');
+ // Only turn dashes into spaces when we stripped a worktree prefix or date stamp.
+ if(cleaned!==value)value=cleaned.replace(/-/g,' ').replace(/\s+/g,' ').trim();
+ else value=cleaned;
+ return value||null;
 };
 const outputKind=run=>{
  try{
@@ -54,10 +70,11 @@ const outputKind=run=>{
 };
 const codeFacts=run=>{
  const facts=[];
+ const tools=toolCallCount(run);
  if(run.shell_calls!=null)facts.push(run.shell_calls+' shell calls');
  if(run.files_touched!=null)facts.push(run.files_touched+' files changed');
  if(run.commits!=null)facts.push(run.commits+' commits');
- if(!facts.length&&run.tool_calls!=null)facts.push(run.tool_calls+' tool calls');
+ if(!facts.length&&tools!=null)facts.push(tools+' tool calls');
  return facts.join(' · ')||'Unknown';
 };
 export function card(run){
@@ -66,10 +83,11 @@ export function card(run){
  const area=plotted?`0,125 ${points} 1030,125`:'';
  const session=run.ridge_basis==='wall-time'?run.ridge_wall_seconds:null;
  const metric=(label,value)=>[label,value==null?'Unknown':String(value)];
+ const missingShape=run.ridge===null;
  const effort=[
   ['Session',duration(session??run.wall_time_s??run.duration_s)],
   metric('Turns',run.prompts),
-  metric('Tool calls',run.tool_calls),
+  metric('Tool calls',toolCallCount(run)),
  ];
  const story=[];
  const output=outputKind(run);if(output)story.push(['Output',output]);
@@ -81,7 +99,7 @@ export function card(run){
     el('div',{style:{display:'flex',color:'#123cff',fontSize:27,fontWeight:800}},BRAND),
     handle?el('div',{style:{display:'flex',fontSize:20,color:'#555'}},'@'+handle):null),
    el('div',{style:{display:'flex',fontSize:13,color:'#123cff',fontWeight:700,letterSpacing:1.2,marginTop:10}},'ACHIEVED'),
-   el('div',{style:{display:'flex',fontSize:38,fontWeight:750,marginTop:3,height:47,overflow:'hidden'}},String(run.title||'Agent run').slice(0,120)),
+   el('div',{style:{display:'flex',fontSize:38,fontWeight:750,marginTop:3,height:56,lineHeight:1.2,overflow:'hidden'}},String(run.title||'Agent run').slice(0,120)),
    run.caption?el('div',{style:{display:'flex',fontSize:18,color:'#333',marginTop:2,height:24,overflow:'hidden'}},String(run.caption).slice(0,160)):null,
    el('div',{style:{display:'flex',marginTop:10,borderTop:'1px solid #d9deea',borderBottom:'1px solid #d9deea'}},
     ...story.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',width:story.length===3?343:515,padding:'9px 8px 10px 0'}},
@@ -94,7 +112,7 @@ export function card(run){
      el('polyline',{points,stroke:'#123cff',strokeWidth:4,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'})]:[
      el('polyline',{points,stroke:'#123cff',strokeWidth:5,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'})])),
     el('div',{style:{display:'flex',fontSize:13,color:'#687083',marginTop:1}},plotted.label))
-    :el('div',{style:{display:'flex',height:114,alignItems:'center',color:'#687083',fontSize:18,marginTop:9}},'Trace unavailable'),
+    :el('div',{style:{display:'flex',height:114,alignItems:'center',color:'#687083',fontSize:18,marginTop:9}},missingShape?'Shape was not recorded for this run':'Trace unavailable'),
    el('div',{style:{display:'flex',fontSize:13,color:'#123cff',fontWeight:700,letterSpacing:1.2,marginTop:7}},'EFFORT'),
    el('div',{style:{display:'flex',marginTop:3,borderTop:'1px solid #d9deea',paddingTop:8}},
     ...effort.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',width:343}},

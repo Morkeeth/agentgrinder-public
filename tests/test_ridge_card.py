@@ -127,3 +127,73 @@ def test_og_renderer_keeps_legacy_cards_and_draws_a_persisted_ridge():
     assert '"type":"polygon"' in rendered["shaped"]
     assert "Agent ridge" in rendered["shaped"]
     assert "Session trace" not in rendered["shaped"]
+
+
+# Card truth: live public OG images on 2026-09-18 printed 0 beside a ridge drawn from 98
+# calls, and drew a flat line for a pre-ridge row. These cases pin the share image only.
+OG_TRUTH_SCRIPT = r"""
+import {card} from './server/public-run.mjs';
+const ridge=Array.from({length:50},(_,i)=>i%9);
+const workers=Array.from({length:50},(_,i)=>i>8&&i<42?(i%4):0);
+const walk=n=>{
+ if(n==null)return[];
+ if(typeof n==='string'||typeof n==='number')return[String(n)];
+ if(Array.isArray(n))return n.flatMap(walk);
+ if(typeof n==='object')return walk(n.props?.children);
+ return[];
+};
+const after=(texts,label)=>{
+ const i=texts.indexOf(label);return i<0?null:texts[i+1]??null;
+};
+const base={id:'c1',title:'Cursor night review ridge',caption:'busy graph',
+ project:'CODE-worktrees-strava-night-review-20260915',visibility:'public',prompts:12,
+ tool_calls:0,ridge_tool_calls:98,ridge,worker_bins:workers,ridge_basis:'wall-time',
+ ridge_wall_seconds:3600,profiles:{handle:'sample'}};
+const withCode={...base,shell_calls:4,files_touched:5,commits:2};
+const effortOnly=base;
+const nullRidge={id:'c2',title:'Pre ridge run',caption:'old row',project:'demo',
+ visibility:'public',prompts:6,tool_calls:28,ridge:null,rhythm:[0,0,0,0,0],
+ profiles:{handle:'sample'}};
+const shaped=walk(card(withCode));
+const effortTexts=walk(card(effortOnly));
+const body=JSON.stringify(card(withCode));
+const titleHeight=(body.match(/"fontSize":38,"fontWeight":750,"marginTop":3,"height":(\d+)/)||[])[1]||null;
+const nullBody=JSON.stringify(card(nullRidge));
+const nullTexts=walk(card(nullRidge));
+process.stdout.write(JSON.stringify({
+ toolCalls:after(shaped,'Tool calls'),
+ toolCallsEffortOnly:after(effortTexts,'Tool calls'),
+ codeActivity:after(effortTexts,'Code activity'),
+ project:after(shaped,'Project touched'),
+ titleHeight:titleHeight&&Number(titleHeight),
+ nullHasPolyline:nullBody.includes('"type":"polyline"'),
+ nullHasPolygon:nullBody.includes('"type":"polygon"'),
+ nullTexts,
+}));
+"""
+
+
+def _og_truth():
+    result = subprocess.run(
+        ["node", "--input-type=module", "-e", OG_TRUTH_SCRIPT],
+        cwd=ROOT, check=True, capture_output=True, text=True)
+    return json.loads(result.stdout)
+
+
+def test_og_card_uses_ridge_tool_calls_when_tool_calls_is_zero():
+    """A ridge drawn from 98 calls must not print 0 in the tool call slots."""
+    rendered = _og_truth()
+    assert rendered["toolCalls"] == "98"
+    assert rendered["toolCallsEffortOnly"] == "98"
+    assert rendered["codeActivity"] == "98 tool calls"
+    assert rendered["project"] == "strava night review"
+    assert rendered["titleHeight"] is not None and rendered["titleHeight"] >= 54
+
+
+def test_og_card_draws_no_flat_line_when_ridge_is_null():
+    """A null ridge is a missing shape. Do not draw a flat polyline from leftover rhythm."""
+    rendered = _og_truth()
+    assert rendered["nullHasPolyline"] is False
+    assert rendered["nullHasPolygon"] is False
+    joined = " ".join(rendered["nullTexts"]).lower()
+    assert "not recorded" in joined
