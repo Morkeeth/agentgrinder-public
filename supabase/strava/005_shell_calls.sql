@@ -1,3 +1,10 @@
+-- Renamed from 004_shell_calls.sql on 2026-09-18.
+-- Two files were numbered 004 after PR 41 merged: this one and 004_ridge_turn_order.sql.
+-- A runner that applies migrations in order and records the number would mark 004 done
+-- and skip this file forever, with no error and no red light.
+-- Applied to production on 2026-09-18 under the ledger name 005_shell_calls_from_main_004,
+-- because the column was missing while main already selected it.
+
 begin;
 
 -- A shell call is a structured Shell tool request in a supported capture.
