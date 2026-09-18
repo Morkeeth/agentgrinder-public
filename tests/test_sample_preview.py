@@ -85,7 +85,7 @@ def render_import(url, sample):
 const fs=require('fs'),vm=require('vm');
 const root=process.argv[1],url=new URL(process.argv[2]),sample=process.argv[3]==='true';
 const html=fs.readFileSync(root+'/site/index.html','utf8');
-const fn=html.slice(html.indexOf('function importRun(){'),html.indexOf('\nasync function viewShareRun('));
+const fn=html.slice(html.indexOf('async function decodeImportPayload('),html.indexOf('\nasync function viewShareRun('));
 const cardFn=html.slice(html.indexOf('function runCard('),html.indexOf('function wireKudos('));
 // runCard's ridge branch calls fiveRow and coachBlock. A Grok Bot payload now carries a
 // call-order ridge, so the vm needs those two helpers as the page defines them.
@@ -99,7 +99,9 @@ const context={$: $,GrinderContract:require(root+'/site/run-contract.js'),locati
  sessionStorage:{getItem:()=>null,setItem:()=>{}},
  runAttribution:()=>({handle:'preview',name:'Preview',link:'/?u=preview'}),avatar:()=>'',safeOutputUrl:()=>null,
  status:()=>{},stashImport:()=>{},showSignIn:()=>{signins++}};
-vm.createContext(context);vm.runInContext(helpers+cardFn+fn+';importRun();',context);
+vm.createContext(context);vm.runInContext(helpers+cardFn+fn,context);
+(async()=>{
+await vm.runInContext('importRun()',context);
 const preview=nodes['import-card-preview'].innerHTML;
 if(!preview.includes('Preview · not saved')||preview.includes('/?run=preview')||preview.includes('class="act')) throw Error('Preview has saved-run controls');
 const saved=vm.runInContext("runCard({id:'real-run',profile_id:'real-author',created_at:'2026-09-14',title:'Real run'},false,0)",context);
@@ -114,7 +116,6 @@ if(sample){
  if(!rendered.includes('Sample card preview')||!rendered.includes('not your activity')) throw Error('Sample provenance not visible');
  if(!/id="i_pub" disabled/.test(rendered)) throw Error('Sample save not disabled');
 }else if(/id="i_pub" disabled/.test(rendered)) throw Error('Real export save disabled');
-(async()=>{
  await events['i_pub:click']();
  if(signins!==(sample?0:1)) throw Error('Sample reached sign-in/save, or real path regressed');
 })().catch(error=>{console.error(error);process.exitCode=1;});

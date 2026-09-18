@@ -22,7 +22,7 @@ HTML = open(os.path.join(REPO, "site", "index.html"), encoding="utf-8").read()
 
 
 def test_the_payload_is_stashed_before_the_redirect_and_the_fragment_is_not_the_redirect_uri():
-    body = HTML[HTML.index("function importRun(){"):]
+    body = HTML[HTML.index("async function importRun(){"):]
     body = body[:body.index("\nasync function viewShareRun(")]
     assert "stashImport(m[1]);" in body
     i_stash = body.index("stashImport(m[1])")
@@ -45,7 +45,7 @@ def test_route_restores_the_payload_before_it_reads_the_hash():
 
 def _js_block() -> str:
     start = HTML.index("const IMPORT_STASH=")
-    end = HTML.index("function importRun(){", start)
+    end = HTML.index("async function importRun(){", start)
     return HTML[start:end]
 
 

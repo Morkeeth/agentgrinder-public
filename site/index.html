@@ -1705,9 +1705,24 @@ function restoreImport(){
   try{ sessionStorage.removeItem(IMPORT_STASH); }catch(_){}
 }
 
-function importRun(){
+async function decodeImportPayload(payload){
+  if(payload.startsWith('gz.')){
+    if(typeof DecompressionStream!=='function'){
+      const error=new Error('This compressed import needs a browser with built-in gzip support. Update the browser, or use the local card while keeping the selected session available.');
+      error.importCompatibility=true;throw error;
+    }
+    const encoded=payload.slice(3).replace(/-/g,'+').replace(/_/g,'/');
+    const padded=encoded+'='.repeat((4-encoded.length%4)%4);
+    const bytes=Uint8Array.from(atob(padded),character=>character.charCodeAt(0));
+    const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return JSON.parse(await new Response(stream).text());
+  }
+  return JSON.parse(atob(decodeURIComponent(payload)));
+}
+
+async function importRun(){
   const m=location.hash.match(/import=([^&]+)/); if(!m) return false;
-  let run; try{ run=JSON.parse(atob(decodeURIComponent(m[1]))); }catch(_){ frame(null,null); $('app').innerHTML='<div class="card"><h2>This import link is incomplete</h2><p>The capture data on this link could not be read, usually because the address was cut when it was copied. Nothing was posted. Run the capture command again to open a fresh preview.</p><p><a href="/?post">How to capture a run</a></p></div>'; return true; }
+  let run; try{ run=await decodeImportPayload(m[1]); }catch(error){ frame(null,null); $('app').innerHTML='<div class="card"><h2>This import link could not be read</h2><p>'+esc(error.importCompatibility?error.message:'The capture data on this link could not be read, usually because the address was cut when it was copied. Nothing was posted. Run the capture command again to open a fresh preview.')+'</p><p><a href="/?post">How to capture a run</a></p></div>'; return true; }
   if(Array.isArray(run?.ridge)&&run.worker_bins==null) run.worker_bins=Array(run.ridge.length).fill(0);
   const importedWholeNumber=id=>{const raw=$(id)?.value;if(raw==null||String(raw).trim()==='')return null;const value=Number(raw);return Number.isInteger(value)&&value>=0?value:Number.NaN};
   try{ GrinderContract.validate(run); }
@@ -1964,7 +1979,7 @@ async function route(){ account.recover();
   if(ME && social.refreshUnread) social.refreshUnread();
   if(IDENTITY_SETUP)return viewIdentitySetup();
   restoreImport();
-  if(importRun()) return;
+  if(await importRun()) return;
   if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example|people|account)(=|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
   const q=new URLSearchParams(location.search);
   if(q.has('example')){

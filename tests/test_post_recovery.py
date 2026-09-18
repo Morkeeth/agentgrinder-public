@@ -11,7 +11,7 @@ SOCIAL = (ROOT / "site" / "social.js").read_text()
 SOCIAL_CSS = (ROOT / "site" / "social.css").read_text()
 PUSH = (ROOT / "agentgrinder" / "push.py").read_text()
 WALK = (ROOT / "scripts" / "check-post-recovery.py").read_text()
-IMPORT = INDEX[INDEX.index("function importRun(){") : INDEX.index("async function viewShareRun(")]
+IMPORT = INDEX[INDEX.index("async function importRun(){") : INDEX.index("async function viewShareRun(")]
 
 
 def test_failed_save_keeps_the_draft_and_offers_an_explicit_retry():
@@ -89,7 +89,8 @@ def test_the_preview_names_what_the_export_carries_and_matches_the_allowlist():
 
 
 def test_a_chopped_import_link_is_named_not_swallowed():
-    assert "This import link is incomplete" in IMPORT
+    assert "This import link could not be read" in IMPORT
+    assert "address was cut" in IMPORT
     assert "catch(_){ return false; }" not in IMPORT
 
 
