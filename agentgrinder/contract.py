@@ -41,8 +41,8 @@ def validate_run(run: dict) -> dict:
                 or any(type(value) is not int or value < 0 or value >= len(ridge)
                        for value in commits)):
             raise ValueError("commit_bins must contain valid ridge bin indexes.")
-        if run.get("ridge_basis") not in ("wall-time", "call-index"):
-            raise ValueError("ridge_basis must be wall-time or call-index.")
+        if run.get("ridge_basis") not in ("wall-time", "call-index", "turn-order"):
+            raise ValueError("ridge_basis must be wall-time, call-index, or turn-order.")
         wall = run.get("ridge_wall_seconds")
         if (wall is not None
                 and (type(wall) not in (int, float) or not math.isfinite(wall) or wall < 0)):

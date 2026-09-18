@@ -561,6 +561,8 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
     typed = 0
     tool_calls = 0
     shell_calls = 0
+    tools_per_turn: list[int] = []
+    current_turn_tools: int | None = None
     stamps: list[datetime] = []
     workdirs: list[str] = []
     first_prompt = None
@@ -572,6 +574,9 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
         msg = row.get("message") if isinstance(row.get("message"), dict) else {}
         text = _cursor_text(msg)
         if role == "user" and "<timestamp>" in text and "<user_query>" in text:
+            if current_turn_tools is not None:
+                tools_per_turn.append(current_turn_tools)
+            current_turn_tools = 0
             typed += 1
             stamp = cursor_time(text)
             if stamp:
@@ -579,14 +584,17 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
             if first_prompt is None:
                 match = uq_re.search(text)
                 first_prompt = (match.group(1).strip() if match else text.strip())
-        elif role == "assistant":
+        elif role == "assistant" and current_turn_tools is not None:
             for name, inputs in _cursor_tool_uses(msg):
                 tool_calls += 1
+                current_turn_tools += 1
                 if name in _CURSOR_SHELL_TOOLS:
                     shell_calls += 1
                     workdir = inputs.get("working_directory") if isinstance(inputs, dict) else None
                     if isinstance(workdir, str) and workdir:
                         workdirs.append(workdir)
+    if current_turn_tools is not None:
+        tools_per_turn.append(current_turn_tools)
 
     if not typed:
         raise ValueError(f"no typed <timestamp> and <user_query> turns in {path}")
@@ -602,7 +610,15 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
                 repo_root = found[1]
                 break
     project = os.path.basename(repo_root) if repo_root else None
-    return {
+    # THE RIDGE IS DRAWN ON TYPED-TURN ORDER. Measured on three real Grok Bot exports on
+    # 16 Sep 2026: the only clock in the file is the <timestamp> tag on typed user turns,
+    # at minute resolution. No tool_use block carries a time. Call-index with fewer than
+    # 50 calls spreads evenly and draws a flat 1 and 0 comb. That comb is not a shape.
+    # Tool counts per typed turn on brief-v2-export-a.jsonl were 1, 2, 5, 13, 0, 7.
+    # ridge_basis is turn-order. Wall seconds stay unknown.
+    from . import cursor_tree
+    ridge = cursor_tree.ridge_from_turn_order(tools_per_turn)
+    run = {
         "athlete": athlete,
         "title": "Grok Bot session",
         "harness": "Grok Bot",
@@ -636,6 +652,11 @@ def parse_grokbot_session(path: str, athlete: str = "you", records=None) -> dict
         "route_legend": [],
         "private_title_prompt": first_prompt,
     }
+    run.update(ridge)
+    run["ridge_source"] = "turn-order"   # LOCAL only, never one of the Save columns
+    run["ridge_tool_calls"] = None       # no store was read, so there is no second count
+    run["capabilities"]["timed_ridge"] = False
+    return run
 
 
 # ---- Codex origin ------------------------------------------------------------

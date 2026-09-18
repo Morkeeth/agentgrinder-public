@@ -67,8 +67,8 @@
         )
       )
         throw new Error("commit_bins must contain valid ridge indexes.");
-      if (!["wall-time", "call-index"].includes(run.ridge_basis))
-        throw new Error("ridge_basis must be wall-time or call-index.");
+      if (!["wall-time", "call-index", "turn-order"].includes(run.ridge_basis))
+        throw new Error("ridge_basis must be wall-time, call-index, or turn-order.");
       if (
         run.ridge_wall_seconds != null &&
         (typeof run.ridge_wall_seconds !== "number" ||
@@ -167,7 +167,13 @@
       const chipY = Math.max(2, y(values[values.length - 1]) - 30);
       return `<g class="ridge-chip" transform="translate(${w - width - 2},${chipY.toFixed(1)})"><rect width="${width}" height="23" rx="2"/><text x="${width / 2}" y="15">${escText(label)}</text></g>`;
     })();
-    return `<div class="ridge-wrap"><svg class="ridge" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Tool calls across ${escText(snapshot.ridge_basis === "wall-time" ? "wall time" : "call order")}">${backs}<polygon class="ridge-fill" points="${area}"/><line class="ridge-base" x1="0" y1="${base}" x2="${w}" y2="${base}"/>${ticks}<polyline class="ridge-line" points="${line}"/><circle class="ridge-start" cx="0" cy="${y(values[0]).toFixed(1)}" r="5"/><circle class="ridge-end" cx="${w}" cy="${y(values[values.length - 1]).toFixed(1)}" r="5"/>${output}</svg><span class="meta">${snapshot.ridge_basis === "wall-time" ? "Tool calls over wall time" : "Tool calls over call order"}</span></div>`;
+    const basisLabel =
+      snapshot.ridge_basis === "wall-time"
+        ? "wall time"
+        : snapshot.ridge_basis === "turn-order"
+          ? "turn order"
+          : "call order";
+    return `<div class="ridge-wrap"><svg class="ridge" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Tool calls across ${escText(basisLabel)}">${backs}<polygon class="ridge-fill" points="${area}"/><line class="ridge-base" x1="0" y1="${base}" x2="${w}" y2="${base}"/>${ticks}<polyline class="ridge-line" points="${line}"/><circle class="ridge-start" cx="0" cy="${y(values[0]).toFixed(1)}" r="5"/><circle class="ridge-end" cx="${w}" cy="${y(values[values.length - 1]).toFixed(1)}" r="5"/>${output}</svg><span class="meta">Tool calls over ${basisLabel}</span></div>`;
   }
   function headlineMetric(snapshot) {
     if (snapshot && snapshot.headline_metric_id) return snapshot.headline_metric_id;
