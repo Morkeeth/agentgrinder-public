@@ -66,13 +66,15 @@ def test_download_share_strip_preserves_zero_and_unknown():
     assert [value for _, value in result["unknown"]] == ["Unknown"] * 3
 
 
-def test_public_link_preview_preserves_zero_and_unknown():
+def test_public_link_preview_preserves_zero_and_omits_unrecorded_fields():
     result = render()
     zero = " ".join(result["ogZero"])
     for value in ("0s", "0 files changed", "0 commits"):
         assert value in zero
     assert result["ogZero"].count("0") == 2
-    assert result["ogUnknown"].count("Unknown") == 5
+    assert "Unknown" not in result["ogUnknown"]
+    for label in ("Session", "Turns", "Tool calls", "Project touched", "Code activity"):
+        assert label not in result["ogUnknown"]
 
 
 def test_share_surfaces_tell_output_project_and_code_story_without_raw_data():
