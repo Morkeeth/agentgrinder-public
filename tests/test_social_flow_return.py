@@ -1,25 +1,29 @@
-"""Returning-friend social flow: follow, Following, Responses return, close-friends clarity."""
+"""Returning-friend social flow with DOM proof of Follow click and auth return."""
 from pathlib import Path
 import re
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = (ROOT / "site" / "index.html").read_text()
 SOCIAL = (ROOT / "site" / "social.js").read_text()
+PROBE = ROOT / "tests" / "fixtures" / "social_follow_auth_probe.mjs"
 
 
-def test_follow_signed_out_uses_github():
-    block = SOCIAL.split("async function followControl")[1].split("async function")[0]
-    assert 'id="follow-signin"' in block
-    assert "Sign in with GitHub" in block
-    assert "signInGitHub" in block
+def test_follow_and_auth_return_dom_probe():
+    out = subprocess.check_output(
+        ["node", str(PROBE)],
+        text=True,
+        cwd=str(ROOT),
+    )
+    assert '"ok":true' in out.replace(" ", "")
+    assert '"followClick":true' in out.replace(" ", "")
+    assert '"inboxFilterReturn":true' in out.replace(" ", "")
 
 
-def test_auth_return_keeps_inbox_filter_and_profile_query():
-    assert "people|account|connect)(=|&|$)" in INDEX
-    pat = re.compile(r"^\?(post|mine|following|inbox|run|u|example|people|account|connect)(=|&|$)")
-    assert pat.match("?inbox&filter=unread")
-    assert pat.match("?u=friend")
-    assert not pat.match("?explore")
+def test_route_uses_apply_stored_social_return():
+    assert "applyStoredSocialReturn" in SOCIAL
+    assert "social.applyStoredSocialReturn" in INDEX
+    assert "isSocialReturn" in SOCIAL
 
 
 def test_following_states_public_only_and_points_close_friends_to_profile():
@@ -39,3 +43,10 @@ def test_responses_return_and_ack_paths_remain():
     assert "Back to Responses" in SOCIAL
     assert "Open exact reply" in SOCIAL
     assert "ACK the work" in INDEX
+
+
+def test_auth_return_allowlist_source():
+    assert "people|account|connect)(=|&|$)" in INDEX or "SOCIAL_RETURN_RE" in SOCIAL
+    pat = re.compile(r"^\?(post|mine|following|inbox|run|u|example|people|account|connect)(=|&|$)")
+    assert pat.match("?inbox&filter=unread")
+    assert not pat.match("?explore")

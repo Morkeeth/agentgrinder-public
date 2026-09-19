@@ -92,6 +92,23 @@ window.GrinderSocial = function ({
   }
 
   const RESPONSE_RETURN_KEY = "ag_response_return";
+  const SOCIAL_RETURN_RE = /^\?(post|mine|following|inbox|run|u|example|people|account|connect)(=|&|$)/;
+  function isSocialReturn(pending) {
+    return typeof pending === "string" && SOCIAL_RETURN_RE.test(pending);
+  }
+  function applyStoredSocialReturn() {
+    try {
+      if (!me()) return null;
+      const pending = sessionStorage.getItem("ag_social_return");
+      if (!isSocialReturn(pending)) return null;
+      history.replaceState(null, "", "/" + pending);
+      sessionStorage.removeItem("ag_social_return");
+      return pending;
+    } catch (_) {
+      return null;
+    }
+  }
+
   const unreadMarked = new Set();
   let inboxObserver = null;
   let unreadMarkOwner = null;
@@ -1626,6 +1643,8 @@ window.GrinderSocial = function ({
     askControl,
     following,
     followControl,
+    isSocialReturn,
+    applyStoredSocialReturn,
     closeFriends,
     thread,
     inbox,
