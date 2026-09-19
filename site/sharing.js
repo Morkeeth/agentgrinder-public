@@ -44,12 +44,18 @@ function codeFacts(run){
 function storyFacts(run){
  return {project:projectName(run)||'Unknown',output:outputKind(run),code:codeFacts(run).join(' · ')||'Unknown'};
 }
+function ridgeBasisLabel(basis){
+ if(basis==='wall-time')return'wall time';
+ if(basis==='turn-order')return'turn order';
+ if(basis==='call-index')return'call order';
+ return'unknown basis';
+}
 function traceSeries(run){
  const ridge=run.ridge,workers=run.worker_bins;
  if(Array.isArray(ridge)&&ridge.length>=40&&ridge.length<=60
   &&ridge.every(v=>Number.isSafeInteger(v)&&v>=0)
   &&Array.isArray(workers)&&workers.length===ridge.length){
-  return {values:ridge,label:run.ridge_basis==='wall-time'?'Tool calls over wall time':'Tool calls over call order'};
+  return {values:ridge,label:'Tool calls over '+ridgeBasisLabel(run.ridge_basis)};
  }
  const rhythm=run.rhythm;
  if(Array.isArray(rhythm)&&rhythm.length>1&&rhythm.length<=10000

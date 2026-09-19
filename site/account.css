@@ -31,3 +31,19 @@ button.danger:disabled{background:#b3261e;border-color:#b3261e}
   .account-identity{flex-direction:column;align-items:stretch}
   .account-state button{margin:8px 0 0;width:100%}
 }
+
+/* Connect agent tokens */
+.connect{max-width:40rem}
+.connect-steps{margin:12px 0 16px;padding-left:1.2rem;color:var(--soft);font-size:14px;line-height:1.5}
+.connect-once{margin-top:16px;padding:14px;border:1px solid var(--blue-soft);background:var(--blue-wash)}
+.connect-once h2{margin:0 0 8px;font-size:16px}
+.connect-once input,.connect-once textarea{width:100%;box-sizing:border-box;margin:6px 0 10px;padding:10px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--box);color:var(--ink);font:12px/1.45 ui-monospace,monospace}
+.connect-once textarea{min-height:10rem;resize:vertical}
+.connect-tokens{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.connect-token{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--rule-2)}
+.connect-token:first-child{border-top:0;padding-top:0}
+.connect-token.is-revoked{opacity:.65}
+.connect-token .account-hint{display:block}
+@media(max-width:600px){
+  .connect-token{flex-direction:column;align-items:stretch}
+}

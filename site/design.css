@@ -160,3 +160,26 @@ button,summary{touch-action:manipulation}
 .tree-empty,.tree-foot{font-size:12px;color:var(--soft);margin:10px 0 0}
 .tree-foot{padding-bottom:2px}
 @media(min-width:720px){.tree{padding:16px 20px 0}.tree-workers{padding-left:16px}}
+
+/* Run map + ranked measured activity (site UX 2026-09-19) */
+.run-map .run-map-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px;padding:0 0 8px}
+.run-map .run-map-head .run-story-label{margin:0}
+.run-map .run-map-head .meta{color:var(--soft);font-size:12px;max-width:28rem}
+.ridge-peak rect{fill:var(--blue)}
+.ridge-peak text{fill:#fff;font:600 12px ui-sans-serif,system-ui,sans-serif;text-anchor:middle}
+.run-rank{list-style:none;margin:12px 16px 0;padding:0;border:1px solid var(--rule);background:var(--box)}
+.run-rank li{display:grid;grid-template-columns:2rem 1fr;gap:10px;padding:12px 14px;border-bottom:1px solid var(--rule)}
+.run-rank li:last-child{border-bottom:0}
+.run-rank-n{font:600 14px/1.2 ui-sans-serif,system-ui,sans-serif;color:var(--blue)}
+.run-rank-body{min-width:0}
+.run-rank-body strong{display:inline;font-size:13px;font-weight:600;margin-right:6px}
+.run-rank-body b.num{color:var(--blue);font-size:18px;font-weight:600}
+.run-rank-body small{display:block;margin-top:4px;color:var(--soft);font-size:11px;line-height:1.4}
+.coach-soon{margin:12px 16px 0;padding:12px 14px;border:1px solid var(--rule);background:var(--blue-wash)}
+.coach-soon .run-story-label{margin:0 0 6px;display:block}
+.coach-soon p{margin:0;color:var(--soft);font-size:13px;line-height:1.45}
+@media(max-width:390px){
+  .run-rank{margin-left:12px;margin-right:12px}
+  .coach-soon{margin-left:12px;margin-right:12px}
+  .run-map .run-map-head .meta{font-size:11px}
+}

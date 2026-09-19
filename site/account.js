@@ -113,6 +113,9 @@ window.GrinderAccount = function ({
         <div id="account-identities">${identitiesHtml(ids)}</div>
         <p id="account-identities-state" class="account-state" role="status" aria-live="polite"></p></section>
       ${origin ? origin.html({ signedIn: true }) : ""}
+      <section class="card pad account-section" aria-labelledby="account-connect-title"><h2 id="account-connect-title">Connect an agent</h2>
+        <p>Mint a private upload token, paste it into your agent once, then see the run under Latest runs. Audience defaults to Only me.</p>
+        <div class="account-actions"><a class="act blue" href="/?connect">Open Connect</a></div></section>
       <section class="card pad account-section" aria-labelledby="account-signout-title"><h2 id="account-signout-title">Sign out on this device</h2>
         <p>Signs you out of __BRAND__ in this browser only. Other devices, and Agent Grinder if you use it with the same sign-in, stay signed in.</p>
         <div class="account-actions"><button type="button" class="act" id="account-signout">Sign out here</button></div></section>

@@ -275,7 +275,7 @@ window.GrinderSocial = function ({
   async function following() {
     start(
       "Following",
-      "Recent public runs from people you chose to follow. Follow works before they post.",
+      "Latest public runs from people you follow. Follow before they post; Responses keeps ACK and reply returns.",
       "feed",
     );
     if (!signedIn()) return;
@@ -305,7 +305,7 @@ window.GrinderSocial = function ({
           .limit(50),
       );
       if (runs.length) {
-        byId("social-body").innerHTML = await renderRuns(runs);
+        byId("social-body").innerHTML = responseReturnBar() + await renderRuns(runs);
         return;
       }
       const people = await result(

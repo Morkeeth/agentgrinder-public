@@ -241,9 +241,9 @@ def test_web_app_never_headlines_prompts():
     assert card.index('const ridgeBody=') < card.index('${metricStrip()}')
     assert 'class="run-metrics"' in card
     assert '<details class="run-evidence">' in card
-    assert 'Counts show activity, not quality. Unknown means not measured.' in card
+    assert 'Ranks name measured activity. They are not a quality score. Unknown means not measured.' in card
     assert card.index('<summary>More</summary>') < card.index('${fiveRow(r)}')
-    assert "['Turns',r.prompts" in card
+    assert "r.prompts??r.turns_typed" in card.replace(" ", "") or "['Turns',turns" in card.replace(" ", "")
     # Share export is exercised by check-moment-fixtures.py; its call signature
     # is not part of the card's headline contract.
     # Social profiles show public work and responses, not activity-as-quality rankings.

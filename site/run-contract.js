@@ -173,7 +173,26 @@
         : snapshot.ridge_basis === "turn-order"
           ? "turn order"
           : "call order";
-    return `<div class="ridge-wrap"><svg class="ridge" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Tool calls across ${escText(basisLabel)}">${backs}<polygon class="ridge-fill" points="${area}"/><line class="ridge-base" x1="0" y1="${base}" x2="${w}" y2="${base}"/>${ticks}<polyline class="ridge-line" points="${line}"/><circle class="ridge-start" cx="0" cy="${y(values[0]).toFixed(1)}" r="5"/><circle class="ridge-end" cx="${w}" cy="${y(values[values.length - 1]).toFixed(1)}" r="5"/>${output}</svg><span class="meta">Tool calls over ${basisLabel}</span></div>`;
+    const peak = Math.max(0, ...values);
+    const peakIndex = peak > 0 ? values.indexOf(peak) : -1;
+    const peakChip =
+      peakIndex >= 0
+        ? (() => {
+            const width = Math.min(128, 36 + String(peak).length * 8);
+            const cx = Math.min(w - width - 2, Math.max(2, x(peakIndex) - width / 2));
+            const cy = Math.max(2, y(peak) - 28);
+            return `<g class="ridge-peak" transform="translate(${cx.toFixed(1)},${cy.toFixed(1)})"><rect width="${width}" height="22" rx="2"/><text x="${width / 2}" y="15">peak ${peak}</text></g>`;
+          })()
+        : "";
+    const basisNote =
+      snapshot.ridge_basis === "turn-order"
+        ? "Typed-turn order. Not wall-clock elapsed time."
+        : snapshot.ridge_basis === "call-index"
+          ? "Call order across the sitting. Not wall-clock elapsed time."
+          : snapshot.ridge_basis === "wall-time"
+            ? "Wall time across the measured window."
+            : "Basis unknown.";
+    return `<div class="ridge-wrap run-map" data-ridge-basis="${escText(snapshot.ridge_basis || "")}"><div class="run-map-head"><span class="run-story-label">Run map</span><span class="meta">${escText(basisNote)}</span></div><svg class="ridge" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Run map of tool calls across ${escText(basisLabel)}">${backs}<polygon class="ridge-fill" points="${area}"/><line class="ridge-base" x1="0" y1="${base}" x2="${w}" y2="${base}"/>${ticks}<polyline class="ridge-line" points="${line}"/><circle class="ridge-start" cx="0" cy="${y(values[0]).toFixed(1)}" r="5"/><circle class="ridge-end" cx="${w}" cy="${y(values[values.length - 1]).toFixed(1)}" r="5"/>${peakChip}${output}</svg><span class="meta">Tool calls over ${basisLabel}</span></div>`;
   }
   function headlineMetric(snapshot) {
     if (snapshot && snapshot.headline_metric_id) return snapshot.headline_metric_id;
