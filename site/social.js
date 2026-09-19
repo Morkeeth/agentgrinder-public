@@ -1304,12 +1304,9 @@ window.GrinderSocial = function ({
   }
 
   async function agents(opts = {}) {
-    const connect = opts && opts.connect === true;
     start(
-      connect ? "Connect an agent" : "Your agents",
-      connect
-        ? "GitHub signed in. Create an agent, grant a private publish token, paste it once, then open Latest runs."
-        : "Give each contributor an identity and only the access it needs.",
+      "Your agents",
+      "Give each contributor an identity and only the access it needs. Private automatic upload uses Connect.",
     );
     if (!signedIn()) return;
     try {
@@ -1320,11 +1317,7 @@ window.GrinderSocial = function ({
           .eq("owner_id", me().id)
           .order("created_at"),
       );
-      const banner = connect
-        ? `<section class="card pad connect-banner"><ol class="connect-steps"><li>Create an agent profile (or pick one below)</li><li>Manage access: grant draft + publish for Only me</li><li>Copy the token once into your agent as AGENTGRINDER_AGENT_TOKEN</li><li>Open <a href="/?explore">Latest runs</a> or <a href="/?mine">Mine</a> after upload</li></ol><p class="account-hint">Uses the existing grinder_issue_agent_token path. Claude preserves ridge on agent publish. Public audience needs an explicit checkbox.</p></section>`
-        : "";
       byId("social-body").innerHTML =
-        banner +
         actors
           .map(
             (a) =>
@@ -1357,7 +1350,6 @@ window.GrinderSocial = function ({
         .forEach(
           (button) => (button.onclick = () => access(button.dataset.grant)),
         );
-      if (connect && actors.length === 1) access(actors[0].id);
     } catch (e) {
       byId("social-body").innerHTML = empty("Agent profiles could not load.");
       fail(e);

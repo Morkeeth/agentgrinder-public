@@ -1,4 +1,4 @@
-"""Connect reuses deployed grinder_agent token facilities."""
+"""Connect uses thin 007 agent_token_* wrappers; Agents stays separate."""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -8,22 +8,31 @@ INDEX = (ROOT / "site" / "index.html").read_text()
 ACCOUNT = (ROOT / "site" / "account.js").read_text()
 
 
-def test_connect_delegates_to_social_agents():
-    assert "social.agents" in CONNECT
-    assert "connect: true" in CONNECT or "connect:true" in CONNECT.replace(" ", "")
-    assert "rpc(\"agent_token_create\"" not in CONNECT
-    assert "rpc(\"agent_token_list\"" not in CONNECT
+def test_connect_calls_thin_wrappers_exactly():
+    assert 'rpc("agent_token_create"' in CONNECT
+    assert "p_label" in CONNECT
+    assert 'rpc("agent_token_list"' in CONNECT
+    assert 'rpc("agent_token_revoke"' in CONNECT
+    assert "p_id" in CONNECT
+    assert "Array.isArray(data)" in CONNECT
+    assert "social.agents" not in CONNECT
+    assert "grinder_issue_agent_token" not in CONNECT
+    assert "Sign in with GitHub" in CONNECT
+    assert "signInGitHub" in CONNECT
+    assert "/?agents" in CONNECT
 
 
-def test_social_still_owns_issue_and_revoke():
+def test_advanced_agents_remain_separate():
     assert 'rpc("grinder_issue_agent_token"' in SOCIAL
-    assert "grinder_agent_tokens" in SOCIAL
-    assert "AGENTGRINDER_AGENT_TOKEN" in SOCIAL
-    assert "async function agents(opts" in SOCIAL
+    assert "async function agents(" in SOCIAL
+    assert "connect-banner" not in SOCIAL
+    assert "Open Connect" in ACCOUNT
+    assert 'href="/?agents"' in ACCOUNT
 
 
 def test_connect_route_and_account_entry():
     assert "q.has('connect')" in INDEX
     assert 'src="/connect.js"' in INDEX
     assert 'href="/?connect"' in INDEX
-    assert "Open Connect" in ACCOUNT
+    assert "db:sb" in INDEX
+    assert "signInGitHub:()=>signInWithGitHub()" in INDEX

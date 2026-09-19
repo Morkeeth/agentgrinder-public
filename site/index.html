@@ -579,7 +579,7 @@ const challenges=GrinderChallenges({client:sb,me:()=>ME,app:()=>$('app'),frame,s
 // Origin remains a post-sign-in repository connection, never an Auth provider.
 const originConnection=GrinderOrigin.create();
 const account=GrinderAccount({auth,me:()=>ME,app:()=>$('app'),frame,status,providersEnabled:PROVIDERS_ENABLED,origin:originConnection,signIn:showSignIn,onProfileChange:p=>{ME=p;refreshAuth();}});
-const connect=typeof GrinderConnect==='function'?GrinderConnect({social,me:()=>ME,app:()=>$('app'),frame,status,signInGitHub:()=>signInWithGitHub(),signIn:showSignIn}):null;
+const connect=typeof GrinderConnect==='function'?GrinderConnect({db:sb,me:()=>ME,app:()=>$('app'),frame,status,signInGitHub:()=>signInWithGitHub(),signIn:showSignIn}):null;
 
 // THE MARK IS THE GRIND, drawn small.
 //

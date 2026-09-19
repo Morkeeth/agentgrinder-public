@@ -154,19 +154,7 @@
       .filter((v) => Number.isSafeInteger(v) && v >= 0 && v < values.length)
       .map((v) => `<line class="ridge-commit" x1="${x(v).toFixed(1)}" y1="${base}" x2="${x(v).toFixed(1)}" y2="${base - 10}"/>`)
       .join("");
-    const output = (() => {
-      let label = "";
-      const url = String(snapshot.output_url || "");
-      if (/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(url)) label = "PR";
-      else if (/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(url)) label = "Screenshot";
-      else if (url) label = "Output";
-      else if (Number.isSafeInteger(snapshot.commits) && snapshot.commits > 0)
-        label = snapshot.commits + " commit" + (snapshot.commits === 1 ? "" : "s");
-      if (!label) return "";
-      const width = Math.min(118, 24 + label.length * 7);
-      const chipY = Math.max(2, y(values[values.length - 1]) - 30);
-      return `<g class="ridge-chip" transform="translate(${w - width - 2},${chipY.toFixed(1)})"><rect width="${width}" height="23" rx="2"/><text x="${width / 2}" y="15">${escText(label)}</text></g>`;
-    })();
+    // Output chips stay off the plot unless a measured bin places them. output_url alone is not a timed landmark.
     const basisLabel =
       snapshot.ridge_basis === "wall-time"
         ? "wall time"
@@ -178,13 +166,10 @@
     const commits = (snapshot.commit_bins || []).filter(
       (v) => Number.isSafeInteger(v) && v >= 0 && v < values.length,
     );
-    const hitWidth = w / values.length;
     const hits = values
       .map((v, i) => {
-        const left = i === 0 ? 0 : x(i) - hitWidth / 2;
-        const width = i === 0 || i === values.length - 1 ? hitWidth / 2 + (i === 0 ? 0 : 0) : hitWidth;
-        const x0 = Math.max(0, i === 0 ? 0 : x(i) - hitWidth / 2);
-        const x1 = Math.min(w, i === values.length - 1 ? w : x(i) + hitWidth / 2);
+        const x0 = Math.max(0, i === 0 ? 0 : x(i) - w / values.length / 2);
+        const x1 = Math.min(w, i === values.length - 1 ? w : x(i) + w / values.length / 2);
         return `<rect class="run-map-hit" data-bin="${i}" x="${x0.toFixed(1)}" y="0" width="${(x1 - x0).toFixed(1)}" height="${h}" fill="transparent"/>`;
       })
       .join("");
@@ -197,19 +182,14 @@
         peakIndex,
         basis: snapshot.ridge_basis || "",
         basisLabel,
-        output: (() => {
-          const url = String(snapshot.output_url || "");
-          if (/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(url)) return "PR";
-          if (/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(url)) return "Screenshot";
-          if (url) return "Output";
-          if (Number.isSafeInteger(snapshot.commits) && snapshot.commits > 0)
-            return snapshot.commits + " commit" + (snapshot.commits === 1 ? "" : "s");
-          return "";
-        })(),
       }),
     );
     const startBin = peakIndex >= 0 ? peakIndex : 0;
-    return `<div class="ridge-wrap run-map" data-ridge-basis="${escText(snapshot.ridge_basis || "")}" data-run-map="${payload}"><div class="run-map-head"><span class="run-story-label">Run map</span><span class="meta">Scrub the bins · ${escText(basisLabel)}</span></div><svg class="ridge" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Interactive run map of tool calls across ${escText(basisLabel)}">${backs}<polygon class="ridge-fill" points="${area}"/><line class="ridge-base" x1="0" y1="${base}" x2="${w}" y2="${base}"/>${ticks}<polyline class="ridge-line" points="${line}"/><circle class="ridge-start" cx="0" cy="${y(values[0]).toFixed(1)}" r="5"/><circle class="ridge-end" cx="${w}" cy="${y(values[values.length - 1]).toFixed(1)}" r="5"/><line class="run-map-scrub" x1="${x(startBin).toFixed(1)}" y1="${top}" x2="${x(startBin).toFixed(1)}" y2="${base}" /><circle class="run-map-focus" cx="${x(startBin).toFixed(1)}" cy="${y(values[startBin]).toFixed(1)}" r="6"/>${output}${hits}</svg><div class="run-map-readout" aria-live="polite"></div></div>`;
+    const help =
+      "Each activity slice is one measured step along " +
+      basisLabel +
+      ". Commit marks sit only on measured commit_bins. Linked output is not placed on the map without a timed bin.";
+    return `<div class="ridge-wrap run-map" data-ridge-basis="${escText(snapshot.ridge_basis || "")}" data-run-map="${payload}"><div class="run-map-head"><span class="run-story-label">Run map</span><span class="meta">Activity along ${escText(basisLabel)}</span></div><div class="run-map-plot"><svg class="ridge" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">${backs}<polygon class="ridge-fill" points="${area}"/><line class="ridge-base" x1="0" y1="${base}" x2="${w}" y2="${base}"/>${ticks}<polyline class="ridge-line" points="${line}"/><circle class="ridge-start" cx="0" cy="${y(values[0]).toFixed(1)}" r="5"/><circle class="ridge-end" cx="${w}" cy="${y(values[values.length - 1]).toFixed(1)}" r="5"/><line class="run-map-scrub" x1="${x(startBin).toFixed(1)}" y1="${top}" x2="${x(startBin).toFixed(1)}" y2="${base}" /><circle class="run-map-focus" cx="${x(startBin).toFixed(1)}" cy="${y(values[startBin]).toFixed(1)}" r="6"/>${hits}</svg></div><label class="run-map-slider-label"><span class="visually-hidden">Activity slice</span><input class="run-map-slider" type="range" min="0" max="${values.length - 1}" value="${startBin}" step="1" aria-valuemin="0" aria-valuemax="${values.length - 1}" aria-valuenow="${startBin}" /></label><div class="run-map-readout" aria-live="polite"></div><details class="run-map-help"><summary>How to read this map</summary><p>${escText(help)}</p></details></div>`;
   }
   function mountRunMaps(root) {
     const scope = root && root.querySelectorAll ? root : typeof document !== "undefined" ? document : null;
@@ -225,12 +205,13 @@
       }
       const values = data.values || [];
       if (!values.length) return;
+      const plot = wrap.querySelector(".run-map-plot") || wrap.querySelector("svg.ridge")?.parentElement || wrap;
       const svg = wrap.querySelector("svg.ridge");
       const scrub = wrap.querySelector(".run-map-scrub");
       const focus = wrap.querySelector(".run-map-focus");
       const readout = wrap.querySelector(".run-map-readout");
+      const slider = wrap.querySelector(".run-map-slider");
       const w = 800,
-        h = 150,
         base = 132,
         top = 16;
       const x = (i) => (i * w) / Math.max(1, values.length - 1);
@@ -242,16 +223,15 @@
         const isPeak = i === data.peakIndex && data.peak > 0;
         const commitHere = (data.commits || []).includes(i);
         const bits = [];
-        bits.push(`Bin ${i + 1} of ${values.length}`);
+        bits.push(`Activity slice ${i + 1} of ${values.length}`);
         bits.push(`${tools} tool call${tools === 1 ? "" : "s"}`);
         if (workers) bits.push(`${workers} worker${workers === 1 ? "" : "s"}`);
-        if (isPeak) bits.push(`peak ${data.peak}`);
+        if (isPeak) bits.push(`peak activity ${data.peak}`);
         if (commitHere) bits.push("commit landmark");
-        if (i === values.length - 1 && data.output) bits.push(data.output);
         return bits.join(" · ");
       };
       const paint = (i) => {
-        const idx = Math.max(0, Math.min(values.length - 1, i));
+        const idx = Math.max(0, Math.min(values.length - 1, i | 0));
         if (scrub) {
           scrub.setAttribute("x1", x(idx).toFixed(1));
           scrub.setAttribute("x2", x(idx).toFixed(1));
@@ -262,34 +242,96 @@
         }
         if (readout) readout.textContent = describe(idx);
         wrap.dataset.activeBin = String(idx);
+        if (slider) {
+          slider.value = String(idx);
+          slider.setAttribute("aria-valuenow", String(idx));
+          slider.setAttribute("aria-valuetext", describe(idx));
+        }
       };
       paint(data.peakIndex >= 0 ? data.peakIndex : 0);
-      const fromEvent = (event) => {
-        const hit = event.target.closest && event.target.closest(".run-map-hit");
-        if (hit && hit.dataset.bin != null) return Number(hit.dataset.bin);
+      const binFromClientX = (clientX) => {
         if (!svg) return null;
         const rect = svg.getBoundingClientRect();
-        const clientX = event.touches && event.touches[0] ? event.touches[0].clientX : event.clientX;
         if (!Number.isFinite(clientX) || !rect.width) return null;
         const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
         return Math.round(ratio * (values.length - 1));
       };
-      const onMove = (event) => {
-        const i = fromEvent(event);
-        if (i == null) return;
-        if (event.cancelable) event.preventDefault();
-        paint(i);
+      const fromPointer = (event) => {
+        const hit = event.target.closest && event.target.closest(".run-map-hit");
+        if (hit && hit.dataset.bin != null) return Number(hit.dataset.bin);
+        const clientX = event.clientX;
+        return binFromClientX(clientX);
       };
-      wrap.addEventListener("pointermove", onMove);
-      wrap.addEventListener("pointerdown", onMove);
-      wrap.addEventListener("click", onMove);
-      wrap.addEventListener(
+      plot.addEventListener("pointerdown", (event) => {
+        const i = fromPointer(event);
+        if (i == null) return;
+        paint(i);
+      });
+      plot.addEventListener("pointermove", (event) => {
+        if (event.buttons === 0 && event.pointerType !== "mouse") return;
+        if (event.pointerType === "mouse" && event.buttons === 0) {
+          const i = fromPointer(event);
+          if (i != null) paint(i);
+          return;
+        }
+        if (event.buttons > 0) {
+          const i = fromPointer(event);
+          if (i != null) paint(i);
+        }
+      });
+      let touchOrigin = null;
+      plot.addEventListener(
+        "touchstart",
+        (event) => {
+          const t = event.touches && event.touches[0];
+          if (!t) return;
+          touchOrigin = { x: t.clientX, y: t.clientY, scrubbing: false };
+        },
+        { passive: true },
+      );
+      plot.addEventListener(
         "touchmove",
         (event) => {
-          onMove(event);
+          const t = event.touches && event.touches[0];
+          if (!t || !touchOrigin) return;
+          const dx = t.clientX - touchOrigin.x;
+          const dy = t.clientY - touchOrigin.y;
+          if (!touchOrigin.scrubbing) {
+            if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+            if (Math.abs(dy) >= Math.abs(dx)) {
+              touchOrigin = null;
+              return;
+            }
+            touchOrigin.scrubbing = true;
+          }
+          if (event.cancelable) event.preventDefault();
+          const i = binFromClientX(t.clientX);
+          if (i != null) paint(i);
         },
         { passive: false },
       );
+      plot.addEventListener(
+        "touchend",
+        () => {
+          touchOrigin = null;
+        },
+        { passive: true },
+      );
+      if (slider) {
+        slider.addEventListener("input", () => paint(Number(slider.value)));
+        slider.addEventListener("keydown", (event) => {
+          let next = null;
+          if (event.key === "Home") next = 0;
+          else if (event.key === "End") next = values.length - 1;
+          else if (event.key === "ArrowLeft" || event.key === "ArrowDown") next = Number(slider.value) - 1;
+          else if (event.key === "ArrowRight" || event.key === "ArrowUp") next = Number(slider.value) + 1;
+          else if (event.key === "PageDown") next = Number(slider.value) - 5;
+          else if (event.key === "PageUp") next = Number(slider.value) + 5;
+          if (next == null) return;
+          event.preventDefault();
+          paint(next);
+        });
+      }
     });
   }
   function headlineMetric(snapshot) {
