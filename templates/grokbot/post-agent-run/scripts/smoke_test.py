@@ -32,9 +32,12 @@ def main():
     assert metrics["is_sample"] is True
     assert metrics["turns_typed"] == 2
     assert metrics["tool_calls"] == 3
-    for field in ("duration_s", "ridge", "ridge_basis", "ridge_wall_seconds"):
+    for field in ("duration_s", "ridge_wall_seconds"):
         assert field not in metrics, f"fabricated {field}: {metrics[field]!r}"
-    print("PASS: bundled sample produced a hosted preview with unknown duration and ridge.")
+    assert metrics["ridge_basis"] == "turn-order"
+    assert len(metrics["ridge"]) == 50
+    assert sum(metrics["ridge"]) == metrics["tool_calls"]
+    print("PASS: bundled sample produced a measured turn-order ridge without a duration claim.")
 
 
 if __name__ == "__main__":

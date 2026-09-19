@@ -108,3 +108,27 @@ def test_migration_004_extends_basis_without_leaving_it_open():
     # The drop exists only to replace the check inside one transaction.
     assert "drop constraint if exists runs_ridge_basis_check" in statements
     assert "drop column" not in statements.lower()
+
+
+def test_standalone_grok_kit_preserves_burst_in_hosted_import(tmp_path):
+    """Exercise the actual distributable script outside the source checkout."""
+    import shutil
+    import subprocess
+    import sys
+
+    script = tmp_path / "preview.py"
+    shutil.copyfile(ROOT / "templates/grokbot/post-agent-run/scripts/preview.py", script)
+    result = subprocess.run(
+        [sys.executable, "-I", str(script), str(BURST_EXPORT)],
+        cwd=tmp_path, check=True, capture_output=True, text=True,
+    )
+    receipt = json.loads(result.stdout)
+    payload = json.loads(base64.b64decode(urllib.parse.unquote(
+        receipt["preview_url"].split("#import=", 1)[1])))
+    assert payload["ridge_basis"] == "turn-order"
+    assert [value for value in payload["ridge"] if value] == [1, 2, 5, 13, 7]
+    assert sum(payload["ridge"]) == payload["tool_calls"] == 28
+    assert payload["ridge"] == parse_grokbot_session(str(BURST_EXPORT))["ridge"]
+    assert "duration_s" not in payload
+    assert "ridge_wall_seconds" not in payload
+    assert "private_title_prompt" not in payload
