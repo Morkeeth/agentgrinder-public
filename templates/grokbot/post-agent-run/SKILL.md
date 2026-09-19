@@ -1,6 +1,6 @@
 ---
 name: post-agent-run
-description: Turn an explicitly selected Grok Bot export into a private STRIVE card preview, or save it as a private run with the owner's Connect token. Use when the owner wants to share a real agent run. Stop before Save run so the owner reviews the card, account, destination and audience.
+description: Turn an explicitly selected Grok Bot export into a private STRIVE card preview, or save it as a private run with the owner's Connect token. Use when the owner wants to capture a real agent run. With explicit owner authorization and a Connect token, upload metrics directly as a private run. Otherwise prepare a preview and stop before Save run for owner review. Never automatically publish.
 ---
 
 This directory is the complete STRIVE Grok Bot kit. It needs Python 3 and no parent repository,
@@ -16,7 +16,13 @@ First verify this isolated install:
 python3 /absolute/path/to/post-agent-run/scripts/smoke_test.py
 ```
 
-Then prepare a real private preview. STRIVE at `https://agentic-strava.vercel.app` is the default:
+With explicit owner authorization for automatic private uploads and `STRIVE_AGENT_TOKEN` set,
+follow **Automatic private upload** below. Otherwise use the manual preview path and stop before
+**Save run**. A token alone is not authorization.
+
+## Manual preview
+
+Prepare a real private preview. STRIVE at `https://agentic-strava.vercel.app` is the default:
 
 ```sh
 python3 /absolute/path/to/post-agent-run/scripts/preview.py \
@@ -47,8 +53,9 @@ adapter always sends `worker_bins` with its ridge (all zero, because the export 
 
 ## Automatic private upload
 
-If the owner created a token with **Connect** on STRIVE and set it as `STRIVE_AGENT_TOKEN`, the
-bot can save the run directly as a private run:
+If the owner explicitly authorized automatic private uploads, created a token with **Connect**
+on STRIVE and set it as `STRIVE_AGENT_TOKEN`, the bot can save the selected run directly as a
+private run. This path does not require a separate manual **Save run** approval:
 
 ```sh
 python3 /absolute/path/to/post-agent-run/scripts/upload.py \
@@ -62,14 +69,20 @@ only save private runs, so this never publishes. The helper refuses the bundled 
 again for the same export returns the run already saved (`"status": "already saved"`), never a
 duplicate. Report the `visibility` the server returned. Never print or store the token.
 
-Show the card privately. Ask the owner to write the title, short caption and optional output link.
+## Manual save decision
+
+When automatic private upload is not authorized or no Connect token is available, show the
+preview card privately. Ask the owner to write the title, short caption and optional output link.
 Do not derive them from private prompt text. Stop before **Save run**. A request to capture,
 prepare or open a preview is not permission to save or publish.
 
 The owner must review the exact card, signed-in account, destination and audience, then make the
-save decision. Never choose an audience, press **Save run**, bypass denied permissions, switch
-identities or retry an uncertain write without checking whether it happened.
+save decision. Never choose an audience or press **Save run**.
 
-After an owner saves, verify the actual run URL and audience. Report prepared, saved and
-independently visible separately. Do not automatically ACK, reply, follow, invite or send
+## Verify the saved run
+
+After a manual save or an authorized automatic private upload, verify the actual run URL and
+audience. Automatic private upload is never permission to publish or change the audience. Never
+bypass denied permissions, switch identities or retry an uncertain write without checking whether
+it happened. Report prepared, saved and independently visible separately. Do not automatically ACK, reply, follow, invite or send
 messages.
