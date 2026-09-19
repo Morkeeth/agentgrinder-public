@@ -119,7 +119,7 @@ def test_public_page_exposes_recorded_metrics_as_readable_html():
     assert "Built the import.\nThen checked the save." in visible
     assert "@builder" in visible
     assert 'aria-label="STRIVE home"' in visible
-    assert 'width="1200" height="630"' in visible  # Authentic share image is retained.
+    assert '<img' not in visible  # OG artwork is metadata, not duplicated tiny body text.
 
 
 def test_unrecorded_metrics_are_not_guessed_and_recorded_zero_is_preserved():
@@ -148,3 +148,25 @@ def test_public_html_escapes_fields_and_rejects_unsafe_output_links():
     row["output_url"] = 'https://example.com/output?a=1&b=2'
     visible = body(serve(MISSING, [row])["body"])
     assert 'href="https://example.com/output?a=1&amp;b=2"' in visible
+
+
+def test_public_page_keeps_og_preview_but_draws_the_map_natively():
+    row = {"id": MISSING, "visibility": "public", "title": "Measured run",
+           "ridge": [0, 2, 5, 1, 0] * 10, "worker_bins": [0] * 50,
+           "ridge_basis": "turn-order", "commit_bins": [12]}
+    page = serve(MISSING, [row])["body"]
+    visible = body(page)
+    assert '<img' not in visible
+    assert 'property="og:image"' in page and 'name="twitter:image"' in page
+    assert '<figure class="run-map">' in visible
+    assert 'viewBox="0 0 800 150"' in visible
+    assert 'aria-label="Tool calls over turn order"' in visible
+    assert '<figcaption>Tool calls over turn order' in visible
+    assert 'Commit marks show recorded locations' in visible
+    assert 'Open run and discussion' in visible
+    for bad in (None, [0.5] * 50):
+        row["ridge"] = bad
+        assert '<figure class="run-map">' not in body(serve(MISSING, [row])["body"])
+    row["ridge"] = [1] * 50
+    row["ridge_basis"] = None
+    assert '<figure class="run-map">' not in body(serve(MISSING, [row])["body"])
