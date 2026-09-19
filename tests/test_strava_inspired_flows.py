@@ -31,7 +31,8 @@ def test_private_preview_leads_with_story_and_plain_privacy_choices():
     assert "Only me — just you" in preview
     assert "Link — anyone with the URL" in preview
     assert "Public — Feed and profile" in preview
-    assert "Unknown measurements stay unknown" in preview
+    assert "Unknown measurements stay unknown" not in preview
+    assert "It never carries prompts" in preview
 
 
 def test_run_detail_promotes_audience_aware_next_action():

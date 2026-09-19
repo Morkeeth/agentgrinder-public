@@ -29,7 +29,8 @@ def test_card_shows_builder_project_session_caption_and_output():
     assert card.index("${story}") < card.index("${ridgeBody}")
     assert card.index("Project touched") < card.index("Code activity")
     assert "card-harness" in card
-    assert "Counts show activity, not quality. Unknown means not measured." in card
+    assert "run-metrics" in card
+    assert "run-rank" not in card
     assert "vptHtml(r)" not in card
 
 

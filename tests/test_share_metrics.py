@@ -24,6 +24,8 @@ const cursor={...rich,ridge:Array.from({length:50},(_,i)=>i%7),worker_bins:Array
  ridge_basis:'wall-time',ridge_wall_seconds:900,rhythm:[9,9]};
 const grok={...base,harness:'Grok Bot',duration_s:null,rhythm:[1,1,1],
  trace_basis:'typed-turn order; Grok Bot export has no top-level event timestamps'};
+const grokRidge={...grok,ridge:[1,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0],
+ worker_bins:Array(50).fill(0),ridge_basis:'turn-order'};
 const text=node=>{
   if(node==null)return[];
   if(typeof node==='string'||typeof node==='number')return[String(node)];
@@ -37,6 +39,7 @@ process.stdout.write(JSON.stringify({
   generic:story(generic),
   cursorTrace:trace(cursor),
   grokTrace:trace(grok),
+  grokRidgeTrace:trace(grokRidge),
   ogRich:text(card(rich)),
   ogGeneric:text(card(generic)),
   ogZero:text(card(zero)),
@@ -56,14 +59,14 @@ def render():
     return json.loads(result.stdout)
 
 
-def test_download_share_strip_preserves_zero_and_unknown():
+def test_download_share_strip_preserves_zero_and_hides_missing():
     result = render()
     assert result["zero"] == [
         ["Session", "0s"],
         ["Turns", "0"],
         ["Tool calls", "0"],
     ]
-    assert [value for _, value in result["unknown"]] == ["Unknown"] * 3
+    assert result["unknown"] == []
 
 
 def test_public_link_preview_preserves_zero_and_unknown():
@@ -83,7 +86,7 @@ def test_share_surfaces_tell_output_project_and_code_story_without_raw_data():
         "code": "4 shell calls · 7 files changed · 2 commits",
     }
     assert result["generic"] == {
-        "project": "Unknown",
+        "project": None,
         "output": None,
         "code": "9 tool calls",
     }
@@ -101,4 +104,10 @@ def test_download_uses_cursor_timed_ridge_and_keeps_grok_time_unknown():
     assert len(result["cursorTrace"]["values"]) == 50
     assert result["grokTrace"]["label"] == "Session activity · time basis unknown"
     assert result["grokTrace"]["values"] == [1, 1, 1]
-    assert result["unknown"][0] == ["Session", "Unknown"]
+    assert result["unknown"] == []
+
+
+def test_share_image_labels_turn_order_ridge_not_call_order():
+    result = render()
+    assert result["grokRidgeTrace"]["label"] == "Tool calls over turn order"
+    assert result["grokRidgeTrace"]["values"][24] == 13

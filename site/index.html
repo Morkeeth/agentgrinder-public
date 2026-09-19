@@ -404,6 +404,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
       <div class="account-panel" role="menu">
         <a href="/?onboard" role="menuitem">Get started</a>
         <a id="account-scrapbook" href="/?mine" role="menuitem" data-auth="1" hidden>My profile</a>
+        <a href="/?connect" role="menuitem" data-auth="1" hidden>Connect agent</a>
         <a href="/?account" role="menuitem" data-auth="1" hidden>Account settings</a>
       </div>
     </details>
@@ -437,6 +438,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 <script src="/people.js"></script>
 <script src="/origin.js"></script>
 <script src="/account.js"></script>
+<script src="/connect.js"></script>
 <script src="/challenges.js"></script>
 <script src="/practice-eligibility.js"></script>
 <script src="/practices.js"></script>
@@ -577,6 +579,7 @@ const challenges=GrinderChallenges({client:sb,me:()=>ME,app:()=>$('app'),frame,s
 // Origin remains a post-sign-in repository connection, never an Auth provider.
 const originConnection=GrinderOrigin.create();
 const account=GrinderAccount({auth,me:()=>ME,app:()=>$('app'),frame,status,providersEnabled:PROVIDERS_ENABLED,origin:originConnection,signIn:showSignIn,onProfileChange:p=>{ME=p;refreshAuth();}});
+const connect=typeof GrinderConnect==='function'?GrinderConnect({db:sb,me:()=>ME,app:()=>$('app'),frame,status,signInGitHub:()=>signInWithGitHub(),signIn:showSignIn}):null;
 
 // THE MARK IS THE GRIND, drawn small.
 //
@@ -849,7 +852,7 @@ function parseCoachExperiment(r){
     const friction=grab('friction:');
     const instruction=grab('experiment:')||lines[0]||'';
     const expected=grab('look for:');
-    if(instruction) exp={title:instruction.slice(0,160), instruction, expected:expected||'Record what you observed. Unknown stays unknown.', friction, consequence:grab('consequence:'), evidence:''};
+    if(instruction) exp={title:instruction.slice(0,160), instruction, expected:expected||'Record what you observed.', friction, consequence:grab('consequence:'), evidence:''};
   }
   return exp && typeof GrinderContract==='object' && GrinderContract.rejectPaths ? GrinderContract.rejectPaths(exp) : exp;
 }
@@ -858,7 +861,7 @@ function coachBlock(r){
   const v=typeof GrinderContract==='object'&&GrinderContract.rejectPaths?GrinderContract.rejectPaths(r.coach_verdict):r.coach_verdict;
   const plan=typeof GrinderContract==='object'&&GrinderContract.rejectPaths?GrinderContract.rejectPaths(r.coach_plan):r.coach_plan;
   const n=r.coach_tool_calls, pv=r.progress_verdict;
-  if(!v&&!pv) return '';
+  if(!v&&!pv) return `<div class="coach-soon" role="note"><span class="run-story-label">Coaching</span><p>Coming soon. Short notes on what to try next after a run.</p></div>`;
   const who=v?`<div class="grp">the coach${n?` · verdict produced by <b>${esc(String(n))}</b> tool call${n==1?'':'s'}`:''}</div>`:'';
   const para=v?`<div class="para">${esc(String(v))}</div>`:'';
   const items=plan?String(plan).split('\n').filter(x=>x.trim()).map(x=>`<li>${esc(x)}</li>`).join(''):'';
@@ -933,22 +936,22 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   };
   const sessionText=()=>{
     const seconds=sessionSeconds();
-    if(seconds==null)return 'Unknown';
+    if(seconds==null)return null;
     if(seconds<60)return `${Math.round(seconds)}s`;
     const minutes=Math.round(seconds/60);
     return minutes>=60?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${minutes}m`;
   };
   const metricStrip=()=>{
+    const turns=r.prompts??r.turns_typed??null;
+    const session=sessionText();
     const cells=[
-      ['Session',sessionText(),'Measured elapsed or wall time'],
-      ['Turns',r.prompts,'Human turns typed or queued'],
-      ['Tool calls',r.tool_calls,'Tool requests recorded in the session'],
-    ];
-    const html=cells.map(([label,value,title])=>{
-      const unknown=value==null||value==='Unknown';
-      return `<div class="run-metric${unknown?' is-unknown':''}" title="${esc(title)}"><dt>${esc(label)}</dt><dd class="num">${unknown?'Unknown':esc(value)}</dd></div>`;
-    }).join('');
-    return `<div class="run-story-label">Effort</div><dl class="run-metrics" aria-label="Recorded effort">${html}</dl><p class="run-metrics-note">Counts show activity, not quality. Unknown means not measured.</p>`;
+      session!=null?['Session',session]:null,
+      turns!=null?['Turns',turns]:null,
+      r.tool_calls!=null?['Tool calls',r.tool_calls]:null,
+    ].filter(Boolean);
+    if(!cells.length) return '';
+    const html=cells.map(([label,value])=>`<div class="run-metric"><dt>${esc(label)}</dt><dd class="num">${esc(value)}</dd></div>`).join('');
+    return `<div class="run-story-label">Effort</div><dl class="run-metrics" aria-label="Recorded effort">${html}</dl>`;
   };
   const selfAck=ME&&ME.id===r.profile_id;
   const ackBtn=selfAck?'':`<button class="act kudo ${acked?'on':''}" data-run="${r.id}" data-to="${r.profile_id}">${acked?'ACKed':'ACK'}${count?' <span class="n num">'+count+'</span>':''}</button>`;
@@ -961,18 +964,20 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   const ridge=typeof GrinderContract==='object'&&GrinderContract.ridge?GrinderContract.ridge(r):'';
   const ridgeOutput=output?(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(output)?'PR':/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(output)?'Screenshot':'Output'):null;
   const code=codeFacts();
+  const project=projectName();
+  const storyFacts=[];
+  if(project) storyFacts.push(`<div><dt>Project touched</dt><dd>${esc(project)}</dd></div>`);
+  if(code.length) storyFacts.push(`<div><dt>Code activity</dt><dd>${code.map(([label,value])=>`<span><strong class="num">${esc(value)}</strong> ${esc(label)}</span>`).join('')}</dd></div>`);
   const story=`${output?`<div class="run-output"><span>Output</span><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open ${esc(ridgeOutput||'output')} ↗</a></div>`:''}
-    <dl class="run-story-facts">
-      <div><dt>Project touched</dt><dd${projectName()?'':' class="is-unknown"'}>${esc(projectName()||'Unknown')}</dd></div>
-      <div><dt>Code activity</dt><dd${code.length?'':' class="is-unknown"'}>${code.length?code.map(([label,value])=>`<span><strong class="num">${esc(value)}</strong> ${esc(label)}</span>`).join(''):'Unknown'}</dd></div>
-    </dl>`;
-  const recorded='<details class="run-evidence"><summary>How these numbers work</summary><p class="meta">Captured from the selected session. A zero is a recorded zero; Unknown means the capture could not measure it.</p></details>';
+    ${storyFacts.length?`<dl class="run-story-facts">${storyFacts.join('')}</dl>`:''}`;
+  const recorded='<details class="run-evidence"><summary>How these numbers work</summary><p class="meta">Captured from the selected session. A zero is a recorded zero. Missing optional fields stay off the card.</p></details>';
   const ridgeBody=ridge?`${ridge}
     ${metricStrip()}
     <details class="ridge-more"><summary>More</summary>${fiveRow(r)}${coachBlock(r)}${r.tree?GrinderContract.tree(r.tree):''}${recorded}</details>`
     :`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
     ${r.tree?GrinderContract.tree(r.tree):''}
     ${metricStrip()}
+    ${coachBlock(r)}
     ${recorded}`;
   return `<div class="card" id="card-${r.id}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
@@ -992,6 +997,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
 
 
 function wireKudos(){
+  if(typeof GrinderContract==='object'&&GrinderContract.mountRunMaps) GrinderContract.mountRunMaps(document);
   document.querySelectorAll('.copy-run-prompt:not([data-wired])').forEach(b=>{b.dataset.wired='true';b.addEventListener('click',async()=>{
     try{await navigator.clipboard.writeText(b.dataset.prompt);b.textContent='Prompt copied'}catch(_){status('Select and copy the public run details instead.',true)}
   })});
@@ -1268,7 +1274,7 @@ function featuredCard(r,{sample=false}={}){
       <div class="stat"><div class="v">${r.prompts??'—'}</div><div class="k">Typed turns</div></div>
       <div class="stat"><div class="v">${dm==null?'—':fmtDur(dm)}</div><div class="k">Session time</div></div>
       <div class="stat"><div class="v">${r.commits??'—'}</div><div class="k">Commits</div></div></div>
-    <details><summary class="pad">${r.tool_calls??'Unknown'} tool calls · recorded measurements</summary>${fiveRow(r)}</details>
+    <details><summary class="pad">${r.tool_calls!=null?r.tool_calls+' tool calls · recorded measurements':'Recorded measurements'}</summary>${fiveRow(r)}</details>
     ${sample?'<div class="foot"><span class="meta">Example data from the repository</span></div>':`<div class="foot">${r.output_url&&safeOutputUrl(r.output_url)?`<a class="primary-output" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-weight:500">Open what was built →</a>`:`<a href="/?run=${r.id}" style="color:var(--blue);font-weight:500">Open run →</a>`}
       <span class="acts"><a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div>`}</div>`;
 }
@@ -1534,8 +1540,8 @@ async function viewPost(){
   $('app').innerHTML=`<div class="head"><h1>Post a run</h1><span class="meta">capture → preview → choose audience</span></div>
     <p>Turn a real coding-agent session into a card. Cursor capture stays on your machine until the preview is open.</p>
     ${first?firstRunPrompt():''}
-    ${ME?postComposerHtml({first}):uploadBlock()+'<div class="panel pad"><p>Sign in when you are ready to save the reviewed preview.</p><button id="post-signin">Sign in</button></div>'}`;
-  if(ME){await loadSegmentChoices('f_segment');wireComposer();} else $('post-signin').onclick=showSignIn;
+    ${ME?postComposerHtml({first}):uploadBlock()+'<div class="panel pad auth-empty"><h3>Sign in to save</h3><p>Preview stays private on this device until you choose an audience. GitHub sign-in keeps your handle; nothing posts until Save.</p><button id="post-signin" class="act blue">Sign in with GitHub</button></div>'}`;
+  if(ME){await loadSegmentChoices('f_segment');wireComposer();} else $('post-signin').onclick=signInWithGitHub;
   wireFirstRunPrompt();
   wireCopy();
 }
@@ -1553,7 +1559,7 @@ async function viewExplore(){
   frame(railHtml('feed',R), null);
   app.innerHTML=feedTabs('discover')+(first?firstRunPrompt():'')+`<div class="cta"><a class="act blue" href="/?post">Post a run</a><span class="hint">Capture locally, preview privately.</span></div>`+`
     <div class="head"><h2>Latest runs</h2><span class="meta">${R.length||'none yet'}</span></div>`
-    +(R.length?R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join(''):'<div class="card"><div class="empty">No public runs yet. A real card will show who built it, the project, caption, output link and measured session cost; unknown measurements stay as dashes. <a href="/?post">Post the first one when you are ready.</a></div></div>');
+    +(R.length?R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join(''):'<div class="card"><div class="empty"><h3>Latest runs</h3><p>Public runs from builders show up here.</p><div class="cta"><a class="act blue" href="/?post">Post a run</a><a class="act" href="/?people">Find people</a></div></div></div>');
   wireFirstRunPrompt();
   wireKudos(); countUp();
 }
@@ -1662,6 +1668,12 @@ async function viewProfile(handle){
     try{ME=await auth.updateProfile({handle:$('e_handle').value,display_name:$('e_name').value});const h=profileHandle(ME);history.replaceState(null,'','/?u='+encodeURIComponent(h));await refreshAuth();await viewProfile(h);status('Saved.');}catch(e){status(e.detail?.message||'Your profile could not be saved.',true)} });
 }
 
+function signInWithGitHub(){
+  if(!auth){status('Sign-in is unavailable. Please refresh.',true);return;}
+  const imported=location.hash.match(/import=([^&]+)/);if(imported&&!stashImport(imported[1])){status('This browser could not preserve the draft. Save your run JSON before signing in.',true);return;}
+  try{sessionStorage.setItem('ag_social_return',location.search)}catch(_){}
+  auth.signIn('github',{returnTo:location.search}).catch(e=>status(e.detail?.message||'GitHub sign-in could not start.',true));
+}
 function showSignIn(){
   if(!auth){status('Sign-in is unavailable. Please refresh.',true);return;}
   const imported=location.hash.match(/import=([^&]+)/);if(imported&&!stashImport(imported[1])){status('This browser could not preserve the draft. Save your run JSON before signing in.',true);return;}
@@ -1759,7 +1771,7 @@ async function importRun(){
     <p class="hint">Only me stays with you. Close friends is your private list. Link is unlisted but readable by anyone with the URL. Choosing Public is the deliberate action that adds the run to Feed and your profile.</p>
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample — preview only':(ME?'Save run':'Sign in to save')}</button>
     <details class="preview-details"><summary>Review recorded measurements and optional details</summary>
-      <p class="hint export-contents">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.ridge?', ridge bins and worker counts':''}${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me. Unknown measurements stay unknown.</p>
+      <p class="hint export-contents">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.ridge?', ridge bins and worker counts':''}${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
       <div class="panel">${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>
       <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details>
       <label>Model (optional)<input id="i_model" maxlength="120" value="${esc(run.model||'')}" placeholder="Model name"></label>
@@ -1787,6 +1799,7 @@ async function importRun(){
       worker_bins:run.worker_bins||null,commit_bins:run.commit_bins||null,
       visibility:'private',started_at:run.started||null,created_at:new Date().toISOString()};
     $('import-card-preview').innerHTML=runCard(preview,false,0,{preview:true});
+    if(typeof GrinderContract==='object'&&GrinderContract.mountRunMaps) GrinderContract.mountRunMaps($('import-card-preview'));
   }
   editFields.forEach(key=>$(key).addEventListener('input',()=>{saveImportEdits();paintImportPreview()}));
   paintImportPreview();
@@ -1980,7 +1993,7 @@ async function route(){ account.recover();
   if(IDENTITY_SETUP)return viewIdentitySetup();
   restoreImport();
   if(await importRun()) return;
-  if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example|people|account)(=|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
+  if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example|people|account|connect)(=|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
   const q=new URLSearchParams(location.search);
   if(q.has('example')){
     if(q.get('example')==='share') return GrinderExample.viewShare();
@@ -1996,6 +2009,7 @@ async function route(){ account.recover();
   if(q.has('comparison')){setPrimarySection('mine');return progress.detail(q.get('comparison'));}
   if(q.has('people')){setPrimarySection('feed');return people.discover(q.get('q')||'');}
   if(q.has('account')){return account.view();}
+  if(q.has('connect')){if(connect)return connect.view();return account.view();}
   if(q.has('following')){setPrimarySection('feed');return social.following();}
   if(q.has('inbox')){setPrimarySection('inbox');return social.inbox();}
   if(q.has('crews')){setPrimarySection('community');return social.crews();}

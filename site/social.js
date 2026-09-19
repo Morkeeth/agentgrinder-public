@@ -275,7 +275,7 @@ window.GrinderSocial = function ({
   async function following() {
     start(
       "Following",
-      "Recent public runs from people you chose to follow. Follow works before they post.",
+      "Latest public runs from people you follow. Follow before they post; Responses keeps ACK and reply returns.",
       "feed",
     );
     if (!signedIn()) return;
@@ -305,7 +305,7 @@ window.GrinderSocial = function ({
           .limit(50),
       );
       if (runs.length) {
-        byId("social-body").innerHTML = await renderRuns(runs);
+        byId("social-body").innerHTML = responseReturnBar() + await renderRuns(runs);
         return;
       }
       const people = await result(
@@ -1303,10 +1303,10 @@ window.GrinderSocial = function ({
     };
   }
 
-  async function agents() {
+  async function agents(opts = {}) {
     start(
       "Your agents",
-      "Give each contributor an identity and only the access it needs.",
+      "Give each contributor an identity and only the access it needs. Private automatic upload uses Connect.",
     );
     if (!signedIn()) return;
     try {
@@ -1324,7 +1324,7 @@ window.GrinderSocial = function ({
               `<article class="card"><h3><a href="/?agent=${a.id}">${esc(a.name)}</a></h3><p>Agent · ${esc(a.visibility)}</p><button data-grant="${a.id}">Manage access</button><div id="access-${a.id}"></div></article>`,
           )
           .join("") +
-        '<form id="create-agent" class="panel reply-form"><label>Agent name<input name="name" required maxlength="80"></label><label>Profile visibility<select name="visibility"><option value="private">Private</option><option value="public">Public</option></select></label><button>Create agent profile</button></form>';
+        '<form id="create-agent" class="panel reply-form"><label>Agent name<input name="name" required maxlength="80" placeholder="Grok Bot"></label><label>Profile visibility<select name="visibility"><option value="private" selected>Private</option><option value="public">Public</option></select></label><button>Create agent profile</button></form>';
       byId("create-agent").onsubmit = async (e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -1339,7 +1339,7 @@ window.GrinderSocial = function ({
                 visibility: form.elements.visibility.value,
               }),
           );
-          await agents();
+          await agents(opts);
         } catch (error) {
           fail(error);
           form.querySelector("button").disabled = false;
@@ -1377,10 +1377,10 @@ window.GrinderSocial = function ({
         ["draft", "publish", "reply", "ack"]
           .map(
             (s) =>
-              `<label><input type="checkbox" name="scope" value="${s}" ${s === "draft" ? "checked" : ""}> ${s}</label>`,
+              `<label><input type="checkbox" name="scope" value="${s}" ${s === "draft" || s === "publish" ? "checked" : ""}> ${s}</label>`,
           )
           .join("") +
-        '</fieldset><fieldset><legend>Permitted audiences</legend><label><input type="checkbox" name="audience" value="private" checked> Private</label><label><input type="checkbox" name="audience" value="public"> Public · authorises outward actions without another click</label></fieldset><label>Expires in<select name="days"><option value="1">1 day</option><option value="7" selected>7 days</option><option value="30">30 days</option></select></label><p>Up to 60 actions per hour. You can revoke access at any time.</p><button>Grant selected access</button></form><div class="issued-token"></div>';
+        '</fieldset><fieldset><legend>Permitted audiences</legend><label><input type="checkbox" name="audience" value="private" checked> Only me (private)</label><label><input type="checkbox" name="audience" value="public"> Public · authorises outward actions without another click</label></fieldset><label>Expires in<select name="days"><option value="1">1 day</option><option value="7" selected>7 days</option><option value="30">30 days</option></select></label><p>Up to 60 actions per hour. You can revoke access at any time. Leave Public unchecked unless you mean it.</p><button>Grant selected access</button></form><div class="issued-token"></div>';
       slot.querySelectorAll("[data-revoke]").forEach(
         (button) =>
           (button.onclick = async () => {
@@ -1425,15 +1425,31 @@ window.GrinderSocial = function ({
             }),
           );
           const shown = slot.querySelector(".issued-token");
+          const paste = [
+            "# STRIVE agent credential (shown once)",
+            "export AGENTGRINDER_AGENT_TOKEN='" + issued.token + "'",
+            "# Kit or agent calls grinder_agent_action with this token.",
+            "# Default audience is Only me unless Public was checked above.",
+            "# After upload: open /?explore (Latest runs) or /?mine",
+          ].join("\n");
           shown.innerHTML =
-            '<p>Save this credential now. It is shown only here and is not saved in this browser.</p><input type="password" readonly aria-label="Agent credential"><button class="ghost">Copy credential</button><p>Give it to your agent as AGENTGRINDER_AGENT_TOKEN. Do not put it in a prompt or public Rig.</p>';
+            '<p>Save this credential now. It is shown only here and is not saved in this browser.</p><input type="password" readonly aria-label="Agent credential"><div class="account-actions"><button type="button" class="act blue" data-copy-token>Copy credential</button><button type="button" class="act" data-copy-paste>Copy one-paste setup</button></div><label>One-paste for your agent<textarea readonly rows="6" aria-label="One-paste setup"></textarea></label><p class="account-hint">Give it to your agent as AGENTGRINDER_AGENT_TOKEN. Do not put it in a prompt or public Rig. Claude preserves ridge on publish.</p>';
           shown.querySelector("input").value = issued.token;
-          shown.querySelector("button").onclick = async () => {
+          shown.querySelector("textarea").value = paste;
+          shown.querySelector("[data-copy-token]").onclick = async () => {
             try {
               await navigator.clipboard.writeText(issued.token);
               status("Credential copied.");
             } catch {
               status("Copy from the credential field.", true);
+            }
+          };
+          shown.querySelector("[data-copy-paste]").onclick = async () => {
+            try {
+              await navigator.clipboard.writeText(paste);
+              status("One-paste setup copied.");
+            } catch {
+              status("Copy from the setup field.", true);
             }
           };
         } catch (error) {

@@ -14,11 +14,12 @@ function duration(value){
  return minutes>=60?Math.floor(minutes/60)+'h '+minutes%60+'m':minutes+'m';
 }
 function metricStrip(run){
- return [
-  ['Session',duration(sessionSeconds(run))],
+ const cells=[
+  ['Session',sessionSeconds(run)==null?null:duration(sessionSeconds(run))],
   ['Turns',run.prompts??run.turns_typed??null],
   ['Tool calls',run.tool_calls??null],
- ].map(([label,value])=>[label,value==null?'Unknown':String(value)]);
+ ].filter(([,value])=>value!=null);
+ return cells.map(([label,value])=>[label,String(value)]);
 }
 function projectName(run){
  const value=typeof run.project==='string'?run.project.trim():'';
@@ -42,14 +43,20 @@ function codeFacts(run){
  return facts;
 }
 function storyFacts(run){
- return {project:projectName(run)||'Unknown',output:outputKind(run),code:codeFacts(run).join(' · ')||'Unknown'};
+ const project=projectName(run),code=codeFacts(run).join(' · ');return {project:project||null,output:outputKind(run),code:code||null};
+}
+function ridgeBasisLabel(basis){
+ if(basis==='wall-time')return'wall time';
+ if(basis==='turn-order')return'turn order';
+ if(basis==='call-index')return'call order';
+ return'unknown basis';
 }
 function traceSeries(run){
  const ridge=run.ridge,workers=run.worker_bins;
  if(Array.isArray(ridge)&&ridge.length>=40&&ridge.length<=60
   &&ridge.every(v=>Number.isSafeInteger(v)&&v>=0)
   &&Array.isArray(workers)&&workers.length===ridge.length){
-  return {values:ridge,label:run.ridge_basis==='wall-time'?'Tool calls over wall time':'Tool calls over call order'};
+  return {values:ridge,label:'Tool calls over '+ridgeBasisLabel(run.ridge_basis)};
  }
  const rhythm=run.rhythm;
  if(Array.isArray(rhythm)&&rhythm.length>1&&rhythm.length<=10000
