@@ -1,10 +1,12 @@
-"""Zero-run, manual-post and hosted-cutover contracts for the first-user journey."""
+"""Zero-run, Connect, My runs and deliberate-share contracts for the first-user journey."""
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = (ROOT / "site" / "index.html").read_text()
 PROGRESS = (ROOT / "site" / "progress.js").read_text()
+CONNECT = (ROOT / "site" / "connect.js").read_text()
+SOCIAL = (ROOT / "site" / "social.js").read_text()
 HOSTED = (ROOT / "docs" / "HOSTED-CUTOVER.md").read_text()
 GROK = (ROOT / "docs" / "GROK-PUSH.md").read_text()
 DRY_RUN = (ROOT / "scripts" / "check-hosted-config.mjs").read_text()
@@ -15,16 +17,43 @@ def test_fresh_signed_in_builder_lands_on_first_post_not_a_tour():
     assert "if(ME&&(await runCount())===0) return viewPost();" in route
     onboard = INDEX[INDEX.index("async function shouldOnboard(){") : INDEX.index("function stepBar(")]
     assert "runCount()" not in onboard
-    assert "Start with a private preview" in INDEX
+    assert "Start with a private preview" in INDEX or "Your first post defaults to Only me." in INDEX
     assert "python3 -m agentgrinder grind --harness cursor --push" in INDEX
     assert "Using Grok Bot?" in INDEX
 
 
-def test_zero_run_surfaces_explain_deliberate_save():
+def test_zero_run_surfaces_connect_and_deliberate_save():
     assert "Your first post defaults to Only me." in INDEX
     assert "Review the title, caption and audience" in INDEX
-    assert "Your first run starts with a private preview" in PROGRESS
+    assert "Your first run starts private" in PROGRESS
+    assert 'href="/?connect">Connect an agent</a>' in PROGRESS
+    assert "Private uploads appear here" in PROGRESS
+    assert "Share explicitly for public Latest runs" in PROGRESS
     assert "Grok Bot push guide" in PROGRESS
+
+
+def test_my_runs_hides_unknown_and_signs_in_with_github():
+    assert "Unknown" not in PROGRESS
+    assert "Sign in with GitHub" in PROGRESS
+    assert "signInGitHub" in PROGRESS
+    assert "signInGitHub:()=>signInWithGitHub()" in INDEX
+    assert "countBits" in PROGRESS
+
+
+def test_connect_primary_still_points_at_mine():
+    assert 'href="/?mine">See my runs</a>' in CONNECT
+    assert "Private uploads appear in" in CONNECT
+
+
+def test_private_run_offers_deliberate_audience_cta():
+    assert 'href="#run-audience">Choose who can see this</a>' in INDEX
+    assert "Private uploads stay in My runs until you deliberately choose Link or Public below." in INDEX
+
+
+def test_responses_signed_out_uses_github():
+    assert "Sign in with GitHub" in SOCIAL
+    assert "signInGitHub" in SOCIAL
+    assert "signInGitHub:()=>signInWithGitHub()" in INDEX
 
 
 def test_manual_post_names_its_duplicate_limit():

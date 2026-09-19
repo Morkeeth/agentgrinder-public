@@ -1,10 +1,18 @@
 /* Private returning-user journey: source runs, frozen comparisons, next practice. */
-window.GrinderProgress = function ({client: db, me, app, frame, status, signIn}) {
+window.GrinderProgress = function ({client: db, me, app, frame, status, signIn, signInGitHub}) {
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const $ = id => document.getElementById(id);
   const uuid = value => /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value || '');
-  const value = number => number == null ? 'Unknown' : esc(number);
-  const date = stamp => stamp && Number.isFinite(Date.parse(stamp)) ? new Date(stamp).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}) : 'Session time unknown';
+  const date = stamp => stamp && Number.isFinite(Date.parse(stamp)) ? new Date(stamp).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}) : null;
+  const value = number => number == null ? '—' : esc(number);
+  function countBits(run){
+    const bits=[];
+    if(run.prompts!=null) bits.push(esc(run.prompts)+' typed turns');
+    if(run.artifacts_produced!=null) bits.push(esc(run.artifacts_produced)+' artifacts');
+    if(run.commits!=null) bits.push(esc(run.commits)+' commits');
+    if(run.tool_calls!=null && !bits.length) bits.push(esc(run.tool_calls)+' tool calls');
+    return bits;
+  }
   const title = run => run.title || 'Untitled run';
   const audience = run => run.crew_shared ? 'Crew members' : ({private:'Only you',public:'Public',link:'Anyone with the link',anonymous:'Only you'}[run.visibility] || 'Only you');
   async function rows(query) {const result = await query; if(result.error) throw Error(result.error.message); return result.data || [];}
@@ -12,7 +20,7 @@ window.GrinderProgress = function ({client: db, me, app, frame, status, signIn})
     frame(null,null);
     app().innerHTML = (typeof myRunsTabs === 'function' ? myRunsTabs(active === 'runs' ? 'runs' : active === 'progress' ? 'progress' : 'practices') : `<nav class="social-nav" aria-label="My runs"><a href="/?mine" ${active==='runs'?'aria-current="page"':''}>My runs</a><a href="/?progress" ${active==='progress'?'aria-current="page"':''}>Progress</a><a href="/?practices">Practices</a></nav>`) + `<div class="head"><h1>${esc(heading)}</h1><span class="meta">Private to your account</span></div><section id="progress-body" aria-live="polite">Loading…</section>`;
     if(typeof setPrimarySection==='function') setPrimarySection('mine');
-    if(!me()) {$('progress-body').innerHTML='<div class="panel reply-form"><p>Sign in to see your own runs and progress. Shared runs stay on the public feed.</p><button id="progress-sign-in">Sign in</button></div>';$('progress-sign-in').onclick=signIn;return false;}
+    if(!me()) {$('progress-body').innerHTML='<div class="panel reply-form"><p>Sign in to see My runs. Private Connect uploads land here. Public Latest runs stay on the feed.</p><button type="button" class="act blue" id="progress-sign-in">Sign in with GitHub</button></div>';$('progress-sign-in').onclick=()=>{if(typeof signInGitHub==='function')signInGitHub();else if(typeof signIn==='function')signIn();};return false;}
     return true;
   }
   function fail(error) {status(GrinderContract.message(error),true);}
@@ -22,7 +30,9 @@ window.GrinderProgress = function ({client: db, me, app, frame, status, signIn})
   }
   async function ownRuns(offset=0) {return rows(db.from('runs').select('*').eq('profile_id',me().id).order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+99));}
   function runTile(run) {
-    return `<article class="history-run"><div class="history-trace">${GrinderContract.trace(run)}</div><div><small>${esc(run.harness || 'Harness unknown')} · ${esc(audience(run))}</small><h2><a href="/?run=${run.id}">${esc(title(run))}</a></h2><p>${esc(date(run.started_at))}</p><div class="history-counts"><span>${value(run.prompts)} typed turns</span><span>${value(run.artifacts_produced)} artifacts</span><span>${value(run.commits)} commits</span></div></div></article>`;
+    const when=date(run.started_at);
+    const bits=countBits(run);
+    return `<article class="history-run"><div class="history-trace">${GrinderContract.trace(run)}</div><div><small>${esc(run.harness || 'Coding agent')} · ${esc(audience(run))}</small><h2><a href="/?run=${run.id}">${esc(title(run))}</a></h2>${when?`<p>${esc(when)}</p>`:''}${bits.length?`<div class="history-counts">${bits.map(b=>`<span>${b}</span>`).join('')}</div>`:''}</div></article>`;
   }
   async function historyView() {
     if(!start('My runs','runs'))return;
@@ -37,7 +47,7 @@ window.GrinderProgress = function ({client: db, me, app, frame, status, signIn})
         const f=$('history-filter').elements;
         const filtered=loaded.filter(r=>(!f.query.value || [r.title,r.project].join(' ').toLowerCase().includes(f.query.value.toLowerCase()))&&(!f.harness.value||r.harness===f.harness.value)&&(!f.audience.value||(f.audience.value==='crew'?r.crew_shared:r.visibility===f.audience.value)));
         $('history-count').textContent=`${filtered.length} shown · ${loaded.length} loaded${more?' · older runs available':''}`;
-        $('history-list').innerHTML=filtered.map(runTile).join('')||`<div class="panel reply-form"><h2>${loaded.length?'No matching runs':'Your first run starts with a private preview'}</h2><p>${loaded.length?'Change the filters or load older runs.':'On the machine where the session happened, run the Cursor capture command below. Review the card, write its caption and output link, then deliberately choose Only me, Link or Public.'}</p>${loaded.length?'':'<div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span></div><div class="cta"><a class="act blue" href="/?post">Open first-post help</a><a class="act" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Grok Bot push guide</a></div>'}</div>`;
+        $('history-list').innerHTML=filtered.map(runTile).join('')||`<div class="panel reply-form"><h2>${loaded.length?'No matching runs':'Your first run starts private'}</h2><p>${loaded.length?'Change the filters or load older runs.':'Connect an agent for automatic Only-me upload, or capture a session and choose an audience deliberately. Private uploads appear here. Share explicitly for public Latest runs.'}</p>${loaded.length?'':'<div class="cta"><a class="act blue" href="/?connect">Connect an agent</a><a class="act" href="/?post">Post a run</a><a class="act" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Grok Bot push guide</a></div>'}</div>`;
       }
       function harnessOptions(){const select=$('history-filter').elements.harness, selected=select.value;select.innerHTML='<option value="">All harnesses</option>'+[...new Set(loaded.map(r=>r.harness).filter(Boolean))].sort().map(h=>`<option>${esc(h)}</option>`).join('');select.value=selected;}
       harnessOptions();render();bind('history-filter',async()=>render());
