@@ -96,6 +96,7 @@ def parse_export(path):
     sample = False
     typed = 0
     tool_calls = 0
+    tools_per_turn = []
     stamps = []
     for row in sitting:
         sample = sample or row.get("agentgrinder_sample") is True
@@ -103,17 +104,26 @@ def parse_export(path):
         text = message_text(message)
         if row.get("role") == "user" and "<timestamp>" in text and USER_QUERY.search(text):
             typed += 1
+            tools_per_turn.append(0)
             stamp = timestamp(text)
             if stamp:
                 stamps.append(stamp)
         elif row.get("role") == "assistant":
             content = message.get("content")
             if isinstance(content, list):
-                tool_calls += sum(
+                count = sum(
                     1
                     for block in content
                     if isinstance(block, dict) and block.get("type") == "tool_use"
                 )
+                tool_calls += count
+                if tools_per_turn:
+                    tools_per_turn[-1] += count
+    # Standalone kit: same turn-order bins as cursor_tree.ridge_from_turn_order.
+    # Only typed turns have timestamps; these bins make no wall-time claim.
+    ridge = [0] * 50
+    for index, count in enumerate(tools_per_turn):
+        ridge[min(49, index * 50 // typed)] += count
     return {
         "harness": "Grok Bot",
         "is_sample": True if sample else None,
@@ -123,6 +133,10 @@ def parse_export(path):
         "tool_calls": tool_calls,
         "started": min(stamps).isoformat() if stamps else None,
         "rhythm": [1] * typed,
+        "ridge": ridge,
+        "ridge_basis": "turn-order",
+        "worker_bins": [0] * 50,
+        "commit_bins": [],
         "trace_basis": "typed-turn order; Grok Bot export has no top-level event timestamps",
     }
 
