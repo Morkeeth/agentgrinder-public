@@ -77,3 +77,25 @@ begin
  update grinder_agent_tokens set window_actions=window_actions+1 where id=capability.id;
  return output;
 end $function$;
+
+-- strava.grinder_profile_id and strava.grinder_issue_agent_token, read verbatim the same way on
+-- 2026-09-19. 007 wraps the issuer rather than replacing it, so tests run against this body.
+CREATE OR REPLACE FUNCTION strava.grinder_profile_id()
+ RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'strava', 'pg_temp'
+AS $function$ select id from strava.profiles where auth_uid = auth.uid() limit 1 $function$;
+
+CREATE OR REPLACE FUNCTION strava.grinder_issue_agent_token(agent uuid, allowed_scopes text[], allowed_audiences text[], expires timestamp with time zone)
+ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'strava', 'pg_temp'
+AS $function$
+declare secret text:='ag_'||gen_random_uuid()::text||gen_random_uuid()::text; token_id uuid;
+begin
+ perform 1 from profiles where id=grinder_profile_id() for update;
+ if not exists(select 1 from grinder_agents where id=agent and owner_id=grinder_profile_id()) then raise exception 'Only the agent owner can grant access'; end if;
+ if (select count(*) from grinder_agent_tokens where agent_id=agent and not revoked and expires_at>now())>=5 then raise exception 'Revoke an existing token before issuing another (five active tokens per agent)'; end if;
+ if allowed_scopes is null or cardinality(allowed_scopes)<1 or not allowed_scopes <@ array['draft','publish','reply','ack']::text[] then raise exception 'Choose valid action scopes'; end if;
+ if allowed_audiences is null or cardinality(allowed_audiences)<1 or not allowed_audiences <@ array['private','public']::text[] then raise exception 'Choose private or public audiences'; end if;
+ if expires is null or expires<=now() or expires>now()+interval '90 days' then raise exception 'Choose an expiry within 90 days'; end if;
+ insert into grinder_agent_tokens(agent_id,token_hash,scopes,audiences,expires_at)
+ values(agent,encode(sha256(convert_to(secret,'UTF8')),'hex'),allowed_scopes,allowed_audiences,expires) returning id into token_id;
+ return jsonb_build_object('id',token_id,'token',secret,'expires_at',expires);
+end $function$;

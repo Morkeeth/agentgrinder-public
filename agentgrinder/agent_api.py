@@ -13,7 +13,9 @@ from .push import export_run
 
 RUN_FIELDS = {"title","project","harness","turns_typed","duration_s","tool_calls","shell_calls","files_touched",
               "commits","claims","claims_verified","artifacts_produced","started","visibility",
-              "rhythm","route","schema_version","measurement_revision","baseline_revision","note","trace_basis"}
+              "rhythm","route","schema_version","measurement_revision","baseline_revision","note","trace_basis",
+              # STRIVE run shape, accepted by the database since migration 006.
+              "ridge","worker_bins","commit_bins","ridge_basis","ridge_wall_seconds","ridge_tool_calls","wall_time_s","model"}
 
 
 def run_payload(run: dict, visibility: str = "private", *, title: str | None = None, note: str | None = None) -> dict:
@@ -77,6 +79,12 @@ class AgentClient:
         if result.get('action')!=action:raise RuntimeError(f'Agent endpoint returned a mismatched action; request {rid}.')
         safe=dict(id=result_id,action=action,request_id=rid)
         if actor_id:safe['agent_id']=actor_id
+        if action=='publish':
+            # Report the audience the server stored. A retry of a saved measurement returns the
+            # existing run, and its audience is never widened by the retry.
+            if not isinstance(result.get('existing'),bool) or result.get('visibility') not in ('private','close_friends','link','public','crew','anonymous'):
+                raise RuntimeError(f'Agent endpoint returned no stored audience; request {rid}.')
+            safe['existing']=result['existing'];safe['visibility']=result['visibility']
         return safe
 
 

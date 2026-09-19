@@ -153,9 +153,10 @@ begin
  else raise exception 'Unsupported agent action';
  end if;
  output=jsonb_build_object('id',result_id,'action',action,'agent_id',actor.id);
- -- On an idempotent return, say so and report the run's actual audience. A retry never widens
- -- the audience of the run it matched and never touches another owner's run.
- if existing then output=output||jsonb_build_object('existing',true,'visibility',(select visibility from runs where id=result_id)); end if;
+ -- Every publish reports whether it matched an existing run and the run's stored audience, so a
+ -- public request that resolves to an existing private run cannot claim it published publicly.
+ -- A retry never widens the audience of the run it matched and never touches another owner's run.
+ if action='publish' then output=output||jsonb_build_object('existing',existing,'visibility',(select visibility from runs where id=result_id)); end if;
  insert into grinder_agent_requests(token_id,request_id,fingerprint,response) values(capability.id,request_id,fingerprint,output);
  update grinder_agent_tokens set window_actions=window_actions+1 where id=capability.id;
  return output;

@@ -19,6 +19,9 @@ const sha = (s) => createHash("sha256").update(s, "utf8").digest("hex");
 await db.exec(`
 create role anon; create role authenticated;
 create schema strava;
+-- Supabase auth.uid() stand-in: the signed-in user comes from request.jwt.claim.sub.
+create schema auth;
+create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 create table strava.profiles(id uuid primary key, auth_uid uuid);
 create table strava.grinder_agents(id uuid primary key default gen_random_uuid(), owner_id uuid references strava.profiles(id),
   name text, rig_revision uuid, visibility text not null default 'private', created_at timestamptz not null default now());
@@ -117,7 +120,8 @@ const pubA = await token(agentA, { scopes: ["publish", "reply"], audiences: ["pr
   assert.deepEqual(run.ridge, RIDGE);
   assert.equal(run.ridge_tool_calls, 28);
   assert.equal(run.profile_id, OWNER_A);
-  assert.equal(out.existing, undefined);
+  assert.equal(out.existing, false);
+  assert.equal(out.visibility, "private", "the response reports the stored audience");
   console.log("publish persists ridge, turn-order basis and counts, private by default");
 }
 
@@ -151,8 +155,34 @@ const pubA = await token(agentA, { scopes: ["publish", "reply"], audiences: ["pr
   const outB = await act(tokB, "publish", strivePayload(REV(3)));
   const aRow = (await db.query("select id from strava.runs where profile_id=$1 and measurement_revision=$2", [OWNER_A, REV(3)])).rows[0];
   assert.notEqual(outB.id, aRow.id);
-  assert.equal(outB.existing, undefined);
+  assert.equal(outB.existing, false);
   console.log("another owner with the same measurement gets their own run");
+}
+
+// Comments: the reply scope. Identity is explicit (owner as author, agent as source actor).
+// The audience is the run's audience, never wider.
+{
+  const own = await act(pubA, "publish", strivePayload(REV(30)));
+  const r = await act(pubA, "reply", { run_id: own.id, body: "Tests green at bin 42." });
+  assert.equal(r.action, "reply");
+  const row = (await db.query("select author_id, source_actor_id, agent_name, body from strava.grinder_replies where id=$1", [r.id])).rows[0];
+  assert.deepEqual(row, { author_id: OWNER_A, source_actor_id: agentA, agent_name: "Grok Bot", body: "Tests green at bin 42." });
+  const bPrivate = (await db.query("select id from strava.runs where profile_id=$1 limit 1", [OWNER_B])).rows[0].id;
+  await refused(act(pubA, "reply", { run_id: bPrivate, body: "hi" }), /outside the granted audience/);
+  const bPublic = (await db.query("insert into strava.runs(profile_id,title,visibility) values($1,'B public','public') returning id", [OWNER_B])).rows[0].id;
+  const pub = await act(pubA, "reply", { run_id: bPublic, body: "Nice climb." });
+  assert.ok(pub.id, "a public agent with the public audience may reply to a public run");
+  const privAgent = await agent(OWNER_A);
+  const privAgentTok = await token(privAgent, { scopes: ["reply"], audiences: ["private", "public"] });
+  await refused(act(privAgentTok, "reply", { run_id: bPublic, body: "hi" }), /Make the agent profile public/);
+  const privAudience = await token(agentA, { scopes: ["reply"], audiences: ["private"] });
+  await refused(act(privAudience, "reply", { run_id: bPublic, body: "hi" }), /outside the granted audience/);
+  const noReply = await token(agentA, { scopes: ["publish"], audiences: ["private", "public"] });
+  await refused(act(noReply, "reply", { run_id: own.id, body: "hi" }), /scope|not granted|permission/i);
+  await refused(act(pubA, "reply", { run_id: own.id, body: { transcript: "raw" } }), /body must be text/);
+  const pubRun = await act(pubA, "publish", strivePayload(REV(31), { visibility: "public" }));
+  assert.equal(pubRun.visibility, "public", "an allowed public publish reports public");
+  console.log("reply scope: explicit identity, run audience enforced, public needs a public agent");
 }
 
 // Audience escalation, expiry, revocation, scopes.
@@ -213,5 +243,152 @@ const pubA = await token(agentA, { scopes: ["publish", "reply"], audiences: ["pr
   await refused(act(limited, "publish", strivePayload(REV(13))), /Hourly action limit/);
   console.log("per-token hourly limit enforced");
 }
+// ---------- 007: Connect tokens, thin wrappers over the deployed issuer ----------
+await db.exec(await readFile(new URL("../supabase/strava/007_agent_token_connect.sql", import.meta.url), "utf8"));
+{
+  const OWNER_C = "c1000000-0000-0000-0000-000000000003";
+  await db.query("insert into strava.profiles(id, auth_uid) values($1,$1)", [OWNER_C]);
+  const as = async (uid, sql, params = []) => {
+    await db.query("select set_config('request.jwt.claim.sub', $1, false)", [uid ?? ""]);
+    return (await db.query(sql, params)).rows[0].v;
+  };
+  const g = (role, fn) => db.query(`select has_function_privilege($1, $2, 'execute') as ok`, [role, fn]).then((r) => r.rows[0].ok);
+  for (const fn of ["strava.agent_token_create(text)", "strava.agent_token_list()", "strava.agent_token_revoke(uuid)"]) {
+    assert.equal(await g("anon", fn), false, `${fn} is not callable signed out`);
+    assert.equal(await g("authenticated", fn), true);
+    const meta = (await db.query("select prosecdef, proconfig from pg_proc where oid=$1::regprocedure", [fn])).rows[0];
+    assert.equal(meta.prosecdef, true);
+    assert.ok(meta.proconfig.some((c) => c.startsWith("search_path=") && c.includes("strava")));
+  }
+  await refused(as(null, "select strava.agent_token_create('x') as v"), /Sign in/);
+  await refused(as(OWNER_C, "select strava.agent_token_create('  ') as v"), /1 to 80/);
+  await refused(as(OWNER_C, "select strava.agent_token_create($1) as v", ["x".repeat(81)]), /1 to 80/);
+
+  const made = await as(OWNER_C, "select strava.agent_token_create(' Grok laptop ') as v");
+  assert.match(made.token, /^ag_[0-9a-f-]{72}$/);
+  assert.equal(made.label, "Grok laptop");
+  assert.equal(made.token_prefix, made.token.slice(0, 8));
+  assert.deepEqual(made.scopes, ["draft", "publish"]);
+  assert.deepEqual(made.audiences, ["private"], "Connect tokens are owner-private");
+  const stored = (await db.query("select * from strava.grinder_agent_tokens where id=$1", [made.id])).rows[0];
+  assert.equal(stored.token_hash, sha(made.token), "only the hash is stored");
+  assert.ok(!JSON.stringify(stored).includes(made.token), "no stored column holds the secret");
+  const days = (new Date(stored.expires_at) - Date.now()) / 864e5;
+  assert.ok(days > 29 && days <= 30, "30 day expiry");
+
+  const listed = await as(OWNER_C, "select strava.agent_token_list() as v");
+  assert.equal(listed.length, 1);
+  assert.equal(listed[0].id, made.id);
+  assert.ok(!("token" in listed[0]) && !JSON.stringify(listed).includes(made.token), "list never returns the secret");
+  assert.deepEqual(await as(OWNER_B, "select strava.agent_token_list() as v"), [], "another owner sees none of them");
+
+  // The minted token uploads a private run and cannot widen, reply or ACK.
+  const up = await act(made.token, "publish", strivePayload(REV(40)));
+  assert.equal(up.visibility, "private");
+  assert.equal(up.existing, false);
+  assert.equal((await db.query("select profile_id from strava.runs where id=$1", [up.id])).rows[0].profile_id, OWNER_C);
+  await refused(act(made.token, "publish", strivePayload(REV(41), { visibility: "public" })), /audience/i);
+  await refused(act(made.token, "reply", { run_id: up.id, body: "hi" }), /scope|not granted|permission/i);
+
+  // One Connect agent is reused, and five active tokens is the cap.
+  for (let k = 2; k <= 5; k++) await as(OWNER_C, "select strava.agent_token_create($1) as v", ["t" + k]);
+  assert.equal((await db.query("select count(*)::int as n from strava.grinder_agents where owner_id=$1 and name='Connect'", [OWNER_C])).rows[0].n, 1);
+  await refused(as(OWNER_C, "select strava.agent_token_create('six') as v"), /five active/);
+  // Regression from the independent 007 review: renaming the agent (an owner-granted update)
+  // once hid every token from the list and reset the cap to allow a sixth.
+  await db.query("update strava.grinder_agents set name='Renamed' where owner_id=$1 and name='Connect'", [OWNER_C]);
+  assert.equal((await as(OWNER_C, "select strava.agent_token_list() as v")).length, 5, "list survives an agent rename");
+  await refused(as(OWNER_C, "select strava.agent_token_create('six') as v"), /five active/);
+  // Tokens from the advanced grant form carry no label and stay out of Connect.
+  const advanced = await agent(OWNER_C);
+  await token(advanced, { scopes: ["reply"], audiences: ["private"] });
+  assert.equal((await as(OWNER_C, "select strava.agent_token_list() as v")).length, 5);
+
+  await refused(as(OWNER_B, "select strava.agent_token_revoke($1) as v", [made.id]), /Token not found/);
+  assert.equal(await as(OWNER_C, "select strava.agent_token_revoke($1) as v", [made.id]), true);
+  await refused(act(made.token, "publish", strivePayload(REV(42))), /Agent access is unavailable/);
+  assert.equal((await as(OWNER_C, "select strava.agent_token_list() as v")).find((t) => t.id === made.id).revoked, true);
+  assert.ok((await as(OWNER_C, "select strava.agent_token_create('after revoke') as v")).token, "revoking frees a slot");
+  await refused(as(OWNER_C, "select strava.agent_token_revoke($1) as v", [randomUUID()]), /Token not found/);
+  console.log("Connect tokens: owner-private defaults, hash only, capped, revocable, usable for private upload");
+
+  // POST /api/agent/runs, end to end: the handler logic against this database through a
+  // PostgREST stand-in. The server adds no power: same token, same RPC, anon key only.
+  const { upload } = await import("../server/agent-upload.mjs");
+  const calls = [];
+  const fakeRest = async (url, init) => {
+    calls.push({ url, init });
+    const { token, action, payload, request_id } = JSON.parse(init.body);
+    try {
+      const v = await act(token, action, payload, request_id);
+      return { ok: true, status: 200, json: async () => v };
+    } catch (e) {
+      return { ok: false, status: 400, json: async () => ({ message: e.message }) };
+    }
+  };
+  const cfg = { SB_URL: "https://example.supabase.co", SB_KEY: "sb_publishable_test" };
+  const fresh = await as(OWNER_C, "select strava.agent_token_create('http') as v").catch(async () => {
+    // The cap is full from the checks above: free one slot first.
+    const first = (await as(OWNER_C, "select strava.agent_token_list() as v")).find((t) => !t.revoked);
+    await as(OWNER_C, "select strava.agent_token_revoke($1) as v", [first.id]);
+    return as(OWNER_C, "select strava.agent_token_create('http') as v");
+  });
+  const H = (extra = {}) => ({ authorization: "Bearer " + fresh.token, ...extra });
+  const key = randomUUID();
+  const r1 = await upload({ method: "POST", headers: H({ "idempotency-key": key }), body: strivePayload(REV(50)) }, cfg, fakeRest);
+  assert.equal(r1.status, 200);
+  assert.deepEqual(Object.keys(r1.body).sort(), ["existing", "id", "request_id", "visibility"]);
+  assert.equal(r1.body.visibility, "private");
+  assert.equal(r1.body.existing, false);
+  assert.equal(r1.body.request_id, key);
+  assert.equal(calls[0].url, "https://example.supabase.co/rest/v1/rpc/grinder_agent_action");
+  assert.equal(calls[0].init.headers["Content-Profile"], "strava");
+  assert.equal(calls[0].init.headers.apikey, "sb_publishable_test");
+  assert.ok(!("authorization" in calls[0].init.headers) && !("Authorization" in calls[0].init.headers), "no service role or user JWT is forwarded");
+  const r2 = await upload({ method: "POST", headers: H(), body: strivePayload(REV(50), { visibility: "public" }) }, cfg, fakeRest);
+  assert.equal(r2.status, 403, "a Connect token cannot ask for public");
+  const r3 = await upload({ method: "POST", headers: H(), body: strivePayload(REV(50)) }, cfg, fakeRest);
+  assert.deepEqual([r3.status, r3.body.id, r3.body.existing, r3.body.visibility], [200, r1.body.id, true, "private"]);
+  const r4 = await upload({ method: "POST", headers: H(), body: strivePayload(REV(51), { transcript: "raw" }) }, cfg, fakeRest);
+  assert.equal(r4.status, 400);
+  assert.match(r4.body.error, /Unsupported public field: transcript/);
+  assert.ok(!JSON.stringify(r4.body).includes(fresh.token), "errors never echo the token");
+  assert.equal((await upload({ method: "GET", headers: H(), body: null }, cfg, fakeRest)).status, 405);
+  assert.equal((await upload({ method: "POST", headers: {}, body: {} }, cfg, fakeRest)).status, 401);
+  assert.equal((await upload({ method: "POST", headers: { authorization: "Bearer nope" }, body: {} }, cfg, fakeRest)).status, 401);
+  const forged = "ag_" + randomUUID() + randomUUID();
+  assert.equal((await upload({ method: "POST", headers: { authorization: "Bearer " + forged }, body: strivePayload(REV(52)) }, cfg, fakeRest)).status, 401);
+  assert.equal((await upload({ method: "POST", headers: H({ "content-length": "70000" }), body: {} }, cfg, fakeRest)).status, 413);
+  // Regression from the independent review: no content-length header, 70 KB parsed body.
+  const before = calls.length;
+  assert.equal((await upload({ method: "POST", headers: H(), body: { title: "x", note: "y".repeat(70000) } }, cfg, fakeRest)).status, 413);
+  assert.equal((await upload({ method: "POST", headers: H(), body: { title: "x", note: "é".repeat(33000) } }, cfg, fakeRest)).status, 413, "counts UTF-8 bytes, not characters");
+  assert.equal(calls.length, before, "an oversized body never reaches the database");
+  assert.equal((await upload({ method: "POST", headers: H(), body: [1] }, cfg, fakeRest)).status, 400);
+  assert.equal((await upload({ method: "POST", headers: H({ "idempotency-key": "x" }), body: {} }, cfg, fakeRest)).status, 400);
+  const down = await upload({ method: "POST", headers: H(), body: strivePayload(REV(53)) }, cfg, async () => { throw new Error("net"); });
+  assert.equal(down.status, 503);
+  console.log("POST /api/agent/runs: private upload, retry returns existing, refusals mapped, no token echo");
+
+  // The Grok kit's exact upload payload (templates/grokbot/post-agent-run/scripts/upload.py)
+  // passes the database check and draws: turn-order ridge, private, retry returns existing.
+  const { execFileSync } = await import("node:child_process");
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const kit = new URL("../templates/grokbot/post-agent-run/", import.meta.url).pathname;
+  const rows = (await readFile(kit + "samples/sample_grokbot_bot_activity.jsonl", "utf8")).trim().split("\n")
+    .map((l) => { const r = JSON.parse(l); delete r.agentgrinder_sample; return JSON.stringify(r); });
+  const exportPath = mkdtempSync(tmpdir() + "/strive-kit-") + "/export.jsonl";
+  writeFileSync(exportPath, rows.join("\n") + "\n");
+  const kitPayload = JSON.parse(execFileSync("python3", [kit + "scripts/upload.py", exportPath, "--dry-run"], { encoding: "utf8" })).payload;
+  const k1 = await upload({ method: "POST", headers: H(), body: kitPayload }, cfg, fakeRest);
+  assert.equal(k1.status, 200, JSON.stringify(k1.body));
+  const kitRun = (await db.query("select ridge_basis, visibility, jsonb_array_length(ridge) as bins from strava.runs where id=$1", [k1.body.id])).rows[0];
+  assert.deepEqual(kitRun, { ridge_basis: "turn-order", visibility: "private", bins: 50 });
+  const k2 = await upload({ method: "POST", headers: H(), body: kitPayload }, cfg, fakeRest);
+  assert.deepEqual([k2.body.id, k2.body.existing], [k1.body.id, true]);
+  console.log("Grok kit payload uploads as a private turn-order run; rerun returns the saved run");
+}
+
 
 console.log("\nAGENT PUBLISH: all checks passed");
