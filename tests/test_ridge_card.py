@@ -185,7 +185,7 @@ def test_og_card_uses_ridge_tool_calls_when_tool_calls_is_zero():
     rendered = _og_truth()
     assert rendered["toolCalls"] == "98"
     assert rendered["toolCallsEffortOnly"] == "98"
-    assert rendered["codeActivity"] == "98 tool calls"
+    assert rendered["codeActivity"] is None  # The tool count already appears in activity.
     assert rendered["project"] == "strava night review"
     assert rendered["titleHeight"] is not None and rendered["titleHeight"] >= 54
 
@@ -196,4 +196,7 @@ def test_og_card_draws_no_flat_line_when_ridge_is_null():
     assert rendered["nullHasPolyline"] is False
     assert rendered["nullHasPolygon"] is False
     joined = " ".join(rendered["nullTexts"]).lower()
-    assert "not recorded" in joined
+    assert "not recorded" not in joined
+    assert "unknown" not in joined
+    assert "Session" not in rendered["nullTexts"]
+    assert "6" in rendered["nullTexts"] and "28" in rendered["nullTexts"]
