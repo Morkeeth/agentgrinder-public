@@ -65,7 +65,7 @@ def test_invalid_id_stays_a_plain_404_and_never_queries():
     assert out["fetches"] == 0
 
 
-def test_public_run_page_is_unchanged():
+def test_public_run_page_stays_public():
     row = {"id": MISSING, "title": "Fixture public run", "caption": "one line", "visibility": "public",
            "profiles": {"handle": "fixture-builder"}}
     out = serve(MISSING, [row])
@@ -86,3 +86,65 @@ def test_a_non_public_row_that_reaches_the_handler_still_gets_the_neutral_page()
         assert leak not in out["body"]
     # Byte-identical to the missing page, so the two cases cannot be told apart.
     assert out["body"] == serve(MISSING, [])["body"]
+
+
+def body(page):
+    return page.split("<body>", 1)[1].split("</body>", 1)[0]
+
+
+def test_neutral_body_has_one_message_without_repeating_the_og_card():
+    page = serve(MISSING, [])["body"]
+    visible = body(page)
+    assert visible.count("This run is private on STRIVE") == 1
+    assert "<img" not in visible
+    assert 'property="og:image"' in page
+    assert 'content="summary_large_image"' in page
+    assert 'aria-label="STRIVE home"' in visible
+    assert 'href="/?run=' + MISSING + '"' in visible
+
+
+def test_public_page_exposes_recorded_metrics_as_readable_html():
+    row = {"id": MISSING, "visibility": "public", "title": "A real sitting",
+           "caption": "Built the import.\nThen checked the save.",
+           "prompts": 6, "tool_calls": 0, "ridge_tool_calls": 28,
+           "ridge_basis": "wall-time", "ridge_wall_seconds": 900,
+           "duration_s": 600, "files_touched": 0, "commits": 2,
+           "project": "session", "profiles": {"handle": "builder"}}
+    visible = body(serve(MISSING, [row])["body"])
+    assert '<dt>Session</dt><dd>15m</dd>' in visible
+    assert '<dt>Turns</dt><dd>6</dd>' in visible
+    assert '<dt>Tool calls</dt><dd>28</dd>' in visible
+    assert '<dt>Files touched</dt><dd>0</dd>' in visible
+    assert '<dt>Commits</dt><dd>2</dd>' in visible
+    assert "Built the import.\nThen checked the save." in visible
+    assert "@builder" in visible
+    assert 'aria-label="STRIVE home"' in visible
+    assert 'width="1200" height="630"' in visible  # Authentic share image is retained.
+
+
+def test_unrecorded_metrics_are_not_guessed_and_recorded_zero_is_preserved():
+    row = {"id": MISSING, "visibility": "public", "duration_s": None,
+           "prompts": 0, "tool_calls": None, "files_touched": None, "commits": -1,
+           "ridge_basis": "turn-order", "ridge_wall_seconds": 120}
+    visible = body(serve(MISSING, [row])["body"])
+    assert '<dt>Turns</dt><dd>0</dd>' in visible
+    for label in ("Session", "Tool calls", "Files touched", "Commits"):
+        assert f'<dt>{label}</dt>' not in visible
+    assert "Unknown" not in visible
+
+
+def test_public_html_escapes_fields_and_rejects_unsafe_output_links():
+    row = {"id": MISSING, "visibility": "public", "title": '<script>alert(1)</script>',
+           "caption": '<img src=x onerror="alert(1)">', "project": '<svg onload="evil()">',
+           "harness": '<iframe>', "profiles": {"handle": '<script>bad()</script>'},
+           "output_url": 'javascript:alert(1)', "prompts": '<img src=x>'}
+    page = serve(MISSING, [row])["body"]
+    assert '<script>' not in page
+    assert '<iframe>' not in page
+    assert '<svg onload' not in page
+    assert '&lt;script&gt;alert(1)&lt;/script&gt;' in page
+    assert 'javascript:' not in page
+    assert 'View linked output' not in page
+    row["output_url"] = 'https://example.com/output?a=1&b=2'
+    visible = body(serve(MISSING, [row])["body"])
+    assert 'href="https://example.com/output?a=1&amp;b=2"' in visible
