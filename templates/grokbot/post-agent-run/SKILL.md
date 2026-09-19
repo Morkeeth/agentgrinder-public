@@ -1,6 +1,6 @@
 ---
 name: post-agent-run
-description: Turn an explicitly selected Grok Bot export into a private STRIVE card preview. Use when the owner wants to share a real agent run. Stop before Save run so the owner reviews the card, account, destination and audience.
+description: Turn an explicitly selected Grok Bot export into a private STRIVE card preview, or save it as a private run with the owner's Connect token. Use when the owner wants to share a real agent run. Stop before Save run so the owner reviews the card, account, destination and audience.
 ---
 
 This directory is the complete STRIVE Grok Bot kit. It needs Python 3 and no parent repository,
@@ -28,9 +28,10 @@ performs no network request and prints only the selected-file receipt, allowlist
 and private import URL. It does not publish or save.
 
 Grok Bot activity stays labelled `bot activity`. Typed-turn timestamps establish the start and
-sitting boundary only. They do not timestamp tool events, so duration and ridge stay NULL. File
-writes and completed commits also stay unknown when the export cannot establish them. Never
-invent missing metrics.
+sitting boundary only. They do not timestamp tool events, so duration stays NULL. The ridge is
+drawn in turn order: 50 bins, tool calls placed by the typed turn they followed, with
+`ridge_basis: "turn-order"`. It makes no wall-time claim. File writes and completed commits stay
+unknown when the export cannot establish them. Never invent missing metrics.
 
 Long `#import` hashes can be truncated in bot or chat output. In that case, create an exact browser
 handoff without printing the URL:
@@ -41,10 +42,25 @@ python3 /absolute/path/to/post-agent-run/scripts/preview.py \
   --handoff /tmp/strive-preview-url.txt
 ```
 
-Pass that file directly to the browser workflow. Do not reconstruct a truncated hash. Adapters
-that provide a ridge without `worker_bins` should wait for
-[worker bin default PR #42](https://github.com/Morkeeth/agentgrinder-public/pull/42). This Grok
-adapter must keep ridge NULL rather than adding placeholders.
+Pass that file directly to the browser workflow. Do not reconstruct a truncated hash. This
+adapter always sends `worker_bins` with its ridge (all zero, because the export shows one bot).
+
+## Automatic private upload
+
+If the owner created a token with **Connect** on STRIVE and set it as `STRIVE_AGENT_TOKEN`, the
+bot can save the run directly as a private run:
+
+```sh
+python3 /absolute/path/to/post-agent-run/scripts/upload.py \
+  /exact/path/to/selected-grokbot-export.jsonl --dry-run
+python3 /absolute/path/to/post-agent-run/scripts/upload.py \
+  /exact/path/to/selected-grokbot-export.jsonl
+```
+
+Run `--dry-run` first and check the payload: metrics only, no prompt or reply text. The token can
+only save private runs, so this never publishes. The helper refuses the bundled sample. Running it
+again for the same export returns the run already saved (`"status": "already saved"`), never a
+duplicate. Report the `visibility` the server returned. Never print or store the token.
 
 Show the card privately. Ask the owner to write the title, short caption and optional output link.
 Do not derive them from private prompt text. Stop before **Save run**. A request to capture,
