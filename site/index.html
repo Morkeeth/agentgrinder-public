@@ -579,7 +579,7 @@ const challenges=GrinderChallenges({client:sb,me:()=>ME,app:()=>$('app'),frame,s
 // Origin remains a post-sign-in repository connection, never an Auth provider.
 const originConnection=GrinderOrigin.create();
 const account=GrinderAccount({auth,me:()=>ME,app:()=>$('app'),frame,status,providersEnabled:PROVIDERS_ENABLED,origin:originConnection,signIn:showSignIn,onProfileChange:p=>{ME=p;refreshAuth();}});
-const connect=typeof GrinderConnect==='function'?GrinderConnect({db:sb,me:()=>ME,app:()=>$('app'),frame,status,signIn:showSignIn}):null;
+const connect=typeof GrinderConnect==='function'?GrinderConnect({social,me:()=>ME,app:()=>$('app'),frame,status,signInGitHub:()=>signInWithGitHub(),signIn:showSignIn}):null;
 
 // THE MARK IS THE GRIND, drawn small.
 //
@@ -852,7 +852,7 @@ function parseCoachExperiment(r){
     const friction=grab('friction:');
     const instruction=grab('experiment:')||lines[0]||'';
     const expected=grab('look for:');
-    if(instruction) exp={title:instruction.slice(0,160), instruction, expected:expected||'Record what you observed. Unknown stays unknown.', friction, consequence:grab('consequence:'), evidence:''};
+    if(instruction) exp={title:instruction.slice(0,160), instruction, expected:expected||'Record what you observed.', friction, consequence:grab('consequence:'), evidence:''};
   }
   return exp && typeof GrinderContract==='object' && GrinderContract.rejectPaths ? GrinderContract.rejectPaths(exp) : exp;
 }
@@ -861,7 +861,7 @@ function coachBlock(r){
   const v=typeof GrinderContract==='object'&&GrinderContract.rejectPaths?GrinderContract.rejectPaths(r.coach_verdict):r.coach_verdict;
   const plan=typeof GrinderContract==='object'&&GrinderContract.rejectPaths?GrinderContract.rejectPaths(r.coach_plan):r.coach_plan;
   const n=r.coach_tool_calls, pv=r.progress_verdict;
-  if(!v&&!pv) return `<div class="coach-soon" role="note"><span class="run-story-label">Coaching</span><p>Coming soon. No score is invented here.</p></div>`;
+  if(!v&&!pv) return `<div class="coach-soon" role="note"><span class="run-story-label">Coaching</span><p>Coming soon. Short notes on what to try next after a run.</p></div>`;
   const who=v?`<div class="grp">the coach${n?` · verdict produced by <b>${esc(String(n))}</b> tool call${n==1?'':'s'}`:''}</div>`:'';
   const para=v?`<div class="para">${esc(String(v))}</div>`:'';
   const items=plan?String(plan).split('\n').filter(x=>x.trim()).map(x=>`<li>${esc(x)}</li>`).join(''):'';
@@ -936,29 +936,22 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   };
   const sessionText=()=>{
     const seconds=sessionSeconds();
-    if(seconds==null)return 'Unknown';
+    if(seconds==null)return null;
     if(seconds<60)return `${Math.round(seconds)}s`;
     const minutes=Math.round(seconds/60);
     return minutes>=60?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${minutes}m`;
   };
   const metricStrip=()=>{
     const turns=r.prompts??r.turns_typed??null;
-    const peak=Array.isArray(r.ridge)&&r.ridge.length?Math.max(0,...r.ridge):null;
+    const session=sessionText();
     const cells=[
-      ['Session',sessionText(),'Measured elapsed or wall time when the capture recorded it'],
-      ['Turns',turns,'Typed human turns in the selected sitting'],
-      ['Tool calls',r.tool_calls,'Tool requests recorded in the session'],
-    ];
-    const html=cells.map(([label,value,title])=>{
-      const unknown=value==null||value==='Unknown';
-      return `<div class="run-metric${unknown?' is-unknown':''}" title="${esc(title)}"><dt>${esc(label)}</dt><dd class="num">${unknown?'Unknown':esc(value)}</dd></div>`;
-    }).join('');
-    const ranked=[];
-    if(peak!=null&&peak>0) ranked.push({rank:1,label:'Peak tools in one bin',value:peak,criterion:'Highest ridge bin for the named basis (turn order, call order, or wall time). Activity shape, not code quality.'});
-    if(r.tool_calls!=null) ranked.push({rank:ranked.length+1,label:'Tool calls',value:r.tool_calls,criterion:'Total tool requests in the selected sitting.'});
-    if(turns!=null) ranked.push({rank:ranked.length+1,label:'Typed turns',value:turns,criterion:'Human turns that opened a timestamped query.'});
-    const rankHtml=ranked.length?`<ol class="run-rank" aria-label="Ranked measured activity">${ranked.map(item=>`<li><span class="run-rank-n">${item.rank}</span><span class="run-rank-body"><strong>${esc(item.label)}</strong> <b class="num">${esc(item.value)}</b><small>${esc(item.criterion)}</small></span></li>`).join('')}</ol>`:'';
-    return `<div class="run-story-label">Effort</div><dl class="run-metrics" aria-label="Recorded effort">${html}</dl>${rankHtml}<p class="run-metrics-note">Ranks name measured activity. They are not a quality score. Unknown means not measured.</p>`;
+      session!=null?['Session',session]:null,
+      turns!=null?['Turns',turns]:null,
+      r.tool_calls!=null?['Tool calls',r.tool_calls]:null,
+    ].filter(Boolean);
+    if(!cells.length) return '';
+    const html=cells.map(([label,value])=>`<div class="run-metric"><dt>${esc(label)}</dt><dd class="num">${esc(value)}</dd></div>`).join('');
+    return `<div class="run-story-label">Effort</div><dl class="run-metrics" aria-label="Recorded effort">${html}</dl>`;
   };
   const selfAck=ME&&ME.id===r.profile_id;
   const ackBtn=selfAck?'':`<button class="act kudo ${acked?'on':''}" data-run="${r.id}" data-to="${r.profile_id}">${acked?'ACKed':'ACK'}${count?' <span class="n num">'+count+'</span>':''}</button>`;
@@ -971,12 +964,13 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   const ridge=typeof GrinderContract==='object'&&GrinderContract.ridge?GrinderContract.ridge(r):'';
   const ridgeOutput=output?(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(output)?'PR':/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(output)?'Screenshot':'Output'):null;
   const code=codeFacts();
+  const project=projectName();
+  const storyFacts=[];
+  if(project) storyFacts.push(`<div><dt>Project touched</dt><dd>${esc(project)}</dd></div>`);
+  if(code.length) storyFacts.push(`<div><dt>Code activity</dt><dd>${code.map(([label,value])=>`<span><strong class="num">${esc(value)}</strong> ${esc(label)}</span>`).join('')}</dd></div>`);
   const story=`${output?`<div class="run-output"><span>Output</span><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open ${esc(ridgeOutput||'output')} ↗</a></div>`:''}
-    <dl class="run-story-facts">
-      <div><dt>Project touched</dt><dd${projectName()?'':' class="is-unknown"'}>${esc(projectName()||'Unknown')}</dd></div>
-      <div><dt>Code activity</dt><dd${code.length?'':' class="is-unknown"'}>${code.length?code.map(([label,value])=>`<span><strong class="num">${esc(value)}</strong> ${esc(label)}</span>`).join(''):'Unknown'}</dd></div>
-    </dl>`;
-  const recorded='<details class="run-evidence"><summary>How these numbers work</summary><p class="meta">Captured from the selected session. A zero is a recorded zero; Unknown means the capture could not measure it.</p></details>';
+    ${storyFacts.length?`<dl class="run-story-facts">${storyFacts.join('')}</dl>`:''}`;
+  const recorded='<details class="run-evidence"><summary>How these numbers work</summary><p class="meta">Captured from the selected session. A zero is a recorded zero. Missing optional fields stay off the card.</p></details>';
   const ridgeBody=ridge?`${ridge}
     ${metricStrip()}
     <details class="ridge-more"><summary>More</summary>${fiveRow(r)}${coachBlock(r)}${r.tree?GrinderContract.tree(r.tree):''}${recorded}</details>`
@@ -1003,6 +997,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
 
 
 function wireKudos(){
+  if(typeof GrinderContract==='object'&&GrinderContract.mountRunMaps) GrinderContract.mountRunMaps(document);
   document.querySelectorAll('.copy-run-prompt:not([data-wired])').forEach(b=>{b.dataset.wired='true';b.addEventListener('click',async()=>{
     try{await navigator.clipboard.writeText(b.dataset.prompt);b.textContent='Prompt copied'}catch(_){status('Select and copy the public run details instead.',true)}
   })});
@@ -1279,7 +1274,7 @@ function featuredCard(r,{sample=false}={}){
       <div class="stat"><div class="v">${r.prompts??'—'}</div><div class="k">Typed turns</div></div>
       <div class="stat"><div class="v">${dm==null?'—':fmtDur(dm)}</div><div class="k">Session time</div></div>
       <div class="stat"><div class="v">${r.commits??'—'}</div><div class="k">Commits</div></div></div>
-    <details><summary class="pad">${r.tool_calls??'Unknown'} tool calls · recorded measurements</summary>${fiveRow(r)}</details>
+    <details><summary class="pad">${r.tool_calls!=null?r.tool_calls+' tool calls · recorded measurements':'Recorded measurements'}</summary>${fiveRow(r)}</details>
     ${sample?'<div class="foot"><span class="meta">Example data from the repository</span></div>':`<div class="foot">${r.output_url&&safeOutputUrl(r.output_url)?`<a class="primary-output" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-weight:500">Open what was built →</a>`:`<a href="/?run=${r.id}" style="color:var(--blue);font-weight:500">Open run →</a>`}
       <span class="acts"><a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div>`}</div>`;
 }
@@ -1546,7 +1541,7 @@ async function viewPost(){
     <p>Turn a real coding-agent session into a card. Cursor capture stays on your machine until the preview is open.</p>
     ${first?firstRunPrompt():''}
     ${ME?postComposerHtml({first}):uploadBlock()+'<div class="panel pad auth-empty"><h3>Sign in to save</h3><p>Preview stays private on this device until you choose an audience. GitHub sign-in keeps your handle; nothing posts until Save.</p><button id="post-signin" class="act blue">Sign in with GitHub</button></div>'}`;
-  if(ME){await loadSegmentChoices('f_segment');wireComposer();} else $('post-signin').onclick=showSignIn;
+  if(ME){await loadSegmentChoices('f_segment');wireComposer();} else $('post-signin').onclick=signInWithGitHub;
   wireFirstRunPrompt();
   wireCopy();
 }
@@ -1564,7 +1559,7 @@ async function viewExplore(){
   frame(railHtml('feed',R), null);
   app.innerHTML=feedTabs('discover')+(first?firstRunPrompt():'')+`<div class="cta"><a class="act blue" href="/?post">Post a run</a><span class="hint">Capture locally, preview privately.</span></div>`+`
     <div class="head"><h2>Latest runs</h2><span class="meta">${R.length||'none yet'}</span></div>`
-    +(R.length?R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join(''):'<div class="card"><div class="empty"><h3>Latest runs</h3><p>When someone posts a public run, the run map, measured effort, and share actions show here. Unknown stays Unknown.</p><div class="cta"><a class="act blue" href="/?post">Post a run</a><a class="act" href="/?people">Find people</a></div></div></div>');
+    +(R.length?R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join(''):'<div class="card"><div class="empty"><h3>Latest runs</h3><p>Public runs from builders show up here.</p><div class="cta"><a class="act blue" href="/?post">Post a run</a><a class="act" href="/?people">Find people</a></div></div></div>');
   wireFirstRunPrompt();
   wireKudos(); countUp();
 }
@@ -1673,6 +1668,12 @@ async function viewProfile(handle){
     try{ME=await auth.updateProfile({handle:$('e_handle').value,display_name:$('e_name').value});const h=profileHandle(ME);history.replaceState(null,'','/?u='+encodeURIComponent(h));await refreshAuth();await viewProfile(h);status('Saved.');}catch(e){status(e.detail?.message||'Your profile could not be saved.',true)} });
 }
 
+function signInWithGitHub(){
+  if(!auth){status('Sign-in is unavailable. Please refresh.',true);return;}
+  const imported=location.hash.match(/import=([^&]+)/);if(imported&&!stashImport(imported[1])){status('This browser could not preserve the draft. Save your run JSON before signing in.',true);return;}
+  try{sessionStorage.setItem('ag_social_return',location.search)}catch(_){}
+  auth.signIn('github',{returnTo:location.search}).catch(e=>status(e.detail?.message||'GitHub sign-in could not start.',true));
+}
 function showSignIn(){
   if(!auth){status('Sign-in is unavailable. Please refresh.',true);return;}
   const imported=location.hash.match(/import=([^&]+)/);if(imported&&!stashImport(imported[1])){status('This browser could not preserve the draft. Save your run JSON before signing in.',true);return;}
@@ -1770,7 +1771,7 @@ async function importRun(){
     <p class="hint">Only me stays with you. Close friends is your private list. Link is unlisted but readable by anyone with the URL. Choosing Public is the deliberate action that adds the run to Feed and your profile.</p>
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample — preview only':(ME?'Save run':'Sign in to save')}</button>
     <details class="preview-details"><summary>Review recorded measurements and optional details</summary>
-      <p class="hint export-contents">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.ridge?', ridge bins and worker counts':''}${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me. Unknown measurements stay unknown.</p>
+      <p class="hint export-contents">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.ridge?', ridge bins and worker counts':''}${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
       <div class="panel">${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>
       <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details>
       <label>Model (optional)<input id="i_model" maxlength="120" value="${esc(run.model||'')}" placeholder="Model name"></label>
@@ -1798,6 +1799,7 @@ async function importRun(){
       worker_bins:run.worker_bins||null,commit_bins:run.commit_bins||null,
       visibility:'private',started_at:run.started||null,created_at:new Date().toISOString()};
     $('import-card-preview').innerHTML=runCard(preview,false,0,{preview:true});
+    if(typeof GrinderContract==='object'&&GrinderContract.mountRunMaps) GrinderContract.mountRunMaps($('import-card-preview'));
   }
   editFields.forEach(key=>$(key).addEventListener('input',()=>{saveImportEdits();paintImportPreview()}));
   paintImportPreview();

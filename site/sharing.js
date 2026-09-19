@@ -14,11 +14,12 @@ function duration(value){
  return minutes>=60?Math.floor(minutes/60)+'h '+minutes%60+'m':minutes+'m';
 }
 function metricStrip(run){
- return [
-  ['Session',duration(sessionSeconds(run))],
+ const cells=[
+  ['Session',sessionSeconds(run)==null?null:duration(sessionSeconds(run))],
   ['Turns',run.prompts??run.turns_typed??null],
   ['Tool calls',run.tool_calls??null],
- ].map(([label,value])=>[label,value==null?'Unknown':String(value)]);
+ ].filter(([,value])=>value!=null);
+ return cells.map(([label,value])=>[label,String(value)]);
 }
 function projectName(run){
  const value=typeof run.project==='string'?run.project.trim():'';
@@ -42,7 +43,7 @@ function codeFacts(run){
  return facts;
 }
 function storyFacts(run){
- return {project:projectName(run)||'Unknown',output:outputKind(run),code:codeFacts(run).join(' · ')||'Unknown'};
+ const project=projectName(run),code=codeFacts(run).join(' · ');return {project:project||null,output:outputKind(run),code:code||null};
 }
 function ridgeBasisLabel(basis){
  if(basis==='wall-time')return'wall time';

@@ -241,7 +241,8 @@ def test_web_app_never_headlines_prompts():
     assert card.index('const ridgeBody=') < card.index('${metricStrip()}')
     assert 'class="run-metrics"' in card
     assert '<details class="run-evidence">' in card
-    assert 'Ranks name measured activity. They are not a quality score. Unknown means not measured.' in card
+    assert 'class="run-metrics"' in card
+    assert 'run-rank' not in card
     assert card.index('<summary>More</summary>') < card.index('${fiveRow(r)}')
     assert "r.prompts??r.turns_typed" in card.replace(" ", "") or "['Turns',turns" in card.replace(" ", "")
     # Share export is exercised by check-moment-fixtures.py; its call signature

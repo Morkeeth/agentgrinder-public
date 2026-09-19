@@ -175,24 +175,122 @@
           : "call order";
     const peak = Math.max(0, ...values);
     const peakIndex = peak > 0 ? values.indexOf(peak) : -1;
-    const peakChip =
-      peakIndex >= 0
-        ? (() => {
-            const width = Math.min(128, 36 + String(peak).length * 8);
-            const cx = Math.min(w - width - 2, Math.max(2, x(peakIndex) - width / 2));
-            const cy = Math.max(2, y(peak) - 28);
-            return `<g class="ridge-peak" transform="translate(${cx.toFixed(1)},${cy.toFixed(1)})"><rect width="${width}" height="22" rx="2"/><text x="${width / 2}" y="15">peak ${peak}</text></g>`;
-          })()
-        : "";
-    const basisNote =
-      snapshot.ridge_basis === "turn-order"
-        ? "Typed-turn order. Not wall-clock elapsed time."
-        : snapshot.ridge_basis === "call-index"
-          ? "Call order across the sitting. Not wall-clock elapsed time."
-          : snapshot.ridge_basis === "wall-time"
-            ? "Wall time across the measured window."
-            : "Basis unknown.";
-    return `<div class="ridge-wrap run-map" data-ridge-basis="${escText(snapshot.ridge_basis || "")}"><div class="run-map-head"><span class="run-story-label">Run map</span><span class="meta">${escText(basisNote)}</span></div><svg class="ridge" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Run map of tool calls across ${escText(basisLabel)}">${backs}<polygon class="ridge-fill" points="${area}"/><line class="ridge-base" x1="0" y1="${base}" x2="${w}" y2="${base}"/>${ticks}<polyline class="ridge-line" points="${line}"/><circle class="ridge-start" cx="0" cy="${y(values[0]).toFixed(1)}" r="5"/><circle class="ridge-end" cx="${w}" cy="${y(values[values.length - 1]).toFixed(1)}" r="5"/>${peakChip}${output}</svg><span class="meta">Tool calls over ${basisLabel}</span></div>`;
+    const commits = (snapshot.commit_bins || []).filter(
+      (v) => Number.isSafeInteger(v) && v >= 0 && v < values.length,
+    );
+    const hitWidth = w / values.length;
+    const hits = values
+      .map((v, i) => {
+        const left = i === 0 ? 0 : x(i) - hitWidth / 2;
+        const width = i === 0 || i === values.length - 1 ? hitWidth / 2 + (i === 0 ? 0 : 0) : hitWidth;
+        const x0 = Math.max(0, i === 0 ? 0 : x(i) - hitWidth / 2);
+        const x1 = Math.min(w, i === values.length - 1 ? w : x(i) + hitWidth / 2);
+        return `<rect class="run-map-hit" data-bin="${i}" x="${x0.toFixed(1)}" y="0" width="${(x1 - x0).toFixed(1)}" height="${h}" fill="transparent"/>`;
+      })
+      .join("");
+    const payload = escText(
+      JSON.stringify({
+        values,
+        workers,
+        commits,
+        peak,
+        peakIndex,
+        basis: snapshot.ridge_basis || "",
+        basisLabel,
+        output: (() => {
+          const url = String(snapshot.output_url || "");
+          if (/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(url)) return "PR";
+          if (/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(url)) return "Screenshot";
+          if (url) return "Output";
+          if (Number.isSafeInteger(snapshot.commits) && snapshot.commits > 0)
+            return snapshot.commits + " commit" + (snapshot.commits === 1 ? "" : "s");
+          return "";
+        })(),
+      }),
+    );
+    const startBin = peakIndex >= 0 ? peakIndex : 0;
+    return `<div class="ridge-wrap run-map" data-ridge-basis="${escText(snapshot.ridge_basis || "")}" data-run-map="${payload}"><div class="run-map-head"><span class="run-story-label">Run map</span><span class="meta">Scrub the bins · ${escText(basisLabel)}</span></div><svg class="ridge" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Interactive run map of tool calls across ${escText(basisLabel)}">${backs}<polygon class="ridge-fill" points="${area}"/><line class="ridge-base" x1="0" y1="${base}" x2="${w}" y2="${base}"/>${ticks}<polyline class="ridge-line" points="${line}"/><circle class="ridge-start" cx="0" cy="${y(values[0]).toFixed(1)}" r="5"/><circle class="ridge-end" cx="${w}" cy="${y(values[values.length - 1]).toFixed(1)}" r="5"/><line class="run-map-scrub" x1="${x(startBin).toFixed(1)}" y1="${top}" x2="${x(startBin).toFixed(1)}" y2="${base}" /><circle class="run-map-focus" cx="${x(startBin).toFixed(1)}" cy="${y(values[startBin]).toFixed(1)}" r="6"/>${output}${hits}</svg><div class="run-map-readout" aria-live="polite"></div></div>`;
+  }
+  function mountRunMaps(root) {
+    const scope = root && root.querySelectorAll ? root : typeof document !== "undefined" ? document : null;
+    if (!scope) return;
+    scope.querySelectorAll(".run-map[data-run-map]").forEach((wrap) => {
+      if (wrap.dataset.wired === "1") return;
+      wrap.dataset.wired = "1";
+      let data;
+      try {
+        data = JSON.parse(wrap.getAttribute("data-run-map") || "{}");
+      } catch (_) {
+        return;
+      }
+      const values = data.values || [];
+      if (!values.length) return;
+      const svg = wrap.querySelector("svg.ridge");
+      const scrub = wrap.querySelector(".run-map-scrub");
+      const focus = wrap.querySelector(".run-map-focus");
+      const readout = wrap.querySelector(".run-map-readout");
+      const w = 800,
+        h = 150,
+        base = 132,
+        top = 16;
+      const x = (i) => (i * w) / Math.max(1, values.length - 1);
+      const max = Math.max(1, ...values);
+      const y = (v) => base - (v / max) * (base - top);
+      const describe = (i) => {
+        const tools = values[i] || 0;
+        const workers = (data.workers && data.workers[i]) || 0;
+        const isPeak = i === data.peakIndex && data.peak > 0;
+        const commitHere = (data.commits || []).includes(i);
+        const bits = [];
+        bits.push(`Bin ${i + 1} of ${values.length}`);
+        bits.push(`${tools} tool call${tools === 1 ? "" : "s"}`);
+        if (workers) bits.push(`${workers} worker${workers === 1 ? "" : "s"}`);
+        if (isPeak) bits.push(`peak ${data.peak}`);
+        if (commitHere) bits.push("commit landmark");
+        if (i === values.length - 1 && data.output) bits.push(data.output);
+        return bits.join(" · ");
+      };
+      const paint = (i) => {
+        const idx = Math.max(0, Math.min(values.length - 1, i));
+        if (scrub) {
+          scrub.setAttribute("x1", x(idx).toFixed(1));
+          scrub.setAttribute("x2", x(idx).toFixed(1));
+        }
+        if (focus) {
+          focus.setAttribute("cx", x(idx).toFixed(1));
+          focus.setAttribute("cy", y(values[idx]).toFixed(1));
+        }
+        if (readout) readout.textContent = describe(idx);
+        wrap.dataset.activeBin = String(idx);
+      };
+      paint(data.peakIndex >= 0 ? data.peakIndex : 0);
+      const fromEvent = (event) => {
+        const hit = event.target.closest && event.target.closest(".run-map-hit");
+        if (hit && hit.dataset.bin != null) return Number(hit.dataset.bin);
+        if (!svg) return null;
+        const rect = svg.getBoundingClientRect();
+        const clientX = event.touches && event.touches[0] ? event.touches[0].clientX : event.clientX;
+        if (!Number.isFinite(clientX) || !rect.width) return null;
+        const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        return Math.round(ratio * (values.length - 1));
+      };
+      const onMove = (event) => {
+        const i = fromEvent(event);
+        if (i == null) return;
+        if (event.cancelable) event.preventDefault();
+        paint(i);
+      };
+      wrap.addEventListener("pointermove", onMove);
+      wrap.addEventListener("pointerdown", onMove);
+      wrap.addEventListener("click", onMove);
+      wrap.addEventListener(
+        "touchmove",
+        (event) => {
+          onMove(event);
+        },
+        { passive: false },
+      );
+    });
   }
   function headlineMetric(snapshot) {
     if (snapshot && snapshot.headline_metric_id) return snapshot.headline_metric_id;
@@ -344,7 +442,7 @@
       "</section>"
     );
   }
-  const api = { validate, message, trace, ridge, sittingsComparable, headlineMetric, rejectPaths, tree };
+  const api = { validate, message, trace, ridge, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

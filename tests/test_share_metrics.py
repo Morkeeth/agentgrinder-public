@@ -59,14 +59,14 @@ def render():
     return json.loads(result.stdout)
 
 
-def test_download_share_strip_preserves_zero_and_unknown():
+def test_download_share_strip_preserves_zero_and_hides_missing():
     result = render()
     assert result["zero"] == [
         ["Session", "0s"],
         ["Turns", "0"],
         ["Tool calls", "0"],
     ]
-    assert [value for _, value in result["unknown"]] == ["Unknown"] * 3
+    assert result["unknown"] == []
 
 
 def test_public_link_preview_preserves_zero_and_unknown():
@@ -86,7 +86,7 @@ def test_share_surfaces_tell_output_project_and_code_story_without_raw_data():
         "code": "4 shell calls · 7 files changed · 2 commits",
     }
     assert result["generic"] == {
-        "project": "Unknown",
+        "project": None,
         "output": None,
         "code": "9 tool calls",
     }
@@ -104,7 +104,7 @@ def test_download_uses_cursor_timed_ridge_and_keeps_grok_time_unknown():
     assert len(result["cursorTrace"]["values"]) == 50
     assert result["grokTrace"]["label"] == "Session activity · time basis unknown"
     assert result["grokTrace"]["values"] == [1, 1, 1]
-    assert result["unknown"][0] == ["Session", "Unknown"]
+    assert result["unknown"] == []
 
 
 def test_share_image_labels_turn_order_ridge_not_call_order():
