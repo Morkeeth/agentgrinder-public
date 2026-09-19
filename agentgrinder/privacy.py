@@ -188,6 +188,10 @@ def _memory_basenames() -> set[str]:
     root = os.path.join(_home(), "." + "clau" + "de", "projects")
     for f in glob.glob(os.path.join(root, "*", "memory", "*")) + \
              glob.glob(os.path.join(root, "*", "memory", "*", "*")):
+        # The glob also returns directories. Their generic labels are not memory filenames;
+        # files inside those directories remain covered by the second glob above.
+        if not os.path.isfile(f):
+            continue
         b = os.path.basename(f)
         if len(b) > 6:                      # a 1-6 char basename is not identifying on its own
             out.add(b)
