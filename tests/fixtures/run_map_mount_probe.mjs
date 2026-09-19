@@ -151,6 +151,9 @@ const root = el("div", {}, [wrap]);
 
 mountRunMaps(root);
 assert.equal(wrap.dataset.wired, "1");
+assert.equal((wrap.listeners.touchmove || []).length, 0, "wrap must not trap touchmove");
+assert.ok((plot.listeners.touchmove || []).length > 0, "plot owns touchmove");
+
 assert.match(readout.textContent, /Activity slice/);
 const before = readout.textContent;
 assert.equal(wrap.dataset.activeBin, String(data.peakIndex));

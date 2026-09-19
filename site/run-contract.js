@@ -205,12 +205,13 @@
       }
       const values = data.values || [];
       if (!values.length) return;
-      const plot = wrap.querySelector(".run-map-plot") || wrap.querySelector("svg.ridge")?.parentElement || wrap;
+      const plot = wrap.querySelector(".run-map-plot");
       const svg = wrap.querySelector("svg.ridge");
       const scrub = wrap.querySelector(".run-map-scrub");
       const focus = wrap.querySelector(".run-map-focus");
       const readout = wrap.querySelector(".run-map-readout");
       const slider = wrap.querySelector(".run-map-slider");
+      if (!plot || !svg) return;
       const w = 800,
         base = 132,
         top = 16;
