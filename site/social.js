@@ -6,6 +6,7 @@ window.GrinderSocial = function ({
   frame,
   status,
   renderRuns,
+  signInGitHub,
 }) {
   const esc = (x) =>
     String(x ?? "").replace(
@@ -68,12 +69,13 @@ window.GrinderSocial = function ({
   function signedIn() {
     if (me()) return true;
     byId("social-body").innerHTML =
-      '<div class="card"><p>Sign in to join the conversation. Your local grinds stay private.</p><button id="social-signin">Sign in</button></div>';
+      '<div class="card"><p>Sign in to open Responses and follow builders. Your private runs stay in My runs.</p><button type="button" class="act blue" id="social-signin">Sign in with GitHub</button></div>';
     byId("social-signin").onclick = () => {
       try {
         sessionStorage.setItem("ag_social_return", location.search);
       } catch (_) {}
-      byId("auth").click();
+      if (typeof signInGitHub === "function") signInGitHub();
+      else byId("auth").click();
     };
     return false;
   }
