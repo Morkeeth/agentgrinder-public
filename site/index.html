@@ -916,6 +916,21 @@ function runContinuation(r,opts={}){
     ${link?`<a class="act blue continue-run" href="${esc(link.href)}">${esc(link.label)}</a>`:''}
     <button class="act copy-run-prompt" type="button" data-prompt="${esc(prompt)}">Copy prompt</button></span></div>`;
 }
+
+function connectWrapperName(name){
+  const n=String(name||'').trim();
+  return !n || /^connect$/i.test(n);
+}
+function runUploadIdentity(r){
+  if(!r.source_actor_id) return '';
+  const agentHref='/?agent='+encodeURIComponent(r.source_actor_id);
+  if(connectWrapperName(r.agent_name)){
+    const session=r.harness?`<span class="card-harness">${esc(r.harness)}</span>`:'session';
+    return `<div class="sub run-upload-identity">Session: ${session} · uploaded via Connect · <a href="${agentHref}">agent profile</a> · authorised by the owner</div>`;
+  }
+  return `<div class="sub run-upload-identity">Agent contribution: <a href="${agentHref}">${esc(r.agent_name)}</a>${r.harness?` · <span class="card-harness">${esc(r.harness)}</span>`:''} · authorised by the owner</div>`;
+}
+
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
   const projectName=()=>{
     const value=typeof r.project==='string'?r.project.trim():'';
@@ -985,7 +1000,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     <div class="run-story-label achieved">Achieved</div>
     <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
-    ${r.source_actor_id?`<div class="sub">Agent contribution: <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name||'agent')}</a> · authorised by the owner</div>`:''}
+    ${runUploadIdentity(r)}
     ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
     ${story}
     <div class="sub run-effort-context"><span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}</div>

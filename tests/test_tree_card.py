@@ -13,12 +13,12 @@ RENDER = r'''
 const fs=require('fs'),vm=require('vm');
 const root=process.argv[1],sample=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
 const html=fs.readFileSync(root+'/site/index.html','utf8');
-const cardFn=html.slice(html.indexOf('function runCard('),html.indexOf('function wireKudos('));
+const cardFn=html.slice(html.indexOf('function connectWrapperName('),html.indexOf('function wireKudos('));
 const context={GrinderContract:require(root+'/site/run-contract.js'),ME:null,
  esc:s=>String(s??'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])),
  fmtDur:m=>!m?'-':(m>=60?`${Math.floor(m/60)}h ${m%60}m`:`${m}m`),
  runAttribution:()=>({handle:'sample',name:'Sample',link:null}),avatar:()=>'',safeOutputUrl:()=>null,
- ackPickerHtml:()=>'',suggestAckReasons:()=>[]};
+ ackPickerHtml:()=>'',suggestAckReasons:()=>[],fiveRow:()=>'',coachBlock:()=>''};
 vm.createContext(context);vm.runInContext(cardFn,context);
 const base={id:'r1',profile_id:'p1',created_at:'2026-09-14T00:00:00Z',title:'Plain run',started_at:'2026-09-14T00:00:00Z',duration_s:600,prompts:3};
 const plain=vm.runInContext('runCard('+JSON.stringify(base)+',false,0)',context);
