@@ -22,6 +22,17 @@ def test_connect_calls_thin_wrappers_exactly():
     assert "/?agents" in CONNECT
 
 
+def test_connect_primary_next_is_mine_for_private_uploads():
+    assert 'href="/?mine">See my runs</a>' in CONNECT
+    assert "Private uploads appear in" in CONNECT
+    assert "Share explicitly" in CONNECT
+    # Primary Next CTA is Mine, not explore-as-blue
+    next_block = CONNECT[CONNECT.index("<h2>Next</h2>") :]
+    blue = next_block.index('class="act blue"')
+    assert 'href="/?mine"' in next_block[blue : blue + 80]
+    assert next_block.index('href="/?mine"') < next_block.index('href="/?explore"')
+
+
 def test_advanced_agents_remain_separate():
     assert 'rpc("grinder_issue_agent_token"' in SOCIAL
     assert "async function agents(" in SOCIAL

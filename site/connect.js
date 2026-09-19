@@ -24,7 +24,7 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
       "  -H 'Content-Type: application/json' \\",
       "  -d @run.json",
       "",
-      "# Metrics only. Default audience is Only me. Ridge travels when the agent sends it.",
+      "# Metrics only. Default audience is Only me. After upload open /?mine (My runs). Share explicitly for public Latest runs.",
     ].join("\n");
   }
 
@@ -35,7 +35,7 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
       <p class="account-hint">${esc(detail || "Waiting on agent_token_create / list / revoke.")}</p>
       <div class="account-actions">
         <a class="act blue" href="/?post">Preview a run</a>
-        <a class="act" href="/?explore">Latest runs</a>
+        <a class="act" href="/?mine">My runs</a>
         <a class="act" href="/?agents">Advanced Agents</a>
       </div>
     </section>`;
@@ -44,9 +44,9 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
   function signedOutHtml() {
     return `<section class="card pad connect" id="connect-body">
       <h1>Connect an agent</h1>
-      <p>Sign in with GitHub, name the agent, get one private upload credential, then runs land automatically under Latest runs and Mine.</p>
+      <p>Sign in with GitHub, name the agent, get one private upload credential. Private uploads appear in My runs. Share explicitly for public Latest runs.</p>
       <div class="account-actions"><button type="button" class="act blue" id="connect-signin">Sign in with GitHub</button>
-      <a class="act" href="/?explore">Latest runs</a></div>
+      <a class="act" href="/?mine">See my runs</a></div>
       <p class="account-hint">Signing in never posts a run. Connect tokens stay Only me.</p>
     </section>`;
   }
@@ -89,7 +89,7 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
     return `<div class="connect" id="connect-body">
       <section class="card pad account-section">
         <h1>Connect an agent</h1>
-        <p class="account-lead">One step: name it, connect, paste the credential once. Private runs upload automatically. Open <a href="/?explore">Latest runs</a> or <a href="/?mine">Mine</a>.</p>
+        <p class="account-lead">One step: name it, connect, paste the credential once. Private uploads appear in <a href="/?mine">My runs</a>. Share explicitly when you want a run on public Latest runs.</p>
         <form id="connect-create" class="account-form" novalidate>
           <label for="connect-label">Agent name</label>
           <input id="connect-label" name="label" maxlength="80" required placeholder="Grok laptop" autocomplete="off">
@@ -107,8 +107,8 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
       <section class="card pad account-section">
         <h2>Next</h2>
         <div class="account-actions">
-          <a class="act blue" href="/?explore">Latest runs</a>
-          <a class="act" href="/?mine">Mine</a>
+          <a class="act blue" href="/?mine">See my runs</a>
+          <a class="act" href="/?explore">Latest runs</a>
           <a class="act" href="/?agents">Advanced Agents</a>
           <a class="act" href="/?account">Account</a>
         </div>
