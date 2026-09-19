@@ -50,7 +50,7 @@ const context={
   PacecardFork:require(root+'/site/fork-run.js'),ME:null,GrinderContract:require(root+'/site/run-contract.js'),
   esc:s=>String(s??'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])),
   runAttribution:()=>({handle:'builder',name:'Builder',link:null,ghost:false}),
-  avatar:()=>'',fmtDur:m=>m+'m',ackPickerHtml:()=>'',suggestAckReasons:()=>[]
+  avatar:()=>'',fmtDur:m=>m+'m',ackPickerHtml:()=>'',suggestAckReasons:()=>[],fiveRow:()=>'',coachBlock:()=>''
 };
 vm.createContext(context);vm.runInContext(html.slice(start,end),context);
 const base={id:'run-1',profile_id:'other',created_at:'2026-09-15T00:00:00Z',

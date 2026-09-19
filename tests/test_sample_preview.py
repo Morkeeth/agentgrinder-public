@@ -86,7 +86,7 @@ const fs=require('fs'),vm=require('vm');
 const root=process.argv[1],url=new URL(process.argv[2]),sample=process.argv[3]==='true';
 const html=fs.readFileSync(root+'/site/index.html','utf8');
 const fn=html.slice(html.indexOf('async function decodeImportPayload('),html.indexOf('\nasync function viewShareRun('));
-const cardFn=html.slice(html.indexOf('function runCard('),html.indexOf('function wireKudos('));
+const cardFn=html.slice(html.indexOf('function connectWrapperName('),html.indexOf('function wireKudos('));
 // runCard's ridge branch calls fiveRow and coachBlock. A Grok Bot payload now carries a
 // call-order ridge, so the vm needs those two helpers as the page defines them.
 const helper=name=>{const start=html.indexOf('function '+name+'(');return html.slice(start,html.indexOf('\n}\n',start)+3);};
