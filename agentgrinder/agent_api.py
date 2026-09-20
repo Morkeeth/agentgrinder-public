@@ -15,7 +15,10 @@ RUN_FIELDS = {"title","project","harness","turns_typed","duration_s","tool_calls
               "commits","claims","claims_verified","artifacts_produced","started","visibility",
               "rhythm","route","schema_version","measurement_revision","baseline_revision","note","trace_basis",
               # STRIVE run shape, accepted by the database since migration 006.
-              "ridge","worker_bins","commit_bins","ridge_basis","ridge_wall_seconds","ridge_tool_calls","wall_time_s","model"}
+              "ridge","worker_bins","commit_bins","ridge_basis","ridge_wall_seconds","ridge_tool_calls","wall_time_s","model",
+              # Declared outcome receipts, accepted since migration 008. Links and short lines the
+              # uploader states. They are never measurements.
+              "repo_url","receipts","shipped","artifact_url","image_url"}
 
 
 def run_payload(run: dict, visibility: str = "private", *, title: str | None = None, note: str | None = None) -> dict:

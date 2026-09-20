@@ -37,7 +37,7 @@ window.GrinderProgress = function ({client: db, me, app, frame, status, signIn, 
     const wrapper=!String(run.agent_name||'').trim()||/^connect$/i.test(String(run.agent_name).trim());
     const via=run.source_actor_id&&wrapper?' · via Connect':'';
     const session=esc(run.harness || 'Coding agent');
-    return `<article class="history-run"><div class="history-trace">${GrinderContract.trace(run)}</div><div><small><span class="card-harness">${session}</span>${via} · ${esc(audience(run))}</small><h2><a href="/?run=${run.id}">${esc(title(run))}</a></h2>${when?`<p>${esc(when)}</p>`:''}${bits.length?`<div class="history-counts">${bits.map(b=>`<span>${b}</span>`).join('')}</div>`:''}</div></article>`;
+    return `<article class="history-run"><div class="history-trace">${GrinderContract.trace(run)}</div><div><small><span class="card-harness">${session}</span>${via} · ${esc(audience(run))}</small><h2><a href="/?run=${run.id}">${esc(title(run))}</a></h2>${when?`<p>${esc(when)}</p>`:''}${bits.length?`<div class="history-counts">${bits.map(b=>`<span>${b}</span>`).join('')}</div>`:''}${run.visibility==='private'?`<p class="history-share"><a href="/?run=${run.id}">Preview and choose who can see it</a></p>`:''}</div></article>`;
   }
   async function historyView() {
     if(!start('My runs','runs'))return;
