@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "projects": [
+    {"id": "zup", "label": "zup", "basis": "measured"},
+    {"id": "agentgrinder-public", "label": "agentgrinder-public", "basis": "measured"},
+    {"id": "mountain-of-helicon", "label": "mountain-of-helicon", "basis": "measured"}
+  ],
+  "stops": [
+    {
+      "id": "zup-edit",
+      "project": "zup",
+      "kind": "edit",
+      "label": "Task board edits",
+      "basis": "measured",
+      "evidence": ["edit cluster in zup"]
+    },
+    {
+      "id": "zup-commit",
+      "project": "zup",
+      "kind": "commit",
+      "label": "Board commit",
+      "basis": "measured",
+      "evidence": ["1 commit verified by git"]
+    },
+    {
+      "id": "strive-edit",
+      "project": "agentgrinder-public",
+      "kind": "edit",
+      "label": "Outcome receipts work",
+      "basis": "measured"
+    },
+    {
+      "id": "strive-check",
+      "project": "agentgrinder-public",
+      "kind": "check",
+      "label": "Contributor checks passed",
+      "basis": "measured",
+      "evidence": ["python3 scripts/dev.py check"]
+    },
+    {
+      "id": "strive-merge",
+      "project": "agentgrinder-public",
+      "kind": "merge",
+      "label": "PR merged",
+      "basis": "declared",
+      "evidence": ["declared merged pull request"]
+    },
+    {
+      "id": "helicon-edit",
+      "project": "mountain-of-helicon",
+      "kind": "edit",
+      "label": "Slim packaging edits",
+      "basis": "measured"
+    },
+    {
+      "id": "helicon-artifact",
+      "project": "mountain-of-helicon",
+      "kind": "artifact",
+      "label": "Wheel built locally",
+      "basis": "measured",
+      "evidence": ["local wheel artifact"]
+    }
+  ],
+  "connectors": [
+    {"from": "zup-commit", "to": "strive-edit", "kind": "handoff", "label": "Cursor to Claude CLI"},
+    {"from": "strive-merge", "to": "helicon-edit", "kind": "handoff", "label": "Claude CLI to Codex"}
+  ],
+  "finish": {
+    "stop": "helicon-artifact",
+    "kind": "artifact",
+    "label": "Wheel built locally"
+  },
+  "stats": {
+    "projects_touched": 3,
+    "commits": 1,
+    "files_changed": 10,
+    "verified_checkpoints": 5,
+    "shipped_artifacts": 1
+  },
+  "harnesses": {
+    "observed": ["cursor", "claude-cli", "codex"],
+    "absent": ["grok-bot"],
+    "basis": "manifest"
+  }
+}

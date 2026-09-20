@@ -193,7 +193,7 @@ a.act{display:inline-block;text-decoration:none}
 /* card foot */
 .c-foot,.foot{display:flex;flex-wrap:wrap;gap:8px 16px;padding:12px 16px;border-top:1px solid var(--rule);
   align-items:center;margin-top:14px;font-size:13px;color:var(--soft)}
-.c-foot .acts,.foot .acts{margin-left:auto;display:flex;gap:8px}
+.c-foot .acts,.foot .acts{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px}
 .run-continuation{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 16px 0}
 .run-continuation .acts{display:flex;flex-wrap:wrap;gap:8px}
 .run-primary-actions{border-left:2px solid var(--blue);padding:14px 16px;margin:0 0 24px;background:var(--box)}
@@ -368,6 +368,9 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   .first-run-actions .act,.first-run-actions button{width:100%;text-align:center;min-height:44px}
   .c-foot .primary-output,.foot .primary-output{order:-1;flex-basis:100%;min-height:44px;display:inline-flex;align-items:center}
   .c-foot .kudo,.foot .kudo{color:var(--blue);border-color:var(--blue-soft);background:var(--blue-wash)}
+  .c-foot .acts,.foot .acts{margin-left:0;flex-basis:100%;width:100%}
+  .c-foot .acts .act,.foot .acts .act,.c-foot .acts button,.foot .acts button{
+    flex:1 1 auto;min-width:calc(33.33% - 8px);min-height:44px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
   .run-primary-actions .act,.run-primary-actions button{width:100%;min-height:44px;text-align:center}
 }
 .landing-intro{padding:28px 0 20px}.landing-intro h1{font-size:clamp(32px,6vw,52px);line-height:1.05;letter-spacing:-1.6px;max-width:18ch;margin:16px 0}.landing-intro>p:not(.meta){font-size:17px;line-height:1.5;max-width:46ch}.landing-intro .cta{margin-top:22px}
@@ -983,6 +986,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   const started=r.started_at&&Number.isFinite(Date.parse(r.started_at))?new Date(r.started_at).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}):'Start time unknown';
   const output=safeOutputUrl(r.output_url);
   const date=new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  const codeRoute=typeof GrinderContract==='object'&&GrinderContract.codeRoute?GrinderContract.codeRoute(r):'';
   const ridge=typeof GrinderContract==='object'&&GrinderContract.ridge?GrinderContract.ridge(r):'';
   const ridgeOutput=output?(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(output)?'PR':/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(output)?'Screenshot':'Output'):null;
   const code=codeFacts();
@@ -994,7 +998,10 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     ${storyFacts.length?`<dl class="run-story-facts">${storyFacts.join('')}</dl>`:''}
     ${declared()}`;
   const recorded='<details class="run-evidence"><summary>How these numbers work</summary><p class="meta">Captured from the selected session. A zero is a recorded zero. Missing optional fields stay off the card.</p></details>';
-  const ridgeBody=ridge?`${ridge}
+  const ridgeBody=codeRoute?`${codeRoute}${ridge?`<details class="ridge-more"><summary>Activity ridge</summary>${ridge}</details>`:''}
+    ${metricStrip()}
+    <details class="ridge-more"><summary>More</summary>${fiveRow(r)}${coachBlock(r)}${r.tree?GrinderContract.tree(r.tree):''}${recorded}</details>`
+    :ridge?`${ridge}
     ${metricStrip()}
     <details class="ridge-more"><summary>More</summary>${fiveRow(r)}${coachBlock(r)}${r.tree?GrinderContract.tree(r.tree):''}${recorded}</details>`
     :`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
@@ -1794,7 +1801,7 @@ async function importRun(){
     <p class="hint">Only me stays with you. Close friends is your private list. Link is unlisted but readable by anyone with the URL. Choosing Public is the deliberate action that adds the run to Feed and your profile.</p>
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample — preview only':(ME?'Save run':'Sign in to save')}</button>
     <details class="preview-details"><summary>Review recorded measurements and optional details</summary>
-      <p class="hint export-contents">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.ridge?', ridge bins and worker counts':''}${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
+      <p class="hint export-contents">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.ridge?', ridge bins and worker counts':''}${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.code_route?', a Code Route':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
       <div class="panel">${rows.map(r=>`<div class="p-row"><span>${r[0]}</span><span class="v"><b>${esc(String(r[1]))}</b></span></div>`).join('')}</div>
       <details><summary>Inspect all imported fields</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify(run,null,2))}</pre></details>
       <label>Model (optional)<input id="i_model" maxlength="120" value="${esc(run.model||'')}" placeholder="Model name"></label>
@@ -1825,6 +1832,7 @@ async function importRun(){
       // the receipt links and the demo, and only the counts survived.
       repo_url:run.repo_url||null,receipts:run.receipts||null,shipped:run.shipped||null,
       artifact_url:run.artifact_url||null,image_url:run.image_url||null,
+      code_route:run.code_route||null,
       visibility:'private',started_at:run.started||null,created_at:new Date().toISOString()};
     $('import-card-preview').innerHTML=runCard(preview,false,0,{preview:true});
     if(typeof GrinderContract==='object'&&GrinderContract.mountRunMaps) GrinderContract.mountRunMaps($('import-card-preview'));
@@ -1908,7 +1916,7 @@ async function importRun(){
       commit_bins:run.commit_bins||null,ridge_tool_calls:run.ridge_tool_calls??null});
     // Declared outcome receipts (migration 008). Same rule as the ridge: the preview already showed
     // them, so a save that dropped them would produce a card that reads differently from its preview.
-    for(const key of ['repo_url','receipts','shipped','artifact_url','image_url'])
+    for(const key of ['repo_url','receipts','shipped','artifact_url','image_url','code_route'])
       if(run[key]!=null) coach[key]=run[key];
     let {data:published,error}=await sb.from('runs').insert({...base,...coach}).select('id').single();
     if(error&&error.code==='23505'){ let again=null; try{again=await existingRun()}catch(_){} if(again){ await openExisting(again); return; } }

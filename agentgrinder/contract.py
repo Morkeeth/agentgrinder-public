@@ -54,6 +54,10 @@ def validate_run(run: dict) -> dict:
         if store_calls is not None and (type(store_calls) is not int or store_calls < 0):
             raise ValueError("ridge_tool_calls must be a non-negative whole number or unknown.")
     public_outcome(run)
+    if run.get("code_route") is not None:
+        from .code_route import validate_code_route
+
+        run["code_route"] = validate_code_route(run["code_route"])
     return run
 
 
@@ -108,6 +112,13 @@ def public_outcome(run: dict) -> dict:
             _safe_url(receipt.get("url"), "each receipt url")
         out["receipts"] = [{"label": receipt["label"], "url": receipt["url"]} for receipt in receipts]
     return out
+
+
+def public_code_route_fields(run: dict) -> dict:
+    """Validated Code Route bytes for export. Absent stays absent."""
+    from .code_route import public_code_route
+
+    return public_code_route(run)
 
 
 def public_revision(run: dict) -> dict:

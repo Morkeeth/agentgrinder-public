@@ -103,6 +103,7 @@
         || typeof r.url !== "string" || !safeUrl(r.url)))
         throw new Error("each receipt is {label, url}: a label of 1 to 60 characters and one https link.");
     }
+    if (run.code_route != null) validateCodeRoute(run.code_route);
     for (const field of ["measurement_revision", "baseline_revision"]) {
       if (
         run[field] != null &&
@@ -116,6 +117,113 @@
     if (typeof value !== "string" || value.length < 12 || value.length > 300) return false;
     if (/[\s<>"'\\]/.test(value) || /javascript:/i.test(value)) return false;
     try { return new URL(value).protocol === "https:"; } catch (_) { return false; }
+  }
+  const CODE_ROUTE_STOP = new Set(["edit", "commit", "check", "merge", "deploy", "artifact", "handoff", "finish"]);
+  const CODE_ROUTE_BASIS = new Set(["measured", "declared"]);
+  const PATHISH = /(^|[\s"'])(\/Users\/|\/home\/|\/private\/|~[/\\]|[A-Za-z]:\\|\\)/;
+  const SECRETISH = /(api[_-]?key|secret|password|token|bearer\s+[a-z0-9]|sk-[a-z0-9]{8,}|prompt\s*:)/i;
+  const PRIVATE_LANE = /(\bL\d+\b|\bprivate\b|\blane\s+[a-z0-9-]+)/i;
+  const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/;
+  const SAFE_LABEL = /^[A-Za-z0-9][A-Za-z0-9 ._+/@#:-]{0,79}$/;
+  const SAFE_HARNESS = /^[a-z][a-z0-9-]{0,31}$/;
+  function rejectRouteText(value, field) {
+    if (typeof value !== "string" || !value.trim()) throw new Error(field + " must be text.");
+    const text = value.trim();
+    if (PATHISH.test(text) || text.startsWith("/") || text.includes("\\") || text.startsWith("~"))
+      throw new Error(field + " must not contain absolute or home paths.");
+    if (SECRETISH.test(text)) throw new Error(field + " must not carry prompts or secrets.");
+    if (PRIVATE_LANE.test(text)) throw new Error(field + " must not carry private lane labels.");
+    return text;
+  }
+  function validateCodeRoute(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      throw new Error("code_route must be an object.");
+    const keys = Object.keys(value);
+    for (const key of keys) {
+      if (!["v", "projects", "stops", "connectors", "finish", "stats", "harnesses", "unavailable"].includes(key))
+        throw new Error("Unknown code_route key: " + key);
+    }
+    if (value.v !== 1) throw new Error("code_route.v must be 1.");
+    if (value.unavailable != null) {
+      if (typeof value.unavailable !== "object" || Array.isArray(value.unavailable))
+        throw new Error("unavailable must be an object.");
+      rejectRouteText(value.unavailable.why, "unavailable.why");
+      if ((value.projects && value.projects.length) || (value.stops && value.stops.length))
+        throw new Error("unavailable code_route cannot also carry route terrain.");
+      if (value.harnesses != null) validateHarnesses(value.harnesses);
+      return value;
+    }
+    if (!Array.isArray(value.projects) || value.projects.length < 1 || value.projects.length > 12)
+      throw new Error("projects holds 1 to 12 lanes.");
+    if (!Array.isArray(value.stops) || value.stops.length < 1 || value.stops.length > 40)
+      throw new Error("stops holds 1 to 40 checkpoints.");
+    const projectIds = [];
+    for (const project of value.projects) {
+      if (!project || typeof project !== "object") throw new Error("each project is an object.");
+      const id = rejectRouteText(project.id, "project.id");
+      if (!SAFE_ID.test(id)) throw new Error("project.id must be a short safe id.");
+      if (projectIds.includes(id)) throw new Error("project ids must be unique.");
+      projectIds.push(id);
+      const label = rejectRouteText(project.label, "project.label");
+      if (!SAFE_LABEL.test(label)) throw new Error("project.label must be a short safe label.");
+      if (project.basis != null && !CODE_ROUTE_BASIS.has(project.basis))
+        throw new Error("project.basis must be measured or declared.");
+    }
+    const stopIds = [];
+    for (const stop of value.stops) {
+      if (!stop || typeof stop !== "object") throw new Error("each stop is an object.");
+      const id = rejectRouteText(stop.id, "stop.id");
+      if (!SAFE_ID.test(id) || stopIds.includes(id)) throw new Error("stop.id must be a unique short safe id.");
+      stopIds.push(id);
+      if (!projectIds.includes(stop.project)) throw new Error("each stop must name a known project.");
+      if (!CODE_ROUTE_STOP.has(stop.kind)) throw new Error("stop.kind is unsupported.");
+      if (!CODE_ROUTE_BASIS.has(stop.basis)) throw new Error("stop.basis must be measured or declared.");
+      const label = rejectRouteText(stop.label, "stop.label");
+      if (!SAFE_LABEL.test(label)) throw new Error("stop.label must be a short safe label.");
+      if (stop.evidence != null) {
+        if (!Array.isArray(stop.evidence) || stop.evidence.length > 5)
+          throw new Error("stop.evidence holds at most 5 lines.");
+        stop.evidence.forEach((line) => {
+          const text = rejectRouteText(line, "stop.evidence");
+          if (text.length > 120) throw new Error("stop.evidence lines are too long.");
+        });
+      }
+    }
+    const connectors = value.connectors || [];
+    if (!Array.isArray(connectors) || connectors.length > 40)
+      throw new Error("connectors holds at most 40 links.");
+    for (const link of connectors) {
+      if (!link || typeof link !== "object") throw new Error("each connector is an object.");
+      if (!stopIds.includes(link.from) || !stopIds.includes(link.to))
+        throw new Error("connectors must join known stops.");
+      rejectRouteText(link.label, "connector.label");
+    }
+    if (!value.finish || typeof value.finish !== "object") throw new Error("finish is required.");
+    if (!stopIds.includes(value.finish.stop)) throw new Error("finish.stop must name a known stop.");
+    if (!["artifact", "unfinished"].includes(value.finish.kind))
+      throw new Error("finish.kind must be artifact or unfinished.");
+    rejectRouteText(value.finish.label, "finish.label");
+    if (value.harnesses != null) validateHarnesses(value.harnesses);
+    return value;
+  }
+  function validateHarnesses(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      throw new Error("harnesses must be an object.");
+    const observed = value.observed || [];
+    const absent = value.absent || [];
+    if (!Array.isArray(observed) || !Array.isArray(absent) || observed.length > 12 || absent.length > 12)
+      throw new Error("harness lists are bounded.");
+    if (!observed.length && !absent.length) throw new Error("harnesses must name populations.");
+    if (!["manifest", "collector"].includes(value.basis))
+      throw new Error("harnesses.basis must be manifest or collector.");
+    const clean = (items) => items.map((item) => {
+      const text = rejectRouteText(item, "harness id");
+      if (!SAFE_HARNESS.test(text)) throw new Error("harness ids are lowercase public population names.");
+      return text;
+    });
+    const obs = clean(observed);
+    const abs = clean(absent);
+    if (obs.some((id) => abs.includes(id))) throw new Error("a harness cannot be both observed and absent.");
   }
   function esc(text) {
     return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -542,7 +650,126 @@
       "</section>"
     );
   }
-  const api = { validate, message, trace, ridge, outcome, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
+  function codeRoute(run) {
+    const route = run && run.code_route;
+    if (!route || typeof route !== "object" || Array.isArray(route) || route.v !== 1) return "";
+    try { validateCodeRoute(route); } catch (_) { return ""; }
+    const harnessBits = [];
+    if (route.harnesses) {
+      const observed = (route.harnesses.observed || []).map((h) => esc(h));
+      const absent = (route.harnesses.absent || []).map((h) => esc(h));
+      harnessBits.push(
+        `<p class="code-route-harnesses">Harness populations · basis ${esc(route.harnesses.basis)}` +
+          ` · observed: ${observed.length ? observed.join(", ") : "none"}` +
+          ` · absent: ${absent.length ? absent.join(", ") : "none"}</p>`
+      );
+    }
+    if (route.unavailable) {
+      return (
+        `<section class="code-route code-route-unavailable" aria-label="Code Route unavailable">` +
+        `<div class="run-story-label">Code Route</div>` +
+        `<p class="code-route-why">${esc(route.unavailable.why)}</p>` +
+        harnessBits.join("") +
+        `</section>`
+      );
+    }
+    const projects = Array.isArray(route.projects) ? route.projects : [];
+    const stops = Array.isArray(route.stops) ? route.stops : [];
+    if (!projects.length || !stops.length) return "";
+    const projectIndex = Object.fromEntries(projects.map((p, i) => [p.id, i]));
+    const n = Math.max(1, projects.length);
+    // Compact lane marks (1…n) keep the map readable at phone width; full names live in the list.
+    const left = 28;
+    const width = 360;
+    const rowH = 28;
+    const top = 18;
+    const height = top + n * rowH + 12;
+    const finishId = route.finish && route.finish.stop;
+    const points = stops.map((stop, i) => {
+      const row = projectIndex[stop.project] ?? 0;
+      const x = left + (i * (width - left - 16)) / Math.max(1, stops.length - 1);
+      const y = top + row * rowH + rowH / 2;
+      return { stop, x, y, finish: stop.id === finishId };
+    });
+    const line = points
+      .map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+      .join(" ");
+    const dots = points
+      .map((p) => {
+        const r = p.finish ? 5.5 : 3.5;
+        const cls = p.finish ? "code-route-finish" : "code-route-stop";
+        return `<circle class="${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" />`;
+      })
+      .join("");
+    const laneLabels = projects
+      .map((p, i) => {
+        const y = top + i * rowH + rowH / 2 + 4;
+        return `<text class="code-route-lane" x="0" y="${y}">${i + 1}</text>`;
+      })
+      .join("");
+    const projectList = projects
+      .map((p, i) =>
+        `<li><span class="code-route-lane-mark" aria-hidden="true">${i + 1}</span>` +
+        `<span class="code-route-project-name">${esc(p.label)}</span></li>`
+      )
+      .join("");
+    const projectNames = projects.map((p) => p.label).join(", ");
+    const measured = stops.filter((s) => s.basis === "measured").length;
+    const declared = stops.filter((s) => s.basis === "declared").length;
+    const aria =
+      `Code Route across ${projects.length} projects: ${projectNames}. ` +
+      `${stops.length} ordered checkpoints · ${measured} measured · ${declared} declared` +
+      (route.finish ? ` · finish ${route.finish.label}` : "");
+    const stats = route.stats || {};
+    const statLine = [
+      stats.projects_touched != null ? `${stats.projects_touched} projects touched` : null,
+      stats.commits != null ? `${stats.commits} commits` : null,
+      stats.files_changed != null ? `${stats.files_changed} files changed` : null,
+      stats.verified_checkpoints != null ? `${stats.verified_checkpoints} verified checkpoints` : null,
+      stats.shipped_artifacts != null ? `${stats.shipped_artifacts} shipped artifacts` : null,
+    ]
+      .filter(Boolean)
+      .map(esc)
+      .join(" · ");
+    const stopList = stops
+      .map((stop) => {
+        const project = projects.find((p) => p.id === stop.project);
+        const lane = project ? (projectIndex[project.id] ?? 0) + 1 : null;
+        const evidence = Array.isArray(stop.evidence) && stop.evidence.length
+          ? `<ul>${stop.evidence.map((line) => `<li>${esc(line)}</li>`).join("")}</ul>`
+          : "";
+        const finishMark = stop.id === finishId ? ' data-finish="1"' : "";
+        return (
+          `<details class="code-route-point"${finishMark}>` +
+          `<summary>` +
+          `<span class="code-route-kind">${esc(stop.kind)}</span>` +
+          `<span class="code-route-stop-label">${esc(stop.label)}</span>` +
+          `<span class="code-route-basis">${esc(stop.basis)}</span>` +
+          (project
+            ? `<span class="code-route-stop-project">${lane != null ? `${lane} · ` : ""}${esc(project.label)}</span>`
+            : "") +
+          `</summary>` +
+          evidence +
+          `</details>`
+        );
+      })
+      .join("");
+    return (
+      `<section class="code-route" aria-label="${esc(aria)}">` +
+      `<div class="run-story-label">Code Route</div>` +
+      `<svg class="code-route-map" viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true">` +
+      `<path class="code-route-line" d="${line}" fill="none" stroke="currentColor" stroke-width="2.5" />` +
+      dots +
+      laneLabels +
+      `</svg>` +
+      `<ol class="code-route-projects">${projectList}</ol>` +
+      (statLine ? `<p class="code-route-stats">${statLine}</p>` : "") +
+      `<div class="code-route-stops">${stopList}</div>` +
+      harnessBits.join("") +
+      `</section>`
+    );
+  }
+  const api = { validate, message, trace, ridge, outcome, codeRoute, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
