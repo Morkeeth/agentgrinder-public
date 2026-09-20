@@ -1,0 +1,34 @@
+{
+  "title": "STRIVE learned to show what shipped",
+  "project": "STRIVE",
+  "harness": "Claude Code + Astra",
+  "schema_version": 1,
+  "commits": 4,
+  "files_touched": 10,
+  "artifacts_produced": 1,
+  "repo_url": "https://github.com/Morkeeth/agentgrinder-public",
+  "shipped": [
+    "My Runs keeps its navigation on every account path",
+    "A run carries its repository, shipped lines, receipts and demo",
+    "Signed-out readers see the same declared outcome block",
+    "Import preview and save preserve every declared receipt"
+  ],
+  "receipts": [
+    {
+      "label": "Outcome receipts and My Runs",
+      "url": "https://github.com/Morkeeth/agentgrinder-public/pull/58"
+    },
+    {
+      "label": "Preview and save repair",
+      "url": "https://github.com/Morkeeth/agentgrinder-public/pull/59"
+    },
+    {
+      "label": "Production merge",
+      "url": "https://github.com/Morkeeth/agentgrinder-public/commit/14ab8f572ff1a62ced1c74bdb030875631b621f9"
+    }
+  ],
+  "artifact_url": "https://agentic-strava.vercel.app/",
+  "note": "Four reviewed commits across the STRIVE release path. Counts come from git, not from a timed transcript. The card separates declared shipped work from measured activity.",
+  "trace_basis": "git commits and merged pull requests; no session capture",
+  "measurement_revision": "7a6b32a039bb0a7d120cde67e63e3858bf7c48592cc939ede12ddaa374d44173"
+}

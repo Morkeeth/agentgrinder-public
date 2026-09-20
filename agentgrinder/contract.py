@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import hashlib
 import math
+import re
+from urllib.parse import urlsplit
 
 SCHEMA_VERSION = 1
 COUNT_FIELDS = ("turns_typed", "tool_calls", "shell_calls", "files_touched", "commits", "claims",
@@ -51,7 +53,61 @@ def validate_run(run: dict) -> dict:
         store_calls = run.get("ridge_tool_calls")
         if store_calls is not None and (type(store_calls) is not int or store_calls < 0):
             raise ValueError("ridge_tool_calls must be a non-negative whole number or unknown.")
+    public_outcome(run)
     return run
+
+
+OUTCOME_FIELDS = ("repo_url", "receipts", "shipped", "artifact_url", "image_url")
+_REPO = re.compile(r"https://(github\.com|gitlab\.com|codeberg\.org)/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+", re.I)
+_IMAGE = re.compile(r"\.(png|jpe?g|webp)([?#].*)?\Z", re.I | re.S)
+_UNSAFE_URL = re.compile(r"[\s<>\"'\\]")
+
+
+def _safe_url(value, field: str) -> str:
+    """One https link. Same rule as strava.grinder_is_safe_url and site/run-contract.js safeUrl."""
+    if (not isinstance(value, str) or not 12 <= len(value) <= 300 or _UNSAFE_URL.search(value)
+            or "javascript:" in value.lower() or urlsplit(value).scheme != "https"):
+        raise ValueError(f"{field} must be one https link under 300 characters.")
+    return value
+
+
+def public_outcome(run: dict) -> dict:
+    """The declared outcome fields, validated and copied exactly as stated. Never measured.
+
+    They are the uploader's own words and links, so nothing is trimmed, rewritten or invented. A
+    value the hosted database would refuse raises here, so a bad field is a loud local error and
+    never a silently weaker card. An absent or null field stays unknown and is left out. The rules
+    repeat migration 008 and site/run-contract.js.
+    """
+    out = {}
+    for field in ("repo_url", "artifact_url", "image_url"):
+        value = run.get(field)
+        if value is None:
+            continue
+        _safe_url(value, field)
+        if field == "repo_url" and not _REPO.match(value):
+            raise ValueError("repo_url must be a repository on github.com, gitlab.com or codeberg.org.")
+        if field == "image_url" and not _IMAGE.search(value):
+            raise ValueError("image_url must end in .png, .jpg, .jpeg or .webp.")
+        out[field] = value
+    shipped = run.get("shipped")
+    if shipped is not None:
+        if not isinstance(shipped, list) or len(shipped) > 5:
+            raise ValueError("shipped holds at most 5 lines.")
+        if any(not isinstance(line, str) or not 1 <= len(line.strip()) <= 120 for line in shipped):
+            raise ValueError("each shipped line is text, 1 to 120 characters.")
+        out["shipped"] = list(shipped)
+    receipts = run.get("receipts")
+    if receipts is not None:
+        if not isinstance(receipts, list) or len(receipts) > 5:
+            raise ValueError("receipts holds at most 5 links.")
+        for receipt in receipts:
+            if (not isinstance(receipt, dict) or set(receipt) - {"label", "url"}
+                    or not isinstance(receipt.get("label"), str) or not 1 <= len(receipt["label"].strip()) <= 60):
+                raise ValueError("each receipt is {label, url}: a label of 1 to 60 characters and one https link.")
+            _safe_url(receipt.get("url"), "each receipt url")
+        out["receipts"] = [{"label": receipt["label"], "url": receipt["url"]} for receipt in receipts]
+    return out
 
 
 def public_revision(run: dict) -> dict:
