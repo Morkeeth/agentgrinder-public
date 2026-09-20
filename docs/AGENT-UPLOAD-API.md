@@ -90,6 +90,11 @@ Any other field is refused (`Unsupported public field: transcript`).
 `artifact_url` a demo link · `image_url` a screenshot ending in .png, .jpg, .jpeg or .webp.
 Every link must be https, at most 300 characters, with no whitespace, quotes, angle brackets or
 backslashes. The card shows them under "Said by the uploader, not measured", never beside the counts.
+The Python client (`agent_api publish`, the MCP `publish` tool, `push.export_run` and the import
+URL) carries all five from the run JSON, copied exactly as stated. It checks the same rules first,
+so a value the database would refuse stops locally with a plain error instead of being left out. A
+`title` or `note` inside the run JSON never travels, because a parser title can be a typed prompt.
+Pass `--title` and `--note` to choose the public text.
 
 **Rules.** Counts are whole numbers from 0. Text fields must be JSON strings. A ridge is 40 to 60
 whole numbers from 0 to 2^53-1, with `worker_bins` of the same length and kind, `commit_bins` as
