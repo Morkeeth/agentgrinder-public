@@ -1820,6 +1820,11 @@ async function importRun(){
       rhythm:run.rhythm||null,trace_basis:run.trace_basis||null,caption:$('i_caption').value||null,output_url:$('i_output_url').value||null,
       ridge:run.ridge||null,ridge_basis:run.ridge_basis||null,ridge_wall_seconds:run.ridge_wall_seconds??null,
       worker_bins:run.worker_bins||null,commit_bins:run.commit_bins||null,
+      // Declared outcome receipts travel into the preview, so what the card shows here is what a
+      // reader would see. Without these the preview silently dropped the repo, the shipped lines,
+      // the receipt links and the demo, and only the counts survived.
+      repo_url:run.repo_url||null,receipts:run.receipts||null,shipped:run.shipped||null,
+      artifact_url:run.artifact_url||null,image_url:run.image_url||null,
       visibility:'private',started_at:run.started||null,created_at:new Date().toISOString()};
     $('import-card-preview').innerHTML=runCard(preview,false,0,{preview:true});
     if(typeof GrinderContract==='object'&&GrinderContract.mountRunMaps) GrinderContract.mountRunMaps($('import-card-preview'));
@@ -1901,6 +1906,10 @@ async function importRun(){
     if(run.ridge) Object.assign(coach,{ridge:run.ridge,ridge_basis:run.ridge_basis||null,
       ridge_wall_seconds:run.ridge_wall_seconds??null,worker_bins:run.worker_bins||null,
       commit_bins:run.commit_bins||null,ridge_tool_calls:run.ridge_tool_calls??null});
+    // Declared outcome receipts (migration 008). Same rule as the ridge: the preview already showed
+    // them, so a save that dropped them would produce a card that reads differently from its preview.
+    for(const key of ['repo_url','receipts','shipped','artifact_url','image_url'])
+      if(run[key]!=null) coach[key]=run[key];
     let {data:published,error}=await sb.from('runs').insert({...base,...coach}).select('id').single();
     if(error&&error.code==='23505'){ let again=null; try{again=await existingRun()}catch(_){} if(again){ await openExisting(again); return; } }
     if(error){showRecovery(error);return;}
