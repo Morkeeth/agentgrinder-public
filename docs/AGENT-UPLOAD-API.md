@@ -84,6 +84,13 @@ schema_version measurement_revision baseline_revision trace_basis note ridge wor
 commit_bins ridge_basis ridge_wall_seconds ridge_tool_calls wall_time_s model caption`.
 Any other field is refused (`Unsupported public field: transcript`).
 
+**Declared outcome receipts** (migration 008, optional, never measurements):
+`repo_url` one repository link on github.com, gitlab.com or codeberg.org · `receipts` up to 5
+`{label, url}` pairs, label 1 to 60 characters · `shipped` up to 5 lines of 1 to 120 characters ·
+`artifact_url` a demo link · `image_url` a screenshot ending in .png, .jpg, .jpeg or .webp.
+Every link must be https, at most 300 characters, with no whitespace, quotes, angle brackets or
+backslashes. The card shows them under "Said by the uploader, not measured", never beside the counts.
+
 **Rules.** Counts are whole numbers from 0. Text fields must be JSON strings. A ridge is 40 to 60
 whole numbers from 0 to 2^53-1, with `worker_bins` of the same length and kind, `commit_bins` as
 indexes into the ridge, and `ridge_basis` one of `wall-time`, `call-index`, `turn-order`.

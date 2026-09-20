@@ -44,6 +44,12 @@ button.ghost:hover,.act:hover{background:var(--rule-2);border-color:var(--rule)}
 .bar nav{display:flex;gap:20px;font-size:13px;color:var(--soft);min-width:0;overflow:visible;align-items:center;flex-wrap:wrap}
 .bar nav a{white-space:nowrap}
 .bar nav a.on,[aria-current=page]{color:var(--ink);font-weight:500}
+.run-outcome{margin:10px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px}
+.run-outcome .run-story-label{margin:0 0 6px}
+.run-outcome-repo{margin:0;font-size:13px}
+.run-outcome-shipped{margin:6px 0;padding-left:18px;font-size:13px}
+.run-outcome-links{margin:6px 0 0;font-size:13px}
+.run-outcome-image img{max-width:100%;border-radius:6px;margin-top:8px}
 .nav-badge{display:inline-block;min-width:8px;height:8px;margin-left:6px;border-radius:50%;background:var(--blue, #123cff);vertical-align:middle}
 .nav-badge[hidden]{display:none}
 .account-menu{position:relative}
@@ -968,6 +974,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     const html=cells.map(([label,value])=>`<div class="run-metric"><dt>${esc(label)}</dt><dd class="num">${esc(value)}</dd></div>`).join('');
     return `<div class="run-story-label">Effort</div><dl class="run-metrics" aria-label="Recorded effort">${html}</dl>`;
   };
+  const declared=()=>typeof GrinderContract!=='undefined'&&GrinderContract.outcome?GrinderContract.outcome(r):'';
   const selfAck=ME&&ME.id===r.profile_id;
   const ackBtn=selfAck?'':`<button class="act kudo ${acked?'on':''}" data-run="${r.id}" data-to="${r.profile_id}">${acked?'ACKed':'ACK'}${count?' <span class="n num">'+count+'</span>':''}</button>`;
   const picker=opts.picker?ackPickerHtml(r,opts.suggested||suggestAckReasons(r),opts.selected||null):'';
@@ -984,7 +991,8 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   if(project) storyFacts.push(`<div><dt>Project touched</dt><dd>${esc(project)}</dd></div>`);
   if(code.length) storyFacts.push(`<div><dt>Code activity</dt><dd>${code.map(([label,value])=>`<span><strong class="num">${esc(value)}</strong> ${esc(label)}</span>`).join('')}</dd></div>`);
   const story=`${output?`<div class="run-output"><span>Output</span><a href="${esc(output)}" target="_blank" rel="noopener noreferrer">Open ${esc(ridgeOutput||'output')} ↗</a></div>`:''}
-    ${storyFacts.length?`<dl class="run-story-facts">${storyFacts.join('')}</dl>`:''}`;
+    ${storyFacts.length?`<dl class="run-story-facts">${storyFacts.join('')}</dl>`:''}
+    ${declared()}`;
   const recorded='<details class="run-evidence"><summary>How these numbers work</summary><p class="meta">Captured from the selected session. A zero is a recorded zero. Missing optional fields stay off the card.</p></details>';
   const ridgeBody=ridge?`${ridge}
     ${metricStrip()}

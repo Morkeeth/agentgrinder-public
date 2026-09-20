@@ -391,4 +391,47 @@ await db.exec(await readFile(new URL("../supabase/strava/007_agent_token_connect
 }
 
 
+// ---------- 008: declared outcome receipts ----------
+await db.exec(await readFile(new URL("../supabase/strava/008_outcome_receipts.sql", import.meta.url), "utf8"));
+{
+  const agentC = await agent(OWNER_A);
+  const tok = await token(agentC, { scopes: ["publish"], audiences: ["private"] });
+  const outcome = {
+    repo_url: "https://github.com/Morkeeth/agentgrinder-public",
+    receipts: [{ label: "PR 51", url: "https://github.com/Morkeeth/agentgrinder-public/pull/51" },
+               { label: "commit e56a748", url: "https://github.com/Morkeeth/agentgrinder-public/commit/e56a748" }],
+    shipped: ["My runs keeps the primary rail", "Outcome receipts on the run contract"],
+    artifact_url: "https://agentic-strava.vercel.app/",
+    image_url: "https://agentic-strava.vercel.app/card.png",
+  };
+  const saved = await act(tok, "publish", { title: "Outcome run", measurement_revision: REV(60), ...outcome });
+  const row = (await db.query("select repo_url, receipts, shipped, artifact_url, image_url, ridge, visibility from strava.runs where id=$1", [saved.id])).rows[0];
+  assert.equal(row.repo_url, outcome.repo_url);
+  assert.deepEqual(row.receipts, outcome.receipts);
+  assert.deepEqual(row.shipped, outcome.shipped);
+  assert.equal(row.artifact_url, outcome.artifact_url);
+  assert.equal(row.image_url, outcome.image_url);
+  assert.equal(row.ridge, null, "an outcome run needs no measured ridge");
+  assert.equal(row.visibility, "private", "declared outcomes do not change the default audience");
+
+  const bad = async (extra, pattern) => refused(act(tok, "publish", { title: "x", measurement_revision: REV("b" + JSON.stringify(extra).length + Math.random()), ...extra }), pattern);
+  await bad({ repo_url: "http://github.com/a/b" }, /https link/);
+  await bad({ repo_url: "https://example.com/a/b" }, /repository on github/);
+  await bad({ artifact_url: 'https://x.com/a" onerror="alert(1)' }, /https link/);
+  await bad({ artifact_url: "https://x.com/a b" }, /https link/);
+  await bad({ artifact_url: "https://x.com/" + "y".repeat(320) }, /https link/);
+  await bad({ image_url: "https://x.com/a.svg" }, /png, .jpg/);
+  await bad({ image_url: { url: "https://x.com/a.png" } }, /image_url must be text/);
+  await bad({ shipped: ["a", "b", "c", "d", "e", "f"] }, /at most 5 lines/);
+  await bad({ shipped: [""] }, /1 to 120 characters/);
+  await bad({ shipped: ["z".repeat(121)] }, /1 to 120 characters/);
+  await bad({ shipped: [{ text: "not a string" }] }, /1 to 120 characters|text/);
+  await bad({ receipts: [{ label: "ok", url: "http://x.com/a" }] }, /label of 1 to 60/);
+  await bad({ receipts: [{ label: "ok", url: "https://x.com/a", extra: 1 }] }, /label of 1 to 60/);
+  await bad({ receipts: [{ url: "https://x.com/a" }] }, /label of 1 to 60/);
+  await bad({ receipts: Array.from({ length: 6 }, () => ({ label: "l", url: "https://x.com/a" })) }, /at most 5 links/);
+  await bad({ output_url: "https://x.com/a" }, /Unsupported public field: output_url/);
+  console.log("outcome receipts persist, stay private, and refuse unsafe links, oversized lists and unknown keys");
+}
+
 console.log("\nAGENT PUBLISH: all checks passed");

@@ -77,6 +77,32 @@
       )
         throw new Error("Invalid ridge wall time.");
     }
+    // Declared outcome receipts. Same rules the database enforces in migration 008. These are the
+    // uploader's claims, never measurements, so they are validated for safety and shown apart.
+    for (const field of ["repo_url", "artifact_url", "image_url"]) {
+      if (run[field] == null) continue;
+      if (typeof run[field] !== "string" || !safeUrl(run[field]))
+        throw new Error(field + " must be one https link under 300 characters.");
+    }
+    if (run.repo_url != null && !/^https:\/\/(github\.com|gitlab\.com|codeberg\.org)\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+/i.test(run.repo_url))
+      throw new Error("repo_url must be a repository on github.com, gitlab.com or codeberg.org.");
+    if (run.image_url != null && !/\.(png|jpe?g|webp)([?#].*)?$/i.test(run.image_url))
+      throw new Error("image_url must end in .png, .jpg, .jpeg or .webp.");
+    if (run.shipped != null) {
+      if (!Array.isArray(run.shipped) || run.shipped.length > 5)
+        throw new Error("shipped holds at most 5 lines.");
+      if (run.shipped.some((line) => typeof line !== "string" || line.trim().length < 1 || line.trim().length > 120))
+        throw new Error("each shipped line is text, 1 to 120 characters.");
+    }
+    if (run.receipts != null) {
+      if (!Array.isArray(run.receipts) || run.receipts.length > 5)
+        throw new Error("receipts holds at most 5 links.");
+      if (run.receipts.some((r) => !r || typeof r !== "object" || Array.isArray(r)
+        || Object.keys(r).some((k) => k !== "label" && k !== "url")
+        || typeof r.label !== "string" || r.label.trim().length < 1 || r.label.trim().length > 60
+        || typeof r.url !== "string" || !safeUrl(r.url)))
+        throw new Error("each receipt is {label, url}: a label of 1 to 60 characters and one https link.");
+    }
     for (const field of ["measurement_revision", "baseline_revision"]) {
       if (
         run[field] != null &&
@@ -85,6 +111,37 @@
         throw new Error("Invalid measurement revision reference.");
     }
     return run;
+  }
+  function safeUrl(value) {
+    if (typeof value !== "string" || value.length < 12 || value.length > 300) return false;
+    if (/[\s<>"'\\]/.test(value) || /javascript:/i.test(value)) return false;
+    try { return new URL(value).protocol === "https:"; } catch (_) { return false; }
+  }
+  function esc(text) {
+    return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function outcome(run) {
+    // Declared by the uploader. Kept in its own block, with its own heading, so it can never read as
+    // a measurement. Every link is re-checked here, because a stored row is still untrusted input.
+    if (!run) return "";
+    const link = (href, text) => safeUrl(href)
+      ? `<a href="${esc(href)}" rel="noopener noreferrer nofollow" target="_blank">${esc(text)}</a>` : "";
+    const parts = [];
+    const repo = safeUrl(run.repo_url) ? link(run.repo_url, String(run.repo_url).replace(/^https:\/\//, "")) : "";
+    if (repo) parts.push(`<p class="run-outcome-repo">${repo}</p>`);
+    const shipped = Array.isArray(run.shipped) ? run.shipped.filter((l) => typeof l === "string" && l.trim()).slice(0, 5) : [];
+    if (shipped.length) parts.push(`<ul class="run-outcome-shipped">${shipped.map((l) => `<li>${esc(l.trim().slice(0, 120))}</li>`).join("")}</ul>`);
+    const receipts = (Array.isArray(run.receipts) ? run.receipts : []).filter((r) => r && safeUrl(r.url) && typeof r.label === "string").slice(0, 5);
+    const extra = [];
+    receipts.forEach((r) => extra.push(link(r.url, r.label.trim().slice(0, 60))));
+    if (safeUrl(run.artifact_url)) extra.push(link(run.artifact_url, "Open the demo"));
+    // No remote image is embedded, here or on the public page: an arbitrary third party host would
+    // learn the IP and user agent of every reader, and a dead link would render a broken box.
+    if (safeUrl(run.image_url) && /\.(png|jpe?g|webp)([?#].*)?$/i.test(run.image_url))
+      extra.push(link(run.image_url, "Open the screenshot"));
+    if (extra.length) parts.push(`<p class="run-outcome-links">${extra.join(" · ")}</p>`);
+    if (!parts.length) return "";
+    return `<section class="run-outcome"><div class="run-story-label">Said by the uploader, not measured</div>${parts.join("")}</section>`;
   }
   function message(error) {
     const text =
@@ -485,7 +542,7 @@
       "</section>"
     );
   }
-  const api = { validate, message, trace, ridge, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
+  const api = { validate, message, trace, ridge, outcome, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
