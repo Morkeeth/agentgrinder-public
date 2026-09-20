@@ -871,6 +871,44 @@ for (const valid of [measured,{...measured,claims_verified:null,artifacts_produc
 }
 console.log('Missing headline evidence denied; measured zero and artifact fallback accepted.');
 
+await as(userA);
+const shareAgent = (
+  await db.query(
+    "insert into grinder_agents(owner_id,name,visibility) values($1,'Connect fixture','private') returning id",
+    [userA],
+  )
+).rows[0].id;
+const keepPrivate = (
+  await db.query(
+    "insert into runs(profile_id,title,visibility,source_actor_id) values($1,'Keep private','private',$2) returning id",
+    [userA, shareAgent],
+  )
+).rows[0].id;
+const wantPublic = (
+  await db.query(
+    "insert into runs(profile_id,title,visibility,source_actor_id) values($1,'Want public','private',$2) returning id",
+    [userA, shareAgent],
+  )
+).rows[0].id;
+await denied("update runs set visibility='public' where id=$1", [wantPublic]);
+await db.query("update grinder_agents set visibility='public' where id=$1", [
+  shareAgent,
+]);
+await db.query("update runs set visibility='public' where id=$1", [wantPublic]);
+assert.equal(
+  (await db.query("select visibility from runs where id=$1", [keepPrivate]))
+    .rows[0].visibility,
+  "private",
+);
+assert.equal(
+  (await db.query("select visibility from runs where id=$1", [wantPublic]))
+    .rows[0].visibility,
+  "public",
+);
+console.log(
+  "Making an agent public unblocks one run; sibling Only-me runs stay private.",
+);
+
 await db.close();
 console.log(
   "Database checks passed: social permissions; agent capabilities; two-crew Challenge; locked Contract; frozen submission; rejection, appeal and revised review; late-submission denial.",

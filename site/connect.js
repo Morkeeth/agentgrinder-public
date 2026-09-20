@@ -71,7 +71,19 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
       .join("")}</ul>`;
   }
 
-  function panelHtml(rows, issued) {
+  function agentVisibilityHtml(agent) {
+    if (!agent) return "";
+    const isPublic = agent.visibility === "public";
+    return `<section class="card pad account-section" id="connect-agent-visibility">
+        <h2>Agent profile</h2>
+        <p>Uploads are linked to this Connect agent. Public, Link or Close friends needs the agent public first. Other Only-me runs stay private.</p>
+        <p class="account-hint">Now: ${isPublic ? "Public" : "Private"}.</p>
+        ${isPublic ? "" : `<div class="account-actions"><button type="button" class="act blue" id="connect-make-public">Make Connect agent public</button></div>`}
+        <p id="connect-agent-state" class="account-state" role="status" aria-live="polite"></p>
+      </section>`;
+  }
+
+  function panelHtml(rows, issued, agent) {
     const once = issued
       ? `<section class="connect-once" role="status" aria-live="polite">
           <h2>Save this credential now</h2>
@@ -99,6 +111,7 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
         </form>
         ${once}
       </section>
+      ${agentVisibilityHtml(agent || null)}
       <section class="card pad account-section" aria-labelledby="connect-list-title">
         <h2 id="connect-list-title">Your connections</h2>
         <div id="connect-list">${listHtml(rows)}</div>
@@ -135,6 +148,18 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
     }
     return data ? [data] : [];
   }
+  async function loadConnectAgent() {
+    const { data, error } = await db
+      .from("grinder_agents")
+      .select("id,name,visibility")
+      .eq("owner_id", me().id)
+      .eq("name", "Connect")
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (error) throw error;
+    return Array.isArray(data) && data.length ? data[0] : null;
+  }
+
   async function rpcRevoke(id) {
     const { data, error } = await db.rpc("agent_token_revoke", { p_id: id });
     if (error) throw error;
@@ -166,8 +191,10 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
       return;
     }
     let rows = [];
+    let agent = null;
     try {
       rows = await rpcList();
+      agent = await loadConnectAgent();
     } catch (error) {
       if (isMissingRpc(error)) {
         root.innerHTML = unavailableHtml(error.message);
@@ -175,11 +202,11 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
       }
       say(error.message || "Connections could not load.", true);
     }
-    root.innerHTML = panelHtml(rows, issued || null);
-    wire(issued || null);
+    root.innerHTML = panelHtml(rows, issued || null, agent);
+    wire(issued || null, agent);
   }
 
-  function wire(issued) {
+  function wire(issued, agent) {
     const form = byId("connect-create");
     const state = byId("connect-create-state");
     form?.addEventListener("submit", async (e) => {
@@ -233,6 +260,29 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
         say("One-paste setup copied.");
       } catch (_) {
         say("Select and copy the setup block.", true);
+      }
+    });
+
+    byId("connect-make-public")?.addEventListener("click", async () => {
+      const button = byId("connect-make-public");
+      const state = byId("connect-agent-state");
+      if (!agent?.id) return;
+      if (button) button.disabled = true;
+      try {
+        const { error } = await db
+          .from("grinder_agents")
+          .update({ visibility: "public" })
+          .eq("id", agent.id);
+        if (error) throw error;
+        say("Connect agent is public. Other Only-me runs stay private.");
+        await view(null);
+      } catch (error) {
+        if (state) {
+          state.textContent = error.message || "Could not update visibility.";
+          state.classList.add("err");
+        }
+        say(error.message || "Could not update visibility.", true);
+        if (button) button.disabled = false;
       }
     });
 

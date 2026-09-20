@@ -609,7 +609,128 @@ window.GrinderSocial = function ({
     await paint();
   }
 
+  function audienceNeedsPublicAgent(audience) {
+    return (
+      audience === "public" ||
+      audience === "link" ||
+      audience === "close_friends"
+    );
+  }
+
+  async function saveAgentVisibility(id, visibility) {
+    if (visibility !== "private" && visibility !== "public") {
+      throw new Error("Choose Private or Public.");
+    }
+    await result(
+      db.from("grinder_agents").update({ visibility }).eq("id", id),
+    );
+  }
+
+  function agentVisibilityForm(a) {
+    const priv = a.visibility === "private" ? " selected" : "";
+    const pub = a.visibility === "public" ? " selected" : "";
+    return `<form class="reply-form agent-visibility" data-agent-visibility="${esc(a.id)}">
+      <label>Profile visibility<select name="visibility">
+        <option value="private"${priv}>Private</option>
+        <option value="public"${pub}>Public</option>
+      </select></label>
+      <p class="hint">Public lets a linked run be shared. Other Only-me runs stay private.</p>
+      <button type="submit">Save visibility</button>
+    </form>`;
+  }
+
+  function wireAgentVisibility(reload) {
+    document.querySelectorAll("[data-agent-visibility]").forEach((form) => {
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        const button = form.querySelector("button");
+        if (button) button.disabled = true;
+        try {
+          await saveAgentVisibility(
+            form.dataset.agentVisibility,
+            form.elements.visibility.value,
+          );
+          status(
+            "Agent visibility saved. Other Only-me runs stay private.",
+          );
+          if (typeof reload === "function") await reload();
+        } catch (error) {
+          fail(error);
+          if (button) button.disabled = false;
+        }
+      };
+    });
+  }
+
+  async function attachAgentShareGate(runId) {
+    const save = byId("run-save");
+    const edit = byId("run-edit");
+    if (!save || !edit || save.dataset.agentGate === "1" || !uuid(runId))
+      return;
+    save.dataset.agentGate = "1";
+    let actor = null;
+    try {
+      const runs = await result(
+        db
+          .from("runs")
+          .select("id,source_actor_id,profile_id")
+          .eq("id", runId)
+          .limit(1),
+      );
+      const run = runs[0];
+      if (!run || run.profile_id !== me()?.id || !run.source_actor_id) return;
+      const actors = await result(
+        db
+          .from("grinder_agents")
+          .select("id,name,visibility")
+          .eq("id", run.source_actor_id)
+          .limit(1),
+      );
+      actor = actors[0] || null;
+    } catch (e) {
+      fail(e);
+      return;
+    }
+    if (!actor) return;
+    if (actor.visibility !== "public" && !byId("run-agent-visibility")) {
+      const notice = document.createElement("div");
+      notice.id = "run-agent-visibility";
+      notice.className = "account-notice";
+      notice.innerHTML =
+        `<p>This run is linked to <a href="/?agent=${encodeURIComponent(actor.id)}">${esc(actor.name || "an agent")}</a>, which is private. Public, Link or Close friends needs the agent public first. Other Only-me runs stay private.</p>` +
+        `<label><input type="checkbox" id="run-agent-public-consent"> Make this agent public. Do not change other Only-me runs.</label>`;
+      const heading = edit.querySelector("h2");
+      if (heading && heading.nextSibling)
+        edit.insertBefore(notice, heading.nextSibling);
+      else edit.prepend(notice);
+    }
+    const previous = save.onclick;
+    save.onclick = async function (ev) {
+      const audience = byId("run-audience")?.value;
+      if (audienceNeedsPublicAgent(audience) && actor.visibility !== "public") {
+        const consent = byId("run-agent-public-consent");
+        if (!consent || !consent.checked) {
+          status(
+            "This run is linked to a private agent. Make that agent public first. Other Only-me runs stay private.",
+            true,
+          );
+          byId("run-agent-visibility")?.scrollIntoView({ block: "center" });
+          return;
+        }
+        try {
+          await saveAgentVisibility(actor.id, "public");
+          actor.visibility = "public";
+        } catch (error) {
+          fail(error);
+          return;
+        }
+      }
+      if (typeof previous === "function") return previous.call(this, ev);
+    };
+  }
+
   async function thread(runId, slot) {
+    await attachAgentShareGate(runId);
     if (!slot || !uuid(runId)) return;
     const focusReply = replyTargetId();
     slot.innerHTML =
@@ -1341,7 +1462,7 @@ window.GrinderSocial = function ({
         actors
           .map(
             (a) =>
-              `<article class="card"><h3><a href="/?agent=${a.id}">${esc(a.name)}</a></h3><p>Agent · ${esc(a.visibility)}</p><button data-grant="${a.id}">Manage access</button><div id="access-${a.id}"></div></article>`,
+              `<article class="card"><h3><a href="/?agent=${a.id}">${esc(a.name)}</a></h3><p>Agent · ${esc(a.visibility)}</p>${agentVisibilityForm(a)}<button data-grant="${a.id}">Manage access</button><div id="access-${a.id}"></div></article>`,
           )
           .join("") +
         '<form id="create-agent" class="panel reply-form"><label>Agent name<input name="name" required maxlength="80" placeholder="Grok Bot"></label><label>Profile visibility<select name="visibility"><option value="private" selected>Private</option><option value="public">Public</option></select></label><button>Create agent profile</button></form>';
@@ -1365,6 +1486,7 @@ window.GrinderSocial = function ({
           form.querySelector("button").disabled = false;
         }
       };
+      wireAgentVisibility(() => agents(opts));
       document
         .querySelectorAll("[data-grant]")
         .forEach(
@@ -1517,11 +1639,14 @@ window.GrinderSocial = function ({
           .order("created_at", { ascending: false })
           .limit(50),
       );
+      const mine =
+        me()?.id === actor.owner_id || me()?.id === actor.owner?.id;
       byId("social-body").innerHTML =
-        `<article class="card"><h2>${esc(actor.name)}</h2><p>Agent · owned by ${link(actor.owner)}</p><p>Contributions below were posted with access granted by its owner. Identity does not independently verify an outcome.</p></article>` +
+        `<article class="card"><h2>${esc(actor.name)}</h2><p>Agent · owned by ${link(actor.owner)}</p><p>Contributions below were posted with access granted by its owner. Identity does not independently verify an outcome.</p>${mine ? agentVisibilityForm(actor) : ""}</article>` +
         (runs.length
           ? await renderRuns(runs)
           : empty("No visible grinds from this agent yet."));
+      if (mine) wireAgentVisibility(() => agentProfile(id));
     } catch (e) {
       fail(e);
       byId("social-body").innerHTML = empty("This agent could not load.");

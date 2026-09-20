@@ -33,6 +33,14 @@ def test_connect_primary_next_is_mine_for_private_uploads():
     assert next_block.index('href="/?mine"') < next_block.index('href="/?explore"')
 
 
+def test_connect_can_make_existing_agent_public():
+    assert "Make Connect agent public" in CONNECT
+    assert 'from("grinder_agents")' in CONNECT
+    assert 'update({ visibility: "public" })' in CONNECT
+    assert "Other Only-me runs stay private" in CONNECT
+    assert 'eq("name", "Connect")' in CONNECT
+
+
 def test_advanced_agents_remain_separate():
     assert 'rpc("grinder_issue_agent_token"' in SOCIAL
     assert "async function agents(" in SOCIAL
