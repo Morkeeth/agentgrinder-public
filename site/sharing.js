@@ -45,6 +45,35 @@ function codeFacts(run){
 function storyFacts(run){
  const project=projectName(run),code=codeFacts(run).join(' · ');return {project:project||null,output:outputKind(run),code:code||null};
 }
+function routeInsight(route){
+ if(!route||typeof route!=='object'||Array.isArray(route)||route.v!==1||route.unavailable)return '';
+ const projects=Array.isArray(route.projects)?route.projects:[];
+ const stops=Array.isArray(route.stops)?route.stops:[];
+ if(!projects.length||!stops.length)return '';
+ const connectors=Array.isArray(route.connectors)?route.connectors:[];
+ const handoffs=connectors.filter(c=>c&&c.kind==='handoff');
+ const measured=stops.filter(s=>s&&s.basis==='measured').length;
+ const declared=stops.filter(s=>s&&s.basis==='declared').length;
+ const counts=Object.create(null);
+ for(const stop of stops){if(!stop||!stop.project)continue;counts[stop.project]=(counts[stop.project]||0)+1;}
+ let densest=null,densestN=0,ties=0;
+ for(const project of projects){const n=counts[project.id]||0;if(n>densestN){densest=project;densestN=n;ties=1;}else if(n===densestN&&n>0)ties+=1;}
+ const finishStop=route.finish&&stops.find(s=>s.id===route.finish.stop);
+ const finishProject=finishStop&&projects.find(p=>p.id===finishStop.project);
+ const parts=[];
+ if(densest&&ties===1&&densestN>0&&densestN<stops.length)parts.push(densest.label+' held the densest stretch ('+densestN+' of '+stops.length+' stops)');
+ if(handoffs.length){
+  if(finishProject&&densest&&finishProject.id!==densest.id)parts.push(handoffs.length+(handoffs.length===1?' handoff carried the work to ':' handoffs carried the work to ')+finishProject.label);
+  else parts.push(handoffs.length+(handoffs.length===1?' handoff across the route':' handoffs across the route'));
+ }
+ if(measured+declared===stops.length){
+  if(declared===0&&measured===stops.length)parts.push('every stop is measured');
+  else if(declared>0)parts.push(measured+' measured, '+declared+' declared');
+ }
+ if(route.finish&&route.finish.kind==='artifact'&&route.finish.label&&parts.length<2)parts.push('finish '+route.finish.label);
+ if(!parts.length)return '';
+ return parts[0]+parts.slice(1).map(part=>'. '+part.charAt(0).toUpperCase()+part.slice(1)).join('')+'.';
+}
 function ridgeBasisLabel(basis){
  if(basis==='wall-time')return'wall time';
  if(basis==='turn-order')return'turn order';
@@ -109,9 +138,9 @@ function mount({run,slot,status,moment=null,review=null}){
   ctx.fillStyle='#333';ctx.font='16px sans-serif';
   const projectLine=projects.map((p,i)=>`${i+1} · ${p.label}`).join('   ');
   clipped=lines(projectLine,64,top+projects.length*rowH+18,952,'16px sans-serif',20,2)||clipped;
-  const stats=route.stats||{};
-  const label=[stats.projects_touched!=null?stats.projects_touched+' projects touched':null,stats.verified_checkpoints!=null?stats.verified_checkpoints+' verified checkpoints':null].filter(Boolean).join(' · ')||'Code Route';
-  ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(label,64,592);
+  const insight=routeInsight(route);
+  ctx.fillStyle='#111';ctx.font='600 20px sans-serif';
+  clipped=lines(insight||'Code Route',64,top+projects.length*rowH+56,952,'600 20px sans-serif',26,2)||clipped;
  }else if(route&&route.unavailable){
   ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Code Route unavailable',64,520);
   ctx.font='17px sans-serif';ctx.fillText(String(route.unavailable.why||'').slice(0,90),64,592);
@@ -119,11 +148,14 @@ function mount({run,slot,status,moment=null,review=null}){
   const trace=traceSeries(run),values=trace?.values;ctx.strokeStyle='#123cff';ctx.lineWidth=4;if(trace){const max=Math.max(...values)||1;ctx.beginPath();values.forEach((v,i)=>{const x=64+i/(values.length-1)*952,y=560-v/max*105;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}else{ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Trace unavailable',64,520)}
   ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(traceSeries(run)?.label||'Session activity · time basis unknown',64,592);
  }
- ctx.fillStyle='#123cff';ctx.font='600 16px sans-serif';ctx.fillText('EFFORT',64,632);
- metricStrip(run).forEach(([name,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(name,x,663);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'22px sans-serif':'600 31px sans-serif';ctx.fillText(value,x,705)});
- let y=770;const blocks=[['THE AGENT',f.contribution],['NEXT RUN',f.next]].filter(([,v])=>v);for(const [label,body] of blocks){ctx.fillStyle='#123cff';ctx.font='600 17px sans-serif';ctx.fillText(label,64,y);ctx.fillStyle='#111';clipped=lines(body,64,y+34,952,'26px sans-serif',32,portrait?3:2)||clipped;y+=portrait?160:110;}
+  const hasRoute=route&&!route.unavailable&&Array.isArray(route.projects)&&Array.isArray(route.stops)&&route.projects.length&&route.stops.length;
+ if(!hasRoute){
+  ctx.fillStyle='#123cff';ctx.font='600 16px sans-serif';ctx.fillText('EFFORT',64,632);
+  metricStrip(run).forEach(([name,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(name,x,663);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'22px sans-serif':'600 31px sans-serif';ctx.fillText(value,x,705)});
+ }
+ let y=hasRoute?720:770;const blocks=[['THE AGENT',f.contribution],['NEXT RUN',f.next]].filter(([,v])=>v);for(const [label,body] of blocks){ctx.fillStyle='#123cff';ctx.font='600 17px sans-serif';ctx.fillText(label,64,y);ctx.fillStyle='#111';clipped=lines(body,64,y+34,952,'26px sans-serif',32,portrait?3:2)||clipped;y+=portrait?160:110;}
  ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(64,canvas.height-65);ctx.lineTo(1016,canvas.height-65);ctx.stroke();ctx.fillStyle='#666';ctx.font='18px sans-serif';ctx.fillText(review?'My observation · this does not prove the practice caused the result':'Builder’s account · recorded counts are not independent verification',64,canvas.height-30);
- slot.querySelector('#post-caption').value=[f.title,f.contribution&&'Agent: '+f.contribution,f.result&&'Result: '+f.result,f.next&&'Next run: '+f.next,review?'My observation, not proof the practice caused the result.':readable?url:''].filter(Boolean).join('\n\n');
+ slot.querySelector('#post-caption').value=[f.title,hasRoute&&routeInsight(route),f.contribution&&'Agent: '+f.contribution,f.result&&'Result: '+f.result,f.next&&'Next run: '+f.next,review?'My observation, not proof the practice caused the result.':readable?url:''].filter(Boolean).join('\n\n');
  slot.querySelector('#post-message').textContent=clipped?'Some text is shortened in the image. Shorten your text or choose portrait. Moment and review exports require the complete text to fit; the caption keeps the full text.':'';
  const ready=form.elements.review.checked&&!!f.title&&(!(moment||review)||!clipped)&&(!review||!!f.result);slot.querySelector('#post-download').disabled=!ready;slot.querySelector('#post-copy').disabled=!ready;
  }
