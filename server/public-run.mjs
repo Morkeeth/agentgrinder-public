@@ -238,8 +238,7 @@ export function card(run){
    routePlot?el('div',{style:{display:'flex',flexDirection:'column',marginTop:9}},
     el('svg',{width:1030,height:Math.max(90,routePlot.n*22+20),viewBox:`0 0 1030 ${Math.max(90,routePlot.n*22+20)}`},
      el('path',{d:routePlot.stops.map((stop,i)=>{const row=routePlot.idx[stop.project]||0;const x=36+i/Math.max(1,routePlot.stops.length-1)*960;const y=16+row*22+11;return `${i?'L':'M'}${x} ${y}`;}).join(' '),stroke:'#123cff',strokeWidth:4,fill:'none'}),
-     ...routePlot.stops.map((stop,i)=>{const row=routePlot.idx[stop.project]||0;const x=36+i/Math.max(1,routePlot.stops.length-1)*960;const y=16+row*22+11;const finish=routePlot.finish===stop.id;return el('circle',{cx:x,cy:y,r:finish?7:4.5,fill:finish?'#111':'#123cff'});}),
-     ...routePlot.projects.map((p,i)=>el('text',{x:8,y:16+i*22+14,fill:'#687083',fontSize:14},String(i+1)))
+     ...routePlot.stops.map((stop,i)=>{const row=routePlot.idx[stop.project]||0;const x=36+i/Math.max(1,routePlot.stops.length-1)*960;const y=16+row*22+11;const finish=routePlot.finish===stop.id;return el('circle',{cx:x,cy:y,r:finish?7:4.5,fill:finish?'#111':'#123cff'});})
     ),
     el('div',{style:{display:'flex',flexDirection:'column',fontSize:15,color:'#333',marginTop:6,gap:2}},
      ...routePlot.projects.map((p,i)=>el('div',{style:{display:'flex'}},`${i+1} · ${p.label}`))),
