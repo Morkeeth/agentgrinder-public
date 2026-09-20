@@ -135,9 +135,11 @@
     const extra = [];
     receipts.forEach((r) => extra.push(link(r.url, r.label.trim().slice(0, 60))));
     if (safeUrl(run.artifact_url)) extra.push(link(run.artifact_url, "Open the demo"));
-    if (extra.length) parts.push(`<p class="run-outcome-links">${extra.join(" · ")}</p>`);
+    // No remote image is embedded, here or on the public page: an arbitrary third party host would
+    // learn the IP and user agent of every reader, and a dead link would render a broken box.
     if (safeUrl(run.image_url) && /\.(png|jpe?g|webp)([?#].*)?$/i.test(run.image_url))
-      parts.push(`<p class="run-outcome-image"><img src="${esc(run.image_url)}" alt="Screenshot the uploader attached" loading="lazy" referrerpolicy="no-referrer"></p>`);
+      extra.push(link(run.image_url, "Open the screenshot"));
+    if (extra.length) parts.push(`<p class="run-outcome-links">${extra.join(" · ")}</p>`);
     if (!parts.length) return "";
     return `<section class="run-outcome"><div class="run-story-label">Said by the uploader, not measured</div>${parts.join("")}</section>`;
   }
