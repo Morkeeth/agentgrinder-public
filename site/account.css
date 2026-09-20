@@ -44,6 +44,10 @@ button.danger:disabled{background:#b3261e;border-color:#b3261e}
 .connect-token:first-child{border-top:0;padding-top:0}
 .connect-token.is-revoked{opacity:.65}
 .connect-token .account-hint{display:block}
+#run-agent-visibility{margin:0 0 16px}
+#run-agent-visibility label{display:flex;gap:10px;align-items:flex-start;margin-top:10px;line-height:1.45}
+#run-agent-visibility input[type=checkbox]{width:20px;height:20px;margin-top:2px;flex:none}
+.agent-visibility{margin:12px 0}
 @media(max-width:600px){
   .connect-token{flex-direction:column;align-items:stretch}
 }
