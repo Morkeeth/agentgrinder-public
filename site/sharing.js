@@ -97,8 +97,25 @@ function mount({run,slot,status,moment=null,review=null}){
  ctx.fillStyle='#444';clipped=lines(f.result||'Achievement caption unknown',64,275,952,'24px sans-serif',31,2)||clipped;
  ctx.fillStyle='#666';const identity=f.identity&&handle?'@'+handle:'Identity not included';const agentLabel=(()=>{const n=String(run.agent_name||'').trim();if(!n||/^connect$/i.test(n))return run.source_actor_id?'via Connect':'';return n;})();clipped=lines(identity+' · '+(run.harness||'Harness unknown')+(f.identity&&agentLabel?' · '+agentLabel:''),64,330,952,'19px sans-serif',24,1)||clipped;
  const facts=storyFacts(run),story=[['OUTPUT',facts.output],['PROJECT TOUCHED',facts.project],['CODE ACTIVITY',facts.code]].filter(([,value])=>value);story.forEach(([label,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='15px sans-serif';ctx.fillText(label,x,378);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'19px sans-serif':'600 20px sans-serif';clipped=lines(value,x,408,285,'600 20px sans-serif',24,1)||clipped;});
- const trace=traceSeries(run),values=trace?.values;ctx.strokeStyle='#123cff';ctx.lineWidth=4;if(trace){const max=Math.max(...values)||1;ctx.beginPath();values.forEach((v,i)=>{const x=64+i/(values.length-1)*952,y=560-v/max*105;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}else{ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Trace unavailable',64,520)}
- ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(trace?.label||'Session activity · time basis unknown',64,592);
+ const route=run.code_route&&run.code_route.v===1?run.code_route:null;
+ if(route&&!route.unavailable&&Array.isArray(route.projects)&&Array.isArray(route.stops)&&route.projects.length&&route.stops.length){
+  const projects=route.projects,stops=route.stops,idx=Object.fromEntries(projects.map((p,i)=>[p.id,i]));
+  const left=64,top=470,rowH=22,width=952,height=Math.max(70,projects.length*rowH+16);
+  ctx.strokeStyle='#123cff';ctx.lineWidth=4;ctx.beginPath();
+  stops.forEach((stop,i)=>{const row=idx[stop.project]??0;const x=left+i/Math.max(1,stops.length-1)*width;const y=top+row*rowH+rowH/2;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.stroke();
+  stops.forEach((stop,i)=>{const row=idx[stop.project]??0;const x=left+i/Math.max(1,stops.length-1)*width;const y=top+row*rowH+rowH/2;const finish=route.finish&&route.finish.stop===stop.id;ctx.fillStyle=finish?'#111':'#123cff';ctx.beginPath();ctx.arc(x,y,finish?7:4.5,0,Math.PI*2);ctx.fill();});
+  ctx.fillStyle='#666';ctx.font='15px sans-serif';projects.forEach((p,i)=>ctx.fillText(String(p.label).slice(0,22),left,top+i*rowH+14));
+  const stats=route.stats||{};
+  const label=[stats.projects_touched!=null?stats.projects_touched+' projects touched':null,stats.verified_checkpoints!=null?stats.verified_checkpoints+' verified checkpoints':null].filter(Boolean).join(' · ')||'Code Route';
+  ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(label,64,592);
+ }else if(route&&route.unavailable){
+  ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Code Route unavailable',64,520);
+  ctx.font='17px sans-serif';ctx.fillText(String(route.unavailable.why||'').slice(0,90),64,592);
+ }else{
+  const trace=traceSeries(run),values=trace?.values;ctx.strokeStyle='#123cff';ctx.lineWidth=4;if(trace){const max=Math.max(...values)||1;ctx.beginPath();values.forEach((v,i)=>{const x=64+i/(values.length-1)*952,y=560-v/max*105;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}else{ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Trace unavailable',64,520)}
+  ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(traceSeries(run)?.label||'Session activity · time basis unknown',64,592);
+ }
  ctx.fillStyle='#123cff';ctx.font='600 16px sans-serif';ctx.fillText('EFFORT',64,632);
  metricStrip(run).forEach(([name,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(name,x,663);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'22px sans-serif':'600 31px sans-serif';ctx.fillText(value,x,705)});
  let y=770;const blocks=[['THE AGENT',f.contribution],['NEXT RUN',f.next]].filter(([,v])=>v);for(const [label,body] of blocks){ctx.fillStyle='#123cff';ctx.font='600 17px sans-serif';ctx.fillText(label,64,y);ctx.fillStyle='#111';clipped=lines(body,64,y+34,952,'26px sans-serif',32,portrait?3:2)||clipped;y+=portrait?160:110;}

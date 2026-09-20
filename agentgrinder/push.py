@@ -6,7 +6,7 @@ import gzip
 import json
 import os
 import urllib.parse
-from .contract import public_outcome, public_revision, validate_run
+from .contract import public_code_route_fields, public_outcome, public_revision, validate_run
 from .coach.experiment import public_experiment, public_text
 
 DEFAULT_URL = os.environ.get("AGENTGRINDER_URL", "http://localhost:8000")
@@ -70,6 +70,8 @@ def export_run(run: dict) -> dict:
     out.update(public_revision(run))
     # Declared by the uploader, never measured (migration 008). Validated, then copied as stated.
     out.update(public_outcome(run))
+    # Measured/declared Code Route (migration 009). Separate from rhythm/route integers.
+    out.update(public_code_route_fields(run))
     return {k: v for k, v in out.items() if v is not None}
 
 

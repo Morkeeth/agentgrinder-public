@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "unavailable": {
+    "why": "Collector returned no agent activity for the Claude projects population while other harnesses were active."
+  },
+  "harnesses": {
+    "observed": [],
+    "absent": ["cursor", "claude-cli", "codex", "grok-bot"],
+    "basis": "collector"
+  }
+}

@@ -434,4 +434,37 @@ await db.exec(await readFile(new URL("../supabase/strava/008_outcome_receipts.sq
   console.log("outcome receipts persist, stay private, and refuse unsafe links, oversized lists and unknown keys");
 }
 
+
+
+// ---------- 009: Code Route persistence (local only; not applied to production here) ----------
+await db.exec(await readFile(new URL("../supabase/strava/009_code_route.sql", import.meta.url), "utf8"));
+{
+  const agentC = await agent(OWNER_A);
+  const tok = await token(agentC, { scopes: ["publish"], audiences: ["private"] });
+  const code_route = {
+    v: 1,
+    projects: [
+      { id: "zup", label: "zup", basis: "measured" },
+      { id: "agentgrinder-public", label: "agentgrinder-public", basis: "measured" },
+      { id: "mountain-of-helicon", label: "mountain-of-helicon", basis: "measured" },
+    ],
+    stops: [
+      { id: "a", project: "zup", kind: "commit", label: "Board commit", basis: "measured" },
+      { id: "b", project: "agentgrinder-public", kind: "check", label: "Checks passed", basis: "measured" },
+      { id: "c", project: "mountain-of-helicon", kind: "artifact", label: "Wheel built", basis: "measured" },
+    ],
+    connectors: [{ from: "a", to: "b", kind: "handoff", label: "Cursor to Claude CLI" }],
+    finish: { stop: "c", kind: "artifact", label: "Wheel built" },
+    stats: { projects_touched: 3, commits: 1, files_changed: 4, verified_checkpoints: 3, shipped_artifacts: 1 },
+    harnesses: { observed: ["cursor", "claude-cli", "codex"], absent: ["grok-bot"], basis: "manifest" },
+  };
+  const saved = await act(tok, "publish", { title: "Code Route run", measurement_revision: REV(90), code_route });
+  const row = (await db.query("select code_route, visibility from strava.runs where id=$1", [saved.id])).rows[0];
+  assert.deepEqual(row.code_route, code_route);
+  assert.equal(row.visibility, "private");
+  await refused(act(tok, "publish", { title: "x", measurement_revision: REV("crbad1"), code_route: { v: 1, prompt: "PRIVATE" } }), /Unsupported public field|code_route|paths|secrets|private lane|must be/);
+  await refused(act(tok, "publish", { title: "x", measurement_revision: REV("crbad2"), code_route: { v: 1, unavailable: { why: "/Users/me/secret" } } }), /paths|secrets|private lane/);
+  console.log("code_route persists privately and refuses path-bearing or unknown-key payloads");
+}
+
 console.log("\nAGENT PUBLISH: all checks passed");
