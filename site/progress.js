@@ -17,7 +17,9 @@ window.GrinderProgress = function ({client: db, me, app, frame, status, signIn, 
   const audience = run => run.crew_shared ? 'Crew members' : ({private:'Only you',public:'Public',link:'Anyone with the link',anonymous:'Only you'}[run.visibility] || 'Only you');
   async function rows(query) {const result = await query; if(result.error) throw Error(result.error.message); return result.data || [];}
   function start(heading, active) {
-    frame(null,null);
+    // Keep the primary rail. This used to clear it, so My runs was the only signed-in page with no
+    // Feed, Post a run, Responses, Privacy or Terms links beside it.
+    frame(typeof railHtml === 'function' ? railHtml('me') : null, null);
     app().innerHTML = (typeof myRunsTabs === 'function' ? myRunsTabs(active === 'runs' ? 'runs' : active === 'progress' ? 'progress' : 'practices') : `<nav class="social-nav" aria-label="My runs"><a href="/?mine" ${active==='runs'?'aria-current="page"':''}>My runs</a><a href="/?progress" ${active==='progress'?'aria-current="page"':''}>Progress</a><a href="/?practices">Practices</a></nav>`) + `<div class="head"><h1>${esc(heading)}</h1><span class="meta">Private to your account</span></div><section id="progress-body" aria-live="polite">Loading…</section>`;
     if(typeof setPrimarySection==='function') setPrimarySection('mine');
     if(!me()) {$('progress-body').innerHTML='<div class="panel reply-form"><p>Sign in to see My runs. Private Connect uploads land here. Public Latest runs stay on the feed.</p><button type="button" class="act blue" id="progress-sign-in">Sign in with GitHub</button></div>';$('progress-sign-in').onclick=()=>{if(typeof signInGitHub==='function')signInGitHub();else if(typeof signIn==='function')signIn();};return false;}
