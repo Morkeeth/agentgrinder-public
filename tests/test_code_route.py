@@ -98,11 +98,72 @@ def test_fixture_card_renders_lanes_checkpoints_and_basis_in_accessible_text():
     assert "code-route-project-name" in text
     assert "…" not in text  # phone layout must not ellipsize lane names
     assert "measured" in text and "declared" in text
-    assert "Projects touched" in text or "projects touched" in text.lower()
+    assert "densest stretch" in text
+    assert "handoffs carried the work" in text
+    assert "code-route-insight" in text
+    assert "token" not in text.lower()
     assert "cursor" in text and "claude-cli" in text and "codex" in text
     assert "grok-bot" in text
     assert "observed" in text.lower() and "absent" in text.lower()
     assert "aria-label" in text
+
+
+def test_route_insight_uses_handoffs_concentration_and_finish_not_tokens():
+    script = r"""
+const GrinderContract=require(process.argv[1]);
+const route=JSON.parse(process.argv[2]);
+process.stdout.write(GrinderContract.routeInsight(route));
+"""
+    fixture_insight = subprocess.run(
+        ["node", "-e", script, str(ROOT / "site" / "run-contract.js"), json.dumps(multi_route())],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert fixture_insight == (
+        "agentgrinder-public held the densest stretch (3 of 7 stops). "
+        "2 handoffs carried the work to mountain-of-helicon. "
+        "6 measured, 1 declared."
+    )
+    night_route = {
+        "v": 1,
+        "projects": [
+            {"id": "zup", "label": "zup", "basis": "measured"},
+            {"id": "agentgrinder-public", "label": "agentgrinder-public", "basis": "measured"},
+            {"id": "mountain-of-helicon", "label": "mountain-of-helicon", "basis": "measured"},
+            {"id": "fleet-ops", "label": "fleet-ops", "basis": "measured"},
+        ],
+        "stops": [
+            {"id": "zup-probe", "project": "zup", "kind": "check", "label": "a", "basis": "measured"},
+            {"id": "zup-merge", "project": "zup", "kind": "merge", "label": "b", "basis": "measured"},
+            {"id": "strive-upload", "project": "agentgrinder-public", "kind": "artifact", "label": "c", "basis": "measured"},
+            {"id": "strive-route", "project": "agentgrinder-public", "kind": "merge", "label": "d", "basis": "measured"},
+            {"id": "strive-live", "project": "agentgrinder-public", "kind": "deploy", "label": "e", "basis": "measured"},
+            {"id": "helicon-build", "project": "mountain-of-helicon", "kind": "artifact", "label": "f", "basis": "measured"},
+            {"id": "helicon-merge", "project": "mountain-of-helicon", "kind": "merge", "label": "g", "basis": "measured"},
+            {"id": "fleet-fail", "project": "fleet-ops", "kind": "check", "label": "h", "basis": "measured"},
+            {"id": "fleet-merge", "project": "fleet-ops", "kind": "merge", "label": "i", "basis": "measured"},
+        ],
+        "connectors": [
+            {"from": "zup-merge", "to": "strive-upload", "kind": "handoff"},
+            {"from": "strive-live", "to": "helicon-build", "kind": "handoff"},
+            {"from": "helicon-merge", "to": "fleet-fail", "kind": "handoff"},
+        ],
+        "finish": {"stop": "fleet-merge", "kind": "artifact", "label": "Four verified lanes reconciled"},
+    }
+    night_insight = subprocess.run(
+        ["node", "-e", script, str(ROOT / "site" / "run-contract.js"), json.dumps(night_route)],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert night_insight == (
+        "agentgrinder-public held the densest stretch (3 of 9 stops). "
+        "3 handoffs carried the work to fleet-ops. "
+        "Every stop is measured."
+    )
+    assert "token" not in night_insight.lower()
+    assert "tool call" not in night_insight.lower()
 
 
 def test_single_project_compact_route_or_honest_unavailable():

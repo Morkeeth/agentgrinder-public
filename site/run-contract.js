@@ -356,9 +356,34 @@
       ". Commit marks sit only on measured commit_bins. Linked output is not placed on the map without a timed bin.";
     return `<div class="ridge-wrap run-map" data-ridge-basis="${escText(snapshot.ridge_basis || "")}" data-run-map="${payload}"><div class="run-map-head"><span class="run-story-label">Run map</span><span class="meta">Activity along ${escText(basisLabel)}</span></div><div class="run-map-plot"><svg class="ridge" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">${backs}<polygon class="ridge-fill" points="${area}"/><line class="ridge-base" x1="0" y1="${base}" x2="${w}" y2="${base}"/>${ticks}<polyline class="ridge-line" points="${line}"/><circle class="ridge-start" cx="0" cy="${y(values[0]).toFixed(1)}" r="5"/><circle class="ridge-end" cx="${w}" cy="${y(values[values.length - 1]).toFixed(1)}" r="5"/><line class="run-map-scrub" x1="${x(startBin).toFixed(1)}" y1="${top}" x2="${x(startBin).toFixed(1)}" y2="${base}" /><circle class="run-map-focus" cx="${x(startBin).toFixed(1)}" cy="${y(values[startBin]).toFixed(1)}" r="6"/>${hits}</svg></div><label class="run-map-slider-label"><span class="visually-hidden">Activity slice</span><input class="run-map-slider" type="range" min="0" max="${values.length - 1}" value="${startBin}" step="1" aria-valuemin="0" aria-valuemax="${values.length - 1}" aria-valuenow="${startBin}" /></label><div class="run-map-readout" aria-live="polite"></div><details class="run-map-help"><summary>How to read this map</summary><p>${escText(help)}</p></details></div>`;
   }
+  function promoteCodeRouteHero(scope) {
+    const cards = scope.querySelectorAll ? scope.querySelectorAll(".card") : [];
+    cards.forEach((card) => {
+      const route = card.querySelector(":scope > .code-route, :scope .code-route");
+      if (!route) return;
+      const identity = card.querySelector(".run-upload-identity");
+      const note = card.querySelector(":scope > .note");
+      const title = card.querySelector(":scope > .title");
+      const anchor = identity || note || title;
+      if (anchor && anchor.nextElementSibling !== route) anchor.after(route);
+      const metrics = card.querySelector("dl.run-metrics");
+      if (!metrics) return;
+      const label = metrics.previousElementSibling;
+      const more = Array.from(card.querySelectorAll("details.ridge-more")).find((block) => {
+        const summary = block.querySelector("summary");
+        return summary && summary.textContent === "More";
+      });
+      if (!more || more.contains(metrics)) return;
+      if (label && label.classList.contains("run-story-label") && !label.classList.contains("achieved")) {
+        more.prepend(metrics);
+        more.prepend(label);
+      } else more.prepend(metrics);
+    });
+  }
   function mountRunMaps(root) {
     const scope = root && root.querySelectorAll ? root : typeof document !== "undefined" ? document : null;
     if (!scope) return;
+    promoteCodeRouteHero(scope);
     scope.querySelectorAll(".run-map[data-run-map]").forEach((wrap) => {
       if (wrap.dataset.wired === "1") return;
       wrap.dataset.wired = "1";
@@ -650,6 +675,79 @@
       "</section>"
     );
   }
+  function routeInsight(route) {
+    if (!route || typeof route !== "object" || Array.isArray(route) || route.v !== 1 || route.unavailable) return "";
+    const projects = Array.isArray(route.projects) ? route.projects : [];
+    const stops = Array.isArray(route.stops) ? route.stops : [];
+    if (!projects.length || !stops.length) return "";
+    const connectors = Array.isArray(route.connectors) ? route.connectors : [];
+    const handoffs = connectors.filter((c) => c && c.kind === "handoff");
+    const measured = stops.filter((s) => s && s.basis === "measured").length;
+    const declared = stops.filter((s) => s && s.basis === "declared").length;
+    const counts = Object.create(null);
+    for (const stop of stops) {
+      if (!stop || !stop.project) continue;
+      counts[stop.project] = (counts[stop.project] || 0) + 1;
+    }
+    let densest = null;
+    let densestN = 0;
+    let ties = 0;
+    for (const project of projects) {
+      const n = counts[project.id] || 0;
+      if (n > densestN) {
+        densest = project;
+        densestN = n;
+        ties = 1;
+      } else if (n === densestN && n > 0) ties += 1;
+    }
+    const finishStop = route.finish && stops.find((s) => s.id === route.finish.stop);
+    const finishProject = finishStop && projects.find((p) => p.id === finishStop.project);
+    const parts = [];
+    if (densest && ties === 1 && densestN > 0 && densestN < stops.length) {
+      parts.push(densest.label + " held the densest stretch (" + densestN + " of " + stops.length + " stops)");
+    }
+    if (handoffs.length) {
+      if (finishProject && densest && finishProject.id !== densest.id) {
+        parts.push(
+          handoffs.length +
+            (handoffs.length === 1 ? " handoff carried the work to " : " handoffs carried the work to ") +
+            finishProject.label
+        );
+      } else {
+        parts.push(handoffs.length + (handoffs.length === 1 ? " handoff across the route" : " handoffs across the route"));
+      }
+    }
+    if (measured + declared === stops.length) {
+      if (declared === 0 && measured === stops.length) parts.push("every stop is measured");
+      else if (declared > 0) parts.push(measured + " measured, " + declared + " declared");
+    }
+    if (route.finish && route.finish.kind === "artifact" && route.finish.label && parts.length < 2) {
+      parts.push("finish " + route.finish.label);
+    }
+    if (!parts.length) return "";
+    return parts[0] + parts.slice(1).map((part) => ". " + part.charAt(0).toUpperCase() + part.slice(1)).join("") + ".";
+  }
+  function densestProject(route) {
+    const projects = Array.isArray(route.projects) ? route.projects : [];
+    const stops = Array.isArray(route.stops) ? route.stops : [];
+    const counts = Object.create(null);
+    for (const stop of stops) {
+      if (!stop || !stop.project) continue;
+      counts[stop.project] = (counts[stop.project] || 0) + 1;
+    }
+    let densest = null;
+    let densestN = 0;
+    let ties = 0;
+    for (const project of projects) {
+      const n = counts[project.id] || 0;
+      if (n > densestN) {
+        densest = project;
+        densestN = n;
+        ties = 1;
+      } else if (n === densestN && n > 0) ties += 1;
+    }
+    return ties === 1 && densestN > 0 ? densest : null;
+  }
   function codeRoute(run) {
     const route = run && run.code_route;
     if (!route || typeof route !== "object" || Array.isArray(route) || route.v !== 1) return "";
@@ -685,19 +783,26 @@
     const top = 18;
     const height = top + n * rowH + 12;
     const finishId = route.finish && route.finish.stop;
+    const handoffTo = new Set(
+      (Array.isArray(route.connectors) ? route.connectors : [])
+        .filter((c) => c && c.kind === "handoff" && c.to)
+        .map((c) => c.to)
+    );
+    const dense = densestProject(route);
+    const insight = routeInsight(route);
     const points = stops.map((stop, i) => {
       const row = projectIndex[stop.project] ?? 0;
       const x = left + (i * (width - left - 16)) / Math.max(1, stops.length - 1);
       const y = top + row * rowH + rowH / 2;
-      return { stop, x, y, finish: stop.id === finishId };
+      return { stop, x, y, finish: stop.id === finishId, handoff: handoffTo.has(stop.id) };
     });
     const line = points
       .map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
       .join(" ");
     const dots = points
       .map((p) => {
-        const r = p.finish ? 5.5 : 3.5;
-        const cls = p.finish ? "code-route-finish" : "code-route-stop";
+        const r = p.finish ? 5.5 : p.handoff ? 4.5 : 3.5;
+        const cls = p.finish ? "code-route-finish" : p.handoff ? "code-route-handoff" : "code-route-stop";
         return `<circle class="${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" />`;
       })
       .join("");
@@ -709,7 +814,8 @@
       .join("");
     const projectList = projects
       .map((p, i) =>
-        `<li><span class="code-route-lane-mark" aria-hidden="true">${i + 1}</span>` +
+        `<li${dense && p.id === dense.id ? ' data-dense="1"' : ""}>` +
+        `<span class="code-route-lane-mark" aria-hidden="true">${i + 1}</span>` +
         `<span class="code-route-project-name">${esc(p.label)}</span></li>`
       )
       .join("");
@@ -719,18 +825,8 @@
     const aria =
       `Code Route across ${projects.length} projects: ${projectNames}. ` +
       `${stops.length} ordered checkpoints · ${measured} measured · ${declared} declared` +
-      (route.finish ? ` · finish ${route.finish.label}` : "");
-    const stats = route.stats || {};
-    const statLine = [
-      stats.projects_touched != null ? `${stats.projects_touched} projects touched` : null,
-      stats.commits != null ? `${stats.commits} commits` : null,
-      stats.files_changed != null ? `${stats.files_changed} files changed` : null,
-      stats.verified_checkpoints != null ? `${stats.verified_checkpoints} verified checkpoints` : null,
-      stats.shipped_artifacts != null ? `${stats.shipped_artifacts} shipped artifacts` : null,
-    ]
-      .filter(Boolean)
-      .map(esc)
-      .join(" · ");
+      (route.finish ? ` · finish ${route.finish.label}` : "") +
+      (insight ? ` · ${insight}` : "");
     const stopList = stops
       .map((stop) => {
         const project = projects.find((p) => p.id === stop.project);
@@ -758,18 +854,18 @@
       `<section class="code-route" aria-label="${esc(aria)}">` +
       `<div class="run-story-label">Code Route</div>` +
       `<svg class="code-route-map" viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true">` +
-      `<path class="code-route-line" d="${line}" fill="none" stroke="currentColor" stroke-width="2.5" />` +
+      `<path class="code-route-line" pathLength="1" d="${line}" fill="none" stroke="currentColor" stroke-width="2.5" />` +
       dots +
       laneLabels +
       `</svg>` +
       `<ol class="code-route-projects">${projectList}</ol>` +
-      (statLine ? `<p class="code-route-stats">${statLine}</p>` : "") +
+      (insight ? `<p class="code-route-insight">${esc(insight)}</p>` : "") +
       `<div class="code-route-stops">${stopList}</div>` +
       harnessBits.join("") +
       `</section>`
     );
   }
-  const api = { validate, message, trace, ridge, outcome, codeRoute, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
+  const api = { validate, message, trace, ridge, outcome, codeRoute, routeInsight, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

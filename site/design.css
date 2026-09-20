@@ -188,14 +188,19 @@ button,summary{touch-action:manipulation}
 .code-route{margin:10px 0 12px;padding:0 16px;color:var(--blue);min-width:0;overflow-wrap:anywhere}
 .code-route .run-story-label{margin:0 0 8px}
 .code-route-map{display:block;width:100%;height:auto;max-width:100%}
-.code-route-line{stroke:var(--blue);fill:none}
+.code-route-line{stroke:var(--blue);fill:none;stroke-dasharray:1;stroke-dashoffset:1;animation:code-route-draw .9s ease-out forwards}
+@media (prefers-reduced-motion:reduce){.code-route-line{animation:none;stroke-dashoffset:0}}
+@keyframes code-route-draw{to{stroke-dashoffset:0}}
 .code-route-stop{fill:var(--blue)}
+.code-route-handoff{fill:var(--blue);stroke:var(--ink);stroke-width:1.5}
 .code-route-finish{fill:var(--ink);stroke:var(--blue);stroke-width:2}
 .code-route-lane{fill:var(--soft);font-size:11px;font-family:inherit;font-variant-numeric:tabular-nums}
 .code-route-projects{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;color:var(--ink);font-size:13px}
 .code-route-projects li{display:flex;gap:8px;align-items:baseline;min-width:0}
+.code-route-projects li[data-dense="1"] .code-route-project-name{font-weight:650}
 .code-route-lane-mark{flex:none;min-width:1.1em;color:var(--blue);font-weight:500;font-variant-numeric:tabular-nums}
 .code-route-project-name{min-width:0;overflow-wrap:anywhere}
+.code-route-insight{margin:10px 0 0;font-size:15px;line-height:1.4;color:var(--ink);font-weight:600}
 .code-route-stats,.code-route-harnesses,.code-route-why{margin:8px 0 0;font-size:13px;color:var(--soft);overflow-wrap:anywhere}
 .code-route-stops{margin:8px 0 0;display:grid;gap:6px;min-width:0}
 .code-route-point{border:0;padding:0;font-size:13px;color:var(--ink);min-width:0}

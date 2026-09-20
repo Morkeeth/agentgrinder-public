@@ -28,14 +28,15 @@ assert.ok(page.includes('zup') && page.includes('agentgrinder-public') && page.i
 assert.ok(page.includes('measured') && page.includes('declared'));
 assert.ok(page.includes('cursor') && page.includes('claude-cli') && page.includes('codex'));
 assert.ok(page.includes('absent') && page.includes('grok-bot'));
-assert.ok(page.includes('projects touched') || page.includes('Projects touched') || page.includes('3 projects touched'));
+assert.ok(page.includes('densest stretch'));
+assert.ok(page.includes('handoffs carried the work to mountain-of-helicon'));
+assert.ok(page.includes('Open builder profile') && page.includes('/?u=oscar'));
+assert.ok(page.includes('property="og:description"') && page.includes('densest stretch'));
+assert.ok(!/token/i.test(page));
 
 const og = card(run);
 assert.equal(og.type, 'div');
 const dump = JSON.stringify(og);
-assert.ok(dump.includes('Code Route') || dump.includes('projects touched'), 'OG card missing Code Route label');
-assert.ok(page.includes('code-route-projects'), 'page missing project list');
-assert.ok(!page.includes('agentgrinder-…') && !page.includes('mountain-of-h…'), 'page still ellipsizes lanes');
-assert.ok(dump.includes('zup') && dump.includes('agentgrinder-public') && dump.includes('mountain-of-helicon'), 'OG card missing full project names');
-assert.ok(dump.includes('1 · zup') || dump.includes('1 ·'), 'OG card missing numbered lanes');
+assert.ok(dump.includes('densest stretch'), 'OG card missing route insight');
+assert.ok(!dump.includes('"ACTIVITY"'), 'OG card still headlines generic activity totals');
 console.log('PASS public Code Route page and share image use the same route data');

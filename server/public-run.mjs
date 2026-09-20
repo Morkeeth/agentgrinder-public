@@ -13,7 +13,7 @@ export async function readPublic(id,fetcher=fetch){
  // permissive REST layer still cannot put a close friends, link or only-me run on this page.
  return Array.isArray(rows)&&rows.length===1&&rows[0]?.visibility==='public'?rows[0]:null;
 }
-const pageStyle=`*{box-sizing:border-box}body{background:#f8f8f6;color:#111;font:17px/1.5 system-ui;margin:0;padding:clamp(16px,4vw,32px)}main{max-width:760px;margin:24px auto}a{color:#123cff}a.home{display:inline-block;font-weight:750;text-decoration:none;padding:10px 0;margin-bottom:20px}article{background:#fff;border:1px solid #d9deea;border-radius:20px;padding:clamp(20px,4vw,32px);min-width:0}h1{font-size:clamp(28px,6vw,42px);line-height:1.15;margin:0 0 16px;overflow-wrap:anywhere}p{overflow-wrap:anywhere}.caption{white-space:pre-wrap}.byline,.note{color:#596174;font-size:15px}.byline{margin:0 0 12px}figure{margin:24px 0}.run-map h2{font-size:18px;margin:0 0 12px}.run-map svg{display:block;width:100%;height:150px;overflow:visible}.run-map figcaption{font-size:14px;color:#596174;margin-top:10px}dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:20px 16px;margin:24px 0}dt{font-size:14px;color:#596174}dd{font-size:28px;font-weight:700;margin:4px 0 0;line-height:1.2;overflow-wrap:anywhere}a.open{display:inline-block;background:#123cff;color:white;text-decoration:none;padding:14px 20px;border-radius:8px;margin:8px 0}a:focus-visible{outline:3px solid #111;outline-offset:4px}.note{margin-bottom:0}.outcome{margin:24px 0 0;padding:16px 18px;border:1px solid #d9deea;border-radius:12px}.outcome h2{font-size:14px;color:#596174;font-weight:600;margin:0 0 8px;text-transform:none}.outcome p,.outcome li{font-size:15px;margin:6px 0}.outcome ul{margin:8px 0;padding-left:20px}.code-route{margin:24px 0 0;color:#123cff;min-width:0;overflow-wrap:anywhere}.code-route h2{font-size:14px;color:#596174;font-weight:600;margin:0 0 8px}.code-route svg{display:block;width:100%;height:auto}.code-route-projects{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;color:#111;font-size:14px}.code-route-projects li{display:flex;gap:8px;align-items:baseline;min-width:0}.code-route-lane-mark{flex:none;min-width:1.1em;color:#123cff;font-weight:600;font-variant-numeric:tabular-nums}.code-route-stats,.code-route-harnesses,.code-route-why{font-size:14px;color:#596174;margin:8px 0 0;overflow-wrap:anywhere}.code-route-stops{margin:8px 0 0;display:grid;gap:6px;min-width:0}.code-route-point summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;min-width:0}.code-route-kind{color:#123cff;font-size:12px;font-weight:600;text-transform:uppercase}.code-route-stop-label,.code-route-stop-project{min-width:0;overflow-wrap:anywhere}.code-route-basis{color:#596174}`;
+const pageStyle=`*{box-sizing:border-box}body{background:#f8f8f6;color:#111;font:17px/1.5 system-ui;margin:0;padding:clamp(16px,4vw,32px)}main{max-width:760px;margin:24px auto}a{color:#123cff}a.home{display:inline-block;font-weight:750;text-decoration:none;padding:10px 0;margin-bottom:20px}article{background:#fff;border:1px solid #d9deea;border-radius:20px;padding:clamp(20px,4vw,32px);min-width:0}h1{font-size:clamp(28px,6vw,42px);line-height:1.15;margin:0 0 16px;overflow-wrap:anywhere}p{overflow-wrap:anywhere}.caption{white-space:pre-wrap}.byline,.note{color:#596174;font-size:15px}.byline{margin:0 0 12px}figure{margin:24px 0}.run-map h2{font-size:18px;margin:0 0 12px}.run-map svg{display:block;width:100%;height:150px;overflow:visible}.run-map figcaption{font-size:14px;color:#596174;margin-top:10px}dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:20px 16px;margin:24px 0}dt{font-size:14px;color:#596174}dd{font-size:22px;font-weight:700;margin:4px 0 0;line-height:1.2;overflow-wrap:anywhere}a.open{display:inline-block;background:#123cff;color:white;text-decoration:none;padding:14px 20px;border-radius:8px;margin:8px 8px 8px 0}a.open-profile{display:inline-block;color:#123cff;text-decoration:none;padding:14px 0;font-weight:650;margin:8px 0}a:focus-visible{outline:3px solid #111;outline-offset:4px}.note{margin-bottom:0}.outcome{margin:24px 0 0;padding:16px 18px;border:1px solid #d9deea;border-radius:12px}.outcome h2{font-size:14px;color:#596174;font-weight:600;margin:0 0 8px;text-transform:none}.outcome p,.outcome li{font-size:15px;margin:6px 0}.outcome ul{margin:8px 0;padding-left:20px}.code-route{margin:8px 0 0;color:#123cff;min-width:0;overflow-wrap:anywhere}.code-route h2{font-size:14px;color:#123cff;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px}.code-route svg{display:block;width:100%;height:auto}.code-route-projects{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;color:#111;font-size:14px}.code-route-projects li{display:flex;gap:8px;align-items:baseline;min-width:0}.code-route-projects li[data-dense="1"] .code-route-project-name{font-weight:650}.code-route-lane-mark{flex:none;min-width:1.1em;color:#123cff;font-weight:600;font-variant-numeric:tabular-nums}.code-route-insight{font-size:18px;line-height:1.35;color:#111;margin:12px 0 0;font-weight:600}.code-route-stats,.code-route-harnesses,.code-route-why{font-size:14px;color:#596174;margin:8px 0 0;overflow-wrap:anywhere}.code-route-stops{margin:8px 0 0;display:grid;gap:6px;min-width:0}.code-route-point summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;min-width:0}.code-route-kind{color:#123cff;font-size:12px;font-weight:600;text-transform:uppercase}.code-route-stop-label,.code-route-stop-project{min-width:0;overflow-wrap:anywhere}.code-route-basis{color:#596174}`;
 const recordedCount=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0?String(value):null;
 const pageMetrics=run=>{
  const session=duration((run.ridge_basis==='wall-time'?run.ridge_wall_seconds:null)??run.wall_time_s??run.duration_s);
@@ -59,6 +59,36 @@ const pageOutcome=run=>{
  return parts.length?`<section class="outcome"><h2>Said by the uploader, not measured</h2>${parts.join('')}</section>`:'';
 };
 
+const routeInsight=route=>{
+ if(!route||typeof route!=='object'||Array.isArray(route)||route.v!==1||route.unavailable)return '';
+ const projects=Array.isArray(route.projects)?route.projects:[];
+ const stops=Array.isArray(route.stops)?route.stops:[];
+ if(!projects.length||!stops.length)return '';
+ const connectors=Array.isArray(route.connectors)?route.connectors:[];
+ const handoffs=connectors.filter(c=>c&&c.kind==='handoff');
+ const measured=stops.filter(s=>s&&s.basis==='measured').length;
+ const declared=stops.filter(s=>s&&s.basis==='declared').length;
+ const counts=Object.create(null);
+ for(const stop of stops){if(!stop||!stop.project)continue;counts[stop.project]=(counts[stop.project]||0)+1;}
+ let densest=null,densestN=0,ties=0;
+ for(const project of projects){const n=counts[project.id]||0;if(n>densestN){densest=project;densestN=n;ties=1;}else if(n===densestN&&n>0)ties+=1;}
+ const finishStop=route.finish&&stops.find(s=>s.id===route.finish.stop);
+ const finishProject=finishStop&&projects.find(p=>p.id===finishStop.project);
+ const parts=[];
+ if(densest&&ties===1&&densestN>0&&densestN<stops.length)parts.push(densest.label+' held the densest stretch ('+densestN+' of '+stops.length+' stops)');
+ if(handoffs.length){
+  if(finishProject&&densest&&finishProject.id!==densest.id)parts.push(handoffs.length+(handoffs.length===1?' handoff carried the work to ':' handoffs carried the work to ')+finishProject.label);
+  else parts.push(handoffs.length+(handoffs.length===1?' handoff across the route':' handoffs across the route'));
+ }
+ if(measured+declared===stops.length){
+  if(declared===0&&measured===stops.length)parts.push('every stop is measured');
+  else if(declared>0)parts.push(measured+' measured, '+declared+' declared');
+ }
+ if(route.finish&&route.finish.kind==='artifact'&&route.finish.label&&parts.length<2)parts.push('finish '+route.finish.label);
+ if(!parts.length)return '';
+ return parts[0]+parts.slice(1).map(part=>'. '+part.charAt(0).toUpperCase()+part.slice(1)).join('')+'.';
+};
+
 const pageCodeRoute=run=>{
  const route=run&&run.code_route;
  if(!route||route.v!==1)return '';
@@ -72,27 +102,33 @@ const pageCodeRoute=run=>{
  const idx=Object.fromEntries(projects.map((p,i)=>[p.id,i]));
  const left=28,width=360,rowH=28,top=18,height=top+projects.length*rowH+12;
  const finishId=route.finish&&route.finish.stop;
- const points=stops.map((stop,i)=>{const row=idx[stop.project]??0;const x=left+(i*(width-left-16))/Math.max(1,stops.length-1);const y=top+row*rowH+rowH/2;return {stop,x,y,finish:stop.id===finishId};});
+ const handoffTo=new Set((Array.isArray(route.connectors)?route.connectors:[]).filter(c=>c&&c.kind==='handoff'&&c.to).map(c=>c.to));
+ const insight=routeInsight(route);
+ const counts=Object.create(null);for(const stop of stops){if(stop&&stop.project)counts[stop.project]=(counts[stop.project]||0)+1;}
+ let dense=null,denseN=0,ties=0;for(const p of projects){const n=counts[p.id]||0;if(n>denseN){dense=p;denseN=n;ties=1;}else if(n===denseN&&n>0)ties+=1;}
+ const denseId=ties===1&&denseN>0?dense.id:null;
+ const points=stops.map((stop,i)=>{const row=idx[stop.project]??0;const x=left+(i*(width-left-16))/Math.max(1,stops.length-1);const y=top+row*rowH+rowH/2;return {stop,x,y,finish:stop.id===finishId,handoff:handoffTo.has(stop.id)};});
  const line=points.map((p,i)=>`${i?'L':'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
- const dots=points.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.finish?5.5:3.5}" fill="${p.finish?'#111':'#123cff'}"/>`).join('');
+ const dots=points.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.finish?5.5:p.handoff?4.5:3.5}" fill="${p.finish?'#111':'#123cff'}" ${p.handoff&&!p.finish?'stroke="#111" stroke-width="1.5"':''}/>`).join('');
  const lanes=projects.map((p,i)=>{const y=top+i*rowH+rowH/2+4;return `<text x="0" y="${y}" fill="#596174" font-size="11">${i+1}</text>`;}).join('');
- const projectList=projects.map((p,i)=>`<li><span class="code-route-lane-mark" aria-hidden="true">${i+1}</span><span>${esc(p.label)}</span></li>`).join('');
+ const projectList=projects.map((p,i)=>`<li${denseId===p.id?' data-dense="1"':''}><span class="code-route-lane-mark" aria-hidden="true">${i+1}</span><span class="code-route-project-name">${esc(p.label)}</span></li>`).join('');
  const names=projects.map(p=>p.label).join(', ');
  const measured=stops.filter(s=>s.basis==='measured').length,declared=stops.filter(s=>s.basis==='declared').length;
- const aria=`Code Route across ${projects.length} projects: ${names}. ${stops.length} ordered checkpoints · ${measured} measured · ${declared} declared`;
- const stats=route.stats||{};
- const statLine=[stats.projects_touched!=null?`${stats.projects_touched} projects touched`:null,stats.commits!=null?`${stats.commits} commits`:null,stats.verified_checkpoints!=null?`${stats.verified_checkpoints} verified checkpoints`:null,stats.shipped_artifacts!=null?`${stats.shipped_artifacts} shipped artifacts`:null].filter(Boolean).map(esc).join(' · ');
+ const aria=`Code Route across ${projects.length} projects: ${names}. ${stops.length} ordered checkpoints · ${measured} measured · ${declared} declared${insight?' · '+insight:''}`;
  const stopList=stops.map(stop=>{const project=projects.find(p=>p.id===stop.project);const lane=project?(idx[project.id]??0)+1:null;const evidence=Array.isArray(stop.evidence)&&stop.evidence.length?`<ul>${stop.evidence.map(line=>`<li>${esc(line)}</li>`).join('')}</ul>`:'';return `<details class="code-route-point"${stop.id===finishId?' data-finish="1"':''}><summary><span class="code-route-kind">${esc(stop.kind)}</span><span class="code-route-stop-label">${esc(stop.label)}</span><span class="code-route-basis">${esc(stop.basis)}</span>${project?`<span class="code-route-stop-project">${lane!=null?`${lane} · `:''}${esc(project.label)}</span>`:''}</summary>${evidence}</details>`;}).join('');
  const harness=route.harnesses?`<p class="code-route-harnesses">Harness populations · basis ${esc(route.harnesses.basis)} · observed: ${(route.harnesses.observed||[]).map(esc).join(', ')||'none'} · absent: ${(route.harnesses.absent||[]).map(esc).join(', ')||'none'}</p>`:'';
- return `<section class="code-route" aria-label="${esc(aria)}"><h2>Code Route</h2><svg viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true"><path d="${line}" fill="none" stroke="#123cff" stroke-width="2.5"/>${dots}${lanes}</svg><ol class="code-route-projects">${projectList}</ol>${statLine?`<p class="code-route-stats">${statLine}</p>`:''}<div class="code-route-stops">${stopList}</div>${harness}</section>`;
+ return `<section class="code-route" aria-label="${esc(aria)}"><h2>Code Route</h2><svg viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true"><path class="code-route-line" pathLength="1" d="${line}" fill="none" stroke="#123cff" stroke-width="2.5"/>${dots}${lanes}</svg><ol class="code-route-projects">${projectList}</ol>${insight?`<p class="code-route-insight">${esc(insight)}</p>`:''}<div class="code-route-stops">${stopList}</div>${harness}</section>`;
 };
 
-export function html(run){const title=esc(run.title||'Agent run'),description=esc(run.caption||'See the work, its recorded activity and the conversation.'),id=encodeURIComponent(run.id),image=origin+'/api/run?id='+id+'&image=1',url=origin+'/r/'+id;
+export function html(run){const title=esc(run.title||'Agent run'),insight=routeInsight(run&&run.code_route),description=esc(insight||run.caption||'See the work, its recorded activity and the conversation.'),id=encodeURIComponent(run.id),image=origin+'/api/run?id='+id+'&image=1',url=origin+'/r/'+id;
  const facts=pageMetrics(run),handle=run.profiles?.handle||run.profiles?.github_handle;
- const byline=[handle?'@'+handle:null,projectName(run),run.harness].filter(Boolean).map(esc).join(' · ');
- const metrics=facts.length?`<dl aria-label="Recorded activity">${facts.map(([label,value])=>`<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>`:'';
+ const profileHref=handle?'/?u='+encodeURIComponent(handle):'';
+ const byline=handle?`<a href="${esc(profileHref)}">@${esc(handle)}</a>${projectName(run)?' · '+esc(projectName(run)):''}${run.harness?' · '+esc(run.harness):''}`:[projectName(run),run.harness].filter(Boolean).map(esc).join(' · ');
+ const routeHtml=pageCodeRoute(run);
+ const metrics=facts.length&&!routeHtml?`<dl aria-label="Recorded activity">${facts.map(([label,value])=>`<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>`:'';
  const output=outputKind(run)?`<p><a href="${esc(run.output_url)}" rel="noopener noreferrer">View linked output</a></p>`:'';
- return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · ${BRAND}</title><meta property="og:type" content="article"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}"><link rel="canonical" href="${url}"><style>${pageStyle}</style></head><body><main><a class="home" href="/" aria-label="${BRAND} home">${BRAND} · Home</a><article>${byline?`<p class="byline">${byline}</p>`:''}<h1>${title}</h1><p class="caption">${description}</p>${metrics}${output}${pageCodeRoute(run)||pageRunMap(run)}${pageOutcome(run)}<a class="open" href="/?run=${id}">Open run and discussion</a><p class="note">Counts describe activity, not result quality.</p></article></main></body></html>`;
+ const profileAct=profileHref?`<a class="open-profile" href="${esc(profileHref)}">Open builder profile</a>`:'';
+ return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · ${BRAND}</title><meta property="og:type" content="article"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}"><link rel="canonical" href="${url}"><style>${pageStyle}</style></head><body><main><a class="home" href="/" aria-label="${BRAND} home">${BRAND} · Home</a><article>${byline?`<p class="byline">${byline}</p>`:''}<h1>${title}</h1>${run.caption?`<p class="caption">${esc(run.caption)}</p>`:''}${routeHtml||pageRunMap(run)}${output}${pageOutcome(run)}<p>${profileAct}<a class="open" href="/?run=${id}">Open run and discussion</a></p>${metrics}<p class="note">Counts describe activity, not result quality.</p></article></main></body></html>`;
 }
 // The page for a run that is missing or not public. Same words as privateCard, same neutral
 // image, and nothing from a row, because there is no row: the public-only query returns
@@ -171,6 +207,7 @@ const codeRoutePlot=run=>{
 };
 export function card(run){
  const routePlot=codeRoutePlot(run);
+ const insight=routePlot?routeInsight(run.code_route):'';
  const plotted=routePlot?null:series(run),max=plotted?Math.max(...plotted.values)||1:1;
  const points=plotted?plotted.values.map((v,i)=>`${i/(plotted.values.length-1)*1030},${125-v/max*105}`).join(' '):'';
  const area=plotted?`0,125 ${points} 1030,125`:'';
@@ -206,7 +243,7 @@ export function card(run){
     ),
     el('div',{style:{display:'flex',flexDirection:'column',fontSize:15,color:'#333',marginTop:6,gap:2}},
      ...routePlot.projects.map((p,i)=>el('div',{style:{display:'flex'}},`${i+1} · ${p.label}`))),
-    el('div',{style:{display:'flex',fontSize:13,color:'#687083',marginTop:4}},routePlot.label))
+    insight?el('div',{style:{display:'flex',fontSize:18,color:'#111',fontWeight:650,marginTop:8,height:52,overflow:'hidden'}},insight):el('div',{style:{display:'flex',fontSize:13,color:'#687083',marginTop:4}},routePlot.label))
     :plotted?el('div',{style:{display:'flex',flexDirection:'column',marginTop:9}},
     el('svg',{width:1030,height:100,viewBox:'0 0 1030 130'},...(plotted.filled?[
      el('polygon',{points:area,fill:'#123cff',fillOpacity:0.16}),
@@ -215,11 +252,11 @@ export function card(run){
      el('polyline',{points,stroke:'#123cff',strokeWidth:5,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'})])),
     el('div',{style:{display:'flex',fontSize:13,color:'#687083',marginTop:1}},plotted.label))
     :null,
-   effort.length?el('div',{style:{display:'flex',fontSize:13,color:'#123cff',fontWeight:700,letterSpacing:1.2,marginTop:(plotted||routePlot)?7:32}},'ACTIVITY'):null,
-   effort.length?el('div',{style:{display:'flex',marginTop:3,borderTop:'1px solid #d9deea',paddingTop:(plotted||routePlot)?8:18}},
+   !routePlot&&effort.length?el('div',{style:{display:'flex',fontSize:13,color:'#123cff',fontWeight:700,letterSpacing:1.2,marginTop:plotted?7:32}},'ACTIVITY'):null,
+   !routePlot&&effort.length?el('div',{style:{display:'flex',marginTop:3,borderTop:'1px solid #d9deea',paddingTop:plotted?8:18}},
     ...effort.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',width:1030/effort.length}},
      el('div',{style:{display:'flex',fontSize:13,color:'#687083'}},label),
-     el('div',{style:{display:'flex',fontSize:(plotted||routePlot)?27:64,fontWeight:700,marginTop:3,color:'#111'}},value)))):null,
+     el('div',{style:{display:'flex',fontSize:plotted?27:64,fontWeight:700,marginTop:3,color:'#111'}},value)))):null,
    el('div',{style:{display:'flex',fontSize:13,color:'#687083',marginTop:'auto'}},'Counts describe activity, not result quality.')));
 }
 export function privateCard(){
