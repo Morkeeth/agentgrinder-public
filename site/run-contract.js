@@ -678,7 +678,8 @@
     if (!projects.length || !stops.length) return "";
     const projectIndex = Object.fromEntries(projects.map((p, i) => [p.id, i]));
     const n = Math.max(1, projects.length);
-    const left = 96;
+    // Compact lane marks (1…n) keep the map readable at phone width; full names live in the list.
+    const left = 28;
     const width = 360;
     const rowH = 28;
     const top = 18;
@@ -703,9 +704,14 @@
     const laneLabels = projects
       .map((p, i) => {
         const y = top + i * rowH + rowH / 2 + 4;
-        const short = String(p.label).length > 14 ? String(p.label).slice(0, 13) + "…" : p.label;
-        return `<text class="code-route-lane" x="0" y="${y}">${esc(short)}</text>`;
+        return `<text class="code-route-lane" x="0" y="${y}">${i + 1}</text>`;
       })
+      .join("");
+    const projectList = projects
+      .map((p, i) =>
+        `<li><span class="code-route-lane-mark" aria-hidden="true">${i + 1}</span>` +
+        `<span class="code-route-project-name">${esc(p.label)}</span></li>`
+      )
       .join("");
     const projectNames = projects.map((p) => p.label).join(", ");
     const measured = stops.filter((s) => s.basis === "measured").length;
@@ -728,15 +734,21 @@
     const stopList = stops
       .map((stop) => {
         const project = projects.find((p) => p.id === stop.project);
+        const lane = project ? (projectIndex[project.id] ?? 0) + 1 : null;
         const evidence = Array.isArray(stop.evidence) && stop.evidence.length
           ? `<ul>${stop.evidence.map((line) => `<li>${esc(line)}</li>`).join("")}</ul>`
           : "";
         const finishMark = stop.id === finishId ? ' data-finish="1"' : "";
         return (
           `<details class="code-route-point"${finishMark}>` +
-          `<summary><span class="code-route-kind">${esc(stop.kind)}</span> ` +
-          `${esc(stop.label)} · <span class="code-route-basis">${esc(stop.basis)}</span>` +
-          `${project ? ` · ${esc(project.label)}` : ""}</summary>` +
+          `<summary>` +
+          `<span class="code-route-kind">${esc(stop.kind)}</span>` +
+          `<span class="code-route-stop-label">${esc(stop.label)}</span>` +
+          `<span class="code-route-basis">${esc(stop.basis)}</span>` +
+          (project
+            ? `<span class="code-route-stop-project">${lane != null ? `${lane} · ` : ""}${esc(project.label)}</span>`
+            : "") +
+          `</summary>` +
           evidence +
           `</details>`
         );
@@ -750,6 +762,7 @@
       dots +
       laneLabels +
       `</svg>` +
+      `<ol class="code-route-projects">${projectList}</ol>` +
       (statLine ? `<p class="code-route-stats">${statLine}</p>` : "") +
       `<div class="code-route-stops">${stopList}</div>` +
       harnessBits.join("") +

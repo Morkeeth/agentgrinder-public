@@ -100,12 +100,15 @@ function mount({run,slot,status,moment=null,review=null}){
  const route=run.code_route&&run.code_route.v===1?run.code_route:null;
  if(route&&!route.unavailable&&Array.isArray(route.projects)&&Array.isArray(route.stops)&&route.projects.length&&route.stops.length){
   const projects=route.projects,stops=route.stops,idx=Object.fromEntries(projects.map((p,i)=>[p.id,i]));
-  const left=64,top=470,rowH=22,width=952,height=Math.max(70,projects.length*rowH+16);
+  const left=96,top=470,rowH=22,width=920;
   ctx.strokeStyle='#123cff';ctx.lineWidth=4;ctx.beginPath();
   stops.forEach((stop,i)=>{const row=idx[stop.project]??0;const x=left+i/Math.max(1,stops.length-1)*width;const y=top+row*rowH+rowH/2;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
   ctx.stroke();
   stops.forEach((stop,i)=>{const row=idx[stop.project]??0;const x=left+i/Math.max(1,stops.length-1)*width;const y=top+row*rowH+rowH/2;const finish=route.finish&&route.finish.stop===stop.id;ctx.fillStyle=finish?'#111':'#123cff';ctx.beginPath();ctx.arc(x,y,finish?7:4.5,0,Math.PI*2);ctx.fill();});
-  ctx.fillStyle='#666';ctx.font='15px sans-serif';projects.forEach((p,i)=>ctx.fillText(String(p.label).slice(0,22),left,top+i*rowH+14));
+  ctx.fillStyle='#666';ctx.font='15px sans-serif';projects.forEach((p,i)=>ctx.fillText(String(i+1),64,top+i*rowH+14));
+  ctx.fillStyle='#333';ctx.font='16px sans-serif';
+  const projectLine=projects.map((p,i)=>`${i+1} · ${p.label}`).join('   ');
+  clipped=lines(projectLine,64,top+projects.length*rowH+18,952,'16px sans-serif',20,2)||clipped;
   const stats=route.stats||{};
   const label=[stats.projects_touched!=null?stats.projects_touched+' projects touched':null,stats.verified_checkpoints!=null?stats.verified_checkpoints+' verified checkpoints':null].filter(Boolean).join(' · ')||'Code Route';
   ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(label,64,592);

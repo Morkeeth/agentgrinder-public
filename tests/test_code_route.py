@@ -94,6 +94,9 @@ def test_fixture_card_renders_lanes_checkpoints_and_basis_in_accessible_text():
     text = html
     for name in ("zup", "agentgrinder-public", "mountain-of-helicon"):
         assert name in text
+    assert "code-route-projects" in text
+    assert "code-route-project-name" in text
+    assert "…" not in text  # phone layout must not ellipsize lane names
     assert "measured" in text and "declared" in text
     assert "Projects touched" in text or "projects touched" in text.lower()
     assert "cursor" in text and "claude-cli" in text and "codex" in text

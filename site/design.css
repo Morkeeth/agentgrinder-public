@@ -184,21 +184,30 @@ button,summary{touch-action:manipulation}
   .coach-soon{margin-left:12px;margin-right:12px}
   .run-map .run-map-head .meta{font-size:11px}
 }
-/* Code Route: one blue path, sparse labels, finish mark, readable without hover. */
-.code-route{margin:10px 0 12px;color:var(--blue)}
+/* Code Route: one blue path, numbered lanes, full project list, readable at 390px. */
+.code-route{margin:10px 0 12px;padding:0 16px;color:var(--blue);min-width:0;overflow-wrap:anywhere}
 .code-route .run-story-label{margin:0 0 8px}
 .code-route-map{display:block;width:100%;height:auto;max-width:100%}
 .code-route-line{stroke:var(--blue);fill:none}
 .code-route-stop{fill:var(--blue)}
 .code-route-finish{fill:var(--ink);stroke:var(--blue);stroke-width:2}
-.code-route-lane{fill:var(--soft);font-size:10px;font-family:inherit}
-.code-route-stats,.code-route-harnesses,.code-route-why{margin:8px 0 0;font-size:13px;color:var(--soft)}
-.code-route-stops{margin:8px 0 0;display:grid;gap:4px}
-.code-route-point{border:0;padding:0;font-size:13px;color:var(--ink)}
-.code-route-point summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+.code-route-lane{fill:var(--soft);font-size:11px;font-family:inherit;font-variant-numeric:tabular-nums}
+.code-route-projects{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;color:var(--ink);font-size:13px}
+.code-route-projects li{display:flex;gap:8px;align-items:baseline;min-width:0}
+.code-route-lane-mark{flex:none;min-width:1.1em;color:var(--blue);font-weight:500;font-variant-numeric:tabular-nums}
+.code-route-project-name{min-width:0;overflow-wrap:anywhere}
+.code-route-stats,.code-route-harnesses,.code-route-why{margin:8px 0 0;font-size:13px;color:var(--soft);overflow-wrap:anywhere}
+.code-route-stops{margin:8px 0 0;display:grid;gap:6px;min-width:0}
+.code-route-point{border:0;padding:0;font-size:13px;color:var(--ink);min-width:0}
+.code-route-point summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;min-width:0}
 .code-route-point summary::-webkit-details-marker{display:none}
 .code-route-point[data-finish="1"] summary{font-weight:600}
 .code-route-kind{color:var(--blue);font-weight:500;text-transform:uppercase;font-size:11px;letter-spacing:.04em}
+.code-route-stop-label{color:var(--ink);min-width:0;overflow-wrap:anywhere}
 .code-route-basis{color:var(--soft)}
-.code-route-point ul{margin:4px 0 8px 18px;padding:0;color:var(--soft);font-size:12px}
+.code-route-stop-project{color:var(--soft);min-width:0;overflow-wrap:anywhere}
+.code-route-point ul{margin:4px 0 8px 18px;padding:0;color:var(--soft);font-size:12px;overflow-wrap:anywhere}
 .code-route-unavailable .code-route-why{color:var(--soft)}
+@media(max-width:390px){
+  .code-route{padding-left:12px;padding-right:12px}
+}
