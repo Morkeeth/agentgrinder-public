@@ -120,7 +120,7 @@ Both hand the human to the same Pacecard account, audience control and saved-run
 | Duplicate manual save | Open first run by browser-generated run UUID; do not insert a second row. | Added in this PR; disposable acceptance required on final source. |
 | Unknown metrics | Store/render null; never infer duration, files, commits or outcomes. | Cursor and Grok safe route walks kept unsupported values unknown. |
 | Only me | Owner only; not a friend/share route. | Source/policies and disposable tests, not hosted use. |
-| Anyone with link | Unlisted readable URL; not feed/profile. | Source/policies; live two-account use outstanding. |
+| Link (followers and close friends) | Relationship-gated URL; not feed/profile. Bearer alone is not enough. | Source/policies; migration 010; live two-account use outstanding. |
 | Public | Feed/profile/public preview; deliberate audience only. | Source and disposable tests; live two-account use outstanding. |
 | Withdrawn to private | Friend loses access; owner retains run. | Disposable privacy path exists. |
 | Deleted run | Discussion target unavailable; Responses explains it without a link. | Disposable Responses test passed. |

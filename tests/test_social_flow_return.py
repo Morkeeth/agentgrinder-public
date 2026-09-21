@@ -42,7 +42,8 @@ def test_responses_return_and_ack_paths_remain():
     assert "ag_response_return" in SOCIAL
     assert "Back to Responses" in SOCIAL
     assert "Open exact reply" in SOCIAL
-    assert "ACK the work" in INDEX
+    assert "Cheer this run" in INDEX
+    assert "Send XUDOS" in INDEX
 
 
 def test_auth_return_allowlist_source():

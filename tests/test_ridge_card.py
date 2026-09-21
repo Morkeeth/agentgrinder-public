@@ -67,13 +67,13 @@ def test_card_draws_one_primary_ridge_and_story_before_effort():
     assert 'Run map' in html and 'run-map' in html
     facts = html[html.index('class="run-metrics"'):html.index("</dl>", html.index('class="run-metrics"'))]
     assert facts.count('<div class="run-metric') >= 2
-    assert "Session" in facts and "Turns" in facts
-    assert html.index("Achieved") < html.index("Open PR") < html.index("Project touched")
-    assert html.index("Project touched") < html.index("Code activity") < html.index('ridge-wrap')
+    assert "Session" in facts
+    assert html.index("Achieved") < html.index('ridge-wrap') < html.index("Open PR")
+    assert html.index('ridge-wrap') < html.index("Project touched") < html.index("Code activity")
     assert "4</strong> Shell calls" in html
     assert "5</strong> Files changed" in html
-    assert html.index('ridge-wrap') < html.index(">Effort</div>")
-    assert html.index("<summary>More</summary>") < html.index("coaching-cell")
+    assert html.index('ridge-wrap') < html.index('class="run-metrics"')
+    assert html.index("<summary>Explore this run</summary>") < html.index("coaching-cell")
     output_facts = render()["outputOnly"]
     assert "Open PR" in output_facts
     assert "<strong class=\"num\">0</strong> Commits" in output_facts

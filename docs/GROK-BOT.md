@@ -48,7 +48,7 @@ unsupported measurements, so those fields remain unknown. Shell requests do not 
 commit succeeded.
 
 The owner supplies public-facing title, caption and optional HTTPS output link, checks the
-signed-in account and destination, deliberately chooses **Only me**, **Anyone with the link**, or
+signed-in account and destination, deliberately chooses **Only me**, **Followers and close friends**, or
 **Public feed and profile**, and only then presses **Save run**. Never auto-publish, select an
 audience, or perform engagement for the owner.
 

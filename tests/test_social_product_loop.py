@@ -22,14 +22,20 @@ def test_post_page_exposes_priority_harnesses_and_private_preview():
 def test_card_shows_builder_project_session_caption_and_output():
     card = INDEX[INDEX.index("function runCard(") : INDEX.index("function wireKudos()")]
     assert "runAttribution(r)" in card
-    for field in ("project", "started_at", "duration_s", "caption", "output_url"):
+    for field in ("project", "started_at", "caption", "output_url"):
         assert field in card
     assert "Open ${esc(ridgeOutput||'output')}" in card
-    assert card.index("${r.caption?") < card.index("${story}")
-    assert card.index("${story}") < card.index("${ridgeBody}")
-    assert card.index("Project touched") < card.index("Code activity")
+    assert card.index("${r.caption?") < card.index("${visual}")
+    assert card.index("${cover}") < card.index("${visual}")
+    assert card.index("run-social-actions") < card.index("${explore}")
+    assert "Project touched" in card
+    assert "Code activity" in card
+    assert "Explore this run" in card
+    assert "card-follow" in card
+    assert "coverHtml" in card or "${cover}" in card
     assert "card-harness" in card
     assert "run-metrics" in card
+    assert "heroStats" in card
     assert "run-rank" not in card
     assert "vptHtml(r)" not in card
 
@@ -37,12 +43,25 @@ def test_card_shows_builder_project_session_caption_and_output():
 def test_social_actions_remain_in_the_focused_app():
     assert ".from(\"grinder_follows\")" in SOCIAL
     assert ".from(\"grinder_replies\")" in SOCIAL
-    assert "ACK the work" in INDEX
+    assert "Cheer this run" in INDEX
+    assert "Send XUDOS" in INDEX
+    assert "ACK the work" not in INDEX
+    assert "Send ACK" not in INDEX
     assert "Responses" in SOCIAL
     assert "/?people" in SOCIAL
     assert "IntersectionObserver" in SOCIAL
     assert "Open exact reply" in SOCIAL
     assert "ag_response_return" in SOCIAL
+    assert "Oscar and Eric" in SOCIAL
+    assert "Grokbot Builders Sunday" not in SOCIAL
+    assert "Grokbot Builders Sunday" not in INDEX
+    assert "luma.com" not in INDEX
+    assert "eventChip" in INDEX or "${eventChip}" in INDEX
+    assert "xudos-tip" in INDEX
+    assert "Scene photo URL" in INDEX
+    assert "history.replaceState(null,'','/?explore')" in INDEX
+    assert "async function viewEvent()" in INDEX
+    assert "return viewExplore()" in INDEX[INDEX.index("async function viewEvent()") : INDEX.index("const forum=")]
 
 
 def test_caption_and_output_are_bounded_by_database_constraints():

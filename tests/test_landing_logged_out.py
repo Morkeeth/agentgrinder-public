@@ -1,11 +1,15 @@
-"""The public STRIVE entry shows the social product without invented activity or sign-in."""
+"""The public STRIVE entry shows a real public run first, without invented activity."""
 from pathlib import Path
 
 HTML = (Path(__file__).resolve().parents[1] / 'site/index.html').read_text()
 
 
 def landing():
-    return HTML[HTML.index('function landingHTML()'):HTML.index('\nasync function viewLanding()')]
+    return HTML[HTML.index('function landingHTML()'):HTML.index('\nasync function fetchLatestPublicRun()')]
+
+
+def view_landing():
+    return HTML[HTML.index('async function viewLanding()'):HTML.index('\nasync function mountCoachExperiment(')]
 
 
 def test_logged_out_landing_exposes_browsing_and_first_post():
@@ -24,18 +28,34 @@ def test_landing_explains_deliberate_publication():
     assert 'You choose what goes public' in body
 
 
-def test_landing_labels_the_neutral_sample_without_promoting_coaching():
+def test_landing_puts_sample_behind_example_link_not_first_fold():
     body = landing()
-    assert '/?example' not in body
-    assert 'aria-label="Sample run card"' in body
-    assert '<span class="sample-label">SAMPLE</span>' in body
-    assert 'data-home-sample="1"' in HTML
+    assert 'href="/?example"' in body
+    assert 'Try a labelled example' in body or 'Labelled example' in body
+    assert 'aria-label="Sample run card"' not in body
+    assert 'WHAT A RUN LOOKS LIKE' not in body
+    assert 'HOME_SAMPLE' not in body
+    assert 'data-home-sample="1"' not in body
+    assert 'aria-label="A public run"' in body
+    assert 'id="landing-feature"' in body
     for retired in ('howItWorks()', 'verified per turn', 'coach verdict', 'DEGRADED'):
         assert retired not in body
 
 
+def test_landing_loads_latest_public_run_only():
+    view = view_landing()
+    assert "fetchLatestPublicRun()" in view
+    assert "runCard(featured" in view
+    fetch = HTML[HTML.index('async function fetchLatestPublicRun()'):HTML.index('async function viewLanding()')]
+    assert ".eq('visibility','public')" in fetch
+    assert "visibility','link'" not in fetch
+    assert "HOME_SAMPLE" not in view
+    assert "No public run yet" in view
+    assert "Link runs stay off this door" in view
+
+
 def test_landing_reads_the_public_count_without_using_it_as_sample_content():
-    view = HTML[HTML.index('async function viewLanding()'):HTML.index('async function viewRun(')]
+    view = view_landing()
     assert "fetchPublicRunCount()" in view
     assert "No public runs yet. Yours would be the first." in view
     count = HTML[HTML.index('async function fetchPublicRunCount()'):HTML.index("const $=id=>")]
@@ -48,8 +68,9 @@ def test_sign_in_explains_github_and_private_runs():
     assert "Closing or cancelling sign-in posts nothing" in HTML
     assert "Runs stay private until you choose Public and save them" in HTML
     assert '<button id="auth" class="ghost">Sign in</button>' in HTML
-    assert "Sign in with GitHub" not in HTML
-    assert "Continue with X" not in HTML
+    panel = HTML[HTML.index('id="signin-explanation"') : HTML.index('id="signin-explanation"') + 800]
+    assert "Continue with X" not in panel
+    assert "Sign in with GitHub" not in panel
 
 
 def test_capture_command_points_to_the_public_product():

@@ -25,7 +25,7 @@ The hosted Pacecard URL for this flow is `https://agentic-strava.vercel.app`.
 4. Open the generated hosted `#import` URL. Inspect every imported field, including fields shown
    as unknown. The helper makes no network request and no post.
 5. Write the title, caption and optional HTTPS link to what was built.
-6. Deliberately choose **Only me**, **Anyone with the link** or **Public feed and profile**, then press **Save run**.
+6. Deliberately choose **Only me**, **Followers and close friends** or **Public feed and profile**, then press **Save run**.
 
 Nothing is posted by installing the skill, selecting an export, running `preview.py` or opening
 the preview. Samples stay labelled **SAMPLE** / **bot activity** and cannot be saved. Do not put

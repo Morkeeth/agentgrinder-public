@@ -243,10 +243,9 @@
     const extra = [];
     receipts.forEach((r) => extra.push(link(r.url, r.label.trim().slice(0, 60))));
     if (safeUrl(run.artifact_url)) extra.push(link(run.artifact_url, "Open the demo"));
-    // No remote image is embedded, here or on the public page: an arbitrary third party host would
-    // learn the IP and user agent of every reader, and a dead link would render a broken box.
+    // Prefer the gallery on the card. Keep a text link here for Explore when no raster cover rendered.
     if (safeUrl(run.image_url) && /\.(png|jpe?g|webp)([?#].*)?$/i.test(run.image_url))
-      extra.push(link(run.image_url, "Open the screenshot"));
+      extra.push(link(run.image_url, "Open the cover or scene photo"));
     if (extra.length) parts.push(`<p class="run-outcome-links">${extra.join(" · ")}</p>`);
     if (!parts.length) return "";
     return `<section class="run-outcome"><div class="run-story-label">Said by the uploader, not measured</div>${parts.join("")}</section>`;
@@ -359,25 +358,21 @@
   function promoteCodeRouteHero(scope) {
     const cards = scope.querySelectorAll ? scope.querySelectorAll(".card") : [];
     cards.forEach((card) => {
-      const route = card.querySelector(":scope > .code-route, :scope .code-route");
-      if (!route) return;
-      const identity = card.querySelector(".run-upload-identity");
+      const cover = card.querySelector(":scope > .run-cover");
+      const route = card.querySelector(":scope > .code-route, :scope > .work-path");
+      if (!route && !cover) return;
       const note = card.querySelector(":scope > .note");
       const title = card.querySelector(":scope > .title");
-      const anchor = identity || note || title;
-      if (anchor && anchor.nextElementSibling !== route) anchor.after(route);
-      const metrics = card.querySelector("dl.run-metrics");
-      if (!metrics) return;
-      const label = metrics.previousElementSibling;
-      const more = Array.from(card.querySelectorAll("details.ridge-more")).find((block) => {
-        const summary = block.querySelector("summary");
-        return summary && summary.textContent === "More";
-      });
-      if (!more || more.contains(metrics)) return;
-      if (label && label.classList.contains("run-story-label") && !label.classList.contains("achieved")) {
-        more.prepend(metrics);
-        more.prepend(label);
-      } else more.prepend(metrics);
+      const anchor = note || title;
+      const stats = card.querySelector(":scope > dl.run-metrics");
+      if (cover && anchor && cover.previousElementSibling !== anchor) {
+        anchor.after(cover);
+      }
+      const routeAnchor = cover || note || title;
+      if (route && routeAnchor && route.previousElementSibling !== routeAnchor) {
+        if (stats && !cover) stats.before(route);
+        else routeAnchor.after(route);
+      }
     });
   }
   function mountRunMaps(root) {
@@ -727,6 +722,65 @@
     if (!parts.length) return "";
     return parts[0] + parts.slice(1).map((part) => ". " + part.charAt(0).toUpperCase() + part.slice(1)).join("") + ".";
   }
+  function recordedCount(value) {
+    return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+  }
+  function sessionLabel(run) {
+    if (!run) return null;
+    const candidates = [
+      run.ridge_basis === "wall-time" ? run.ridge_wall_seconds : null,
+      run.wall_time_s,
+      run.duration_s,
+    ];
+    const value = candidates.find((v) => typeof v === "number" && Number.isFinite(v) && v >= 0);
+    if (value == null) return null;
+    if (value < 60) return Math.round(value) + "s";
+    const minutes = Math.round(value / 60);
+    return minutes >= 60 ? Math.floor(minutes / 60) + "h " + (minutes % 60) + "m" : minutes + "m";
+  }
+  // At most three recorded facts from THIS run. Prefer the run row and the route geometry
+  // that was drawn, not a generalised aggregate that can disagree with the card.
+  function heroStats(run) {
+    const cells = [];
+    const add = (label, value) => {
+      if (cells.length >= 3 || value == null || value === "") return;
+      cells.push([label, String(value)]);
+    };
+    const route = run && run.code_route;
+    const routeOk =
+      route &&
+      typeof route === "object" &&
+      !Array.isArray(route) &&
+      route.v === 1 &&
+      !route.unavailable;
+    const projects = routeOk && Array.isArray(route.projects) ? route.projects : [];
+    const stops = routeOk && Array.isArray(route.stops) ? route.stops : [];
+    if (projects.length > 1) add("Projects", projects.length);
+    const commits = recordedCount(run && run.commits);
+    if (commits != null) add("Commits", commits);
+    const files = recordedCount(run && run.files_touched);
+    if (files != null) add("Files", files);
+    const measured = stops.filter((s) => s && s.basis === "measured").length;
+    if (measured > 0) add("Measured stops", measured);
+    add("Session", sessionLabel(run));
+    const turns = recordedCount(run && (run.prompts ?? run.turns_typed));
+    if (turns != null) add("Turns", turns);
+    const tools = recordedCount(run && run.tool_calls);
+    // A recorded zero beside a live ridge map contradicts the slice readout; omit the strip cell.
+    const ridge = run && Array.isArray(run.ridge) ? run.ridge : null;
+    const ridgeSum =
+      ridge && ridge.length && ridge.every((v) => Number.isFinite(v) && v >= 0)
+        ? ridge.reduce((a, b) => a + b, 0)
+        : 0;
+    if (tools != null && !(tools === 0 && ridgeSum > 0)) add("Tool calls", tools);
+    // Route.stats only fills gaps the run row left empty.
+    if (cells.length < 3 && routeOk && route.stats && typeof route.stats === "object") {
+      const stats = route.stats;
+      if (commits == null && recordedCount(stats.commits) != null) add("Commits", stats.commits);
+      if (files == null && recordedCount(stats.files_changed) != null) add("Files", stats.files_changed);
+    }
+    return cells;
+  }
   function densestProject(route) {
     const projects = Array.isArray(route.projects) ? route.projects : [];
     const stops = Array.isArray(route.stops) ? route.stops : [];
@@ -748,85 +802,251 @@
     }
     return ties === 1 && densestN > 0 ? densest : null;
   }
-  function codeRoute(run) {
+  function readCodeRoute(run) {
     const route = run && run.code_route;
-    if (!route || typeof route !== "object" || Array.isArray(route) || route.v !== 1) return "";
-    try { validateCodeRoute(route); } catch (_) { return ""; }
-    const harnessBits = [];
-    if (route.harnesses) {
-      const observed = (route.harnesses.observed || []).map((h) => esc(h));
-      const absent = (route.harnesses.absent || []).map((h) => esc(h));
-      harnessBits.push(
-        `<p class="code-route-harnesses">Harness populations · basis ${esc(route.harnesses.basis)}` +
-          ` · observed: ${observed.length ? observed.join(", ") : "none"}` +
-          ` · absent: ${absent.length ? absent.join(", ") : "none"}</p>`
-      );
+    if (!route || typeof route !== "object" || Array.isArray(route) || route.v !== 1) return null;
+    try { validateCodeRoute(route); } catch (_) { return null; }
+    return route;
+  }
+  function harnessHtml(route) {
+    if (!route || !route.harnesses) return "";
+    const observed = (route.harnesses.observed || []).map((h) => esc(h));
+    const absent = (route.harnesses.absent || []).map((h) => esc(h));
+    return (
+      `<p class="code-route-harnesses">Harness populations · basis ${esc(route.harnesses.basis)}` +
+      ` · observed: ${observed.length ? observed.join(", ") : "none"}` +
+      ` · absent: ${absent.length ? absent.join(", ") : "none"}</p>`
+    );
+  }
+    // Author-selected images only. Never invent stock. A lifestyle scene may sit beside a genuine
+    // output image; the scene is atmosphere, not proof. No auto-publish from a camera roll.
+    function isRasterUrl(href) {
+      return safeUrl(href) && /\.(png|jpe?g|webp)([?#].*)?$/i.test(href);
     }
-    if (route.unavailable) {
+    function coverHtml(run) {
+      const scene = run && isRasterUrl(run.image_url) ? run.image_url : null;
+      const output =
+        run && isRasterUrl(run.output_url) && run.output_url !== scene ? run.output_url : null;
+      const slides = [];
+      if (scene && output) {
+        slides.push({ href: scene, kind: "scene", caption: "Scene" });
+        slides.push({ href: output, kind: "output", caption: "Output" });
+      } else if (scene) {
+        slides.push({
+          href: scene,
+          kind: "cover",
+          caption: "Cover",
+        });
+      } else if (output) {
+        slides.push({ href: output, kind: "output", caption: "Output" });
+      }
+      if (!slides.length) return "";
+      const figures = slides
+        .map(
+          (slide) =>
+            `<figure class="run-cover-slide" data-kind="${esc(slide.kind)}">` +
+            `<img src="${esc(slide.href)}" alt="" width="1200" height="630" loading="lazy" decoding="async" referrerpolicy="no-referrer" />` +
+            (slides.length > 1 || slide.kind === "scene"
+              ? `<figcaption class="meta">${esc(slide.caption)}</figcaption>`
+              : "") +
+            `</figure>`,
+        )
+        .join("");
+      return `<div class="run-cover${slides.length > 1 ? " run-cover-gallery" : ""}">${figures}</div>`;
+    }
+    function eventChip(run) {
+      // At most one author-chosen external link on the card. No event directory or calendar UI.
+      const receipts = Array.isArray(run && run.receipts) ? run.receipts : [];
+      for (const row of receipts) {
+        if (!row || typeof row.label !== "string" || !safeUrl(row.url)) continue;
+        const label = row.label.trim();
+        const match = /^event:\s*(.+)$/i.exec(label);
+        if (!match) continue;
+        const name = match[1].trim().slice(0, 80);
+        if (!name) continue;
+        return (
+          `<p class="run-event-chip meta">` +
+          `<a href="${esc(row.url)}" rel="noopener noreferrer nofollow" target="_blank">${esc(name)}</a>` +
+          `</p>`
+        );
+      }
+      return "";
+    }
+    function routeShape(route, run) {
+      const projects = Array.isArray(route && route.projects) ? route.projects : [];
+      const stops = Array.isArray(route && route.stops) ? route.stops : [];
+      if (projects.length >= 2 && stops.length >= 2) return "day";
+      const harness = String((run && run.harness) || "").toLowerCase();
+      if (/grok|bot/.test(harness)) return "agent";
+      return "fix";
+    }
+    function compactWorkPath(route, run) {
+      const stops = Array.isArray(route.stops) ? route.stops : [];
+      if (!stops.length) return "";
+      const shape = routeShape(route, run);
+      const titles =
+        shape === "agent"
+          ? ["Action", "Work", "Output"]
+          : ["Before", "Change", "Result"];
+      const finishId = route.finish && route.finish.stop;
+      const finish = finishId ? stops.find((s) => s.id === finishId) : null;
+      const first = stops[0];
+      const last = finish || stops[stops.length - 1];
+      const mid =
+        stops.length >= 3
+          ? stops[Math.floor((stops.length - 1) / 2)]
+          : stops.length === 2
+            ? null
+            : first;
+      const stages = [
+        { title: titles[0], stop: first },
+        {
+          title: titles[1],
+          stop: mid,
+          bridge: !mid && stops.length === 2 ? (first.kind || "change") : null,
+        },
+        { title: titles[2], stop: last },
+      ];
+      const insight = routeInsight(route);
+      const project =
+        Array.isArray(route.projects) && route.projects[0]
+          ? route.projects[0].label
+          : null;
+      const cells = stages
+        .map((stage) => {
+          if (stage.bridge) {
+            return (
+              `<li class="work-path-stage work-path-bridge">` +
+              `<span class="work-path-title">${esc(stage.title)}</span>` +
+              `<span class="work-path-label">${esc(stage.bridge)}</span>` +
+              `</li>`
+            );
+          }
+          const stop = stage.stop;
+          const label = stop
+            ? stop.label
+            : shape === "agent"
+              ? "not recorded"
+              : "not recorded";
+          const kind = stop ? stop.kind : "";
+          return (
+            `<li class="work-path-stage">` +
+            `<span class="work-path-title">${esc(stage.title)}</span>` +
+            (kind ? `<span class="work-path-kind">${esc(kind)}</span>` : "") +
+            `<span class="work-path-label">${esc(label)}</span>` +
+            `</li>`
+          );
+        })
+        .join("");
+      const aria =
+        (shape === "agent" ? "Agent lane" : "Quick fix path") +
+        (project ? ` on ${project}` : "") +
+        (insight ? ` · ${insight}` : "");
       return (
-        `<section class="code-route code-route-unavailable" aria-label="Code Route unavailable">` +
-        `<div class="run-story-label">Code Route</div>` +
-        `<p class="code-route-why">${esc(route.unavailable.why)}</p>` +
-        harnessBits.join("") +
+        `<section class="work-path" data-shape="${esc(shape)}" aria-label="${esc(aria)}">` +
+        `<div class="run-story-label">${shape === "agent" ? "Agent lane" : "Work path"}</div>` +
+        `<ol class="work-path-stages">${cells}</ol>` +
+        (project ? `<p class="work-path-project">${esc(project)}</p>` : "") +
+        (insight ? `<p class="code-route-insight">${esc(insight)}</p>` : "") +
         `</section>`
       );
     }
+    function codeRouteMap(route, run) {
+      const projects = Array.isArray(route.projects) ? route.projects : [];
+      const stops = Array.isArray(route.stops) ? route.stops : [];
+      if (!projects.length || !stops.length) return "";
+      const projectIndex = Object.fromEntries(projects.map((p, i) => [p.id, i]));
+      const n = Math.max(1, projects.length);
+      const left = 28;
+      const width = 360;
+      const rowH = 28;
+      const top = 18;
+      const height = top + n * rowH + 12;
+      const finishId = route.finish && route.finish.stop;
+      const handoffTo = new Set(
+        (Array.isArray(route.connectors) ? route.connectors : [])
+          .filter((c) => c && c.kind === "handoff" && c.to)
+          .map((c) => c.to)
+      );
+      const dense = densestProject(route);
+      const insight = routeInsight(route);
+      const points = stops.map((stop, i) => {
+        const row = projectIndex[stop.project] ?? 0;
+        const x = left + (i * (width - left - 16)) / Math.max(1, stops.length - 1);
+        const y = top + row * rowH + rowH / 2;
+        return { stop, x, y, finish: stop.id === finishId, handoff: handoffTo.has(stop.id) };
+      });
+      const line = points
+        .map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+        .join(" ");
+      const dots = points
+        .map((p) => {
+          const r = p.finish ? 5.5 : p.handoff ? 4.5 : 3.5;
+          const cls = p.finish ? "code-route-finish" : p.handoff ? "code-route-handoff" : "code-route-stop";
+          return `<circle class="${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" />`;
+        })
+        .join("");
+      const laneLabels = projects
+        .map((p, i) => {
+          const y = top + i * rowH + rowH / 2 + 4;
+          return `<text class="code-route-lane" x="0" y="${y}">${i + 1}</text>`;
+        })
+        .join("");
+      const projectList = projects
+        .map((p, i) =>
+          `<li${dense && p.id === dense.id ? ' data-dense="1"' : ""}>` +
+          `<span class="code-route-lane-mark" aria-hidden="true">${i + 1}</span>` +
+          `<span class="code-route-project-name">${esc(p.label)}</span></li>`
+        )
+        .join("");
+      const projectNames = projects.map((p) => p.label).join(", ");
+      const measured = stops.filter((s) => s.basis === "measured").length;
+      const declared = stops.filter((s) => s.basis === "declared").length;
+      const aria =
+        `Code Route across ${projects.length} project${projects.length === 1 ? "" : "s"}: ${projectNames}. ` +
+        `${stops.length} ordered checkpoints · ${measured} measured · ${declared} declared` +
+        (route.finish ? ` · finish ${route.finish.label}` : "") +
+        (insight ? ` · ${insight}` : "");
+      return (
+        `<section class="code-route" data-shape="day" aria-label="${esc(aria)}">` +
+        `<div class="run-story-label">Code Route</div>` +
+        `<svg class="code-route-map" viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true">` +
+        `<path class="code-route-line" pathLength="1" d="${line}" fill="none" stroke="currentColor" stroke-width="2.5" />` +
+        dots +
+        laneLabels +
+        `</svg>` +
+        `<ol class="code-route-projects">${projectList}</ol>` +
+        (insight ? `<p class="code-route-insight">${esc(insight)}</p>` : "") +
+        `</section>`
+      );
+    }
+    function codeRoute(run) {
+      const route = readCodeRoute(run);
+      if (!route) return "";
+      if (route.unavailable) {
+        return (
+          `<section class="code-route code-route-unavailable" aria-label="Code Route unavailable">` +
+          `<div class="run-story-label">Code Route</div>` +
+          `<p class="code-route-why">${esc(route.unavailable.why)}</p>` +
+          `</section>`
+        );
+      }
+      const projects = Array.isArray(route.projects) ? route.projects : [];
+      const stops = Array.isArray(route.stops) ? route.stops : [];
+      if (!projects.length || !stops.length) return "";
+      // Day runs earn the multi-lane map. A quick fix or agent lane is a short path, never a lonely dot.
+      if (routeShape(route, run) === "day") return codeRouteMap(route, run);
+      return compactWorkPath(route, run);
+    }
+  function codeRouteDetail(run) {
+    const route = readCodeRoute(run);
+    if (!route) return "";
+    if (route.unavailable) return harnessHtml(route);
     const projects = Array.isArray(route.projects) ? route.projects : [];
     const stops = Array.isArray(route.stops) ? route.stops : [];
-    if (!projects.length || !stops.length) return "";
+    if (!projects.length || !stops.length) return harnessHtml(route);
     const projectIndex = Object.fromEntries(projects.map((p, i) => [p.id, i]));
-    const n = Math.max(1, projects.length);
-    // Compact lane marks (1…n) keep the map readable at phone width; full names live in the list.
-    const left = 28;
-    const width = 360;
-    const rowH = 28;
-    const top = 18;
-    const height = top + n * rowH + 12;
     const finishId = route.finish && route.finish.stop;
-    const handoffTo = new Set(
-      (Array.isArray(route.connectors) ? route.connectors : [])
-        .filter((c) => c && c.kind === "handoff" && c.to)
-        .map((c) => c.to)
-    );
-    const dense = densestProject(route);
-    const insight = routeInsight(route);
-    const points = stops.map((stop, i) => {
-      const row = projectIndex[stop.project] ?? 0;
-      const x = left + (i * (width - left - 16)) / Math.max(1, stops.length - 1);
-      const y = top + row * rowH + rowH / 2;
-      return { stop, x, y, finish: stop.id === finishId, handoff: handoffTo.has(stop.id) };
-    });
-    const line = points
-      .map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-      .join(" ");
-    const dots = points
-      .map((p) => {
-        const r = p.finish ? 5.5 : p.handoff ? 4.5 : 3.5;
-        const cls = p.finish ? "code-route-finish" : p.handoff ? "code-route-handoff" : "code-route-stop";
-        return `<circle class="${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" />`;
-      })
-      .join("");
-    const laneLabels = projects
-      .map((p, i) => {
-        const y = top + i * rowH + rowH / 2 + 4;
-        return `<text class="code-route-lane" x="0" y="${y}">${i + 1}</text>`;
-      })
-      .join("");
-    const projectList = projects
-      .map((p, i) =>
-        `<li${dense && p.id === dense.id ? ' data-dense="1"' : ""}>` +
-        `<span class="code-route-lane-mark" aria-hidden="true">${i + 1}</span>` +
-        `<span class="code-route-project-name">${esc(p.label)}</span></li>`
-      )
-      .join("");
-    const projectNames = projects.map((p) => p.label).join(", ");
-    const measured = stops.filter((s) => s.basis === "measured").length;
-    const declared = stops.filter((s) => s.basis === "declared").length;
-    const aria =
-      `Code Route across ${projects.length} projects: ${projectNames}. ` +
-      `${stops.length} ordered checkpoints · ${measured} measured · ${declared} declared` +
-      (route.finish ? ` · finish ${route.finish.label}` : "") +
-      (insight ? ` · ${insight}` : "");
     const stopList = stops
       .map((stop) => {
         const project = projects.find((p) => p.id === stop.project);
@@ -850,22 +1070,9 @@
         );
       })
       .join("");
-    return (
-      `<section class="code-route" aria-label="${esc(aria)}">` +
-      `<div class="run-story-label">Code Route</div>` +
-      `<svg class="code-route-map" viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true">` +
-      `<path class="code-route-line" pathLength="1" d="${line}" fill="none" stroke="currentColor" stroke-width="2.5" />` +
-      dots +
-      laneLabels +
-      `</svg>` +
-      `<ol class="code-route-projects">${projectList}</ol>` +
-      (insight ? `<p class="code-route-insight">${esc(insight)}</p>` : "") +
-      `<div class="code-route-stops">${stopList}</div>` +
-      harnessBits.join("") +
-      `</section>`
-    );
+    return `<div class="code-route-stops">${stopList}</div>` + harnessHtml(route);
   }
-  const api = { validate, message, trace, ridge, outcome, codeRoute, routeInsight, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
+  const api = { validate, message, trace, ridge, outcome, coverHtml, eventChip, heroStats, codeRoute, codeRouteDetail, routeInsight, routeShape, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

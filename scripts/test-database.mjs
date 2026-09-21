@@ -579,6 +579,8 @@ assert.equal((await db.query('select id from runs where id=$1',[ghost])).rows.le
 await as(userB);
 assert.equal((await db.query('select id from runs where id=$1',[ghost])).rows.length,0);
 // Link collections and ACKs cannot reveal private activity IDs.
+// This harness covers the Agent Grinder public schema only (prepare-migration.py).
+// Relationship-gated Link asserts for the strava schema live in test-shared-schema.mjs.
 await as(userA);
 const secretLink=(await db.query("insert into runs(profile_id,title,visibility) values($1,'Link fixture','link') returning id",[userA])).rows[0].id;
 await anonymous();

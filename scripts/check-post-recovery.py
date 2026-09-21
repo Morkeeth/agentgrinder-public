@@ -250,7 +250,7 @@ def main():
             cp.wait_for_url("**/?run=*", timeout=20000)
             cp.wait_for_function("document.getElementById('status').textContent.includes('already received')")
             check(len(my_runs(cp)) == before_manual + 1, "manual retry: existing save opened and no duplicate was created")
-            check("Anyone with the link" in cp.inner_text("#status"), "manual retry: status names the existing audience")
+            check("Followers and close friends" in cp.inner_text("#status"), "manual retry: status names the existing audience")
             shot(cp, "06-manual-lost-response-found-mobile.png")
             cp.set_viewport_size({"width": 1280, "height": 900})
             shot(cp, "06-manual-lost-response-found-desktop.png")

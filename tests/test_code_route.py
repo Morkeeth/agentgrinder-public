@@ -106,6 +106,93 @@ def test_fixture_card_renders_lanes_checkpoints_and_basis_in_accessible_text():
     assert "grok-bot" in text
     assert "observed" in text.lower() and "absent" in text.lower()
     assert "aria-label" in text
+    # Detail stays in the HTML for agents even when Explore is collapsed for humans.
+    assert 'data-run-detail="1"' in html
+    assert 'id="run-detail-r-code-route"' in html
+    assert "code-route-stops" in html
+    assert html.index("Explore this run") < html.index("code-route-stops")
+    assert "Receipts" in html
+
+
+def test_hero_stats_prefer_this_run_over_route_aggregates():
+    script = r"""
+const GrinderContract=require(process.argv[1]);
+const route=JSON.parse(process.argv[2]);
+const prefer=GrinderContract.heroStats({
+  code_route:route,commits:4,files_touched:41,tool_calls:0,ridge:[2,3,5]
+});
+const gap=GrinderContract.heroStats({code_route:route});
+process.stdout.write(JSON.stringify({prefer,gap}));
+"""
+    out = subprocess.run(
+        ["node", "-e", script, str(ROOT / "site" / "run-contract.js"), json.dumps(multi_route())],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    data = json.loads(out)
+    assert data["prefer"] == [["Projects", "3"], ["Commits", "4"], ["Files", "41"]]
+    # Without a run row, fall back to measured stops from the drawn route, not a vanity total.
+    assert data["gap"][0] == ["Projects", "3"]
+    assert ["Measured stops", "6"] in data["gap"]
+
+
+def test_work_route_shapes_day_fix_and_agent():
+    script = r"""
+const GrinderContract=require(process.argv[1]);
+const day=JSON.parse(process.argv[2]);
+const compact=JSON.parse(process.argv[3]);
+const dayHtml=GrinderContract.codeRoute({code_route:day,harness:'Cursor'});
+const fixHtml=GrinderContract.codeRoute({code_route:compact,harness:'Cursor'});
+const agentHtml=GrinderContract.codeRoute({code_route:compact,harness:'Grok Bot'});
+const cover=GrinderContract.coverHtml({image_url:'https://example.com/out.png'});
+const noCover=GrinderContract.coverHtml({output_url:'https://github.com/x/y/pull/1'});
+const gallery=GrinderContract.coverHtml({
+  image_url:'https://example.com/scene.jpg',
+  output_url:'https://example.com/result.png',
+});
+const event=GrinderContract.eventChip({
+  receipts:[{label:'Event: Meetup',url:'https://example.com/meetup'}],
+});
+process.stdout.write(JSON.stringify({
+  dayShape:GrinderContract.routeShape(day,{harness:'Cursor'}),
+  fixShape:GrinderContract.routeShape(compact,{harness:'Cursor'}),
+  agentShape:GrinderContract.routeShape(compact,{harness:'Grok Bot'}),
+  dayHasMap:dayHtml.includes('code-route-map'),
+  fixHasPath:fixHtml.includes('work-path')&&fixHtml.includes('Before'),
+  agentHasPath:agentHtml.includes('data-shape="agent"')&&agentHtml.includes('Action'),
+  cover:cover.includes('run-cover')&&cover.includes('referrerpolicy="no-referrer"'),
+  noCover:!noCover,
+  gallery:gallery.includes('run-cover-gallery')&&gallery.includes('Scene')&&gallery.includes('Output'),
+  event:event.includes('Meetup')&&event.includes('href="https://example.com/meetup"')&&!/partnership|Grokbot Builders Sunday|luma\.com/i.test(event),
+}));
+"""
+    compact = compact_from_checkpoints(
+        project_label="agentgrinder-public",
+        commits=2,
+        files_changed=4,
+        receipts=1,
+        artifact=True,
+    )
+    out = subprocess.run(
+        [
+            "node",
+            "-e",
+            script,
+            str(ROOT / "site" / "run-contract.js"),
+            json.dumps(multi_route()),
+            json.dumps(compact),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    data = json.loads(out)
+    assert data["dayShape"] == "day" and data["dayHasMap"]
+    assert data["fixShape"] == "fix" and data["fixHasPath"]
+    assert data["agentShape"] == "agent" and data["agentHasPath"]
+    assert data["cover"] and data["noCover"]
+    assert data["gallery"] and data["event"]
 
 
 def test_route_insight_uses_handoffs_concentration_and_finish_not_tokens():

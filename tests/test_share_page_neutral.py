@@ -74,6 +74,20 @@ def test_public_run_page_stays_public():
     assert "This run is private on STRIVE" not in out["body"]
 
 
+def test_link_row_that_reaches_the_handler_stays_neutral_for_strangers():
+    # Oscar ruling: Link is relationship-gated, not globally readable on /r/.
+    # Even if a link row reached the handler, the public-only re-check must keep the neutral page.
+    row = {"id": MISSING, "title": "Fixture link night run", "caption": "one line",
+           "visibility": "link", "prompts": 4, "profiles": {"handle": "link-builder"}}
+    out = serve(MISSING, [row])
+    assert out["status"] == 200
+    assert "This run is private on STRIVE" in out["body"]
+    assert "Fixture link night run" not in out["body"]
+    assert "link-builder" not in out["body"]
+    assert 'location.replace("/?run=' in out["body"] or "location.replace('/?run=" in out["body"]
+    assert out["body"].split("<script>", 1)[0] == serve(MISSING, [])["body"].split("<script>", 1)[0]
+
+
 def test_a_non_public_row_that_reaches_the_handler_still_gets_the_neutral_page():
     # The public-only filter lives in the query string. If it were ever lost, or the REST layer
     # ignored it, a close friends row would arrive here. The page must still be neutral.
@@ -84,8 +98,8 @@ def test_a_non_public_row_that_reaches_the_handler_still_gets_the_neutral_page()
     assert "This run is private on STRIVE" in out["body"]
     for leak in ("SECRET TITLE", "SECRET CAPTION", "secret-handle"):
         assert leak not in out["body"]
-    # Byte-identical to the missing page, so the two cases cannot be told apart.
-    assert out["body"] == serve(MISSING, [])["body"]
+    # Neutral article matches the missing page; permitted readers are handed to /?run= via script.
+    assert out["body"].split("<script>", 1)[0] == serve(MISSING, [])["body"].split("<script>", 1)[0]
 
 
 def body(page):
