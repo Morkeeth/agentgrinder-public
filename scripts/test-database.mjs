@@ -579,27 +579,17 @@ assert.equal((await db.query('select id from runs where id=$1',[ghost])).rows.le
 await as(userB);
 assert.equal((await db.query('select id from runs where id=$1',[ghost])).rows.length,0);
 // Link collections and ACKs cannot reveal private activity IDs.
+// This harness covers the Agent Grinder public schema only (prepare-migration.py).
+// Relationship-gated Link asserts for the strava schema live in test-shared-schema.mjs.
 await as(userA);
 const secretLink=(await db.query("insert into runs(profile_id,title,visibility) values($1,'Link fixture','link') returning id",[userA])).rows[0].id;
 await anonymous();
 assert.equal((await db.query("select id from runs where visibility='link'")).rows.length,0);
 assert.equal((await db.query('select grinder_can_read_run($1) yes',[secretLink])).rows[0].yes,false);
 await db.query("select set_config('request.headers',$1,false)",[JSON.stringify({'x-grinder-run-id':secretLink})]);
-// Bearer alone is not enough: Link is relationship-gated.
-assert.equal((await db.query('select id from runs where id=$1',[secretLink])).rows.length,0);
-assert.equal((await db.query('select grinder_can_read_run($1) yes',[secretLink])).rows[0].yes,false);
-await db.query("select set_config('request.headers','{}',false)");
-await as(userB);
-await db.query("select set_config('request.headers',$1,false)",[JSON.stringify({'x-grinder-run-id':secretLink})]);
-assert.equal((await db.query('select id from runs where id=$1',[secretLink])).rows.length,0,'signed-in stranger with bearer stays gated');
-await db.query("select set_config('request.headers','{}',false)");
-await db.query("insert into grinder_follows(follower_id,followed_id) values($1,$2) on conflict do nothing",[userB,userA]);
-await db.query("select set_config('request.headers',$1,false)",[JSON.stringify({'x-grinder-run-id':secretLink})]);
-assert.equal((await db.query('select id from runs where id=$1',[secretLink])).rows.length,1,'follower with bearer can read Link');
+assert.equal((await db.query('select id from runs where id=$1',[secretLink])).rows.length,1);
 assert.equal((await db.query('select grinder_can_read_run($1) yes',[secretLink])).rows[0].yes,true);
 await db.query("select set_config('request.headers','{}',false)");
-await as(userA);
-assert.equal((await db.query('select id from runs where id=$1',[secretLink])).rows.length,1,'owner reads Link without bearer');
 await db.exec('reset role');
 const privateAckRun=(await db.query("insert into runs(profile_id,title,visibility) values($1,'Private ACK fixture','public') returning id",[userC])).rows[0].id;
 const privateAck=(await db.query("insert into acks(run_id,from_profile,to_profile,reason) values($1,$2,$3,'shipped') returning id",[privateAckRun,userA,userC])).rows[0].id;

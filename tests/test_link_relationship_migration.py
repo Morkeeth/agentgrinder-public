@@ -15,6 +15,7 @@ def test_link_relationship_migration_enforces_follow_or_close_friends():
     assert "grinder_link_not_enumerable" in MIGRATION
     assert "grinder_link_access(id)" in MIGRATION
     assert "grinder_link_relationship(profile_id)" in MIGRATION
+    assert "grant execute on function strava.grinder_link_relationship(uuid) to anon, authenticated" in MIGRATION
     assert "Anyone with a link" not in MIGRATION
 
 

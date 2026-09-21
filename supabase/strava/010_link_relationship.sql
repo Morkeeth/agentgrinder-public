@@ -56,7 +56,9 @@ as $$
 $$;
 
 revoke all on function strava.grinder_link_relationship(uuid) from public, anon, authenticated;
-grant execute on function strava.grinder_link_relationship(uuid) to authenticated;
+-- Anon must EXECUTE this function: the restrictive runs policy calls it for every SELECT,
+-- including public rows. The body still returns false when grinder_profile_id() is null.
+grant execute on function strava.grinder_link_relationship(uuid) to anon, authenticated;
 
 -- Restrictive: Link rows need the bearer header plus a relationship (or ownership / crew).
 drop policy if exists grinder_link_not_enumerable on strava.runs;
