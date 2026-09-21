@@ -21,7 +21,7 @@ def test_zero_unread_badge_is_not_drawn():
 
 
 def test_missing_or_private_run_keeps_the_responses_return_path():
-    view_run = INDEX[INDEX.index("async function viewRun(id){"):INDEX.index("function showSignIn(){")]
+    view_run = INDEX[INDEX.index("async function viewRun(id){"):INDEX.index("function showSignIn(")]
     assert "This run is private or does not exist." in view_run
     assert "responseReturnLink()" in view_run
     assert "function responseReturnLink()" in INDEX and "ag_response_return" in INDEX

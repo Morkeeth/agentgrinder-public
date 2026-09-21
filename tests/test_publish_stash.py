@@ -28,7 +28,7 @@ def test_the_payload_is_stashed_before_the_redirect_and_the_fragment_is_not_the_
     i_stash = body.index("stashImport(m[1])")
     i_dialog = body.index("showSignIn()", i_stash)
     assert i_stash < i_dialog, "the stash must be written before opening sign-in"
-    signin=HTML[HTML.index("function showSignIn(){"):HTML.index("async function refreshAuth()") ]
+    signin=HTML[HTML.index("function showSignIn("):HTML.index("async function refreshAuth()") ]
     assert signin.index("stashImport") < signin.index("auth.signIn")
     # a fragment cannot come back through OAuth, so it must not be what we ask to come back to.
     # Comment lines are dropped first: the comment above the fix quotes the old call by name.

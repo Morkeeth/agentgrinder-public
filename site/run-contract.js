@@ -727,12 +727,20 @@
   }
   // Prefer the transcript count. When it is zero or missing and the stored ridge carried a
   // real call count, print that count so /r/, the SPA strip, Explore and share agree.
+  // A recorded zero beside a live ridge with no ridge_tool_calls contradicts the map; omit it.
   function toolCallCount(run) {
     if (!run) return null;
     const recorded = run.tool_calls;
     const fromRidge = run.ridge_tool_calls;
     if ((recorded == null || recorded === 0) && Number.isFinite(fromRidge) && fromRidge > 0)
       return fromRidge;
+    const ridge = Array.isArray(run.ridge) ? run.ridge : null;
+    const ridgeLive =
+      ridge &&
+      ridge.length &&
+      ridge.every((v) => Number.isFinite(v) && v >= 0) &&
+      ridge.some((v) => v > 0);
+    if (recorded === 0 && ridgeLive && !(Number.isFinite(fromRidge) && fromRidge > 0)) return null;
     return recorded == null ? null : recorded;
   }
   function sessionLabel(run) {
