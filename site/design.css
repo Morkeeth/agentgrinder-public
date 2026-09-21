@@ -137,11 +137,13 @@ button,summary{touch-action:manipulation}
 .run-cover{margin:0;padding:0;border-bottom:1px solid var(--rule);background:var(--box)}
 .run-cover img{display:block;width:100%;height:auto;max-height:min(52vw,320px);object-fit:cover;object-position:center;background:var(--rule-2)}
 .run-cover figcaption,.run-cover-slide figcaption{padding:8px 16px 10px;margin:0}
-.run-cover-gallery{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule)}
-.run-cover-gallery .run-cover-slide{margin:0;background:var(--box);min-width:0}
-.run-cover-gallery .run-cover-slide img{max-height:min(40vw,240px)}
-.run-event-chip{margin:8px 16px 0;font-size:13px}
-.xudos-tip{margin:0 16px 10px;font-size:13px}
+.run-cover-gallery{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid var(--rule)}
+.run-cover-gallery .run-cover-slide{margin:0;min-width:0;border-right:1px solid var(--rule)}
+.run-cover-gallery .run-cover-slide:last-child{border-right:0}
+.run-cover-gallery .run-cover-slide img{max-height:min(36vw,220px)}
+.run-cover-gallery .run-cover-slide figcaption{padding:6px 12px 8px;font-size:12px}
+.run-event-chip{margin:6px 16px 0}
+.xudos-tip{margin:0 16px 8px;font-size:12px;color:var(--soft)}
 .run-agent-chip{margin:8px 16px 0;font-size:13px;color:var(--soft)}
 .run-social-actions .card-follow{display:inline-flex;align-items:center}
 .run-social-actions .card-follow .act,.run-social-actions .card-follow button{font:inherit}

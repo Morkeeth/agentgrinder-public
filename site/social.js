@@ -1248,9 +1248,9 @@ window.GrinderSocial = function ({
               .join("")
           : empty(
               "Invite one friend. The club starts when both of you have posted a real run into the same Crew feed.",
-              `<div class="cta"><a class="act" href="/?people">Find people</a><a class="act" href="/?event=1">Grokbot Builders Sunday</a></div>`,
+              `<div class="cta"><a class="act" href="/?people">Find people</a></div>`,
             )) +
-        '<form id="create-crew" class="panel"><label>Crew name<input name="name" required maxlength="80" placeholder="Grokbot Builders Sunday"></label><label>Who can see the Crew?<select name="visibility"><option value="private">Members only</option><option value="public">Public</option></select></label><p class="hint">First named real crew/event can be Grokbot Builders Sunday. Start with two real people and two real runs - no invented members.</p><button>Start a two-person Crew</button></form>';
+        '<form id="create-crew" class="panel"><label>Crew name<input name="name" required maxlength="80" placeholder="Oscar and Eric"></label><label>Who can see the Crew?<select name="visibility"><option value="private">Members only</option><option value="public">Public</option></select></label><p class="hint">Primary launch is Oscar and Eric\'s two-person return loop, not a directory of empty clubs or an official Grok Bot community.</p><button>Start a two-person Crew</button></form>';
       byId("create-crew").onsubmit = async (e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -1322,10 +1322,6 @@ window.GrinderSocial = function ({
       } else if (!runs.length) {
         loopNote =
           '<p class="hint">No shared runs yet. Each member posts one real run to this Crew.</p>';
-      }
-      if (/grokbot builders sunday/i.test(c.name || "")) {
-        loopNote +=
-          '<p class="hint">Named Sunday practice. Members are only people who joined this Crew; STRIVE does not invent attendees or pull an external guest list.</p>';
       }
       byId("social-body").innerHTML =
         `<div class="card"><h2>${esc(c.name)}</h2><p>${esc(c.description)}</p>${mine ? `<p><a href="/?experiments=${id}">Crew experiments</a> · <a href="/?practices">Practices</a></p>` : ""}<small>${esc(c.visibility)} · ${members.length} members</small><p>${members.map((m) => link(m.profile) + (m.role === "owner" ? " · owner" : "")).join(" · ")}</p>${loopNote}${owner ? '<button id="invite-crew">Invite one person</button><div id="crew-invite"></div>' : mine ? '<button id="leave-crew" class="ghost">Leave Crew</button>' : ""}</div><div class="head"><h2>Crew feed</h2><span class="meta">${runs.length || "none yet"}</span></div>` +

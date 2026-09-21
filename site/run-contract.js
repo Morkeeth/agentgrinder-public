@@ -829,16 +829,16 @@
         run && isRasterUrl(run.output_url) && run.output_url !== scene ? run.output_url : null;
       const slides = [];
       if (scene && output) {
-        slides.push({ href: scene, kind: "scene", caption: "Scene · not proof of the result" });
+        slides.push({ href: scene, kind: "scene", caption: "Scene" });
         slides.push({ href: output, kind: "output", caption: "Output" });
       } else if (scene) {
         slides.push({
           href: scene,
           kind: "cover",
-          caption: "Cover photo · author-selected",
+          caption: "Cover",
         });
       } else if (output) {
-        slides.push({ href: output, kind: "output", caption: "Output photo" });
+        slides.push({ href: output, kind: "output", caption: "Output" });
       }
       if (!slides.length) return "";
       const figures = slides
@@ -846,13 +846,16 @@
           (slide) =>
             `<figure class="run-cover-slide" data-kind="${esc(slide.kind)}">` +
             `<img src="${esc(slide.href)}" alt="" width="1200" height="630" loading="lazy" decoding="async" referrerpolicy="no-referrer" />` +
-            `<figcaption class="meta">${esc(slide.caption)}</figcaption>` +
+            (slides.length > 1 || slide.kind === "scene"
+              ? `<figcaption class="meta">${esc(slide.caption)}</figcaption>`
+              : "") +
             `</figure>`,
         )
         .join("");
       return `<div class="run-cover${slides.length > 1 ? " run-cover-gallery" : ""}">${figures}</div>`;
     }
     function eventChip(run) {
+      // Later: author-chosen external event/community link only. Never a STRIVE club directory.
       const receipts = Array.isArray(run && run.receipts) ? run.receipts : [];
       for (const row of receipts) {
         if (!row || typeof row.label !== "string" || !safeUrl(row.url)) continue;
@@ -862,9 +865,9 @@
         const name = match[1].trim().slice(0, 80);
         if (!name) continue;
         return (
-          `<p class="run-event-chip"><span class="meta">Event</span> ` +
+          `<p class="run-event-chip meta">` +
           `<a href="${esc(row.url)}" rel="noopener noreferrer nofollow" target="_blank">${esc(name)}</a>` +
-          `<span class="meta"> · author-linked, not a STRIVE partnership</span></p>`
+          ` · external</p>`
         );
       }
       return "";

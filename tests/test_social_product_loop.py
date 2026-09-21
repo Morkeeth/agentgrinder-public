@@ -52,7 +52,9 @@ def test_social_actions_remain_in_the_focused_app():
     assert "IntersectionObserver" in SOCIAL
     assert "Open exact reply" in SOCIAL
     assert "ag_response_return" in SOCIAL
-    assert "Grokbot Builders Sunday" in SOCIAL
+    assert "Oscar and Eric" in SOCIAL
+    assert "Grokbot Builders Sunday" not in SOCIAL
+    assert "Grokbot Builders Sunday" not in INDEX
     assert "eventChip" in INDEX or "${eventChip}" in INDEX
     assert "xudos-tip" in INDEX
     assert "Scene photo URL" in INDEX

@@ -152,7 +152,7 @@ const gallery=GrinderContract.coverHtml({
   output_url:'https://example.com/result.png',
 });
 const event=GrinderContract.eventChip({
-  receipts:[{label:'Event: Grokbot Builders Sunday',url:'https://example.com/sunday'}],
+  receipts:[{label:'Event: Meetup',url:'https://example.com/meetup'}],
 });
 process.stdout.write(JSON.stringify({
   dayShape:GrinderContract.routeShape(day,{harness:'Cursor'}),
@@ -163,8 +163,8 @@ process.stdout.write(JSON.stringify({
   agentHasPath:agentHtml.includes('data-shape="agent"')&&agentHtml.includes('Action'),
   cover:cover.includes('run-cover')&&cover.includes('referrerpolicy="no-referrer"'),
   noCover:!noCover,
-  gallery:gallery.includes('run-cover-gallery')&&gallery.includes('Scene · not proof')&&gallery.includes('Output'),
-  event:event.includes('Grokbot Builders Sunday')&&event.includes('not a STRIVE partnership'),
+  gallery:gallery.includes('run-cover-gallery')&&gallery.includes('Scene')&&gallery.includes('Output'),
+  event:event.includes('Meetup')&&event.includes('external')&&!/partnership|Grokbot Builders Sunday/i.test(event),
 }));
 """
     compact = compact_from_checkpoints(

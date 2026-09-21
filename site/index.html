@@ -1560,9 +1560,7 @@ function postComposerHtml({first=false}={}){
       <label>Segment wall time in seconds (optional)<input id="f_wall" type="number" min="0" step="1"></label>
       <label>Short caption<textarea id="f_caption" required maxlength="280" placeholder="What changed in this session?"></textarea></label>
       <label>Link to what was built (optional)<input id="f_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
-      <label>Scene photo URL (optional)<input id="f_image_url" type="url" maxlength="2048" placeholder="https://…/desk.jpg"><span class="hint">Manual lifestyle photo beside genuine output. Atmosphere only - not proof. Never auto-published from a camera roll.</span></label>
-      <label>Event link label (optional)<input id="f_event_label" maxlength="80" placeholder="Grokbot Builders Sunday"><span class="hint">Author-chosen Event: receipt on the card. Not a STRIVE partnership and not auto-enrollment.</span></label>
-      <label>Event URL (optional)<input id="f_event_url" type="url" maxlength="2048" placeholder="https://…"></label>
+      <label>Scene photo URL (optional)<input id="f_image_url" type="url" maxlength="2048" placeholder="https://…/desk.jpg"><span class="hint">Optional lifestyle photo beside genuine output. Atmosphere only - not auto-published.</span></label>
       <div class="row"><div><label>Typed turns</label><input id="f_prompts" type="number" min="0"></div><div><label>Minutes</label><input id="f_dur" type="number" min="0"></div><div><label>Commits</label><input id="f_commits" type="number" min="0"></div></div>
       <label>Who can see this run?
         <select id="f_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - anyone with the URL</option><option value="public">Public - Feed and profile</option></select>
@@ -1622,7 +1620,7 @@ async function viewExplore(){
 
 function wireComposer(){
   const pb=$('publish'); if(!pb)return;
-  const fields=['f_title','f_project','f_model','f_segment','f_wall','f_caption','f_output_url','f_image_url','f_event_label','f_event_url','f_prompts','f_dur','f_commits','f_vis'];
+  const fields=['f_title','f_project','f_model','f_segment','f_wall','f_caption','f_output_url','f_image_url','f_prompts','f_dur','f_commits','f_vis'];
   const key='ag_manual_post_draft';
   let attemptId=crypto.randomUUID();
   try{
@@ -1638,15 +1636,11 @@ function wireComposer(){
   pb.addEventListener('click',async()=>{ if(!ME)return;
     const title=$('f_title').value.trim(),caption=$('f_caption').value.trim(),audience=$('f_vis').value,output=$('f_output_url').value.trim();
     const imageUrl=($('f_image_url')?.value||'').trim();
-    const eventLabel=($('f_event_label')?.value||'').trim();
-    const eventUrl=($('f_event_url')?.value||'').trim();
     const wallTime=optionalWholeNumber('f_wall');
     if(!title||!caption||!audience){status('Add a title and caption, then choose who can see the run.',true);return}
     if(Number.isNaN(wallTime)){status('Segment wall time must be a whole number of seconds.',true);return}
     if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
     if(imageUrl&&!(safeOutputUrl(imageUrl)&&/\.(png|jpe?g|webp)([?#].*)?$/i.test(imageUrl))){status('Scene photo must be an https image ending in .png, .jpg, .jpeg or .webp.',true);return}
-    if((eventLabel&&!eventUrl)||(!eventLabel&&eventUrl)){status('Event needs both a name and a URL, or leave both blank.',true);return}
-    if(eventUrl&&!safeOutputUrl(eventUrl)){status('The event link must start with http:// or https://.',true);return}
     if(!(await requireCloseFriendsForSave(audience)))return;
     keepDraft();
     pb.disabled=true;
@@ -1673,16 +1667,14 @@ function wireComposer(){
       const prior=await existing();
       if(prior){await openExisting(prior);return}
     }catch(error){showRecovery(error);pb.disabled=false;return}
-    const receipts=eventLabel&&eventUrl?[{label:'Event: '+eventLabel.slice(0,80),url:eventUrl}]:null;
     const row={id:attemptId,profile_id:ME.id,title,project:$('f_project').value||null,model:$('f_model').value.trim()||null,
       segment_id:$('f_segment').value||null,wall_time_s:wallTime,
       harness:null,prompts:+$('f_prompts').value||null,duration_s:(+$('f_dur').value||0)*60||null,commits:+$('f_commits').value||null,
-      caption,output_url:output||null,image_url:imageUrl||null,receipts,visibility:audience,started_at:new Date().toISOString()};
+      caption,output_url:output||null,image_url:imageUrl||null,visibility:audience,started_at:new Date().toISOString()};
     // Segment columns (migration supabase/strava/001_segments.sql) are only sent when set,
     // so posting keeps working on a database that does not have them yet.
     dropNullSegmentColumns(row);
     if(!row.image_url) delete row.image_url;
-    if(!row.receipts) delete row.receipts;
     let data,error;
     try{({data,error}=await sb.from('runs').insert(row).select('id').single())}catch(unexpected){error=unexpected}
     pb.disabled=false;
@@ -1833,9 +1825,7 @@ async function importRun(){
     <label>What did you achieve?<input id="i_title" maxlength="120" required placeholder="Write the achievement. Prompt text is never used."></label>
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
-    <label>Scene photo URL (optional)<input id="i_image_url" type="url" maxlength="2048" placeholder="https://…/cafe.jpg"><span class="hint">Optional lifestyle scene beside a genuine output image. You paste the URL; nothing is taken from your camera roll automatically.</span></label>
-    <label>Event name (optional)<input id="i_event_label" maxlength="80" placeholder="Grokbot Builders Sunday"></label>
-    <label>Event URL (optional)<input id="i_event_url" type="url" maxlength="2048" placeholder="https://…"><span class="hint">Shows as an author-linked Event chip. Not a partnership and not membership import.</span></label>
+    <label>Scene photo URL (optional)<input id="i_image_url" type="url" maxlength="2048" placeholder="https://…/cafe.jpg"><span class="hint">Optional lifestyle scene beside a genuine output image. Paste a URL; nothing is taken from your camera roll automatically.</span></label>
     <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - anyone with the URL</option><option value="public">Public - Feed and profile</option></select></label>
     <p class="hint">Only me stays with you. Close friends is your private list. Link is unlisted but readable by anyone with the URL. Choosing Public is the deliberate action that adds the run to Feed and your profile.</p>
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample - preview only':(ME?'Save run':'Sign in to save')}</button>
@@ -1853,22 +1843,13 @@ async function importRun(){
     </details>
     <div id="i_recover" hidden></div></div></div>
     <div class="head"><h2>${sample?'Sample card preview':'Card preview'}</h2><span class="meta">not posted</span></div><div id="import-card-preview"></div>`;
-  const editFields=['i_title','i_model','i_segment','i_wall','i_caption','i_output_url','i_image_url','i_event_label','i_event_url','i_stack','i_vis'];
+  const editFields=['i_title','i_model','i_segment','i_wall','i_caption','i_output_url','i_image_url','i_stack','i_vis'];
   let savedImportEdits=null;
   try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){savedImportEdits=saved;for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
   if(!$('i_image_url').value&&run.image_url)$('i_image_url').value=run.image_url;
-  if(!$('i_event_label').value&&Array.isArray(run.receipts)){
-    const er=run.receipts.find(r=>r&&typeof r.label==='string'&&/^event:\s*/i.test(r.label)&&r.url);
-    if(er){$('i_event_label').value=er.label.replace(/^event:\s*/i,'').trim();$('i_event_url').value=er.url}
-  }
   function saveImportEdits(){try{sessionStorage.setItem('ag_import_edits',JSON.stringify({token:m[1],...Object.fromEntries(editFields.map(key=>[key,$(key).value])),shareRig:$('i_share_rig').checked}))}catch(_){}}
   function paintImportPreview(){
     const sceneUrl=($('i_image_url')?.value||'').trim()||run.image_url||null;
-    const eventLabel=($('i_event_label')?.value||'').trim();
-    const eventUrl=($('i_event_url')?.value||'').trim();
-    let receipts=Array.isArray(run.receipts)?run.receipts.slice():[];
-    receipts=receipts.filter(r=>!(r&&typeof r.label==='string'&&/^event:\s*/i.test(r.label)));
-    if(eventLabel&&eventUrl) receipts=[...receipts,{label:'Event: '+eventLabel.slice(0,80),url:eventUrl}];
     const preview={id:'preview',profile_id:ME?.id||'preview',profiles:ME||{github_handle:'you',name:'Your preview'},title:$('i_title').value||'Untitled run',
       project:importedProject,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
       wall_time_s:importedWholeNumber('i_wall'),
@@ -1880,7 +1861,7 @@ async function importRun(){
       // Declared outcome receipts travel into the preview, so what the card shows here is what a
       // reader would see. Without these the preview silently dropped the repo, the shipped lines,
       // the receipt links and the demo, and only the counts survived.
-      repo_url:run.repo_url||null,receipts:receipts.length?receipts:null,shipped:run.shipped||null,
+      repo_url:run.repo_url||null,receipts:run.receipts||null,shipped:run.shipped||null,
       artifact_url:run.artifact_url||null,image_url:sceneUrl,
       code_route:run.code_route||null,
       visibility:'private',started_at:run.started||null,created_at:new Date().toISOString()};
@@ -1905,14 +1886,10 @@ async function importRun(){
       showSignIn(); return; }
     const caption=$('i_caption').value.trim(),output=$('i_output_url').value.trim(),audience=$('i_vis').value,wallTime=importedWholeNumber('i_wall');
     const sceneUrl=($('i_image_url')?.value||'').trim();
-    const eventLabel=($('i_event_label')?.value||'').trim();
-    const eventUrl=($('i_event_url')?.value||'').trim();
     if(!$('i_title').value.trim()||!caption||!audience){status('Add a title and caption, then choose who can see the run.',true);return}
     if(Number.isNaN(wallTime)){status('Segment wall time must be a whole number of seconds.',true);return}
     if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
     if(sceneUrl&&!(safeOutputUrl(sceneUrl)&&/\.(png|jpe?g|webp)([?#].*)?$/i.test(sceneUrl))){status('Scene photo must be an https image ending in .png, .jpg, .jpeg or .webp.',true);return}
-    if((eventLabel&&!eventUrl)||(!eventLabel&&eventUrl)){status('Event needs both a name and a URL, or leave both blank.',true);return}
-    if(eventUrl&&!safeOutputUrl(eventUrl)){status('The event link must start with http:// or https://.',true);return}
     if(!(await requireCloseFriendsForSave(audience)))return;
     publishButton.disabled=true;
     const recover=$('i_recover'); recover.hidden=true; recover.innerHTML='';
@@ -1976,11 +1953,6 @@ async function importRun(){
       if(run[key]!=null) coach[key]=run[key];
     if(sceneUrl) coach.image_url=sceneUrl;
     else if(sceneUrl==='') delete coach.image_url;
-    let receipts=Array.isArray(coach.receipts)?coach.receipts.slice():(Array.isArray(run.receipts)?run.receipts.slice():[]);
-    receipts=receipts.filter(r=>!(r&&typeof r.label==='string'&&/^event:\s*/i.test(r.label)));
-    if(eventLabel&&eventUrl) receipts.push({label:'Event: '+eventLabel.slice(0,80),url:eventUrl});
-    if(receipts.length) coach.receipts=receipts;
-    else delete coach.receipts;
     let {data:published,error}=await sb.from('runs').insert({...base,...coach}).select('id').single();
     if(error&&error.code==='23505'){ let again=null; try{again=await existingRun()}catch(_){} if(again){ await openExisting(again); return; } }
     if(error){showRecovery(error);return;}
@@ -2077,18 +2049,14 @@ async function viewEvent(){
   const {data:runs}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('visibility','public').order('created_at',{ascending:false}).limit(40);
   noteTraces(runs);
   const ad=await ackData(runs||[]);
-  const R=(runs||[]).filter(r=>{
-    const receipts=Array.isArray(r.receipts)?r.receipts:[];
-    return receipts.some(row=>row&&typeof row.label==='string'&&/^event:\s*grokbot builders sunday/i.test(row.label.trim()));
-  });
+  const R=runs||[];
   frame(railHtml('feed',R), sidePanels(R));
-  app.innerHTML=`<div class="head"><h2>Grokbot Builders Sunday</h2><span class="meta">named crew / event · author-linked runs</span></div>
-    <div class="up"><div class="up-top"><span class="t">First named real crew practice</span><span class="meta">no invented members</span></div>
-      <p class="hint">Builders who choose to attach a real run with an Event: Grokbot Builders Sunday receipt appear here. This is not a membership import, not auto-enrollment, and not a partnership with an external Grok Bot community.</p>
+  app.innerHTML=`<div class="head"><h2>Public runs</h2><span class="meta">open board</span></div>
+    <div class="up"><div class="up-top"><span class="t">Post a real run</span><span class="meta">metrics only, your click</span></div>
       <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span></div>
-      <div class="up-foot">Post a real run, optionally add the Event name and URL in preview, invite one person into a Crew named Grokbot Builders Sunday.</div></div>
-    <div class="head"><h2>Sunday feed</h2><span class="meta">${R.length||'none yet'}</span></div>
-    ${R.length?R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join(''):'<div class="card"><div class="empty">No author-linked Sunday runs yet. When someone posts a real public run with that Event receipt, it shows here.</div></div>'}`;
+      <div class="up-foot">STRIVE crews start with two people and two real runs. External communities stay external.</div></div>
+    <div class="head"><h2>Feed</h2><span class="meta">${R.length||'none yet'}</span></div>
+    ${R.length?R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join(''):'<div class="card"><div class="empty">Be the first on the board: python3 -m agentgrinder grind --harness cursor --push</div></div>'}`;
   wireKudos(); countUp();
 }
 

@@ -50,8 +50,9 @@ def test_run_detail_promotes_audience_aware_next_action():
     assert "Link-only. This run does not appear on the public profile" in detail
     assert "card-follow" in detail or "Follow lives on the card" in detail
     assert detail.index("+nextAction") < detail.index("grind-thread")
-    assert "Grokbot Builders Sunday" in INDEX
+    assert "Grokbot Builders Sunday" not in INDEX
     assert "Send XUDOS" in INDEX
+    assert "Oscar and Eric" in SOCIAL
 
 
 def test_profile_and_response_return_are_people_first():
