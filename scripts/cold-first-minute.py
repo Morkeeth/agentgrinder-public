@@ -26,13 +26,26 @@ window.__coldSignin=location.hash==='#cold-signin';
 if(window.__coldSignin) history.replaceState(null,'','/');
 window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()+1000),0);
 window.supabase={createClient(){
-  function from(){
+  const publicRun={
+    id:'cold-public-1',title:'Cold public run',visibility:'public',
+    caption:'A measured outcome from a real public post.',
+    created_at:'2026-09-20T12:00:00Z',harness:'Cursor',project:'strive',
+    prompts:3,duration_s:600,commits:1,tool_calls:8,
+    profiles:{handle:'builder',name:'Builder',github_handle:'builder',display_name:'Builder'}
+  };
+  function from(table){
     let countOnly=false;
     const query={
       select(_columns,options){countOnly=Boolean(options&&options.count==='exact'&&options.head);return query},
       eq(){return query},
+      in(){return query},
+      order(){return query},
+      limit(){return query},
       then(resolve,reject){
-        return Promise.resolve({data:countOnly?null:[],count:countOnly?0:null,error:null}).then(resolve,reject)
+        if(countOnly) return Promise.resolve({data:null,count:1,error:null}).then(resolve,reject);
+        if(table==='runs') return Promise.resolve({data:[publicRun],count:null,error:null}).then(resolve,reject);
+        if(table==='acks') return Promise.resolve({data:[],count:0,error:null}).then(resolve,reject);
+        return Promise.resolve({data:[],count:null,error:null}).then(resolve,reject)
       }
     };
     return query;
@@ -54,12 +67,14 @@ window.addEventListener('load',()=>{
   setTimeout(()=>{
     if(window.__coldSignin) showSignIn();
     setTimeout(()=>{
+      const feature=document.querySelector('#landing-feature .card[data-run-id]');
       const sample=document.querySelector('[data-home-sample]');
       const count=document.getElementById('public-run-count');
       const explanation=document.getElementById('signin-explanation');
-      const rect=sample&&sample.getBoundingClientRect();
+      const rect=feature&&feature.getBoundingClientRect();
       const visible=rect?Math.max(0,Math.min(rect.bottom,innerHeight)-Math.max(rect.top,0)):0;
-      document.documentElement.dataset.coldSampleVisible=String(visible>=120);
+      document.documentElement.dataset.coldFeatureVisible=String(visible>=120);
+      document.documentElement.dataset.coldSampleAbsent=String(!sample);
       document.documentElement.dataset.coldCountRendered=String(
         Boolean(count&&count.offsetHeight&&count.dataset.countState==='ready')
       );
@@ -207,15 +222,20 @@ def main() -> None:
         finally:
             server.shutdown()
 
-    assert 'data-cold-sample-visible="true"' in phone
+    assert 'data-cold-feature-visible="true"' in phone
+    assert 'data-cold-sample-absent="true"' in phone
     assert 'data-cold-count-rendered="true"' in phone
-    assert 'data-home-sample="1"' in phone and "SAMPLE" in phone
-    assert "sample-project: a two-hour probe" in phone
-    assert "No public runs yet. Yours would be the first." in phone
+    assert "WHAT A RUN LOOKS LIKE" not in phone
+    assert "sample-project: a two-hour probe" not in phone
+    assert "Cold public run" in phone
+    assert "A measured outcome from a real public post." in phone
+    assert "1 public run is live." in phone
+    assert 'href="/?example"' in phone
     assert 'data-cold-signin-rendered="true"' in modal
     assert EXPLANATION in modal
     assert "Continue with X" not in modal
-    assert 'data-cold-sample-visible="true"' in desktop
+    assert 'data-cold-feature-visible="true"' in desktop
+    assert 'data-cold-sample-absent="true"' in desktop
     print(f"Cold first minute passed. Screenshots: {args.screenshots}")
 
 
