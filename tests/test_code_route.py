@@ -262,11 +262,100 @@ def test_single_project_compact_route_or_honest_unavailable():
         artifact=True,
     )
     assert ok["projects"][0]["label"] == "agentgrinder-public"
+    assert any(s["kind"] == "edit" for s in ok["stops"])
     assert any(s["kind"] == "commit" for s in ok["stops"])
     assert ok["finish"]["kind"] == "artifact"
     missing = compact_from_checkpoints(project_label="agentgrinder-public")
     assert "unavailable" in missing
     assert "No checkpoint evidence" in missing["unavailable"]["why"]
+
+
+def test_attach_measured_code_route_from_cursor_counts():
+    from agentgrinder.code_route import attach_measured_code_route
+
+    run = attach_measured_code_route(
+        {
+            "harness": "Cursor",
+            "project": "agentgrinder-public",
+            "commits": 2,
+            "files_touched": 13,
+            "tool_calls": 149,
+        }
+    )
+    route = run["code_route"]
+    assert route["projects"][0]["label"] == "agentgrinder-public"
+    assert [s["kind"] for s in route["stops"]] == ["edit", "commit"]
+    assert route["stats"]["files_changed"] == 13
+    assert route["stats"]["commits"] == 2
+    assert route["harnesses"]["observed"] == ["cursor"]
+    # Does not invent output links.
+    assert "output_url" not in run
+    # Leaves an explicit route alone.
+    kept = {"v": 1, "unavailable": {"why": "Collector missed Cursor."}}
+    again = attach_measured_code_route({"code_route": kept, "commits": 9})
+    assert again["code_route"]["unavailable"]["why"] == "Collector missed Cursor."
+    # No project, no fabricated route.
+    bare = attach_measured_code_route({"commits": 2, "files_touched": 3})
+    assert "code_route" not in bare
+
+
+def test_attach_skips_unproven_project():
+    """project_proven False must never fabricate a route from counts (ws2 PR69 guard)."""
+    from agentgrinder.code_route import attach_measured_code_route
+
+    run = attach_measured_code_route(
+        {
+            "harness": "Cursor",
+            "project": "agentgrinder-public",
+            "project_proven": False,
+            "commits": 2,
+            "files_touched": 13,
+        }
+    )
+    assert "code_route" not in run
+
+
+def test_attach_skips_unavailable_compact_route():
+    """Zero checkpoint evidence must leave the run unchanged, not attach unavailable."""
+    from agentgrinder.code_route import attach_measured_code_route
+
+    run = {
+        "harness": "Cursor",
+        "project": "agentgrinder-public",
+        "commits": 0,
+        "files_touched": 0,
+    }
+    out = attach_measured_code_route(run)
+    assert out is run
+    assert "code_route" not in out
+
+
+def test_attach_never_promotes_artifacts_produced_to_finish():
+    """artifacts_produced is tool-write count, never a shipped artifact finish stop."""
+    from agentgrinder.code_route import attach_measured_code_route
+
+    only_artifacts = attach_measured_code_route(
+        {
+            "harness": "Cursor",
+            "project": "agentgrinder-public",
+            "artifacts_produced": 13,
+        }
+    )
+    assert "code_route" not in only_artifacts
+
+    with_counts = attach_measured_code_route(
+        {
+            "harness": "Cursor",
+            "project": "agentgrinder-public",
+            "commits": 2,
+            "files_touched": 13,
+            "artifacts_produced": 13,
+        }
+    )
+    route = with_counts["code_route"]
+    assert route["finish"]["kind"] != "artifact"
+    assert not any(s["kind"] == "artifact" for s in route["stops"])
+    assert route["stats"]["shipped_artifacts"] == 0
 
 
 def test_collector_miss_names_absent_harness_populations():

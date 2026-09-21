@@ -514,7 +514,9 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
         run["capabilities"]["timed_ridge"] = True
     else:
         run["capabilities"]["timed_ridge"] = False
-    return run
+    from .code_route import attach_measured_code_route
+
+    return attach_measured_code_route(run)
 
 
 # ---- Grok Bot origin ---------------------------------------------------------
@@ -821,7 +823,9 @@ def parse_codex_session(path: str, athlete: str = "you", records=None) -> dict:
         reach_value, reach_reason = None, reachmod.R_CWD_NOT_REPO
 
     route = [_region_of(fp, repo_root) for fp in edits]
-    return {
+    from .code_route import attach_measured_code_route
+
+    return attach_measured_code_route({
         "athlete": athlete,
         "title": title,
         "harness": "Codex",
@@ -846,7 +850,7 @@ def parse_codex_session(path: str, athlete: str = "you", records=None) -> dict:
         "reach_reason": reach_reason,
         "route": _route_indices(route),
         "route_legend": _dedupe(route),
-    }
+    })
 
 
 def _dedupe(seq):

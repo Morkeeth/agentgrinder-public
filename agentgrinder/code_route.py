@@ -345,6 +345,17 @@ def compact_from_checkpoints(
     """Honest single-project compact route when checkpoint evidence exists."""
     label = _label(project_label, "project")
     stops = []
+    if type(files_changed) is int and files_changed > 0:
+        stops.append(
+            {
+                "id": "edit",
+                "project": "p1",
+                "kind": "edit",
+                "label": f"{files_changed} file{'s' if files_changed != 1 else ''} changed",
+                "basis": "measured",
+                "evidence": [f"{files_changed} files touched in the session"],
+            }
+        )
     if type(commits) is int and commits > 0:
         stops.append(
             {
@@ -420,3 +431,49 @@ def compact_from_checkpoints(
             },
         }
     )
+
+
+def attach_measured_code_route(run: dict) -> dict:
+    """Attach a compact Code Route from measured capture counts when none was supplied.
+
+    Does not invent projects, output links or receipts. A run that already carries
+    code_route (including unavailable) is left alone. Missing project or checkpoint
+    evidence stays unknown: no fabricated route.
+    """
+    if not isinstance(run, dict) or run.get("code_route") is not None:
+        return run
+    project = run.get("project")
+    if not isinstance(project, str) or not project.strip():
+        return run
+    if run.get("project_proven") is False:
+        return run
+    files = run.get("files_touched")
+    commits = run.get("commits")
+    # artifacts_produced counts tool writes, not a declared shipped output. Never promote it
+    # to an artifact finish stop.
+    route = compact_from_checkpoints(
+        project_label=project.strip(),
+        commits=commits if type(commits) is int else None,
+        files_changed=files if type(files) is int else None,
+    )
+    if route.get("unavailable"):
+        return run
+    harness = str(run.get("harness") or "").strip().lower()
+    observed = []
+    if "cursor" in harness:
+        observed = ["cursor"]
+    elif "claude" in harness:
+        observed = ["claude-cli"]
+    elif "codex" in harness:
+        observed = ["codex"]
+    elif "grok" in harness:
+        observed = ["grok-bot"]
+    if observed:
+        route["harnesses"] = {
+            "observed": observed,
+            "absent": [],
+            "basis": "collector",
+        }
+        route = validate_code_route(route)
+    run["code_route"] = route
+    return run
