@@ -1,6 +1,7 @@
-// Audience gate for non-public runs. Public is world-readable. Private is owner-only.
-// Link and Close friends need a signed-in reader with a follow or close-friends relation
-// (or ownership). Strangers stay on the neutral private surface.
+// Audience gate for non-public runs. Public is world-readable. Private is owner-only unless
+// crew_shared (crew members; matches strava.grinder_can_read_run). Link and Close friends need
+// a signed-in reader with a follow or close-friends relation (or ownership). Strangers stay
+// on the neutral private surface.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.GrinderRunAccess = factory();
@@ -29,6 +30,9 @@
     if (run.visibility === 'public') return true;
     if (!me || !me.id) return false;
     if (me.id === run.profile_id) return true;
+    // Crew shares are stored as visibility=private with crew_shared=true. RLS only returns
+    // those rows to members; close_friends stays on its own path (not via this flag).
+    if (run.crew_shared === true && run.visibility !== 'close_friends') return true;
     if (run.visibility === 'private' || run.visibility === 'anonymous') return false;
     if (run.visibility === 'close_friends') {
       // RLS only returns Close friends rows to the owner or listed friends.
@@ -38,6 +42,7 @@
       if (await followsAuthor(client, me.id, run.profile_id)) return true;
       return isCloseFriendOf(client, run.profile_id);
     }
+    if (run.visibility === 'crew') return true;
     return false;
   }
 

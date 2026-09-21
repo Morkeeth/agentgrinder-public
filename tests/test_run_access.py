@@ -11,6 +11,7 @@ PUBLIC_RUN = (ROOT / "server" / "public-run.mjs").read_text()
 def test_run_access_module_wires_into_index():
     assert "viewerMayOpenRun" in ACCESS
     assert "visibility === 'link'" in ACCESS
+    assert "crew_shared" in ACCESS
     assert "grinder_is_close_friend_of" in ACCESS
     assert 'src="/run-access.js"' in INDEX
     assert "GrinderRunAccess.viewerMayOpenRun" in INDEX
