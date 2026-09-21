@@ -243,10 +243,9 @@
     const extra = [];
     receipts.forEach((r) => extra.push(link(r.url, r.label.trim().slice(0, 60))));
     if (safeUrl(run.artifact_url)) extra.push(link(run.artifact_url, "Open the demo"));
-    // No remote image is embedded, here or on the public page: an arbitrary third party host would
-    // learn the IP and user agent of every reader, and a dead link would render a broken box.
+    // Prefer the gallery on the card. Keep a text link here for Explore when no raster cover rendered.
     if (safeUrl(run.image_url) && /\.(png|jpe?g|webp)([?#].*)?$/i.test(run.image_url))
-      extra.push(link(run.image_url, "Open the screenshot"));
+      extra.push(link(run.image_url, "Open the cover or scene photo"));
     if (extra.length) parts.push(`<p class="run-outcome-links">${extra.join(" · ")}</p>`);
     if (!parts.length) return "";
     return `<section class="run-outcome"><div class="run-story-label">Said by the uploader, not measured</div>${parts.join("")}</section>`;
@@ -819,18 +818,53 @@
       ` · absent: ${absent.length ? absent.join(", ") : "none"}</p>`
     );
   }
-    // Author-selected cover only. Never invent a stock photo. Safe https image URLs only;
-    // referrer is stripped so a dead third-party host still cannot fingerprint readers via Referer.
+    // Author-selected images only. Never invent stock. A lifestyle scene may sit beside a genuine
+    // output image; the scene is atmosphere, not proof. No auto-publish from a camera roll.
+    function isRasterUrl(href) {
+      return safeUrl(href) && /\.(png|jpe?g|webp)([?#].*)?$/i.test(href);
+    }
     function coverHtml(run) {
-      const candidates = [run && run.image_url, run && run.output_url];
-      for (const href of candidates) {
-        if (!safeUrl(href)) continue;
-        if (!/\.(png|jpe?g|webp)([?#].*)?$/i.test(href)) continue;
+      const scene = run && isRasterUrl(run.image_url) ? run.image_url : null;
+      const output =
+        run && isRasterUrl(run.output_url) && run.output_url !== scene ? run.output_url : null;
+      const slides = [];
+      if (scene && output) {
+        slides.push({ href: scene, kind: "scene", caption: "Scene · not proof of the result" });
+        slides.push({ href: output, kind: "output", caption: "Output" });
+      } else if (scene) {
+        slides.push({
+          href: scene,
+          kind: "cover",
+          caption: "Cover photo · author-selected",
+        });
+      } else if (output) {
+        slides.push({ href: output, kind: "output", caption: "Output photo" });
+      }
+      if (!slides.length) return "";
+      const figures = slides
+        .map(
+          (slide) =>
+            `<figure class="run-cover-slide" data-kind="${esc(slide.kind)}">` +
+            `<img src="${esc(slide.href)}" alt="" width="1200" height="630" loading="lazy" decoding="async" referrerpolicy="no-referrer" />` +
+            `<figcaption class="meta">${esc(slide.caption)}</figcaption>` +
+            `</figure>`,
+        )
+        .join("");
+      return `<div class="run-cover${slides.length > 1 ? " run-cover-gallery" : ""}">${figures}</div>`;
+    }
+    function eventChip(run) {
+      const receipts = Array.isArray(run && run.receipts) ? run.receipts : [];
+      for (const row of receipts) {
+        if (!row || typeof row.label !== "string" || !safeUrl(row.url)) continue;
+        const label = row.label.trim();
+        const match = /^event:\s*(.+)$/i.exec(label);
+        if (!match) continue;
+        const name = match[1].trim().slice(0, 80);
+        if (!name) continue;
         return (
-          `<figure class="run-cover">` +
-          `<img src="${esc(href)}" alt="" width="1200" height="630" loading="lazy" decoding="async" referrerpolicy="no-referrer" />` +
-          `<figcaption class="meta">Output photo</figcaption>` +
-          `</figure>`
+          `<p class="run-event-chip"><span class="meta">Event</span> ` +
+          `<a href="${esc(row.url)}" rel="noopener noreferrer nofollow" target="_blank">${esc(name)}</a>` +
+          `<span class="meta"> · author-linked, not a STRIVE partnership</span></p>`
         );
       }
       return "";
@@ -1035,7 +1069,7 @@
       .join("");
     return `<div class="code-route-stops">${stopList}</div>` + harnessHtml(route);
   }
-  const api = { validate, message, trace, ridge, outcome, coverHtml, heroStats, codeRoute, codeRouteDetail, routeInsight, routeShape, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
+  const api = { validate, message, trace, ridge, outcome, coverHtml, eventChip, heroStats, codeRoute, codeRouteDetail, routeInsight, routeShape, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

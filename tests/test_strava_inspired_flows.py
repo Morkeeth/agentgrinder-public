@@ -44,12 +44,14 @@ def test_run_detail_promotes_audience_aware_next_action():
         "Saved for anyone with the link",
         "Saved for Only me",
         "Open builder profile",
-        "Follow lives on the card with ACK and Share",
+        "Follow lives on the card with XUDOS and Share",
     ):
         assert phrase in detail
     assert "Link-only. This run does not appear on the public profile" in detail
     assert "card-follow" in detail or "Follow lives on the card" in detail
     assert detail.index("+nextAction") < detail.index("grind-thread")
+    assert "Grokbot Builders Sunday" in INDEX
+    assert "Send XUDOS" in INDEX
 
 
 def test_profile_and_response_return_are_people_first():

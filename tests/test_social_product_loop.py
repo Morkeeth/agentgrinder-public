@@ -43,12 +43,19 @@ def test_card_shows_builder_project_session_caption_and_output():
 def test_social_actions_remain_in_the_focused_app():
     assert ".from(\"grinder_follows\")" in SOCIAL
     assert ".from(\"grinder_replies\")" in SOCIAL
-    assert "ACK the work" in INDEX
+    assert "Cheer this run" in INDEX
+    assert "Send XUDOS" in INDEX
+    assert "ACK the work" not in INDEX
+    assert "Send ACK" not in INDEX
     assert "Responses" in SOCIAL
     assert "/?people" in SOCIAL
     assert "IntersectionObserver" in SOCIAL
     assert "Open exact reply" in SOCIAL
     assert "ag_response_return" in SOCIAL
+    assert "Grokbot Builders Sunday" in SOCIAL
+    assert "eventChip" in INDEX or "${eventChip}" in INDEX
+    assert "xudos-tip" in INDEX
+    assert "Scene photo URL" in INDEX
 
 
 def test_caption_and_output_are_bounded_by_database_constraints():

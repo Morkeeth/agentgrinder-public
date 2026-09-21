@@ -105,7 +105,7 @@ await vm.runInContext('importRun()',context);
 const preview=nodes['import-card-preview'].innerHTML;
 if(!preview.includes('Preview · not saved')||preview.includes('/?run=preview')||preview.includes('class="act')) throw Error('Preview has saved-run controls');
 const saved=vm.runInContext("runCard({id:'real-run',profile_id:'real-author',created_at:'2026-09-14',title:'Real run'},false,0)",context);
-for(const text of ['ACK','Discuss','Share','/?run=real-run'])if(!saved.includes(text))throw Error('Saved run lost '+text);
+for(const text of ['XUDOS','Discuss','Share','/?run=real-run'])if(!saved.includes(text))throw Error('Saved run lost '+text);
 // The rhythm trace carries the blue token inline. A ridge carries it through design.css
 // (.ridge-line stroke:var(--blue)), so a preview with a ridge is checked against that rule.
 const css=fs.readFileSync(root+'/site/design.css','utf8');

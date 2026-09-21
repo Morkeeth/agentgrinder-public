@@ -10,11 +10,11 @@ Every run your agent made, on a card you can share.
 - Post a run: import a real session, review the card and choose to publish.
 - My runs: your session history.
 - Profile: your public runs and identity.
-- Follow, ACK and reply: lightweight social interaction.
+- Follow, XUDOS and reply: one reaction (cheer this run), then discussion.
 
-Cursor first. Keep the white card and blue activity trace. The run card is an image-led social object: an author-selected output cover when one exists, an evidence-based work route, two or three measured facts from that run, builder or agent identity, and immediate Share, ACK and Follow. Day runs use a multi-project route; a quick fix is before → change → result; one agent lane is action → output. Provenance and raw metrics stay under Explore this run. Unknown measurements stay unknown.
+Cursor first. Keep the white card and blue activity trace. The run card is an image-led social object: an optional author-selected lifestyle scene beside a genuine output image when both exist, an evidence-based work route, two or three measured facts from that run, builder or agent identity, and immediate Share, XUDOS and Follow. A lifestyle scene is atmosphere, not proof; photos are never auto-published from a camera roll. Day runs use a multi-project route; a quick fix is before → change → result; one agent lane is action → output. Provenance and raw metrics stay under Explore this run. Unknown measurements stay unknown. Authors may attach one Event: receipt (for example Grokbot Builders Sunday) as an optional chip; that is not a partnership or membership import.
 
-Free posting and browsing. Recognition comes from real people seeing and responding to work. No mandatory model calls, coaching flow, practice programme, score dashboard or challenges in the main app. Crews stay out of primary navigation; the first useful Crew is a two-person feed where each builder posts a real run and can return through Responses, not an empty feature page.
+Free posting and browsing. Recognition comes from real people seeing and responding to work. No mandatory model calls, coaching flow, practice programme, score dashboard or challenges in the main app. Crews stay out of primary navigation; the first named real crew/event can be Grokbot Builders Sunday, still as a two-person feed where each builder posts a real run and can return through Responses - never an empty page of invented members.
 
 ## First useful test
 
@@ -28,7 +28,7 @@ This repository is the public product. Morkeeth/agentgrinder remains the hackath
 
 - Hosted at [agentic-strava.vercel.app](https://agentic-strava.vercel.app) on Vercel. App data lives in a dedicated `strava` schema in a Supabase project whose Auth is shared with the hackathon build; app data and profiles are separate. `/api/health` reports the database state.
 - Sign-in with GitHub or an email link. One profile per account, with a handle and display name you can edit.
-- Feed, post a run, My runs, profiles, follow, Following, ACK, reply and a Responses inbox. The public feed is new and mostly empty.
+- Feed, post a run, My runs, profiles, follow, Following, XUDOS, reply and a Responses inbox. The public feed is new and mostly empty.
 - Local capture: `python3 -m agentgrinder grind --harness cursor` reads a real Cursor session with no keys and writes a card to `./grind.html`.
 - Private Cursor hook: `python3 -m agentgrinder hook install --harness cursor` watches completed local composers, dedupes by composer id and opens a loopback Pacecard without posting.
 - Pacecard ridge: Cursor bubble timestamps draw tool calls over wall time with worker activity behind one blue line. Captures without that clock use call order and say so.
