@@ -28,9 +28,9 @@ def test_private_preview_leads_with_story_and_plain_privacy_choices():
     assert preview.index("STORY FIRST") < preview.index('id="i_caption"')
     assert preview.index('id="i_caption"') < preview.index("Review recorded measurements")
     assert preview.index('id="i_output_url"') < preview.index("Review recorded measurements")
-    assert "Only me — just you" in preview
-    assert "Link — anyone with the URL" in preview
-    assert "Public — Feed and profile" in preview
+    assert "Only me - just you" in preview
+    assert "Link - anyone with the URL" in preview
+    assert "Public - Feed and profile" in preview
     assert "Unknown measurements stay unknown" not in preview
     assert "It never carries prompts" in preview
 
@@ -44,9 +44,10 @@ def test_run_detail_promotes_audience_aware_next_action():
         "Saved for anyone with the link",
         "Saved for Only me",
         "Open builder profile",
-        "No one is added automatically",
+        "Follow is always your choice",
     ):
         assert phrase in detail
+    assert "Link-only. This run does not appear on the public profile" in detail
     assert detail.index("+nextAction") < detail.index("grind-thread")
 
 

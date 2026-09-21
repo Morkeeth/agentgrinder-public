@@ -71,7 +71,8 @@ def test_site_keeps_coach_fields_null_safe_behind_more():
         assert f"{col}:run.{col}??null" in html, col          # the insert carries it
     assert "function coachBlock(r)" in html
     card = html[html.index("function runCard("):html.index("function wireKudos(")]
-    assert card.index("<summary>More</summary>") < card.index("${coachBlock(r)}")
+    assert "Explore this run" in card and "coachBlock(r)" in card
+    assert card.index("exploreInner") < card.index("Explore this run")
     assert "if(!v&&!pv) return '';" in html                    # null-safe: no verdict, no block
 
 

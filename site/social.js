@@ -50,7 +50,11 @@ window.GrinderSocial = function ({
     (typeof communityTabs === "function" ? communityTabs("crews") : "") +
     '<nav class="social-nav" aria-label="Community extras"><a href="/?inbox">Inbox</a></nav>';
   function start(title, description, section) {
-    frame(null, null);
+    const rail =
+      section === "inbox" && typeof railHtml === "function"
+        ? railHtml("inbox")
+        : null;
+    frame(rail, null);
     if (typeof setPrimarySection === "function") {
       setPrimarySection(section === "inbox" ? "inbox" : section === "feed" ? "feed" : "community");
     }

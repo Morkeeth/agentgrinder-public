@@ -130,6 +130,9 @@ button,summary{touch-action:manipulation}
 .ridge-start{fill:var(--box);stroke:var(--blue);stroke-width:2}.ridge-end{fill:var(--blue);stroke:var(--box);stroke-width:2}
 .ridge-commit{stroke:var(--blue);stroke-width:2}.ridge-chip rect{fill:var(--blue)}.ridge-chip text{fill:var(--box);font:500 12px 'IBM Plex Sans',system-ui,sans-serif;text-anchor:middle}
 .ridge-wrap>.meta{display:block;margin-top:5px}.ridge-more{border-top:1px solid var(--rule);padding:12px 16px}.ridge-more>summary{cursor:pointer;color:var(--soft);font-size:13px}
+.ridge-more.run-explore>summary{color:var(--ink);font-weight:500}
+.run-audience-note{margin:8px 16px 0}
+.profile-public-note{margin:0 0 12px}
 .ridge-more .fiverow{margin-left:-16px;margin-right:-16px}.ridge-more .mode-banner{margin-top:12px}
 @media(min-width:720px){.ridge-wrap{padding-left:20px;padding-right:20px}.ridge-more{padding-left:20px;padding-right:20px}}
 

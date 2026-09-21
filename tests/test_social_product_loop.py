@@ -22,14 +22,16 @@ def test_post_page_exposes_priority_harnesses_and_private_preview():
 def test_card_shows_builder_project_session_caption_and_output():
     card = INDEX[INDEX.index("function runCard(") : INDEX.index("function wireKudos()")]
     assert "runAttribution(r)" in card
-    for field in ("project", "started_at", "duration_s", "caption", "output_url"):
+    for field in ("project", "started_at", "caption", "output_url"):
         assert field in card
     assert "Open ${esc(ridgeOutput||'output')}" in card
-    assert card.index("${r.caption?") < card.index("${story}")
-    assert card.index("${story}") < card.index("${ridgeBody}")
-    assert card.index("Project touched") < card.index("Code activity")
+    assert card.index("${r.caption?") < card.index("${ridgeBody}")
+    assert "Project touched" in card
+    assert "Code activity" in card
+    assert "Explore this run" in card
     assert "card-harness" in card
     assert "run-metrics" in card
+    assert "heroStats" in card
     assert "run-rank" not in card
     assert "vptHtml(r)" not in card
 

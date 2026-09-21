@@ -359,25 +359,16 @@
   function promoteCodeRouteHero(scope) {
     const cards = scope.querySelectorAll ? scope.querySelectorAll(".card") : [];
     cards.forEach((card) => {
-      const route = card.querySelector(":scope > .code-route, :scope .code-route");
+      const route = card.querySelector(":scope > .code-route");
       if (!route) return;
-      const identity = card.querySelector(".run-upload-identity");
       const note = card.querySelector(":scope > .note");
       const title = card.querySelector(":scope > .title");
-      const anchor = identity || note || title;
-      if (anchor && anchor.nextElementSibling !== route) anchor.after(route);
-      const metrics = card.querySelector("dl.run-metrics");
-      if (!metrics) return;
-      const label = metrics.previousElementSibling;
-      const more = Array.from(card.querySelectorAll("details.ridge-more")).find((block) => {
-        const summary = block.querySelector("summary");
-        return summary && summary.textContent === "More";
-      });
-      if (!more || more.contains(metrics)) return;
-      if (label && label.classList.contains("run-story-label") && !label.classList.contains("achieved")) {
-        more.prepend(metrics);
-        more.prepend(label);
-      } else more.prepend(metrics);
+      const anchor = note || title;
+      const stats = card.querySelector(":scope > dl.run-metrics");
+      if (anchor && route.previousElementSibling !== anchor) {
+        if (stats) stats.before(route);
+        else anchor.after(route);
+      }
     });
   }
   function mountRunMaps(root) {
@@ -727,6 +718,56 @@
     if (!parts.length) return "";
     return parts[0] + parts.slice(1).map((part) => ". " + part.charAt(0).toUpperCase() + part.slice(1)).join("") + ".";
   }
+  function recordedCount(value) {
+    return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+  }
+  function sessionLabel(run) {
+    if (!run) return null;
+    const candidates = [
+      run.ridge_basis === "wall-time" ? run.ridge_wall_seconds : null,
+      run.wall_time_s,
+      run.duration_s,
+    ];
+    const value = candidates.find((v) => typeof v === "number" && Number.isFinite(v) && v >= 0);
+    if (value == null) return null;
+    if (value < 60) return Math.round(value) + "s";
+    const minutes = Math.round(value / 60);
+    return minutes >= 60 ? Math.floor(minutes / 60) + "h " + (minutes % 60) + "m" : minutes + "m";
+  }
+  // At most three recorded facts. A tiny sitting may have one; a missing measurement stays off
+  // the strip. Route totals only appear when the run actually carried a route.
+  function heroStats(run) {
+    const cells = [];
+    const add = (label, value) => {
+      if (cells.length >= 3 || value == null || value === "") return;
+      cells.push([label, String(value)]);
+    };
+    const route = run && run.code_route;
+    if (route && route.v === 1 && !route.unavailable && route.stats && typeof route.stats === "object") {
+      const stats = route.stats;
+      if (recordedCount(stats.projects_touched) > 1) add("Projects", stats.projects_touched);
+      if (recordedCount(stats.verified_checkpoints) != null) add("Checkpoints", stats.verified_checkpoints);
+      if (recordedCount(stats.files_changed) != null) add("Files", stats.files_changed);
+      if (recordedCount(stats.commits) != null) add("Commits", stats.commits);
+      if (cells.length) return cells;
+    }
+    add("Session", sessionLabel(run));
+    const commits = recordedCount(run && run.commits);
+    if (commits != null) add("Commits", commits);
+    const files = recordedCount(run && run.files_touched);
+    if (files != null) add("Files", files);
+    const turns = recordedCount(run && (run.prompts ?? run.turns_typed));
+    if (turns != null) add("Turns", turns);
+    const tools = recordedCount(run && run.tool_calls);
+    // A recorded zero beside a live ridge map contradicts the slice readout; omit the strip cell.
+    const ridge = run && Array.isArray(run.ridge) ? run.ridge : null;
+    const ridgeSum =
+      ridge && ridge.length && ridge.every((v) => Number.isFinite(v) && v >= 0)
+        ? ridge.reduce((a, b) => a + b, 0)
+        : 0;
+    if (tools != null && !(tools === 0 && ridgeSum > 0)) add("Tool calls", tools);
+    return cells;
+  }
   function densestProject(route) {
     const projects = Array.isArray(route.projects) ? route.projects : [];
     const stops = Array.isArray(route.stops) ? route.stops : [];
@@ -748,26 +789,30 @@
     }
     return ties === 1 && densestN > 0 ? densest : null;
   }
-  function codeRoute(run) {
+  function readCodeRoute(run) {
     const route = run && run.code_route;
-    if (!route || typeof route !== "object" || Array.isArray(route) || route.v !== 1) return "";
-    try { validateCodeRoute(route); } catch (_) { return ""; }
-    const harnessBits = [];
-    if (route.harnesses) {
-      const observed = (route.harnesses.observed || []).map((h) => esc(h));
-      const absent = (route.harnesses.absent || []).map((h) => esc(h));
-      harnessBits.push(
-        `<p class="code-route-harnesses">Harness populations · basis ${esc(route.harnesses.basis)}` +
-          ` · observed: ${observed.length ? observed.join(", ") : "none"}` +
-          ` · absent: ${absent.length ? absent.join(", ") : "none"}</p>`
-      );
-    }
+    if (!route || typeof route !== "object" || Array.isArray(route) || route.v !== 1) return null;
+    try { validateCodeRoute(route); } catch (_) { return null; }
+    return route;
+  }
+  function harnessHtml(route) {
+    if (!route || !route.harnesses) return "";
+    const observed = (route.harnesses.observed || []).map((h) => esc(h));
+    const absent = (route.harnesses.absent || []).map((h) => esc(h));
+    return (
+      `<p class="code-route-harnesses">Harness populations · basis ${esc(route.harnesses.basis)}` +
+      ` · observed: ${observed.length ? observed.join(", ") : "none"}` +
+      ` · absent: ${absent.length ? absent.join(", ") : "none"}</p>`
+    );
+  }
+  function codeRoute(run) {
+    const route = readCodeRoute(run);
+    if (!route) return "";
     if (route.unavailable) {
       return (
         `<section class="code-route code-route-unavailable" aria-label="Code Route unavailable">` +
         `<div class="run-story-label">Code Route</div>` +
         `<p class="code-route-why">${esc(route.unavailable.why)}</p>` +
-        harnessBits.join("") +
         `</section>`
       );
     }
@@ -823,10 +868,32 @@
     const measured = stops.filter((s) => s.basis === "measured").length;
     const declared = stops.filter((s) => s.basis === "declared").length;
     const aria =
-      `Code Route across ${projects.length} projects: ${projectNames}. ` +
+      `Code Route across ${projects.length} project${projects.length === 1 ? "" : "s"}: ${projectNames}. ` +
       `${stops.length} ordered checkpoints · ${measured} measured · ${declared} declared` +
       (route.finish ? ` · finish ${route.finish.label}` : "") +
       (insight ? ` · ${insight}` : "");
+    return (
+      `<section class="code-route" aria-label="${esc(aria)}">` +
+      `<div class="run-story-label">Code Route</div>` +
+      `<svg class="code-route-map" viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true">` +
+      `<path class="code-route-line" pathLength="1" d="${line}" fill="none" stroke="currentColor" stroke-width="2.5" />` +
+      dots +
+      laneLabels +
+      `</svg>` +
+      `<ol class="code-route-projects">${projectList}</ol>` +
+      (insight ? `<p class="code-route-insight">${esc(insight)}</p>` : "") +
+      `</section>`
+    );
+  }
+  function codeRouteDetail(run) {
+    const route = readCodeRoute(run);
+    if (!route) return "";
+    if (route.unavailable) return harnessHtml(route);
+    const projects = Array.isArray(route.projects) ? route.projects : [];
+    const stops = Array.isArray(route.stops) ? route.stops : [];
+    if (!projects.length || !stops.length) return harnessHtml(route);
+    const projectIndex = Object.fromEntries(projects.map((p, i) => [p.id, i]));
+    const finishId = route.finish && route.finish.stop;
     const stopList = stops
       .map((stop) => {
         const project = projects.find((p) => p.id === stop.project);
@@ -850,22 +917,9 @@
         );
       })
       .join("");
-    return (
-      `<section class="code-route" aria-label="${esc(aria)}">` +
-      `<div class="run-story-label">Code Route</div>` +
-      `<svg class="code-route-map" viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true">` +
-      `<path class="code-route-line" pathLength="1" d="${line}" fill="none" stroke="currentColor" stroke-width="2.5" />` +
-      dots +
-      laneLabels +
-      `</svg>` +
-      `<ol class="code-route-projects">${projectList}</ol>` +
-      (insight ? `<p class="code-route-insight">${esc(insight)}</p>` : "") +
-      `<div class="code-route-stops">${stopList}</div>` +
-      harnessBits.join("") +
-      `</section>`
-    );
+    return `<div class="code-route-stops">${stopList}</div>` + harnessHtml(route);
   }
-  const api = { validate, message, trace, ridge, outcome, codeRoute, routeInsight, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
+  const api = { validate, message, trace, ridge, outcome, heroStats, codeRoute, codeRouteDetail, routeInsight, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

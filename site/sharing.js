@@ -14,6 +14,9 @@ function duration(value){
  return minutes>=60?Math.floor(minutes/60)+'h '+minutes%60+'m':minutes+'m';
 }
 function metricStrip(run){
+ if(typeof GrinderContract==='object'&&GrinderContract.heroStats){
+  return GrinderContract.heroStats(run);
+ }
  const cells=[
   ['Session',sessionSeconds(run)==null?null:duration(sessionSeconds(run))],
   ['Turns',run.prompts??run.turns_typed??null],
@@ -107,18 +110,24 @@ function mount({run,slot,status,moment=null,review=null}){
  slot.innerHTML=`<div class="head"><h2>${review?"Share my outcome":"Share your run"}</h2>${review?"":`<a href="/?run=${encodeURIComponent(run.id)}">Back to run</a>`}</div>
  <p class="hint">${readable?(run.visibility==='public'?'Public run · anyone can read it.':'Link-only run · anyone with the link can read it.'):'Private run · exporting an image does not change who can read the run.'}</p>
  <div class="share-studio"><form id="post-editor" class="panel reply-form">
- <label>What did you build?<input name="title" maxlength="100" required value="${esc(run.title)}"></label>
- <label>Where did the agent help or struggle?<textarea name="contribution" maxlength="240" placeholder="Describe one useful contribution or difficult moment."></textarea></label>
- <label>What was the result?<textarea name="result" maxlength="240" placeholder="Describe what you checked. Keep claims specific.">${esc(run.caption||'')}</textarea></label>
- <label>What will you try next?<input name="next" maxlength="160" placeholder="One change for the next run"></label>
+ <label>Title<input name="title" maxlength="100" required value="${esc(run.title)}"></label>
+ <label>Caption (optional edit)<textarea name="result" maxlength="240" placeholder="One short result line. Leave as-is if the card already says it.">${esc(run.caption||'')}</textarea></label>
  <label>Image format<select name="format"><option value="square">Square · 1080 × 1080</option><option value="portrait">Portrait · 1080 × 1350</option></select></label>
  <label><input type="checkbox" name="identity" ${handle?'checked':''}> Include public handle and agent name</label>
- <p class="hint">The image uses your title and result, a safe output label, the proven project name, measured code activity, the blue trace, and effort counts. It never includes command text, paths, code, prompts, secrets, or tool output.</p>
+ <p class="hint">The image is built from this run: title, caption, Code Route or blue trace, and measured facts. It never includes command text, paths, code, prompts, secrets, or tool output.</p>
  <label><input type="checkbox" name="review"> I have reviewed this image and caption for sharing.</label>
  <div class="cta"><button type="button" id="post-download" disabled>Download PNG</button><button type="button" class="ghost" id="post-copy" disabled>Copy caption</button></div>
  </form><div class="post-preview"><canvas aria-label="Exact share image preview" role="img"></canvas><label>Caption<textarea id="post-caption" readonly rows="8"></textarea></label><p class="hint" id="post-message" role="status"></p></div></div>`;
  const form=slot.querySelector('form'),canvas=slot.querySelector('canvas'),ctx=canvas.getContext('2d');
- const fields=()=>({title:form.elements.title.value.trim(),contribution:form.elements.contribution.value.trim(),result:form.elements.result.value.trim(),next:form.elements.next.value.trim(),identity:form.elements.identity.checked});
+ let contributionText=(()=>{
+  const facts=storyFacts(run);
+  const bits=[run.harness?String(run.harness)+' session':'Agent session'];
+  if(facts.code) bits.push(facts.code);
+  if(facts.project) bits.push('project '+facts.project);
+  return bits.join(' · ');
+ })();
+ let nextText='';
+ const fields=()=>({title:form.elements.title.value.trim(),contribution:contributionText,result:form.elements.result.value.trim(),next:nextText,identity:form.elements.identity.checked});
  function lines(text,x,y,width,font,lineHeight,maxLines){ctx.font=font;let words=String(text).split(/\s+/),line='',rows=[];for(const word of words){const candidate=line?line+' '+word:word;if(ctx.measureText(candidate).width>width&&line){rows.push(line);line=word}else line=candidate;}if(line)rows.push(line);rows=rows.flatMap(row=>{if(ctx.measureText(row).width<=width)return[row];const parts=[];let part='';for(const c of row){if(ctx.measureText(part+c).width>width){parts.push(part);part=''}part+=c}if(part)parts.push(part);return parts});const clipped=rows.length>maxLines;rows=rows.slice(0,maxLines);if(clipped){let last=rows.at(-1);while(last&&ctx.measureText(last+'…').width>width)last=last.slice(0,-1);rows[rows.length-1]=last+'…'}rows.forEach((row,i)=>ctx.fillText(row,x,y+i*lineHeight));return clipped;}
  function draw(){const f=fields(),portrait=form.elements.format.value==='portrait';canvas.width=1080;canvas.height=portrait?1350:1080;let clipped=false;ctx.fillStyle='#f8f8f6';ctx.fillRect(0,0,1080,canvas.height);ctx.fillStyle='#123cff';ctx.fillRect(64,64,44,8);ctx.fillStyle='#111';ctx.font='600 23px sans-serif';ctx.fillText('__BRAND__',128,80);ctx.fillStyle='#666';ctx.font='20px sans-serif';ctx.fillText(review?'MY RETURN':'RUN NOTES',820,80);
  ctx.fillStyle='#123cff';ctx.font='600 16px sans-serif';ctx.fillText('ACHIEVED',64,124);
@@ -165,12 +174,12 @@ function mount({run,slot,status,moment=null,review=null}){
  if(moment){
   form.elements.title.value=moment.title;
   form.elements.result.value=moment.claim+' Limit: '+moment.limitation;
-  form.elements.contribution.value='Builder-authored observation'+(moment.measurement_revision!==run.measurement_revision?' · earlier measurement, current run changed':'')+'. Not independently verified.';
-  form.elements.next.value=moment.next_action;
+  contributionText='Builder-authored observation'+(moment.measurement_revision!==run.measurement_revision?' · earlier measurement, current run changed':'')+'. Not independently verified.';
+  nextText=moment.next_action||'';
   const context=document.createElement('p');context.className='hint';context.textContent='Moment selected. The full excerpt stays on the run; the card includes your claim and its limit. Review all text before exporting.';form.prepend(context);
  }
  if(review){
-  form.elements.contribution.value='My decision: '+review.decision+'. Tried the practice: '+(review.tried===true?'yes':review.tried===false?'no':'unknown')+'.';
+  contributionText='My decision: '+review.decision+'. Tried the practice: '+(review.tried===true?'yes':review.tried===false?'no':'unknown')+'.';
   form.elements.result.required=true;
   const context=document.createElement('p');context.className='hint';context.textContent='Only your frozen outcome counts are included. Missing measurements stay unknown. Write the result you choose to share; your saved reflection, practice text, original author and source links are not copied. This export does not change access to your private attempt.';form.prepend(context);
  }

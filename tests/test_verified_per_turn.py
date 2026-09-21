@@ -243,13 +243,14 @@ def test_web_app_never_headlines_prompts():
     assert '<details class="run-evidence">' in card
     assert 'class="run-metrics"' in card
     assert 'run-rank' not in card
-    assert card.index('<summary>More</summary>') < card.index('${fiveRow(r)}')
-    assert "r.prompts??r.turns_typed" in card.replace(" ", "") or "['Turns',turns" in card.replace(" ", "")
+    assert "Explore this run" in card and "fiveRow(r)" in card
+    assert "GrinderContract.heroStats" in card
     # Share export is exercised by check-moment-fixtures.py; its call signature
     # is not part of the card's headline contract.
     # Social profiles show public work and responses, not activity-as-quality rankings.
     prof = src[src.index("async function viewProfile("):src.index("async function refreshAuth(")]
     assert "Public runs" in prof and "ACKs received" in prof
+    assert "Link-only runs stay off this profile" in prof
     assert "verified per turn" not in prof
     assert '<div class="k">prompts</div>' not in prof
     # a missing part is a dash that names the missing fact, never a 0 and never a private project
