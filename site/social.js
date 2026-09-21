@@ -390,7 +390,7 @@ window.GrinderSocial = function ({
                 : "?people"),
           );
         } catch (_) {}
-        if (typeof showSignIn === "function") showSignIn();
+        if (typeof showSignIn === "function") showSignIn({ reason: "social" });
         else if (typeof signInGitHub === "function") signInGitHub();
         else byId("auth")?.click();
       };

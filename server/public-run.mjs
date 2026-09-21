@@ -168,8 +168,8 @@ const duration=value=>{
  const minutes=Math.round(seconds/60);return minutes>=60?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${minutes}m`;
 };
 // Prefer the transcript count. When it is zero or missing and the stored ridge carried a
-// real call count, print that count so the label matches the graph.
-const toolCallCount=run=>{
+// real call count, print that count so the label matches the graph and the SPA strip.
+export const toolCallCount=run=>{
  const recorded=run.tool_calls;
  const fromRidge=run.ridge_tool_calls;
  if((recorded==null||recorded===0)&&Number.isFinite(fromRidge)&&fromRidge>0)return fromRidge;

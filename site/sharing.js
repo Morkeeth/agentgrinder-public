@@ -13,14 +13,20 @@ function duration(value){
  const minutes=Math.round(value/60);
  return minutes>=60?Math.floor(minutes/60)+'h '+minutes%60+'m':minutes+'m';
 }
+function contractApi(){
+ return (typeof GrinderContract==='object'&&GrinderContract)||root.GrinderContract||null;
+}
 function metricStrip(run){
- if(typeof GrinderContract==='object'&&GrinderContract.heroStats){
-  return GrinderContract.heroStats(run);
+ const contract=contractApi();
+ if(contract&&contract.heroStats){
+  return contract.heroStats(run);
  }
+ const tools=contract&&contract.toolCallCount
+  ?contract.toolCallCount(run):(run.tool_calls??null);
  const cells=[
   ['Session',sessionSeconds(run)==null?null:duration(sessionSeconds(run))],
   ['Turns',run.prompts??run.turns_typed??null],
-  ['Tool calls',run.tool_calls??null],
+  ['Tool calls',tools],
  ].filter(([,value])=>value!=null);
  return cells.map(([label,value])=>[label,String(value)]);
 }
@@ -42,7 +48,10 @@ function codeFacts(run){
  if(run.shell_calls!=null)facts.push(run.shell_calls+' shell calls');
  if(run.files_touched!=null)facts.push(run.files_touched+' files changed');
  if(run.commits!=null)facts.push(run.commits+' commits');
- if(!facts.length&&run.tool_calls!=null)facts.push(run.tool_calls+' tool calls');
+ const contract=contractApi();
+ const tools=contract&&contract.toolCallCount
+  ?contract.toolCallCount(run):run.tool_calls;
+ if(!facts.length&&tools!=null)facts.push(tools+' tool calls');
  return facts;
 }
 function storyFacts(run){
@@ -114,7 +123,7 @@ function mount({run,slot,status,moment=null,review=null}){
  <label>Caption (optional edit)<textarea name="result" maxlength="240" placeholder="One short result line. Leave as-is if the card already says it.">${esc(run.caption||'')}</textarea></label>
  <label>Image format<select name="format"><option value="square">Square · 1080 × 1080</option><option value="portrait">Portrait · 1080 × 1350</option></select></label>
  <label><input type="checkbox" name="identity" ${handle?'checked':''}> Include public handle and agent name</label>
- <p class="hint">The image is built from this run: title, caption, Code Route or blue trace, and measured facts. It never includes command text, paths, code, prompts, secrets, or tool output.</p>
+ <p class="hint">The image is built from this run: title, caption, Code Route when recorded or the blue activity trace, and measured facts. It never includes command text, paths, code, prompts, secrets, or tool output.</p>
  <label><input type="checkbox" name="review"> I have reviewed this image and caption for sharing.</label>
  <div class="cta"><button type="button" id="post-download" disabled>Download PNG</button><button type="button" class="ghost" id="post-copy" disabled>Copy caption</button></div>
  </form><div class="post-preview"><canvas aria-label="Exact share image preview" role="img"></canvas><label>Caption<textarea id="post-caption" readonly rows="8"></textarea></label><p class="hint" id="post-message" role="status"></p></div></div>`;
