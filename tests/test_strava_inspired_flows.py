@@ -29,7 +29,7 @@ def test_private_preview_leads_with_story_and_plain_privacy_choices():
     assert preview.index('id="i_caption"') < preview.index("Review recorded measurements")
     assert preview.index('id="i_output_url"') < preview.index("Review recorded measurements")
     assert "Only me - just you" in preview
-    assert "Link - anyone with the URL" in preview
+    assert "Link - followers and close friends" in preview
     assert "Public - Feed and profile" in preview
     assert "Unknown measurements stay unknown" not in preview
     assert "It never carries prompts" in preview
@@ -41,13 +41,13 @@ def test_run_detail_promotes_audience_aware_next_action():
         "Saved to Public feed and profile",
         "Copy public link",
         "Open share card",
-        "Saved for anyone with the link",
+        "Saved for followers and close friends",
         "Saved for Only me",
         "Open builder profile",
         "Follow lives on the card with XUDOS and Share",
     ):
         assert phrase in detail
-    assert "Link-only. This run does not appear on the public profile" in detail
+    assert "Link audience. This run does not appear on the public profile" in detail
     assert "card-follow" in detail or "Follow lives on the card" in detail
     assert detail.index("+nextAction") < detail.index("grind-thread")
     assert "Grokbot Builders Sunday" not in INDEX

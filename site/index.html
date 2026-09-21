@@ -443,6 +443,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
+<script src="/run-access.js"></script>
 <script src="/fork-run.js"></script>
 <script src="/auth.js"></script>
 <script src="/segments.js"></script>
@@ -567,14 +568,22 @@ function skeletonCard(){
 }
 const status=(m,e)=>{const s=$('status');s.textContent=m||'';s.className=e?'err':'';};
 if(!window.supabase) status("Couldn't load, refresh.",true);
-// Link-only reads carry the ID the visitor opened; collection reads cannot enumerate them.
+// Link and other non-public rows are relationship-gated. Only a signed-in session may
+// carry the run-id bearer header; strangers must not learn the row from the URL alone.
+let authClient=null;
 async function grinderFetch(input, options={}){
   const headers=new Headers(options.headers || (input instanceof Request ? input.headers : undefined));
   const runId=new URLSearchParams(location.search).get('run');
-  if(runId && /^[a-f0-9-]{36}$/i.test(runId)) headers.set('x-grinder-run-id',runId);
+  if(runId && /^[a-f0-9-]{36}$/i.test(runId) && authClient){
+    try{
+      const {data:{session}}=await authClient.auth.getSession();
+      if(session) headers.set('x-grinder-run-id',runId);
+    }catch(_){}
+  }
   return fetch(input,{...options,headers});
 }
 const sb=window.supabase&&window.supabase.createClient(SB_URL,SB_KEY,{db:{schema:SB_SCHEMA},auth:{storageKey:"agentic-strava-auth"},global:{fetch:grinderFetch}});
+authClient=sb;
 const auth=sb?GrinderAuth.create({client:sb,redirectTo:location.origin+'/'}):null;
 const PROVIDERS_ENABLED=["github","email"];
 const profileHandle=p=>GrinderAuth.present(p)?.handle||'';
@@ -894,7 +903,7 @@ function audienceLabel(visibility){
   return visibility==='private'||visibility==='anonymous'?'Only me'
     :visibility==='close_friends'?'Close friends'
     :visibility==='public'?'Everyone'
-    :visibility==='link'?'Anyone with the link':'Crew members';
+    :visibility==='link'?'Followers and close friends':'Crew members';
 }
 async function requireCloseFriendsForSave(audience){
   if(audience!=='close_friends')return true;
@@ -989,7 +998,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     ${storyFacts.length?`<dl class="run-story-facts">${storyFacts.join('')}</dl>`:''}
     ${declared()}`;
   const recorded='<details class="run-evidence"><summary>How these numbers work</summary><p class="meta">Captured from the selected session. A zero is a recorded zero. Missing optional fields stay off the card.</p></details>';
-  const audienceNote=r.visibility==='link'?'<p class="meta run-audience-note">Link-only. Anyone with the URL can read it; it does not appear on the public profile or Feed.</p>':'';
+  const audienceNote=r.visibility==='link'?'<p class="meta run-audience-note">Link audience. Signed-in followers and close friends can open it; it does not appear on the public profile or Feed.</p>':'';
   const agentChip=(!opts.preview&&r.source_actor_id&&!connectWrapperName(r.agent_name))
     ?`<div class="run-agent-chip">with <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name)}</a>${r.harness?` · <span class="card-harness">${esc(r.harness)}</span>`:''}</div>`
     :'';
@@ -1508,6 +1517,14 @@ async function viewRun(id){
   const {data:r,error:runError}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('id',id).single();
   if(runError&&runError.code!=='PGRST116'){app.innerHTML='<div class="empty">This run could not load. Please refresh to try again.</div>';return;}
   if(!r){ app.innerHTML='<div class="card"><div class="empty">This run is private or does not exist.</div></div>'+responseReturnLink(); return; }
+  const mayOpen=typeof GrinderRunAccess==='object'&&GrinderRunAccess.viewerMayOpenRun
+    ? await GrinderRunAccess.viewerMayOpenRun(r,{me:ME,client:sb})
+    : r.visibility==='public'||(ME&&ME.id===r.profile_id);
+  if(!mayOpen){
+    app.innerHTML=`<div class="card"><div class="empty"><h3>This run is private on STRIVE</h3><p>Sign in with a follow or close-friends relation to the builder, then open the shared run link again.</p><p class="cta"><button type="button" class="act blue" id="run-gate-signin">Sign in</button><a class="act" href="/">Home</a></p></div></div>`+responseReturnLink();
+    const gate=$('run-gate-signin'); if(gate) gate.onclick=()=>showSignIn();
+    return;
+  }
   noteTraces([r]);
   const ad=await ackData([r]);
   const acks=await fetchAckList(id);
@@ -1518,20 +1535,20 @@ async function viewRun(id){
   const shareable=r.visibility==='public'||r.visibility==='link'||r.visibility==='close_friends';
   const profileUrl='/?u='+encodeURIComponent(profileHandle(r.profiles)||'');
   const nextAction=owner
-    ? `<section class="run-primary-actions"><p><b>${r.visibility==='public'?'Saved to Public feed and profile':r.visibility==='link'?'Saved for anyone with the link':r.visibility==='close_friends'?'Saved for Close friends':'Saved for Only me'}</b></p>
+    ? `<section class="run-primary-actions"><p><b>${r.visibility==='public'?'Saved to Public feed and profile':r.visibility==='link'?'Saved for followers and close friends':r.visibility==='close_friends'?'Saved for Close friends':'Saved for Only me'}</b></p>
         <div class="cta">${shareable?`<button id="run-copy-link" class="act blue">${r.visibility==='public'?'Copy public link':'Copy link'}</button>`:`<a class="act blue" href="#run-audience">Choose who can see this</a>`}${shareable?`<a class="act" href="/?share=1&run=${r.id}">Open share card</a>`:''}</div>
-        <p class="hint">${r.visibility==='public'?'This public run also has a clean share card.':r.visibility==='link'?'This unlisted run is readable by anyone with the URL. It does not appear on Feed or the public profile.':r.visibility==='close_friends'?'Only people on your Close friends list can open this run. Manage the list on your profile.':'Private uploads stay in My runs until you deliberately choose Link or Public below.'}</p></section>`
-    : `<section class="run-primary-actions"><p class="meta">FROM THIS RUN</p><div class="cta">${shareable?`<a class="act blue" href="/?share=1&run=${r.id}">Share this run</a>`:''}<a class="act" href="${profileUrl}">Open builder profile</a></div><p class="hint">${r.visibility==='link'?'Link-only. This run does not appear on the public profile. Follow is on the card above.':'Follow lives on the card with XUDOS and Share.'}</p></section>`;
+        <p class="hint">${r.visibility==='public'?'This public run also has a clean share card.':r.visibility==='link'?'This Link run is for signed-in followers and close friends. It does not appear on Feed or the public profile.':r.visibility==='close_friends'?'Only people on your Close friends list can open this run. Manage the list on your profile.':'Private uploads stay in My runs until you deliberately choose Link or Public below.'}</p></section>`
+    : `<section class="run-primary-actions"><p class="meta">FROM THIS RUN</p><div class="cta">${shareable?`<a class="act blue" href="/?share=1&run=${r.id}">Share this run</a>`:''}<a class="act" href="${profileUrl}">Open builder profile</a></div><p class="hint">${r.visibility==='link'?'Link audience. This run does not appear on the public profile. Follow is on the card above.':'Follow lives on the card with XUDOS and Share.'}</p></section>`;
   frame(typeof railHtml==='function'?railHtml(null):null,null);
   app.innerHTML=`<div class="head"><h2>A run</h2><span class="meta">${esc(audienceLabel(r.visibility))}</span></div>`
     +runCard(r,ad.mine.has(r.id),ad.counts[r.id]||acks.length,{picker:openAck,suggested,selected:preselect})
     +nextAction
     +`<section id="grind-thread"></section><div class="head"><h2>XUDOS</h2><span class="meta">${acks.length}</span></div><div class="panel">`+ackListHtml(acks)+`</div>`
     +`<section id="grind-feature"></section>`;
-  const copyLink=$('run-copy-link');if(copyLink)copyLink.onclick=async()=>{try{await navigator.clipboard.writeText(location.origin+'/?run='+r.id);copyLink.textContent='Link copied'}catch(_){status('Copy this page address to share your run.')}};
+  const copyLink=$('run-copy-link');if(copyLink)copyLink.onclick=async()=>{try{const sharePath=r.visibility==='public'?'/r/'+r.id:'/?run='+r.id;await navigator.clipboard.writeText(location.origin+sharePath);copyLink.textContent='Link copied'}catch(_){status('Copy this page address to share your run.')}};
   if(ME?.id===r.profile_id){
     const controls=document.createElement('div');controls.className='panel reply-form';
-    controls.id='run-edit';controls.innerHTML='<h2>Edit your post</h2><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label id="run-audience-label">Who can read this run<select id="run-audience"><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - anyone with the URL</option><option value="public">Public - Feed and profile</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
+    controls.id='run-edit';controls.innerHTML='<h2>Edit your post</h2><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label id="run-audience-label">Who can read this run<select id="run-audience"><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
     app.append(controls);$('run-caption').value=r.caption||r.note||'';$('run-output-url').value=r.output_url||'';$('run-audience').value=r.visibility==='anonymous'?'private':r.visibility;
     $('run-save').onclick=async()=>{const caption=$('run-caption').value.trim(),output=$('run-output-url').value.trim(),audience=$('run-audience').value;if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}if(!(await requireCloseFriendsForSave(audience)))return;const {error}=await sb.from('runs').update({caption:caption||null,output_url:output||null,visibility:audience}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};
     $('run-delete').onclick=async()=>{if(!confirm('Delete this run and its discussion?'))return;const {error}=await sb.from('runs').delete().eq('id',r.id);if(error){status(error.message,true);return}history.replaceState(null,'','/?mine');viewMe()};
@@ -1582,7 +1599,7 @@ function postComposerHtml({first=false}={}){
       <label>Scene photo URL (optional)<input id="f_image_url" type="url" maxlength="2048" placeholder="https://…/desk.jpg"><span class="hint">Optional lifestyle photo beside genuine output. Atmosphere only - not auto-published.</span></label>
       <div class="row"><div><label>Typed turns</label><input id="f_prompts" type="number" min="0"></div><div><label>Minutes</label><input id="f_dur" type="number" min="0"></div><div><label>Commits</label><input id="f_commits" type="number" min="0"></div></div>
       <label>Who can see this run?
-        <select id="f_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - anyone with the URL</option><option value="public">Public - Feed and profile</option></select>
+        <select id="f_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select>
       </label>
       <p class="hint">Nothing is posted until you choose an audience and press the button.</p>
       <button id="publish">Save run</button>
@@ -1667,7 +1684,7 @@ function wireComposer(){
     const openExisting=async prior=>{
       clearDraft();
       history.replaceState(null,'','/?run='+prior.id);
-      status('This save was already received as '+(prior.visibility==='private'?'Only me':prior.visibility==='link'?'Anyone with the link':'Public')+'. Opening the existing run; no duplicate was created.');
+      status('This save was already received as '+(prior.visibility==='private'?'Only me':prior.visibility==='link'?'Followers and close friends':'Public')+'. Opening the existing run; no duplicate was created.');
       await viewRun(prior.id);
     };
     const existing=async()=>{
@@ -1703,7 +1720,7 @@ function wireComposer(){
     }
     clearDraft();
     history.replaceState(null,'','/?run='+data.id);
-    status(audience==='private'?'Saved for Only me. Only you can see it.':audience==='close_friends'?'Saved for Close friends. People on your list can read it.':audience==='link'?'Saved for anyone with the link. Copy the URL when you are ready.':'Saved to Public feed and profile. Copy the public link or open the share card.');
+    status(audience==='private'?'Saved for Only me. Only you can see it.':audience==='close_friends'?'Saved for Close friends. People on your list can read it.':audience==='link'?'Saved for followers and close friends. Copy the URL when you are ready.':'Saved to Public feed and profile. Copy the public link or open the share card.');
     viewRun(data.id);
   });
 }
@@ -1845,8 +1862,8 @@ async function importRun(){
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
     <label>Scene photo URL (optional)<input id="i_image_url" type="url" maxlength="2048" placeholder="https://…/cafe.jpg"><span class="hint">Optional lifestyle scene beside a genuine output image. Paste a URL; nothing is taken from your camera roll automatically.</span></label>
-    <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - anyone with the URL</option><option value="public">Public - Feed and profile</option></select></label>
-    <p class="hint">Only me stays with you. Close friends is your private list. Link is unlisted but readable by anyone with the URL. Choosing Public is the deliberate action that adds the run to Feed and your profile.</p>
+    <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label>
+    <p class="hint">Only me stays with you. Close friends is your private list. Link is for signed-in followers and close friends. Choosing Public is the deliberate action that adds the run to Feed and your profile.</p>
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample - preview only':(ME?'Save run':'Sign in to save')}</button>
     <details class="preview-details"><summary>Review recorded measurements and optional details</summary>
       <p class="hint export-contents">${sample?'This sample':'This export'} carries: the project folder name, counts, timing, the activity trace${run.ridge?', ridge bins and worker counts':''}${run.coach_verdict||run.coach_plan||run.coach_experiment?", the coach's sentences":''}${run.progress_verdict!=null||run.progress_delta!=null?', progress notes':''}${run.reach!=null||run.reach_reason?', a reach flag'+(run.reach_reason?' and reason':''):''}${run.rig_notes?', the stack notes you wrote':''}${run.activity_label?', an activity label':''}${run.route?', route metadata':''}${run.code_route?', a Code Route':''}${run.measurement_revision||run.baseline_revision?', measurement references':''}${run.rig_mcps!=null||run.rig_skills!=null?', how many MCPs and skills your rig has':''}. It never carries prompts, code or file paths. MCP names travel only if you tick the box below. Rig counts and notes are saved to your profile even when the run is Only me.</p>
@@ -1987,7 +2004,7 @@ async function importRun(){
       if(rigError) throw rigError;
     }catch(_){ rigNote=' Your rig counts and notes were not updated; edit them from your profile.'; }
     try{localStorage.setItem('ag_onboard_done','1');sessionStorage.removeItem('ag_import');sessionStorage.removeItem('ag_import_edits')}catch(_){}
-    history.replaceState(null,'','/?run='+published.id);status((base.visibility==='private'?'Saved for Only me. Change the audience when you deliberately want to share.':base.visibility==='close_friends'?'Saved for Close friends. Copy its link for someone on your list.':base.visibility==='link'?'Saved for anyone with the link. Copy the URL when you are ready.':'Saved to Public feed and profile. Copy the public link or open the share card.')+rigNote);
+    history.replaceState(null,'','/?run='+published.id);status((base.visibility==='private'?'Saved for Only me. Change the audience when you deliberately want to share.':base.visibility==='close_friends'?'Saved for Close friends. Copy its link for someone on your list.':base.visibility==='link'?'Saved for followers and close friends. Copy the URL when you are ready.':'Saved to Public feed and profile. Copy the public link or open the share card.')+rigNote);
     await viewRun(published.id);
     }catch(unexpected){showRecovery(unexpected)}finally{publishButton.disabled=false}
 

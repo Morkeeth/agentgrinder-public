@@ -105,10 +105,10 @@ function mount({run,slot,status,moment=null,review=null}){
  if(moment&&(moment.run_id!==run.id||moment.measurement_revision!==run.measurement_revision)){
   slot.innerHTML='<p>This moment belongs to a different measurement. Return to the grind and choose a current moment before making a card.</p>';return;
  }
- const readable=['public','link'].includes(run.visibility), handle=run.profiles?.github_handle;
- const url=moment?location.origin+'/?run='+encodeURIComponent(run.id)+'&moment='+encodeURIComponent(moment.id):location.origin+(run.visibility==='public'?'/r/':'/?run=')+encodeURIComponent(run.id);
+ const publicShare=run.visibility==='public', handle=run.profiles?.github_handle;
+ const url=moment?location.origin+'/?run='+encodeURIComponent(run.id)+'&moment='+encodeURIComponent(moment.id):location.origin+(publicShare?'/r/':'/?run=')+encodeURIComponent(run.id);
  slot.innerHTML=`<div class="head"><h2>${review?"Share my outcome":"Share your run"}</h2>${review?"":`<a href="/?run=${encodeURIComponent(run.id)}">Back to run</a>`}</div>
- <p class="hint">${readable?(run.visibility==='public'?'Public run · anyone can read it.':'Link-only run · anyone with the link can read it.'):'Private run · exporting an image does not change who can read the run.'}</p>
+ <p class="hint">${publicShare?'Public run · anyone can read it at /r/.':run.visibility==='link'?'Link run · signed-in followers and close friends can open /?run=.':'Private run · exporting an image does not change who can read the run.'}</p>
  <div class="share-studio"><form id="post-editor" class="panel reply-form">
  <label>Title<input name="title" maxlength="100" required value="${esc(run.title)}"></label>
  <label>Caption (optional edit)<textarea name="result" maxlength="240" placeholder="One short result line. Leave as-is if the card already says it.">${esc(run.caption||'')}</textarea></label>
@@ -164,7 +164,7 @@ function mount({run,slot,status,moment=null,review=null}){
  }
  let y=hasRoute?720:770;const blocks=[['THE AGENT',f.contribution],['NEXT RUN',f.next]].filter(([,v])=>v);for(const [label,body] of blocks){ctx.fillStyle='#123cff';ctx.font='600 17px sans-serif';ctx.fillText(label,64,y);ctx.fillStyle='#111';clipped=lines(body,64,y+34,952,'26px sans-serif',32,portrait?3:2)||clipped;y+=portrait?160:110;}
  ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(64,canvas.height-65);ctx.lineTo(1016,canvas.height-65);ctx.stroke();ctx.fillStyle='#666';ctx.font='18px sans-serif';ctx.fillText(review?'My observation · this does not prove the practice caused the result':'Builder’s account · recorded counts are not independent verification',64,canvas.height-30);
- slot.querySelector('#post-caption').value=[f.title,hasRoute&&routeInsight(route),f.contribution&&'Agent: '+f.contribution,f.result&&'Result: '+f.result,f.next&&'Next run: '+f.next,review?'My observation, not proof the practice caused the result.':readable?url:''].filter(Boolean).join('\n\n');
+ slot.querySelector('#post-caption').value=[f.title,hasRoute&&routeInsight(route),f.contribution&&'Agent: '+f.contribution,f.result&&'Result: '+f.result,f.next&&'Next run: '+f.next,review?'My observation, not proof the practice caused the result.':(publicShare||run.visibility==='link')?url:''].filter(Boolean).join('\n\n');
  slot.querySelector('#post-message').textContent=clipped?'Some text is shortened in the image. Shorten your text or choose portrait. Moment and review exports require the complete text to fit; the caption keeps the full text.':'';
  const ready=form.elements.review.checked&&!!f.title&&(!(moment||review)||!clipped)&&(!review||!!f.result);slot.querySelector('#post-download').disabled=!ready;slot.querySelector('#post-copy').disabled=!ready;
  }

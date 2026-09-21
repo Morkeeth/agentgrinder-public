@@ -12,6 +12,8 @@ Every run your agent made, on a card you can share.
 - Profile: your public runs and identity.
 - Follow, XUDOS and reply: one reaction (cheer this run), then discussion.
 
+Audience: **Public** is listed and open to anyone signed out at `/r/<id>`. **Private** is owner-only. Every other audience (**Link**, Close friends, crew) is relationship-gated: a signed-in reader needs a follow or close-friends relation with the author (or be the owner). Strangers see the neutral private page. Link is not globally readable from the URL alone.
+
 Cursor first. Keep the white card and blue activity trace. Prefer a clean, minimal card: one visual plane, a short route, two or three measured facts, identity, and Share, XUDOS and Follow. An optional author-selected lifestyle scene may sit beside a genuine output image; the scene is atmosphere, not proof, and photos are never auto-published from a camera roll. Day runs use a multi-project route; a quick fix is before → change → result; one agent lane is action → output. Provenance and raw metrics stay under Explore this run. Unknown measurements stay unknown. An external community or event is at most one optional author-chosen chip/link on the run card - not a directory, not primary nav, and not a calendar integration in this release.
 
 Free posting and browsing. Recognition comes from real people seeing and responding to work. No mandatory model calls, coaching flow, practice programme, score dashboard or challenges in the main app. Crews stay out of primary navigation; the first useful Crew is Oscar and Eric's two-person feed where each builder posts a real run and can return through Responses, not an empty feature page and not an official Grok Bot club.
