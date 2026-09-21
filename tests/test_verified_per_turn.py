@@ -237,8 +237,8 @@ def test_web_app_never_headlines_prompts():
     assert "heroN:r.prompts" not in src
     assert "heroK:'prompts typed'" not in src and "heroK:'prompts'" not in src
     card = src[src.index("function runCard("):src.index("function wireKudos(")]
-    assert card.index('<div class="title">') < card.index('${ridgeBody}')
-    assert card.index('const ridgeBody=') < card.index('${metricStrip()}')
+    assert card.index('<div class="title">') < card.index('${visual}')
+    assert 'metricStrip()' in card and '${metricStrip()}' in card
     assert 'class="run-metrics"' in card
     assert '<details class="run-evidence">' in card
     assert 'class="run-metrics"' in card

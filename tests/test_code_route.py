@@ -136,6 +136,56 @@ process.stdout.write(JSON.stringify({prefer,gap}));
     assert data["gap"][0] == ["Projects", "3"]
     assert ["Measured stops", "6"] in data["gap"]
 
+
+def test_work_route_shapes_day_fix_and_agent():
+    script = r"""
+const GrinderContract=require(process.argv[1]);
+const day=JSON.parse(process.argv[2]);
+const compact=JSON.parse(process.argv[3]);
+const dayHtml=GrinderContract.codeRoute({code_route:day,harness:'Cursor'});
+const fixHtml=GrinderContract.codeRoute({code_route:compact,harness:'Cursor'});
+const agentHtml=GrinderContract.codeRoute({code_route:compact,harness:'Grok Bot'});
+const cover=GrinderContract.coverHtml({image_url:'https://example.com/out.png'});
+const noCover=GrinderContract.coverHtml({output_url:'https://github.com/x/y/pull/1'});
+process.stdout.write(JSON.stringify({
+  dayShape:GrinderContract.routeShape(day,{harness:'Cursor'}),
+  fixShape:GrinderContract.routeShape(compact,{harness:'Cursor'}),
+  agentShape:GrinderContract.routeShape(compact,{harness:'Grok Bot'}),
+  dayHasMap:dayHtml.includes('code-route-map'),
+  fixHasPath:fixHtml.includes('work-path')&&fixHtml.includes('Before'),
+  agentHasPath:agentHtml.includes('data-shape="agent"')&&agentHtml.includes('Action'),
+  cover:cover.includes('run-cover')&&cover.includes('referrerpolicy="no-referrer"'),
+  noCover:!noCover,
+}));
+"""
+    compact = compact_from_checkpoints(
+        project_label="agentgrinder-public",
+        commits=2,
+        files_changed=4,
+        receipts=1,
+        artifact=True,
+    )
+    out = subprocess.run(
+        [
+            "node",
+            "-e",
+            script,
+            str(ROOT / "site" / "run-contract.js"),
+            json.dumps(multi_route()),
+            json.dumps(compact),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    data = json.loads(out)
+    assert data["dayShape"] == "day" and data["dayHasMap"]
+    assert data["fixShape"] == "fix" and data["fixHasPath"]
+    assert data["agentShape"] == "agent" and data["agentHasPath"]
+    assert data["cover"] and data["noCover"]
+
+
+def test_route_insight_uses_handoffs_concentration_and_finish_not_tokens():
     script = r"""
 const GrinderContract=require(process.argv[1]);
 const route=JSON.parse(process.argv[2]);

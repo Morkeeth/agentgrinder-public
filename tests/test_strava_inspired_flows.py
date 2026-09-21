@@ -44,10 +44,11 @@ def test_run_detail_promotes_audience_aware_next_action():
         "Saved for anyone with the link",
         "Saved for Only me",
         "Open builder profile",
-        "Follow is always your choice",
+        "Follow lives on the card with ACK and Share",
     ):
         assert phrase in detail
     assert "Link-only. This run does not appear on the public profile" in detail
+    assert "card-follow" in detail or "Follow lives on the card" in detail
     assert detail.index("+nextAction") < detail.index("grind-thread")
 
 

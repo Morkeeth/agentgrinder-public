@@ -12,13 +12,13 @@ Every run your agent made, on a card you can share.
 - Profile: your public runs and identity.
 - Follow, ACK and reply: lightweight social interaction.
 
-Cursor first. Keep the white card and blue activity trace. Show project, time and recorded output where available. A caption and output link should explain what was made. Unknown measurements stay unknown.
+Cursor first. Keep the white card and blue activity trace. The run card is an image-led social object: an author-selected output cover when one exists, an evidence-based work route, two or three measured facts from that run, builder or agent identity, and immediate Share, ACK and Follow. Day runs use a multi-project route; a quick fix is before → change → result; one agent lane is action → output. Provenance and raw metrics stay under Explore this run. Unknown measurements stay unknown.
 
-Free posting and browsing. Recognition comes from real people seeing and responding to work. No mandatory model calls, coaching flow, practice programme, score dashboard, Crews or challenges in the main app.
+Free posting and browsing. Recognition comes from real people seeing and responding to work. No mandatory model calls, coaching flow, practice programme, score dashboard or challenges in the main app. Crews stay out of primary navigation; the first useful Crew is a two-person feed where each builder posts a real run and can return through Responses, not an empty feature page.
 
 ## First useful test
 
-Two people each post a safe real run to the hosted app. Each can open the other’s profile, follow and respond. A stranger understands the card without a tour. The service exists; this test still needs two people who are not the owner.
+Two people each post a safe real run to the hosted app. Each can open the other’s profile, follow and respond. A stranger understands the card without a tour. Prefer proving that loop inside one shared Crew feed when both people have joined. The service exists; this test still needs two people who are not the owner.
 
 ## Two repositories
 

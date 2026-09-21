@@ -25,10 +25,14 @@ def test_card_shows_builder_project_session_caption_and_output():
     for field in ("project", "started_at", "caption", "output_url"):
         assert field in card
     assert "Open ${esc(ridgeOutput||'output')}" in card
-    assert card.index("${r.caption?") < card.index("${ridgeBody}")
+    assert card.index("${r.caption?") < card.index("${visual}")
+    assert card.index("${cover}") < card.index("${visual}")
+    assert card.index("run-social-actions") < card.index("${explore}")
     assert "Project touched" in card
     assert "Code activity" in card
     assert "Explore this run" in card
+    assert "card-follow" in card
+    assert "coverHtml" in card or "${cover}" in card
     assert "card-harness" in card
     assert "run-metrics" in card
     assert "heroStats" in card

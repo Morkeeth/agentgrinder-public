@@ -359,15 +359,20 @@
   function promoteCodeRouteHero(scope) {
     const cards = scope.querySelectorAll ? scope.querySelectorAll(".card") : [];
     cards.forEach((card) => {
-      const route = card.querySelector(":scope > .code-route");
-      if (!route) return;
+      const cover = card.querySelector(":scope > .run-cover");
+      const route = card.querySelector(":scope > .code-route, :scope > .work-path");
+      if (!route && !cover) return;
       const note = card.querySelector(":scope > .note");
       const title = card.querySelector(":scope > .title");
       const anchor = note || title;
       const stats = card.querySelector(":scope > dl.run-metrics");
-      if (anchor && route.previousElementSibling !== anchor) {
-        if (stats) stats.before(route);
-        else anchor.after(route);
+      if (cover && anchor && cover.previousElementSibling !== anchor) {
+        anchor.after(cover);
+      }
+      const routeAnchor = cover || note || title;
+      if (route && routeAnchor && route.previousElementSibling !== routeAnchor) {
+        if (stats && !cover) stats.before(route);
+        else routeAnchor.after(route);
       }
     });
   }
@@ -814,86 +819,188 @@
       ` · absent: ${absent.length ? absent.join(", ") : "none"}</p>`
     );
   }
-  function codeRoute(run) {
-    const route = readCodeRoute(run);
-    if (!route) return "";
-    if (route.unavailable) {
+    // Author-selected cover only. Never invent a stock photo. Safe https image URLs only;
+    // referrer is stripped so a dead third-party host still cannot fingerprint readers via Referer.
+    function coverHtml(run) {
+      const candidates = [run && run.image_url, run && run.output_url];
+      for (const href of candidates) {
+        if (!safeUrl(href)) continue;
+        if (!/\.(png|jpe?g|webp)([?#].*)?$/i.test(href)) continue;
+        return (
+          `<figure class="run-cover">` +
+          `<img src="${esc(href)}" alt="" width="1200" height="630" loading="lazy" decoding="async" referrerpolicy="no-referrer" />` +
+          `<figcaption class="meta">Output photo</figcaption>` +
+          `</figure>`
+        );
+      }
+      return "";
+    }
+    function routeShape(route, run) {
+      const projects = Array.isArray(route && route.projects) ? route.projects : [];
+      const stops = Array.isArray(route && route.stops) ? route.stops : [];
+      if (projects.length >= 2 && stops.length >= 2) return "day";
+      const harness = String((run && run.harness) || "").toLowerCase();
+      if (/grok|bot/.test(harness)) return "agent";
+      return "fix";
+    }
+    function compactWorkPath(route, run) {
+      const stops = Array.isArray(route.stops) ? route.stops : [];
+      if (!stops.length) return "";
+      const shape = routeShape(route, run);
+      const titles =
+        shape === "agent"
+          ? ["Action", "Work", "Output"]
+          : ["Before", "Change", "Result"];
+      const finishId = route.finish && route.finish.stop;
+      const finish = finishId ? stops.find((s) => s.id === finishId) : null;
+      const first = stops[0];
+      const last = finish || stops[stops.length - 1];
+      const mid =
+        stops.length >= 3
+          ? stops[Math.floor((stops.length - 1) / 2)]
+          : stops.length === 2
+            ? null
+            : first;
+      const stages = [
+        { title: titles[0], stop: first },
+        {
+          title: titles[1],
+          stop: mid,
+          bridge: !mid && stops.length === 2 ? (first.kind || "change") : null,
+        },
+        { title: titles[2], stop: last },
+      ];
+      const insight = routeInsight(route);
+      const project =
+        Array.isArray(route.projects) && route.projects[0]
+          ? route.projects[0].label
+          : null;
+      const cells = stages
+        .map((stage) => {
+          if (stage.bridge) {
+            return (
+              `<li class="work-path-stage work-path-bridge">` +
+              `<span class="work-path-title">${esc(stage.title)}</span>` +
+              `<span class="work-path-label">${esc(stage.bridge)}</span>` +
+              `</li>`
+            );
+          }
+          const stop = stage.stop;
+          const label = stop
+            ? stop.label
+            : shape === "agent"
+              ? "not recorded"
+              : "not recorded";
+          const kind = stop ? stop.kind : "";
+          return (
+            `<li class="work-path-stage">` +
+            `<span class="work-path-title">${esc(stage.title)}</span>` +
+            (kind ? `<span class="work-path-kind">${esc(kind)}</span>` : "") +
+            `<span class="work-path-label">${esc(label)}</span>` +
+            `</li>`
+          );
+        })
+        .join("");
+      const aria =
+        (shape === "agent" ? "Agent lane" : "Quick fix path") +
+        (project ? ` on ${project}` : "") +
+        (insight ? ` · ${insight}` : "");
       return (
-        `<section class="code-route code-route-unavailable" aria-label="Code Route unavailable">` +
-        `<div class="run-story-label">Code Route</div>` +
-        `<p class="code-route-why">${esc(route.unavailable.why)}</p>` +
+        `<section class="work-path" data-shape="${esc(shape)}" aria-label="${esc(aria)}">` +
+        `<div class="run-story-label">${shape === "agent" ? "Agent lane" : "Work path"}</div>` +
+        `<ol class="work-path-stages">${cells}</ol>` +
+        (project ? `<p class="work-path-project">${esc(project)}</p>` : "") +
+        (insight ? `<p class="code-route-insight">${esc(insight)}</p>` : "") +
         `</section>`
       );
     }
-    const projects = Array.isArray(route.projects) ? route.projects : [];
-    const stops = Array.isArray(route.stops) ? route.stops : [];
-    if (!projects.length || !stops.length) return "";
-    const projectIndex = Object.fromEntries(projects.map((p, i) => [p.id, i]));
-    const n = Math.max(1, projects.length);
-    // Compact lane marks (1…n) keep the map readable at phone width; full names live in the list.
-    const left = 28;
-    const width = 360;
-    const rowH = 28;
-    const top = 18;
-    const height = top + n * rowH + 12;
-    const finishId = route.finish && route.finish.stop;
-    const handoffTo = new Set(
-      (Array.isArray(route.connectors) ? route.connectors : [])
-        .filter((c) => c && c.kind === "handoff" && c.to)
-        .map((c) => c.to)
-    );
-    const dense = densestProject(route);
-    const insight = routeInsight(route);
-    const points = stops.map((stop, i) => {
-      const row = projectIndex[stop.project] ?? 0;
-      const x = left + (i * (width - left - 16)) / Math.max(1, stops.length - 1);
-      const y = top + row * rowH + rowH / 2;
-      return { stop, x, y, finish: stop.id === finishId, handoff: handoffTo.has(stop.id) };
-    });
-    const line = points
-      .map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-      .join(" ");
-    const dots = points
-      .map((p) => {
-        const r = p.finish ? 5.5 : p.handoff ? 4.5 : 3.5;
-        const cls = p.finish ? "code-route-finish" : p.handoff ? "code-route-handoff" : "code-route-stop";
-        return `<circle class="${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" />`;
-      })
-      .join("");
-    const laneLabels = projects
-      .map((p, i) => {
-        const y = top + i * rowH + rowH / 2 + 4;
-        return `<text class="code-route-lane" x="0" y="${y}">${i + 1}</text>`;
-      })
-      .join("");
-    const projectList = projects
-      .map((p, i) =>
-        `<li${dense && p.id === dense.id ? ' data-dense="1"' : ""}>` +
-        `<span class="code-route-lane-mark" aria-hidden="true">${i + 1}</span>` +
-        `<span class="code-route-project-name">${esc(p.label)}</span></li>`
-      )
-      .join("");
-    const projectNames = projects.map((p) => p.label).join(", ");
-    const measured = stops.filter((s) => s.basis === "measured").length;
-    const declared = stops.filter((s) => s.basis === "declared").length;
-    const aria =
-      `Code Route across ${projects.length} project${projects.length === 1 ? "" : "s"}: ${projectNames}. ` +
-      `${stops.length} ordered checkpoints · ${measured} measured · ${declared} declared` +
-      (route.finish ? ` · finish ${route.finish.label}` : "") +
-      (insight ? ` · ${insight}` : "");
-    return (
-      `<section class="code-route" aria-label="${esc(aria)}">` +
-      `<div class="run-story-label">Code Route</div>` +
-      `<svg class="code-route-map" viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true">` +
-      `<path class="code-route-line" pathLength="1" d="${line}" fill="none" stroke="currentColor" stroke-width="2.5" />` +
-      dots +
-      laneLabels +
-      `</svg>` +
-      `<ol class="code-route-projects">${projectList}</ol>` +
-      (insight ? `<p class="code-route-insight">${esc(insight)}</p>` : "") +
-      `</section>`
-    );
-  }
+    function codeRouteMap(route, run) {
+      const projects = Array.isArray(route.projects) ? route.projects : [];
+      const stops = Array.isArray(route.stops) ? route.stops : [];
+      if (!projects.length || !stops.length) return "";
+      const projectIndex = Object.fromEntries(projects.map((p, i) => [p.id, i]));
+      const n = Math.max(1, projects.length);
+      const left = 28;
+      const width = 360;
+      const rowH = 28;
+      const top = 18;
+      const height = top + n * rowH + 12;
+      const finishId = route.finish && route.finish.stop;
+      const handoffTo = new Set(
+        (Array.isArray(route.connectors) ? route.connectors : [])
+          .filter((c) => c && c.kind === "handoff" && c.to)
+          .map((c) => c.to)
+      );
+      const dense = densestProject(route);
+      const insight = routeInsight(route);
+      const points = stops.map((stop, i) => {
+        const row = projectIndex[stop.project] ?? 0;
+        const x = left + (i * (width - left - 16)) / Math.max(1, stops.length - 1);
+        const y = top + row * rowH + rowH / 2;
+        return { stop, x, y, finish: stop.id === finishId, handoff: handoffTo.has(stop.id) };
+      });
+      const line = points
+        .map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+        .join(" ");
+      const dots = points
+        .map((p) => {
+          const r = p.finish ? 5.5 : p.handoff ? 4.5 : 3.5;
+          const cls = p.finish ? "code-route-finish" : p.handoff ? "code-route-handoff" : "code-route-stop";
+          return `<circle class="${cls}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" />`;
+        })
+        .join("");
+      const laneLabels = projects
+        .map((p, i) => {
+          const y = top + i * rowH + rowH / 2 + 4;
+          return `<text class="code-route-lane" x="0" y="${y}">${i + 1}</text>`;
+        })
+        .join("");
+      const projectList = projects
+        .map((p, i) =>
+          `<li${dense && p.id === dense.id ? ' data-dense="1"' : ""}>` +
+          `<span class="code-route-lane-mark" aria-hidden="true">${i + 1}</span>` +
+          `<span class="code-route-project-name">${esc(p.label)}</span></li>`
+        )
+        .join("");
+      const projectNames = projects.map((p) => p.label).join(", ");
+      const measured = stops.filter((s) => s.basis === "measured").length;
+      const declared = stops.filter((s) => s.basis === "declared").length;
+      const aria =
+        `Code Route across ${projects.length} project${projects.length === 1 ? "" : "s"}: ${projectNames}. ` +
+        `${stops.length} ordered checkpoints · ${measured} measured · ${declared} declared` +
+        (route.finish ? ` · finish ${route.finish.label}` : "") +
+        (insight ? ` · ${insight}` : "");
+      return (
+        `<section class="code-route" data-shape="day" aria-label="${esc(aria)}">` +
+        `<div class="run-story-label">Code Route</div>` +
+        `<svg class="code-route-map" viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true">` +
+        `<path class="code-route-line" pathLength="1" d="${line}" fill="none" stroke="currentColor" stroke-width="2.5" />` +
+        dots +
+        laneLabels +
+        `</svg>` +
+        `<ol class="code-route-projects">${projectList}</ol>` +
+        (insight ? `<p class="code-route-insight">${esc(insight)}</p>` : "") +
+        `</section>`
+      );
+    }
+    function codeRoute(run) {
+      const route = readCodeRoute(run);
+      if (!route) return "";
+      if (route.unavailable) {
+        return (
+          `<section class="code-route code-route-unavailable" aria-label="Code Route unavailable">` +
+          `<div class="run-story-label">Code Route</div>` +
+          `<p class="code-route-why">${esc(route.unavailable.why)}</p>` +
+          `</section>`
+        );
+      }
+      const projects = Array.isArray(route.projects) ? route.projects : [];
+      const stops = Array.isArray(route.stops) ? route.stops : [];
+      if (!projects.length || !stops.length) return "";
+      // Day runs earn the multi-lane map. A quick fix or agent lane is a short path, never a lonely dot.
+      if (routeShape(route, run) === "day") return codeRouteMap(route, run);
+      return compactWorkPath(route, run);
+    }
   function codeRouteDetail(run) {
     const route = readCodeRoute(run);
     if (!route) return "";
@@ -928,7 +1035,7 @@
       .join("");
     return `<div class="code-route-stops">${stopList}</div>` + harnessHtml(route);
   }
-  const api = { validate, message, trace, ridge, outcome, heroStats, codeRoute, codeRouteDetail, routeInsight, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
+  const api = { validate, message, trace, ridge, outcome, coverHtml, heroStats, codeRoute, codeRouteDetail, routeInsight, routeShape, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

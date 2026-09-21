@@ -970,6 +970,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   const date=new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'});
   const codeRoute=typeof GrinderContract==='object'&&GrinderContract.codeRoute?GrinderContract.codeRoute(r):'';
   const codeRouteDetail=typeof GrinderContract==='object'&&GrinderContract.codeRouteDetail?GrinderContract.codeRouteDetail(r):'';
+  const cover=typeof GrinderContract==='object'&&GrinderContract.coverHtml?GrinderContract.coverHtml(r):'';
   const ridge=typeof GrinderContract==='object'&&GrinderContract.ridge?GrinderContract.ridge(r):'';
   const ridgeOutput=output?(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(output)?'PR':/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(output)?'Screenshot':'Output'):null;
   const code=codeFacts();
@@ -982,9 +983,13 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     ${declared()}`;
   const recorded='<details class="run-evidence"><summary>How these numbers work</summary><p class="meta">Captured from the selected session. A zero is a recorded zero. Missing optional fields stay off the card.</p></details>';
   const audienceNote=r.visibility==='link'?'<p class="meta run-audience-note">Link-only. Anyone with the URL can read it; it does not appear on the public profile or Feed.</p>':'';
+  const agentChip=(!opts.preview&&r.source_actor_id&&!connectWrapperName(r.agent_name))
+    ?`<div class="run-agent-chip">with <a href="/?agent=${encodeURIComponent(r.source_actor_id)}">${esc(r.agent_name)}</a>${r.harness?` · <span class="card-harness">${esc(r.harness)}</span>`:''}</div>`
+    :'';
   const exploreInner=[
     story,
     runUploadIdentity(r),
+    `<div class="sub run-effort-context"><span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}</div>`,
     codeRoute?codeRouteDetail:'',
     codeRoute&&ridge?ridge:'',
     fiveRow(r),
@@ -996,24 +1001,26 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   // Full receipts stay in the HTML for humans and agents. Collapsed for people; still in the
   // document for scrapers until a visibility-safe /runs/{id}.json exists.
   const explore=exploreInner?`<details class="ridge-more run-explore" id="run-detail-${esc(r.id)}" data-run-detail="1"><summary>Explore this run</summary><div class="run-detail-body">${exploreInner}</div></details>`:'';
-  const ridgeBody=codeRoute?`${codeRoute}${metricStrip()}${explore}`
-    :ridge?`${ridge}${metricStrip()}${explore}`
-    :`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
-    ${metricStrip()}
-    ${explore}`;
+  const visual=codeRoute||ridge||`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>`;
+  const followSlot=(!opts.preview&&!selfAck&&r.profile_id)
+    ?`<span class="card-follow" data-profile="${esc(r.profile_id)}" data-handle="${esc(h)}" data-label="Follow"></span>`
+    :'';
   const detailLink=explore&&!opts.preview?`<a class="act run-detail-link" href="#run-detail-${esc(r.id)}">Receipts</a>`:'';
   return `<div class="card" id="card-${r.id}" data-run-id="${esc(r.id)}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
+    ${cover}
     <div class="run-story-label achieved">Achieved</div>
     <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
     ${audienceNote}
+    ${agentChip}
     ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
-    <div class="sub run-effort-context"><span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}</div>
-    ${ridgeBody}
-    ${opts.preview?'<div class="foot"><span class="meta">Preview · not saved</span></div>':`<div class="foot"><span class="meta">${count||0} ACK${count===1?'':'s'}${selfAck?' · your run':''}</span>
-      <span class="acts">${ackBtn}<a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a>${detailLink}</span></div>`}
+    ${visual}
+    ${metricStrip()}
+    ${opts.preview?'<div class="foot"><span class="meta">Preview · not saved</span></div>':`<div class="foot run-social-actions"><span class="meta">${count||0} ACK${count===1?'':'s'}${selfAck?' · your run':''}</span>
+      <span class="acts">${ackBtn}${followSlot}<a class="act" href="/?share=1&run=${r.id}">Share</a><a class="act" href="/?run=${r.id}#grind-thread">Discuss</a>${detailLink}</span></div>`}
+    ${explore}
     ${picker}</div>`; }
 
 
@@ -1029,6 +1036,16 @@ function wireKudos(){
       const el=id?document.getElementById(id):null;
       if(el) el.open=true;
     });
+  });
+  document.querySelectorAll('.card-follow[data-profile]:not([data-wired])').forEach(slot=>{
+    slot.dataset.wired='true';
+    if(typeof social==='object'&&social.followControl){
+      social.followControl({
+        id:slot.dataset.profile,
+        handle:slot.dataset.handle||null,
+        github_handle:slot.dataset.handle||null,
+      },slot);
+    }
   });
   document.querySelectorAll('.kudo').forEach(b=>b.addEventListener('click',async()=>{
   if(!ME){if(typeof showSignIn==='function')showSignIn();else status('Sign in to ACK.',true);return;}
@@ -1478,7 +1495,7 @@ async function viewRun(id){
     ? `<section class="run-primary-actions"><p><b>${r.visibility==='public'?'Saved to Public feed and profile':r.visibility==='link'?'Saved for anyone with the link':r.visibility==='close_friends'?'Saved for Close friends':'Saved for Only me'}</b></p>
         <div class="cta">${shareable?`<button id="run-copy-link" class="act blue">${r.visibility==='public'?'Copy public link':'Copy link'}</button>`:`<a class="act blue" href="#run-audience">Choose who can see this</a>`}${shareable?`<a class="act" href="/?share=1&run=${r.id}">Open share card</a>`:''}</div>
         <p class="hint">${r.visibility==='public'?'This public run also has a clean share card.':r.visibility==='link'?'This unlisted run is readable by anyone with the URL. It does not appear on Feed or the public profile.':r.visibility==='close_friends'?'Only people on your Close friends list can open this run. Manage the list on your profile.':'Private uploads stay in My runs until you deliberately choose Link or Public below.'}</p></section>`
-    : `<section class="run-primary-actions"><p class="meta">FROM THIS RUN</p><div class="cta"><a class="act blue" href="${profileUrl}">Open builder profile</a>${shareable?`<a class="act" href="/?share=1&run=${r.id}">Share this run</a>`:''}<span id="run-follow"></span></div><p class="hint">${r.visibility==='link'?'Link-only. This run does not appear on the public profile. Follow is always your choice.':'Follow is always your choice. No one is added automatically.'}</p></section>`;
+    : `<section class="run-primary-actions"><p class="meta">FROM THIS RUN</p><div class="cta">${shareable?`<a class="act blue" href="/?share=1&run=${r.id}">Share this run</a>`:''}<a class="act" href="${profileUrl}">Open builder profile</a></div><p class="hint">${r.visibility==='link'?'Link-only. This run does not appear on the public profile. Follow is on the card above.':'Follow lives on the card with ACK and Share.'}</p></section>`;
   frame(typeof railHtml==='function'?railHtml(null):null,null);
   app.innerHTML=`<div class="head"><h2>A run</h2><span class="meta">${esc(audienceLabel(r.visibility))}</span></div>`
     +runCard(r,ad.mine.has(r.id),ad.counts[r.id]||acks.length,{picker:openAck,suggested,selected:preselect})
@@ -1495,7 +1512,6 @@ async function viewRun(id){
   }
   wireKudos(); if(openAck){ const card=$('card-'+id); if(card) wireAckPicker(card,r,preselect); }
   if(q.get('ack')) history.replaceState(null,'',`/?run=${id}`);
-  if(!owner&&r.profile_id) await social.followControl({...(r.profiles||{}),id:r.profile_id},$('run-follow'));
   await social.thread(id,$('grind-thread'));
   await social.askControl(r,$('grind-thread'));
   await social.featureControl(r,$('grind-feature'));

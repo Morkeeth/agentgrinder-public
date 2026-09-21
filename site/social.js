@@ -377,8 +377,9 @@ window.GrinderSocial = function ({
       }
     } catch (_) {}
     if (!me()) {
+      const label = slot.dataset.label || "Sign in with GitHub";
       slot.innerHTML =
-        '<button type="button" id="follow-signin" class="act blue">Sign in with GitHub</button>';
+        `<button type="button" id="follow-signin" class="act blue">${esc(label)}</button>`;
       slot.querySelector("#follow-signin").onclick = () => {
         try {
           sessionStorage.setItem(
@@ -389,7 +390,8 @@ window.GrinderSocial = function ({
                 : "?people"),
           );
         } catch (_) {}
-        if (typeof signInGitHub === "function") signInGitHub();
+        if (typeof showSignIn === "function") showSignIn();
+        else if (typeof signInGitHub === "function") signInGitHub();
         else byId("auth")?.click();
       };
       return;
@@ -1222,7 +1224,11 @@ window.GrinderSocial = function ({
   }
 
   async function crews() {
-    start("Crews", "Build with people whose work you want to follow.", "crews");
+    start(
+      "Crews",
+      "A Crew is two builders who each post a real run and see each other here. Empty pages are not a club.",
+      "crews",
+    );
     if (!signedIn()) return;
     try {
       const memberships = await result(
@@ -1240,8 +1246,11 @@ window.GrinderSocial = function ({
                   `<article class="card"><h3><a href="/?crew=${c.id}">${esc(c.name)}</a></h3><p>${esc(c.description)}</p><small>${esc(c.visibility)} Crew</small></article>`,
               )
               .join("")
-          : empty("Create a Crew or join with an invitation.")) +
-        '<form id="create-crew" class="panel"><label>Crew name<input name="name" required maxlength="80"></label><label>Who can see the Crew?<select name="visibility"><option value="private">Members only</option><option value="public">Public</option></select></label><button>Create Crew</button></form>';
+          : empty(
+              "Invite one friend. The club starts when both of you have posted a real run into the same Crew feed.",
+              `<div class="cta"><a class="act" href="/?people">Find people</a></div>`,
+            )) +
+        '<form id="create-crew" class="panel"><label>Crew name<input name="name" required maxlength="80" placeholder="Oscar and Eric"></label><label>Who can see the Crew?<select name="visibility"><option value="private">Members only</option><option value="public">Public</option></select></label><p class="hint">Primary launch is a two-person return loop, not a directory of empty clubs.</p><button>Start a two-person Crew</button></form>';
       byId("create-crew").onsubmit = async (e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -1266,7 +1275,7 @@ window.GrinderSocial = function ({
   }
 
   async function crew(id) {
-    start("Crew", "A shared place for real work.");
+    start("Crew", "Shared runs from people in this Crew.", "crews");
     if (!uuid(id)) {
       byId("social-body").innerHTML = empty("This Crew link is invalid.");
       return;
@@ -1298,11 +1307,31 @@ window.GrinderSocial = function ({
           .order("created_at", { ascending: false })
           .limit(50),
       );
+      const posters = new Set((runs || []).map((r) => r.profile_id).filter(Boolean));
+      let loopNote = "";
+      if (members.length < 2) {
+        loopNote =
+          '<p class="hint">Invite one person. A Crew becomes real when two builders each have a run in this feed.</p>';
+      } else if (members.length === 2 && posters.size >= 2) {
+        loopNote =
+          '<p class="hint">Two builders, real runs. ACK a specific moment, then open Responses to return.</p>';
+      } else if (members.length === 2 && posters.size === 1) {
+        const missing = members.find((m) => !posters.has(m.profile_id));
+        const label = missing ? present(missing.profile).label : "the other member";
+        loopNote = `<p class="hint">Waiting for ${esc(label)} to share a real run into this Crew.</p>`;
+      } else if (!runs.length) {
+        loopNote =
+          '<p class="hint">No shared runs yet. Each member posts one real run to this Crew.</p>';
+      }
       byId("social-body").innerHTML =
-        `<div class="card"><h2>${esc(c.name)}</h2><p>${esc(c.description)}</p>${mine ? `<p><a href="/?experiments=${id}">Crew experiments</a> · <a href="/?practices">Practices</a></p>` : ""}<small>${esc(c.visibility)} · ${members.length} members</small><p>${members.map((m) => link(m.profile) + (m.role === "owner" ? " · owner" : "")).join(" · ")}</p>${owner ? '<button id="invite-crew">Create single-use invite</button><div id="crew-invite"></div>' : mine ? '<button id="leave-crew" class="ghost">Leave Crew</button>' : ""}</div><div class="head"><h2>Crew grinds</h2></div>` +
+        `<div class="card"><h2>${esc(c.name)}</h2><p>${esc(c.description)}</p>${mine ? `<p><a href="/?experiments=${id}">Crew experiments</a> · <a href="/?practices">Practices</a></p>` : ""}<small>${esc(c.visibility)} · ${members.length} members</small><p>${members.map((m) => link(m.profile) + (m.role === "owner" ? " · owner" : "")).join(" · ")}</p>${loopNote}${owner ? '<button id="invite-crew">Invite one person</button><div id="crew-invite"></div>' : mine ? '<button id="leave-crew" class="ghost">Leave Crew</button>' : ""}</div><div class="head"><h2>Crew feed</h2><span class="meta">${runs.length || "none yet"}</span></div>` +
         (runs.length
           ? await renderRuns(runs)
-          : empty("No grinds shared with this Crew yet."));
+          : empty(
+              members.length < 2
+                ? "Invite one friend, then each of you post a real run here."
+                : "No grinds shared with this Crew yet. Each member posts one real run to start the return loop.",
+            ));
       if (owner)
         byId("invite-crew").onclick = async () => {
           try {
