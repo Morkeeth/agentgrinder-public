@@ -993,13 +993,16 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     recorded,
     typeof runContinuation==='function'?runContinuation(r,opts):'',
   ].filter(Boolean).join('');
-  const explore=exploreInner?`<details class="ridge-more run-explore"><summary>Explore this run</summary>${exploreInner}</details>`:'';
+  // Full receipts stay in the HTML for humans and agents. Collapsed for people; still in the
+  // document for scrapers until a visibility-safe /runs/{id}.json exists.
+  const explore=exploreInner?`<details class="ridge-more run-explore" id="run-detail-${esc(r.id)}" data-run-detail="1"><summary>Explore this run</summary><div class="run-detail-body">${exploreInner}</div></details>`:'';
   const ridgeBody=codeRoute?`${codeRoute}${metricStrip()}${explore}`
     :ridge?`${ridge}${metricStrip()}${explore}`
     :`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>
     ${metricStrip()}
     ${explore}`;
-  return `<div class="card" id="card-${r.id}">
+  const detailLink=explore&&!opts.preview?`<a class="act run-detail-link" href="#run-detail-${esc(r.id)}">Receipts</a>`:'';
+  return `<div class="card" id="card-${r.id}" data-run-id="${esc(r.id)}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
     <div class="run-story-label achieved">Achieved</div>
@@ -1010,7 +1013,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     <div class="sub run-effort-context"><span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}</div>
     ${ridgeBody}
     ${opts.preview?'<div class="foot"><span class="meta">Preview · not saved</span></div>':`<div class="foot"><span class="meta">${count||0} ACK${count===1?'':'s'}${selfAck?' · your run':''}</span>
-      <span class="acts">${ackBtn}<a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div>`}
+      <span class="acts">${ackBtn}<a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a>${detailLink}</span></div>`}
     ${picker}</div>`; }
 
 
@@ -1019,6 +1022,14 @@ function wireKudos(){
   document.querySelectorAll('.copy-run-prompt:not([data-wired])').forEach(b=>{b.dataset.wired='true';b.addEventListener('click',async()=>{
     try{await navigator.clipboard.writeText(b.dataset.prompt);b.textContent='Prompt copied'}catch(_){status('Select and copy the public run details instead.',true)}
   })});
+  document.querySelectorAll('.run-detail-link:not([data-wired])').forEach(a=>{
+    a.dataset.wired='true';
+    a.addEventListener('click',()=>{
+      const id=(a.getAttribute('href')||'').replace(/^#/,'');
+      const el=id?document.getElementById(id):null;
+      if(el) el.open=true;
+    });
+  });
   document.querySelectorAll('.kudo').forEach(b=>b.addEventListener('click',async()=>{
   if(!ME){if(typeof showSignIn==='function')showSignIn();else status('Sign in to ACK.',true);return;}
   if(b.classList.contains('on'))return;

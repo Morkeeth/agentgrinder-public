@@ -106,9 +106,36 @@ def test_fixture_card_renders_lanes_checkpoints_and_basis_in_accessible_text():
     assert "grok-bot" in text
     assert "observed" in text.lower() and "absent" in text.lower()
     assert "aria-label" in text
+    # Detail stays in the HTML for agents even when Explore is collapsed for humans.
+    assert 'data-run-detail="1"' in html
+    assert 'id="run-detail-r-code-route"' in html
+    assert "code-route-stops" in html
+    assert html.index("Explore this run") < html.index("code-route-stops")
+    assert "Receipts" in html
 
 
-def test_route_insight_uses_handoffs_concentration_and_finish_not_tokens():
+def test_hero_stats_prefer_this_run_over_route_aggregates():
+    script = r"""
+const GrinderContract=require(process.argv[1]);
+const route=JSON.parse(process.argv[2]);
+const prefer=GrinderContract.heroStats({
+  code_route:route,commits:4,files_touched:41,tool_calls:0,ridge:[2,3,5]
+});
+const gap=GrinderContract.heroStats({code_route:route});
+process.stdout.write(JSON.stringify({prefer,gap}));
+"""
+    out = subprocess.run(
+        ["node", "-e", script, str(ROOT / "site" / "run-contract.js"), json.dumps(multi_route())],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    data = json.loads(out)
+    assert data["prefer"] == [["Projects", "3"], ["Commits", "4"], ["Files", "41"]]
+    # Without a run row, fall back to measured stops from the drawn route, not a vanity total.
+    assert data["gap"][0] == ["Projects", "3"]
+    assert ["Measured stops", "6"] in data["gap"]
+
     script = r"""
 const GrinderContract=require(process.argv[1]);
 const route=JSON.parse(process.argv[2]);

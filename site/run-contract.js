@@ -734,8 +734,8 @@
     const minutes = Math.round(value / 60);
     return minutes >= 60 ? Math.floor(minutes / 60) + "h " + (minutes % 60) + "m" : minutes + "m";
   }
-  // At most three recorded facts. A tiny sitting may have one; a missing measurement stays off
-  // the strip. Route totals only appear when the run actually carried a route.
+  // At most three recorded facts from THIS run. Prefer the run row and the route geometry
+  // that was drawn, not a generalised aggregate that can disagree with the card.
   function heroStats(run) {
     const cells = [];
     const add = (label, value) => {
@@ -743,19 +743,22 @@
       cells.push([label, String(value)]);
     };
     const route = run && run.code_route;
-    if (route && route.v === 1 && !route.unavailable && route.stats && typeof route.stats === "object") {
-      const stats = route.stats;
-      if (recordedCount(stats.projects_touched) > 1) add("Projects", stats.projects_touched);
-      if (recordedCount(stats.verified_checkpoints) != null) add("Checkpoints", stats.verified_checkpoints);
-      if (recordedCount(stats.files_changed) != null) add("Files", stats.files_changed);
-      if (recordedCount(stats.commits) != null) add("Commits", stats.commits);
-      if (cells.length) return cells;
-    }
-    add("Session", sessionLabel(run));
+    const routeOk =
+      route &&
+      typeof route === "object" &&
+      !Array.isArray(route) &&
+      route.v === 1 &&
+      !route.unavailable;
+    const projects = routeOk && Array.isArray(route.projects) ? route.projects : [];
+    const stops = routeOk && Array.isArray(route.stops) ? route.stops : [];
+    if (projects.length > 1) add("Projects", projects.length);
     const commits = recordedCount(run && run.commits);
     if (commits != null) add("Commits", commits);
     const files = recordedCount(run && run.files_touched);
     if (files != null) add("Files", files);
+    const measured = stops.filter((s) => s && s.basis === "measured").length;
+    if (measured > 0) add("Measured stops", measured);
+    add("Session", sessionLabel(run));
     const turns = recordedCount(run && (run.prompts ?? run.turns_typed));
     if (turns != null) add("Turns", turns);
     const tools = recordedCount(run && run.tool_calls);
@@ -766,6 +769,12 @@
         ? ridge.reduce((a, b) => a + b, 0)
         : 0;
     if (tools != null && !(tools === 0 && ridgeSum > 0)) add("Tool calls", tools);
+    // Route.stats only fills gaps the run row left empty.
+    if (cells.length < 3 && routeOk && route.stats && typeof route.stats === "object") {
+      const stats = route.stats;
+      if (commits == null && recordedCount(stats.commits) != null) add("Commits", stats.commits);
+      if (files == null && recordedCount(stats.files_changed) != null) add("Files", stats.files_changed);
+    }
     return cells;
   }
   function densestProject(route) {
