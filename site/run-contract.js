@@ -855,7 +855,7 @@
       return `<div class="run-cover${slides.length > 1 ? " run-cover-gallery" : ""}">${figures}</div>`;
     }
     function eventChip(run) {
-      // Later: author-chosen external event/community link only. Never a STRIVE club directory.
+      // At most one author-chosen external link on the card. No event directory or calendar UI.
       const receipts = Array.isArray(run && run.receipts) ? run.receipts : [];
       for (const row of receipts) {
         if (!row || typeof row.label !== "string" || !safeUrl(row.url)) continue;
@@ -867,7 +867,7 @@
         return (
           `<p class="run-event-chip meta">` +
           `<a href="${esc(row.url)}" rel="noopener noreferrer nofollow" target="_blank">${esc(name)}</a>` +
-          ` · external</p>`
+          `</p>`
         );
       }
       return "";

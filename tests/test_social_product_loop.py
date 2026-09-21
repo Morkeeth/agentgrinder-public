@@ -55,9 +55,13 @@ def test_social_actions_remain_in_the_focused_app():
     assert "Oscar and Eric" in SOCIAL
     assert "Grokbot Builders Sunday" not in SOCIAL
     assert "Grokbot Builders Sunday" not in INDEX
+    assert "luma.com" not in INDEX
     assert "eventChip" in INDEX or "${eventChip}" in INDEX
     assert "xudos-tip" in INDEX
     assert "Scene photo URL" in INDEX
+    assert "history.replaceState(null,'','/?explore')" in INDEX
+    assert "async function viewEvent()" in INDEX
+    assert "return viewExplore()" in INDEX[INDEX.index("async function viewEvent()") : INDEX.index("const forum=")]
 
 
 def test_caption_and_output_are_bounded_by_database_constraints():

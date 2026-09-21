@@ -164,7 +164,7 @@ process.stdout.write(JSON.stringify({
   cover:cover.includes('run-cover')&&cover.includes('referrerpolicy="no-referrer"'),
   noCover:!noCover,
   gallery:gallery.includes('run-cover-gallery')&&gallery.includes('Scene')&&gallery.includes('Output'),
-  event:event.includes('Meetup')&&event.includes('external')&&!/partnership|Grokbot Builders Sunday/i.test(event),
+  event:event.includes('Meetup')&&event.includes('href="https://example.com/meetup"')&&!/partnership|Grokbot Builders Sunday|luma\.com/i.test(event),
 }));
 """
     compact = compact_from_checkpoints(

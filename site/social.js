@@ -1250,7 +1250,7 @@ window.GrinderSocial = function ({
               "Invite one friend. The club starts when both of you have posted a real run into the same Crew feed.",
               `<div class="cta"><a class="act" href="/?people">Find people</a></div>`,
             )) +
-        '<form id="create-crew" class="panel"><label>Crew name<input name="name" required maxlength="80" placeholder="Oscar and Eric"></label><label>Who can see the Crew?<select name="visibility"><option value="private">Members only</option><option value="public">Public</option></select></label><p class="hint">Primary launch is Oscar and Eric\'s two-person return loop, not a directory of empty clubs or an official Grok Bot community.</p><button>Start a two-person Crew</button></form>';
+        '<form id="create-crew" class="panel"><label>Crew name<input name="name" required maxlength="80" placeholder="Oscar and Eric"></label><label>Who can see the Crew?<select name="visibility"><option value="private">Members only</option><option value="public">Public</option></select></label><p class="hint">Primary launch is Oscar and Eric\'s two-person return loop, not a directory of empty clubs.</p><button>Start a two-person Crew</button></form>';
       byId("create-crew").onsubmit = async (e) => {
         e.preventDefault();
         const form = e.currentTarget;

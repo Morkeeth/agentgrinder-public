@@ -12,7 +12,7 @@ Every run your agent made, on a card you can share.
 - Profile: your public runs and identity.
 - Follow, XUDOS and reply: one reaction (cheer this run), then discussion.
 
-Cursor first. Keep the white card and blue activity trace. Prefer a clean, minimal card: one visual plane, a short route, two or three measured facts, identity, and Share, XUDOS and Follow. An optional author-selected lifestyle scene may sit beside a genuine output image; the scene is atmosphere, not proof, and photos are never auto-published from a camera roll. Day runs use a multi-project route; a quick fix is before → change → result; one agent lane is action → output. Provenance and raw metrics stay under Explore this run. Unknown measurements stay unknown. Attaching a run to an external event or community is later and author-chosen only - not a STRIVE club, partnership, or membership import.
+Cursor first. Keep the white card and blue activity trace. Prefer a clean, minimal card: one visual plane, a short route, two or three measured facts, identity, and Share, XUDOS and Follow. An optional author-selected lifestyle scene may sit beside a genuine output image; the scene is atmosphere, not proof, and photos are never auto-published from a camera roll. Day runs use a multi-project route; a quick fix is before → change → result; one agent lane is action → output. Provenance and raw metrics stay under Explore this run. Unknown measurements stay unknown. An external community or event is at most one optional author-chosen chip/link on the run card - not a directory, not primary nav, and not a calendar integration in this release.
 
 Free posting and browsing. Recognition comes from real people seeing and responding to work. No mandatory model calls, coaching flow, practice programme, score dashboard or challenges in the main app. Crews stay out of primary navigation; the first useful Crew is Oscar and Eric's two-person feed where each builder posts a real run and can return through Responses, not an empty feature page and not an official Grok Bot club.
 
@@ -41,5 +41,6 @@ This repository is the public product. Morkeeth/agentgrinder remains the hackath
 - Close friends: privately mark people and post to a Close friends audience. Needs server-enforced access and revocation tests, not a client-side filter. No contact upload or automatic following is implied.
 - Grok Bot verification: a second bot installing the kit and previewing its own export.
 - A verified first useful test with two people who are not the owner.
+- External event calendars (Grok Bot, Claude, Devin, Codex) stay discovery sources in the journey brief only. No Luma or community directory in the app.
 
 Brand decision, 16 September: the public product is STRIVE, tagline "Post your strides". Pacecard is rejected. Keep the white cards and blue activity trace. The address remains `agentic-strava.vercel.app`. The name and tagline are held in one place, `server/brand.mjs`; internal identifiers, the package name, the CLI command and the `strava` schema are unchanged.
