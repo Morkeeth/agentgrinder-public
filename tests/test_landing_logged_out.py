@@ -51,7 +51,7 @@ def test_landing_loads_latest_public_run_only():
     assert "visibility','link'" not in fetch
     assert "HOME_SAMPLE" not in view
     assert "No public run yet" in view
-    assert "Link-only runs stay off this door" in view
+    assert "Link runs stay off this door" in view
 
 
 def test_landing_reads_the_public_count_without_using_it_as_sample_content():

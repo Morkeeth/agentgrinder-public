@@ -37,7 +37,7 @@ def test_no_fake_ranked_metrics_or_unknown_disclaimers():
     assert "Coming soon. Short notes on what to try next after a run." not in INDEX
     assert "if(!v&&!pv) return '';" in INDEX
     assert "Explore this run" in INDEX
-    assert "Link-only. Anyone with the URL can read it" in INDEX
+    assert "Link audience. Signed-in followers and close friends can open it" in INDEX
 
 
 def test_sign_in_with_github_invokes_github():

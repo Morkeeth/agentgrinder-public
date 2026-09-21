@@ -24,7 +24,7 @@ def read(table, params, extra_headers=None):
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--private-run', help='an existing private test run that anonymous callers must not read')
-parser.add_argument('--link-run', help='an existing link-only test run: hidden from collection reads, readable with its ID')
+parser.add_argument('--link-run', help='an existing link-only test run: hidden from collection reads; bearer alone must not open it')
 args = parser.parse_args()
 queries = set()
 for name in ('site/index.html', 'site/social.js'):
@@ -46,5 +46,5 @@ if args.link_run:
     status, body = read('runs', {'select':'id','visibility':'eq.link'})
     assert status == 200 and body == [], 'Link-only collection was exposed or the check failed'
     status, body = read('runs', {'select':'id','id':'eq.'+args.link_run}, {'x-grinder-run-id':args.link_run})
-    assert status == 200 and body == [{'id':args.link_run}], 'Known link was not readable'
-print(f'Hosted checks passed: {len(queries)} actual run query shapes; anonymous access denied on private tables; rollback profiles absent; private run checked={bool(args.private_run)}')
+    assert status == 200 and body == [], 'Anonymous bearer must not open a Link run'
+print(f'Hosted checks passed: {len(queries)} actual run query shapes; anonymous access denied on private tables; rollback profiles absent; private run checked={bool(args.private_run)}; link gated={bool(args.link_run)}')

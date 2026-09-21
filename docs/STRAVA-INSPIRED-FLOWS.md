@@ -79,7 +79,7 @@ the visual anchor. Unknown measurements remain unknown.
    Imported retries use a measurement revision; #28 adds the complete uncertain-response and
    manual idempotency path.
 2. **Strava-inspired improvement:** privacy language must describe reach at the decision:
-   **Only me — just you**, **Link — anyone with the URL**, **Public — Feed and profile**.
+   **Only me - just you**, **Link - followers and close friends**, **Public - Feed and profile**.
 3. **This PR:** aligns those labels and success copy across manual/import/edit controls. It does
    not alter Save identity, retry or server policy.
 4. **Backlog / lane:** #28 owns no-auto-retry, retained draft/audience and exact prior-save lookup.
@@ -90,8 +90,8 @@ the visual anchor. Unknown measurements remain unknown.
 1. **Current:** successful Save opens `/?run=<id>`; public/link runs can copy a URL; Share card is
    lower on the activity detail.
 2. **Strava-inspired improvement:** put the saved destination and one large next action directly
-   under the card. Public: copy public link or open the clean share card. Link: copy the unlisted
-   URL. Only me: explain that sharing requires an audience change.
+   under the card. Public: copy public link or open the clean share card. Link: copy the
+   relationship-gated URL for followers and close friends. Only me: explain that sharing requires an audience change.
 3. **This PR:** moves audience-aware share success directly below the card and makes the relevant
    next action primary. It adds no write or OG endpoint.
 4. **Backlog / lane:** #26 owns public-only Pacecard OG. Its Close friends migration is separate
