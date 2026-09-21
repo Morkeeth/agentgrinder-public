@@ -299,6 +299,65 @@ def test_attach_measured_code_route_from_cursor_counts():
     assert "code_route" not in bare
 
 
+def test_attach_skips_unproven_project():
+    """project_proven False must never fabricate a route from counts (ws2 PR69 guard)."""
+    from agentgrinder.code_route import attach_measured_code_route
+
+    run = attach_measured_code_route(
+        {
+            "harness": "Cursor",
+            "project": "agentgrinder-public",
+            "project_proven": False,
+            "commits": 2,
+            "files_touched": 13,
+        }
+    )
+    assert "code_route" not in run
+
+
+def test_attach_skips_unavailable_compact_route():
+    """Zero checkpoint evidence must leave the run unchanged, not attach unavailable."""
+    from agentgrinder.code_route import attach_measured_code_route
+
+    run = {
+        "harness": "Cursor",
+        "project": "agentgrinder-public",
+        "commits": 0,
+        "files_touched": 0,
+    }
+    out = attach_measured_code_route(run)
+    assert out is run
+    assert "code_route" not in out
+
+
+def test_attach_never_promotes_artifacts_produced_to_finish():
+    """artifacts_produced is tool-write count, never a shipped artifact finish stop."""
+    from agentgrinder.code_route import attach_measured_code_route
+
+    only_artifacts = attach_measured_code_route(
+        {
+            "harness": "Cursor",
+            "project": "agentgrinder-public",
+            "artifacts_produced": 13,
+        }
+    )
+    assert "code_route" not in only_artifacts
+
+    with_counts = attach_measured_code_route(
+        {
+            "harness": "Cursor",
+            "project": "agentgrinder-public",
+            "commits": 2,
+            "files_touched": 13,
+            "artifacts_produced": 13,
+        }
+    )
+    route = with_counts["code_route"]
+    assert route["finish"]["kind"] != "artifact"
+    assert not any(s["kind"] == "artifact" for s in route["stops"])
+    assert route["stats"]["shipped_artifacts"] == 0
+
+
 def test_collector_miss_names_absent_harness_populations():
     route = from_manifest(json.loads(MISS.read_text()))
     assert "unavailable" in route
