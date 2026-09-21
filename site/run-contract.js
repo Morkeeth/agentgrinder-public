@@ -410,7 +410,7 @@
         const commitHere = (data.commits || []).includes(i);
         const bits = [];
         bits.push(`Activity slice ${i + 1} of ${values.length}`);
-        bits.push(`${tools} tool call${tools === 1 ? "" : "s"}`);
+        bits.push(`${tools} tool call${tools === 1 ? "" : "s"} in this slice`);
         if (workers) bits.push(`${workers} worker${workers === 1 ? "" : "s"}`);
         if (isPeak) bits.push(`peak activity ${data.peak}`);
         if (commitHere) bits.push("commit landmark");
@@ -725,6 +725,24 @@
   function recordedCount(value) {
     return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
   }
+  // Prefer the transcript count. When it is zero or missing and the stored ridge carried a
+  // real call count, print that count so /r/, the SPA strip, Explore and share agree.
+  // A recorded zero beside a live ridge with no ridge_tool_calls contradicts the map; omit it.
+  function toolCallCount(run) {
+    if (!run) return null;
+    const recorded = run.tool_calls;
+    const fromRidge = run.ridge_tool_calls;
+    if ((recorded == null || recorded === 0) && Number.isFinite(fromRidge) && fromRidge > 0)
+      return fromRidge;
+    const ridge = Array.isArray(run.ridge) ? run.ridge : null;
+    const ridgeLive =
+      ridge &&
+      ridge.length &&
+      ridge.every((v) => Number.isFinite(v) && v >= 0) &&
+      ridge.some((v) => v > 0);
+    if (recorded === 0 && ridgeLive && !(Number.isFinite(fromRidge) && fromRidge > 0)) return null;
+    return recorded == null ? null : recorded;
+  }
   function sessionLabel(run) {
     if (!run) return null;
     const candidates = [
@@ -765,14 +783,9 @@
     add("Session", sessionLabel(run));
     const turns = recordedCount(run && (run.prompts ?? run.turns_typed));
     if (turns != null) add("Turns", turns);
-    const tools = recordedCount(run && run.tool_calls);
-    // A recorded zero beside a live ridge map contradicts the slice readout; omit the strip cell.
-    const ridge = run && Array.isArray(run.ridge) ? run.ridge : null;
-    const ridgeSum =
-      ridge && ridge.length && ridge.every((v) => Number.isFinite(v) && v >= 0)
-        ? ridge.reduce((a, b) => a + b, 0)
-        : 0;
-    if (tools != null && !(tools === 0 && ridgeSum > 0)) add("Tool calls", tools);
+    // Same source as /r/ and the share image: transcript count, else ridge_tool_calls.
+    const tools = recordedCount(toolCallCount(run));
+    if (tools != null) add("Tool calls", tools);
     // Route.stats only fills gaps the run row left empty.
     if (cells.length < 3 && routeOk && route.stats && typeof route.stats === "object") {
       const stats = route.stats;
@@ -1072,7 +1085,7 @@
       .join("");
     return `<div class="code-route-stops">${stopList}</div>` + harnessHtml(route);
   }
-  const api = { validate, message, trace, ridge, outcome, coverHtml, eventChip, heroStats, codeRoute, codeRouteDetail, routeInsight, routeShape, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
+  const api = { validate, message, trace, ridge, outcome, coverHtml, eventChip, heroStats, toolCallCount, codeRoute, codeRouteDetail, routeInsight, routeShape, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

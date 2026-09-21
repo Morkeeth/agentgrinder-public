@@ -168,11 +168,15 @@ const duration=value=>{
  const minutes=Math.round(seconds/60);return minutes>=60?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${minutes}m`;
 };
 // Prefer the transcript count. When it is zero or missing and the stored ridge carried a
-// real call count, print that count so the label matches the graph.
-const toolCallCount=run=>{
+// real call count, print that count so the label matches the graph and the SPA strip.
+// A recorded zero beside a live ridge with no ridge_tool_calls contradicts the map; omit it.
+export const toolCallCount=run=>{
  const recorded=run.tool_calls;
  const fromRidge=run.ridge_tool_calls;
  if((recorded==null||recorded===0)&&Number.isFinite(fromRidge)&&fromRidge>0)return fromRidge;
+ const ridge=Array.isArray(run.ridge)?run.ridge:null;
+ const ridgeLive=ridge&&ridge.length&&ridge.every(v=>Number.isFinite(v)&&v>=0)&&ridge.some(v=>v>0);
+ if(recorded===0&&ridgeLive&&!(Number.isFinite(fromRidge)&&fromRidge>0))return null;
  return recorded;
 };
 const projectName=run=>{

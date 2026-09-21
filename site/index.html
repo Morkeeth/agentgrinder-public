@@ -785,7 +785,7 @@ async function fillTraces(rows){
   noteTraces(data||[]); noteLooked(handles,'public');
 }
 async function submitAck(runId,toProfile,reason){
-  if(!ME){if(typeof showSignIn==='function')showSignIn();else status('Sign in to send XUDOS.',true);return false;}
+  if(!ME){if(typeof showSignIn==='function')showSignIn({reason:'social'});else status('Sign in to send XUDOS.',true);return false;}
   if(ME.id===toProfile){status('You cannot XUDOS your own grind.',true);return false;}
   const {error}=await sb.from('acks').insert({from_profile:ME.id,to_profile:toProfile,run_id:runId,reason,same_owner:false});
   if(error){status('XUDOS failed: '+error.message,true);return false;}
@@ -963,7 +963,9 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     if(r.shell_calls!=null)facts.push(['Shell calls',r.shell_calls]);
     if(r.files_touched!=null)facts.push(['Files changed',r.files_touched]);
     if(r.commits!=null)facts.push(['Commits',r.commits]);
-    if(!facts.length&&r.tool_calls!=null)facts.push(['Tool calls',r.tool_calls]);
+    const tools=typeof GrinderContract==='object'&&GrinderContract.toolCallCount
+      ?GrinderContract.toolCallCount(r):r.tool_calls;
+    if(!facts.length&&tools!=null)facts.push(['Tool calls',tools]);
     return facts;
   };
   const metricStrip=()=>{
@@ -1066,7 +1068,7 @@ function wireKudos(){
     }
   });
   document.querySelectorAll('.kudo').forEach(b=>b.addEventListener('click',async()=>{
-  if(!ME){if(typeof showSignIn==='function')showSignIn();else status('Sign in to send XUDOS.',true);return;}
+  if(!ME){if(typeof showSignIn==='function')showSignIn({reason:'social'});else status('Sign in to send XUDOS.',true);return;}
   if(b.classList.contains('on'))return;
   const card=b.closest('.card'); if(!card)return;
   const tip=card.querySelector('.xudos-tip'); if(tip) tip.remove();
@@ -1768,13 +1770,18 @@ function signInWithGitHub(){
   try{sessionStorage.setItem('ag_social_return',location.search)}catch(_){}
   auth.signIn('github',{returnTo:location.search}).catch(e=>status(e.detail?.message||'GitHub sign-in could not start.',true));
 }
-function showSignIn(){
+function showSignIn(opts={}){
   if(!auth){status('Sign-in is unavailable. Please refresh.',true);return;}
   const imported=location.hash.match(/import=([^&]+)/);if(imported&&!stashImport(imported[1])){status('This browser could not preserve the draft. Save your run JSON before signing in.',true);return;}
   try{sessionStorage.setItem('ag_social_return',location.search)}catch(_){}
   let dialog=$('signin-dialog');if(dialog)dialog.remove();
   dialog=document.createElement('dialog');dialog.id='signin-dialog';dialog.setAttribute('aria-labelledby','signin-title');
-  dialog.innerHTML='<h2 id="signin-title">Keep your place</h2><p id="signin-explanation">Sign in to keep your profile and responses connected. You will return to this preview or social action. Runs stay private until you choose Public and save them.</p><p class="hint">Closing or cancelling sign-in posts nothing and changes no audience.</p>'+PROVIDERS_ENABLED.filter(p=>p==='github').map(p=>'<button data-provider="'+p+'">Continue with GitHub</button>').join('')+'<form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public profile.</p><button>Send a sign-in link</button></form><p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
+  const stranger=opts.reason==='social';
+  const title=stranger?'Continue on __BRAND__':'Keep your place';
+  const explanation=stranger
+    ?'Sign in to cheer this run or follow the builder. You will return here after signing in. Nothing posts until you choose.'
+    :'Sign in to keep your profile and responses connected. You will return to this preview or social action. Runs stay private until you choose Public and save them.';
+  dialog.innerHTML='<h2 id="signin-title">'+title+'</h2><p id="signin-explanation">'+explanation+'</p><p class="hint">Closing or cancelling sign-in posts nothing and changes no audience.</p>'+PROVIDERS_ENABLED.filter(p=>p==='github').map(p=>'<button data-provider="'+p+'">Continue with GitHub</button>').join('')+'<form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public profile.</p><button>Send a sign-in link</button></form><p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
   document.body.append(dialog);dialog.showModal();$('signin-close').onclick=()=>dialog.close();
   dialog.querySelectorAll('[data-provider]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{await auth.signIn(button.dataset.provider,{returnTo:location.search})}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not start. Try again.';button.disabled=false}});
   $('signin-email').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,button=f.querySelector('button');button.disabled=true;try{await auth.signIn('email',{email:f.elements.email.value,returnTo:location.search});$('signin-state').textContent='Check your email for the sign-in link. Keep this tab open to return to your draft.'}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not connect. Try again.'}finally{button.disabled=false}};
