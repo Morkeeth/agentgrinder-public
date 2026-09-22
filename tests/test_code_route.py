@@ -159,7 +159,7 @@ process.stdout.write(JSON.stringify({
   fixShape:GrinderContract.routeShape(compact,{harness:'Cursor'}),
   agentShape:GrinderContract.routeShape(compact,{harness:'Grok Bot'}),
   dayHasMap:dayHtml.includes('code-route-map'),
-  fixHasPath:fixHtml.includes('work-path')&&fixHtml.includes('Before'),
+  fixHasMap:fixHtml.includes('code-route-map')&&fixHtml.includes('Code Route'),
   agentHasPath:agentHtml.includes('data-shape="agent"')&&agentHtml.includes('Action'),
   cover:cover.includes('run-cover')&&cover.includes('referrerpolicy="no-referrer"'),
   noCover:!noCover,
@@ -189,10 +189,38 @@ process.stdout.write(JSON.stringify({
     ).stdout
     data = json.loads(out)
     assert data["dayShape"] == "day" and data["dayHasMap"]
-    assert data["fixShape"] == "fix" and data["fixHasPath"]
+    assert data["fixShape"] == "day" and data["fixHasMap"]
     assert data["agentShape"] == "agent" and data["agentHasPath"]
     assert data["cover"] and data["noCover"]
     assert data["gallery"] and data["event"]
+
+
+def test_declared_only_compact_stays_a_work_path():
+    """A lonely declared stop is a quick path, not a Code Route map."""
+    script = r"""
+const GrinderContract=require(process.argv[1]);
+const route=JSON.parse(process.argv[2]);
+const html=GrinderContract.codeRoute({code_route:route,harness:'Cursor'});
+process.stdout.write(JSON.stringify({
+  shape:GrinderContract.routeShape(route,{harness:'Cursor'}),
+  workPath:html.includes('work-path'),
+  map:html.includes('code-route-map'),
+}));
+"""
+    declared = compact_from_checkpoints(
+        project_label="agentgrinder-public",
+        receipts=2,
+    )
+    out = subprocess.run(
+        ["node", "-e", script, str(ROOT / "site" / "run-contract.js"), json.dumps(declared)],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    data = json.loads(out)
+    assert data["shape"] == "fix"
+    assert data["workPath"] is True
+    assert data["map"] is False
 
 
 def test_route_insight_uses_handoffs_concentration_and_finish_not_tokens():

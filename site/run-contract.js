@@ -891,6 +891,10 @@
       if (projects.length >= 2 && stops.length >= 2) return "day";
       const harness = String((run && run.harness) || "").toLowerCase();
       if (/grok|bot/.test(harness)) return "agent";
+      // Measured capture routes (edit + commit, one project) use the Code Route map, same
+      // wording as /r/. A lonely declared stop stays a short work path.
+      const measured = stops.filter((s) => s && s.basis === "measured").length;
+      if (projects.length >= 1 && measured >= 2) return "day";
       return "fix";
     }
     function compactWorkPath(route, run) {
