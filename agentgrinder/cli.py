@@ -87,12 +87,35 @@ def coach_install_hint() -> str:
     )
 
 
+ATHLETE_HELP = ("name on the card. Default: the GitHub account this machine is already signed in "
+                "as (the gh CLI login, or github.user in this repository), otherwise a neutral "
+                "label. Write @handle to claim an account; a bare name is a display name only.")
+
+
+def _stamp_identity(run: dict, explicit=None) -> dict:
+    """Put the account this machine is signed in as on the run, or a neutral label.
+
+    Local reads only (identity.py): no network, no application, no change to sign-in. The card
+    said "you" over a "Y" avatar until 22 Sep 2026 because `--athlete` defaulted to the word.
+    """
+    from .identity import resolve
+    who = resolve(explicit if explicit is not None else run.get("athlete"))
+    run["athlete_handle"] = who.handle
+    run["athlete"] = who.display
+    return run
+
+
 def _render(run: dict, out: Path, open_it: bool) -> None:
-    a = build_activity(run)
+    a = build_activity(_stamp_identity(run))
     out.write_text(render_card(a), encoding="utf-8")
-    # terminal summary (Oscar reads the terminal too)
+    # terminal summary (Oscar reads the terminal too). Same order as the card: what shipped,
+    # then the one number that proves it, then the metric identity and the cost.
     print(f"\n  {a.athlete} · {a.title}")
     print(f"  {a.harness} · {a.project} · {a.date_str}")
+    print(f"\n  {a.outcome}")
+    print(f"  {a.outcome_basis}")
+    if a.hero_value:
+        print(f"\n  {a.hero_value}  {a.hero_label}")
     print(f"\n  {a.headline_label.upper()}  {a.headline}    {a.headline_formula}")
     print("  " + " · ".join(f"{c.label} {c.value}" + (" (cost)" if c.cost else "") for c in a.five))
     print(f"\n  cost: {a.distance} | {a.moving_time} | {a.pace}")
@@ -150,7 +173,9 @@ def main(argv=None) -> int:
     )
     g.add_argument("--gap", type=int, default=30,
                    help="minutes of total idle that end a grind (default 30)")
-    g.add_argument("--athlete", default="you")
+    # The name on the card. Default None: identity.resolve reads the account this machine is
+    # already signed in as, and prints a neutral label when there is none. It never prints "you".
+    g.add_argument("--athlete", default=None, help=ATHLETE_HELP)
     g.add_argument("-o", "--out", default="grind.html")
     g.add_argument("--json", dest="as_json", action="store_true")
     # AUTO IS THE DEFAULT. It was `claude` until 3 Sep 2026, so a Cursor or Codex user running the
@@ -195,7 +220,7 @@ def main(argv=None) -> int:
     co.add_argument("--model", choices=["local", "bedrock", "none"], default="local",
                     help="local (default, keyless, scripted model through the real Strands loop) · "
                          "bedrock (real model, AWS creds, costs money, opt-in) · none (no agent)")
-    co.add_argument("--athlete", default="you")
+    co.add_argument("--athlete", default=None, help=ATHLETE_HELP)
     co.add_argument("--json", dest="as_json", action="store_true",
                     help="print the run with the verdict attached, as JSON (counts only, no prompt text)")
     co.add_argument("--live-status", action="store_true",
@@ -258,7 +283,7 @@ def main(argv=None) -> int:
     r = sub.add_parser("v1card", help="the v1 sparkline card (kept for the bundled sample)")
     r.add_argument("session", nargs="?")
     r.add_argument("--harness", choices=["claude", "cursor", "codex", "grokbot"], default="claude")
-    r.add_argument("--athlete", default="you")
+    r.add_argument("--athlete", default=None, help=ATHLETE_HELP)
     r.add_argument("-o", "--out", default="card.html")
     r.add_argument("--no-open", action="store_true")
     nr = sub.add_parser("nightrun", help="aggregate a multi-agent fleet run (orchestrator + lanes) into one card")
@@ -266,7 +291,7 @@ def main(argv=None) -> int:
     nr.add_argument("--hours", type=float, default=12.0)
     nr.add_argument("--gap", type=int, default=30,
                     help="minutes of total idle (no human turn, no open lane) that end the run")
-    nr.add_argument("--athlete", default="you")
+    nr.add_argument("--athlete", default=None, help=ATHLETE_HELP)
     nr.add_argument("--title", help="card title (default: derived from the lane + repo counts)")
     nr.add_argument("-o", "--out", default="nightrun.html")
     nr.add_argument("--json", dest="as_json", action="store_true")
@@ -812,6 +837,7 @@ def _grind(args) -> int:
                          show_paths=getattr(args, "show_paths", False))
     except ValueError as e:
         print(f"  {e}"); return 1
+    _stamp_identity(run, args.athlete)
     coach_text = None
     if getattr(args, "coach", None):
         coach_text = _run_coach_into(run, path, pick, args.gap * 60, args.coach, args.athlete)
@@ -936,6 +962,7 @@ def _list_native_selection(path, harness, groups, parser, show_paths=False):
 def _native_grind(run, args, path, source_digest, selected=None, total=None):
     from .contract import capture_digest
     from .engine.series import record_and_attach
+    _stamp_identity(run, getattr(args, "athlete", None))
     if source_digest != capture_digest(path):
         print('The transcript changed during analysis. Try again.',file=sys.stderr);return 1
     run['input_digest']=source_digest
