@@ -178,7 +178,19 @@ def _verdict_block(run: dict) -> str:
     return "".join(parts)
 
 
-def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = None) -> str:
+def _photo_hero(photo_src: str | None, h_title: str, pill: str) -> str:
+    """The headline, on the author's photo when there is one. The line under the photo says
+    what it is: added by the author, not measured, location and camera data removed."""
+    if not photo_src:
+        return f"<h1>{h_title}{pill}</h1>"
+    return (f'<figure class="photo"><img src="{photo_src}" alt="Photo added by the author">'
+            f'<h1>{h_title}{pill}</h1></figure>'
+            f'<div class="decl">Photo added by you, not measured. '
+            f'Location and camera data removed before this card was drawn.</div>')
+
+
+def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = None,
+                     photo_src: str | None = None) -> str:
     svg, m = render_route_svg(run)
     # The SAME numbers in a layout a 390px screen can hold: see soloroute.Geo for the measurement
     # that forced two layouts rather than one responsive drawing.
@@ -428,6 +440,13 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
   /* Below 760 the desktop trace is retired outright and the phone layout takes over. It was
      kept, scaled and scrolled, until 31 Aug: measured in a real 390px iframe, that put 14 of
      grind-deep's file-path labels outside the scroller at the card's own opening scroll. */
+  /* THE RUN PHOTO: declared by the author, never measured. The headline sits on it. */
+  .photo{{position:relative;margin:4px 0 0;line-height:0}}
+  .photo img{{display:block;width:100%;max-height:560px;object-fit:cover}}
+  .photo h1{{position:absolute;left:0;right:0;bottom:0;margin:0;padding:64px 22px 16px;color:#fff;
+    line-height:1.15;background:linear-gradient(to top,rgba(0,0,0,.62),rgba(0,0,0,0))}}
+  .decl{{padding:7px 22px 0;line-height:1.4;font-size:11px;color:var(--faint);
+    font-family:"IBM Plex Sans",system-ui,sans-serif}}
   @media (max-width:760px){{
     #mapwrap{{display:none}}
     .mapwrap.phonewrap{{display:block}}
@@ -451,7 +470,7 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
     .fiverow{{grid-template-columns:repeat(2,1fr)}} .five:nth-child(5){{grid-column:span 2}}
     .hl{{padding-left:14px;padding-right:14px}} .hl .n{{font-size:36px}} .grp{{padding-left:14px}}
     h1{{font-size:20px}} .stat .v{{font-size:21px}}
-    .top,.sub,h1,.mapwrap,.maphead,.legend,.honest,.foot,.callout,.dead{{padding-left:14px;padding-right:14px}}
+    .top,.sub,h1,.mapwrap,.maphead,.legend,.honest,.foot,.callout,.dead,.decl{{padding-left:14px;padding-right:14px}}
     .callout,.dead{{margin-left:14px;margin-right:14px;padding-left:12px;padding-right:12px}}
   }}
 </style></head>
@@ -462,7 +481,7 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
       <div class="who"><b>{_esc(run["athlete"])}</b><small>{date_line}</small></div>
       <div class="brand">AGENT GRINDER</div>
     </div>
-    <h1>{h_title}{pill}</h1>
+    {_photo_hero(photo_src, h_title, pill)}
     <div class="sub">{run["harness"]} · {_esc(run["project"])} ·
       sitting {sit["index"]} of {sit["of"]} in this transcript
       {f'<span class="q">— “{prompt}”</span>' if prompt else ''}</div>
@@ -545,7 +564,12 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
 _render_unchecked = render_solo_card
 
 
-def render_solo_card(*a, **kw) -> str:
-    html = _render_unchecked(*a, **kw)
+def render_solo_card(*a, photo_src: str | None = None, **kw) -> str:
+    # The privacy control reads every character of the card. A base64 image is bytes, not text a
+    # reader sees, and random base64 can spell a pattern by chance, so the control runs on the card
+    # with a placeholder where the image goes, and the image is put in after it passes. The photo
+    # itself was cleaned in photo.load_photo, which is where its own private data lives.
+    token = "agentgrinder-photo-placeholder" if photo_src else None
+    html = _render_unchecked(*a, photo_src=token, **kw)
     privacy.assert_clean(html, where="render_solo_card")
-    return html
+    return html.replace(token, photo_src) if token else html

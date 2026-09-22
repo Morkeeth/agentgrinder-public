@@ -180,6 +180,9 @@ def main(argv=None) -> int:
     )
     g.add_argument("--no-series", action="store_true",
                    help="do not record this grind in the local per-project series (~/.agentgrinder/series.db)")
+    g.add_argument("--photo", default=None, metavar="JPEG_OR_PNG",
+                   help="put your own photo at the top of the LOCAL card. Location, camera and time "
+                        "data are removed first. The photo is never in --json or --push.")
     g.add_argument("--coach", nargs="?", const="local", choices=["local", "bedrock", "none"], default=None,
                    help="run the grind coach on this sitting before drawing the card. Default mode "
                         "local: a real Strands agent loop over a scripted model, keyless, nothing "
@@ -831,8 +834,19 @@ def _grind(args) -> int:
         from .history import load, rank
         ranks = rank(run, load())
 
+    photo_src = None
+    if getattr(args, "photo", None):
+        from .photo import load_photo
+        try:
+            ph = load_photo(args.photo)
+        except (OSError, ValueError) as e:
+            print(f"  {e}"); return 1
+        photo_src = ph.data_uri()
+        print(f"  photo: removed {', '.join(ph.removed) if ph.removed else 'nothing (none found)'}; "
+              f"it stays on this card only")
+
     out = Path(args.out)
-    out.write_text(render_solo_card(run, ranks=ranks), encoding="utf-8")
+    out.write_text(render_solo_card(run, ranks=ranks, photo_src=photo_src), encoding="utf-8")
 
     from .solocard import headline
     t0 = run["started"][11:16]; t1 = run["ended"][11:16]
