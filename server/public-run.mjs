@@ -1,5 +1,5 @@
 import {runtimeConfig} from './runtime-config.mjs';
-import {BRAND} from './brand.mjs';
+import {BRAND,TAGLINE} from './brand.mjs';
 const config=runtimeConfig();
 export const origin=config.ORIGIN;
 export const validId=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -271,3 +271,19 @@ export function privateCard(){
    el('div',{style:{display:'flex',fontSize:42,fontWeight:700,marginTop:34}},`This run is private on ${BRAND}`),
    el('div',{style:{display:'flex',fontSize:21,color:'#687083',marginTop:18}},'Sign in and open the shared run link to check your access')));
 }
+// THE HOME PAGE'S OWN CARD. Until now `/` carried no og: or twitter: tags at all, so a post that
+// sent a thousand people to the address showed them a bare link with no title, no description and
+// no image — the first impression of the product was the URL. This reuses the run image pipeline
+// (@vercel/og at 1200x630, served by api/og.js) rather than committing a static PNG, so the
+// brand and tagline come from server/brand.mjs like every other name on the site.
+export function homeCard(){
+ return el('div',{style:{width:'100%',height:'100%',background:'#f5f7fb',display:'flex',padding:'30px',fontFamily:'sans-serif',color:'#111'}},
+  el('div',{style:{width:'100%',height:'100%',background:'#fff',border:'1px solid #d9deea',borderRadius:22,display:'flex',flexDirection:'column',justifyContent:'center',padding:'54px'}},
+   el('div',{style:{display:'flex',color:'#123cff',fontSize:30,fontWeight:800,letterSpacing:6}},BRAND),
+   el('div',{style:{display:'flex',fontSize:64,fontWeight:700,marginTop:26,lineHeight:1.1}},TAGLINE),
+   el('div',{style:{display:'flex',fontSize:26,color:'#687083',marginTop:24,lineHeight:1.35}},
+     'Every run your agent made, on a card you can share.'),
+   el('div',{style:{display:'flex',fontSize:20,color:'#687083',marginTop:'auto'}},
+     'Capture a Cursor, Claude Code, Codex or Grok Bot session · private until you choose to share')));
+}
+
