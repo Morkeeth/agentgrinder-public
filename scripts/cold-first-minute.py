@@ -67,12 +67,28 @@ window.addEventListener('load',()=>{
   setTimeout(()=>{
     if(window.__coldSignin) showSignIn();
     setTimeout(()=>{
+      const intro=document.querySelector('.landing-intro');
+      const cta=document.querySelector('.landing-intro .cta .primary');
+      const featureSection=document.querySelector('#landing-feature');
       const feature=document.querySelector('#landing-feature .card[data-run-id]');
       const sample=document.querySelector('[data-home-sample]');
       const count=document.getElementById('public-run-count');
       const explanation=document.getElementById('signin-explanation');
       const rect=feature&&feature.getBoundingClientRect();
       const visible=rect?Math.max(0,Math.min(rect.bottom,innerHeight)-Math.max(rect.top,0)):0;
+      const introBox=intro&&intro.getBoundingClientRect();
+      const ctaBox=cta&&cta.getBoundingClientRect();
+      const featureBox=featureSection&&featureSection.getBoundingClientRect();
+      const sideBySide=innerWidth>800;
+      const pitchFirst=Boolean(
+        introBox&&featureBox&&ctaBox&&
+        /Post your first run/i.test(cta.textContent||'')&&
+        ctaBox.top>=0&&ctaBox.bottom<=innerHeight&&
+        (sideBySide
+          ? introBox.left<=featureBox.left+1
+          : introBox.bottom<=featureBox.top+1)
+      );
+      document.documentElement.dataset.coldPitchFirst=String(pitchFirst);
       document.documentElement.dataset.coldFeatureVisible=String(visible>=120);
       document.documentElement.dataset.coldSampleAbsent=String(!sample);
       document.documentElement.dataset.coldCountRendered=String(
@@ -222,7 +238,7 @@ def main() -> None:
         finally:
             server.shutdown()
 
-    assert 'data-cold-feature-visible="true"' in phone
+    assert 'data-cold-pitch-first="true"' in phone
     assert 'data-cold-sample-absent="true"' in phone
     assert 'data-cold-count-rendered="true"' in phone
     assert "WHAT A RUN LOOKS LIKE" not in phone
@@ -230,10 +246,12 @@ def main() -> None:
     assert "Cold public run" in phone
     assert "A measured outcome from a real public post." in phone
     assert "1 public run is live." in phone
+    assert "Post your first run" in phone
     assert 'href="/?example"' in phone
     assert 'data-cold-signin-rendered="true"' in modal
     assert EXPLANATION in modal
     assert "Continue with X" not in modal
+    assert 'data-cold-pitch-first="true"' in desktop
     assert 'data-cold-feature-visible="true"' in desktop
     assert 'data-cold-sample-absent="true"' in desktop
     print(f"Cold first minute passed. Screenshots: {args.screenshots}")
