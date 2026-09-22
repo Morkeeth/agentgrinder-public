@@ -143,6 +143,10 @@ class Activity:
     headline_label: str = "verified per turn"
     headline_metric_id: str = METRIC_VERIFIED_PER_TURN
     five: list = field(default_factory=list)   # five Cell rows, in the metric spec's order
+    # Selected, uploader-declared outcome. Absent stays empty; never invented.
+    selected_outcome: str = ""
+    receipts: list = field(default_factory=list)  # [{label,url}, ...] after public_outcome
+    code_route: dict | None = None
 
 
 @dataclass
@@ -272,6 +276,21 @@ def build_activity(run: dict) -> Activity:
         pace = "—"
         cadence = "—"
 
+    from .contract import public_outcome
+    declared = public_outcome(run)
+    shipped = declared.get("shipped") or []
+    selected = ""
+    if shipped:
+        selected = shipped[0].strip()
+    elif isinstance(run.get("caption"), str) and run.get("caption").strip():
+        # Caption alone is not receipt-backed; only surface it when receipts are present.
+        if declared.get("receipts"):
+            selected = run["caption"].strip()[:200]
+    route = run.get("code_route")
+    if route is not None:
+        from .code_route import validate_code_route
+        route = validate_code_route(route)
+
     return Activity(
         athlete=run.get("athlete", "athlete"),
         title=run.get("title", "Untitled session"),
@@ -298,6 +317,9 @@ def build_activity(run: dict) -> Activity:
         worker_bins=run.get("worker_bins") or [],
         commit_bins=run.get("commit_bins") or [],
         output_url=run.get("output_url") or "",
+        selected_outcome=selected,
+        receipts=list(declared.get("receipts") or []),
+        code_route=route,
         headline=hl.text,
         headline_val=hl.value,
         headline_formula=hl.formula,
