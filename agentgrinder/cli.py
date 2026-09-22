@@ -54,14 +54,32 @@ def coach_degraded_banner(harness: str, run: dict) -> str:
 # The old auto message said "no Claude or Cursor session found on this machine" and named no
 # path — while `_pick` right beside it already handled Codex. A stranger cannot check a claim
 # that names no object, so the message lists every location, every time.
-def no_session_message() -> str:
-    from .ingest import searched_paths
-    lines = ["", "  no agent session found on this machine. Searched:", ""]
+#
+# AND IT HAS TO SAY WHAT TO DO NEXT. A harness-specific miss printed one line — "no Cursor
+# session under ~/.cursor/projects/*/agent-transcripts" — and exited 1. The site promises four
+# tools, so the person who hit that line was usually a Claude Code, Codex or Grok Bot user who
+# had just copied the wrong command: the tool knew the answer and did not say it. Every miss now
+# names the four tools this reader supports and shows how to point at one file.
+def no_session_message(harness: str | None = None) -> str:
+    from .ingest import HARNESSES, searched_paths
+    named = HARNESSES.get(harness or "", "")
+    head = (f"  no {named} session found on this machine. Searched:" if named
+            else "  no agent session found on this machine. Searched:")
+    lines = ["", head, ""]
     lines += [f"      {g}" for g in searched_paths()]
     lines += ["",
-              "  AGENT GRINDER only reads transcripts you already have. To see a card anyway:",
+              "  This reader supports " + ", ".join(HARNESSES.values()) + ".",
+              "  It only reads transcripts you already have. Next step:",
+              "",
+              "      python3 -m agentgrinder grind --harness auto",
+              "          the freshest session of any of those four on this machine",
+              "",
+              "      python3 -m agentgrinder grind /path/to/session.jsonl --harness "
+              + (harness or "claude"),
+              "          one exact transcript, when it is somewhere else",
               "",
               "      python3 -m agentgrinder demo",
+              "          the bundled sample, to see what a card looks like",
               ""]
     return "\n".join(lines)
 
@@ -721,7 +739,7 @@ def _grind(args) -> int:
         from .ingest import parse_cursor_session, latest_cursor_session
         path = args.session or latest_cursor_session()
         if not path:
-            print("no Cursor session under ~/.cursor/projects/*/agent-transcripts"); return 1
+            print(no_session_message("cursor")); return 1
         from .contract import capture_digest
         source_digest=capture_digest(path)
         try:
@@ -743,11 +761,7 @@ def _grind(args) -> int:
         from .render import render_card
         path = args.session or latest_codex_session()
         if not path:
-            from .ingest import CODEX_GLOBS
-            print("\n  no Codex session with a human turn in it. Searched:")
-            for g in CODEX_GLOBS:
-                print(f"      {g}")
-            print("\n  try:  python3 -m agentgrinder demo\n"); return 1
+            print(no_session_message("codex")); return 1
         from .contract import capture_digest
         source_digest=capture_digest(path)
         try:
@@ -771,12 +785,7 @@ def _grind(args) -> int:
         from .ingest import latest_grokbot_session, parse_grokbot_session
         path = args.session or latest_grokbot_session()
         if not path:
-            from .ingest import GROKBOT_GLOB
-            print("\n  no imported Grok Bot export with a typed human turn. Searched:"
-                  f"\n      {GROKBOT_GLOB}"
-                  "\n\n  pass an export explicitly or place it in that import directory."
-                  "\n  try:  python3 -m agentgrinder demo\n")
-            return 1
+            print(no_session_message("grokbot")); return 1
         from .contract import capture_digest
         source_digest = capture_digest(path)
         try:
@@ -808,15 +817,7 @@ def _grind(args) -> int:
             # A JUDGE WITH NO CLAUDE CODE HITS THIS FIRST. Until 31 Aug it was a dead end: one
             # sentence naming a directory, exit 1, no next step. Measured by running the whole
             # CLI with HOME pointed at an empty directory.
-            print("\n  no Claude Code session with a human turn under ~/.claude/projects."
-                  "\n  AGENT GRINDER only reads transcripts you already have, so there is"
-                  "\n  nothing here to read. To see what a card looks like:"
-                  "\n"
-                  "\n      python3 -m agentgrinder demo"
-                  "\n"
-                  "\n  (that renders the bundled sample on the v1 card — the grind trace needs a"
-                  "\n  real transcript, because every mark on it is a timestamp from one.)\n")
-            return 1
+            print(no_session_message("claude")); return 1
         path, auto = found
         pick = auto if pick is None else pick
 

@@ -205,7 +205,7 @@ def main():
             riley.goto(base + "/?post", wait_until="networkidle")
             riley.get_by_role("heading", name="Start with a private preview").wait_for()
             riley.get_by_text(
-                "python3 -m agentgrinder grind --harness cursor --push", exact=True
+                "python3 -m agentgrinder grind --harness auto --push", exact=True
             ).first.wait_for()
             riley.get_by_text("Post a run without a Cursor export").click()
             assert riley.get_by_label("Who can see this run?").input_value() == "private"

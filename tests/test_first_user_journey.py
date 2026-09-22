@@ -18,7 +18,7 @@ def test_fresh_signed_in_builder_lands_on_first_post_not_a_tour():
     onboard = INDEX[INDEX.index("async function shouldOnboard(){") : INDEX.index("function stepBar(")]
     assert "runCount()" not in onboard
     assert "Start with a private preview" in INDEX or "Your first post defaults to Only me." in INDEX
-    assert "python3 -m agentgrinder grind --harness cursor --push" in INDEX
+    assert "python3 -m agentgrinder grind --harness auto --push" in INDEX
     assert "Using Grok Bot?" in INDEX
 
 
