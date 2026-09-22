@@ -54,6 +54,7 @@ def validate_run(run: dict) -> dict:
         if store_calls is not None and (type(store_calls) is not int or store_calls < 0):
             raise ValueError("ridge_tool_calls must be a non-negative whole number or unknown.")
     public_outcome(run)
+    selected_insight(run)
     if run.get("code_route") is not None:
         from .code_route import validate_code_route
 
@@ -61,7 +62,8 @@ def validate_run(run: dict) -> dict:
     return run
 
 
-OUTCOME_FIELDS = ("repo_url", "receipts", "shipped", "artifact_url", "image_url")
+OUTCOME_FIELDS = ("repo_url", "receipts", "shipped", "artifact_url", "image_url", "insight")
+MAX_INSIGHT = 120
 _REPO = re.compile(r"https://(github\.com|gitlab\.com|codeberg\.org)/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+", re.I)
 _IMAGE = re.compile(r"\.(png|jpe?g|webp)([?#].*)?\Z", re.I | re.S)
 _UNSAFE_URL = re.compile(r"[\s<>\"'\\]")
@@ -112,6 +114,42 @@ def public_outcome(run: dict) -> dict:
             _safe_url(receipt.get("url"), "each receipt url")
         out["receipts"] = [{"label": receipt["label"], "url": receipt["url"]} for receipt in receipts]
     return out
+
+
+def selected_insight(run: dict) -> dict:
+    """The one selected insight, validated and BOUND to a receipt this same run carries.
+
+    An insight is the single line a run is worth remembering for — the verified outcome, or the
+    one correction that mattered. It is the author's, not the machine's: nothing here reads a
+    transcript, and no parser in this package writes the field. It defaults to ABSENT, and an
+    absent insight is the normal state of a run.
+
+    BINDING IS THE WHOLE RULE. A line with no receipt behind it is an assertion, and an assertion
+    printed in the card's hierarchy reads as a measurement. So the receipt must be one of the
+    receipts already declared on this run: a URL that is not among them is a refusal, loud and
+    local, never a card that quietly shows the sentence without the link.
+
+    One insight, not a list. A card that can carry five "key" lines carries none.
+    """
+    value = run.get("insight")
+    if value is None:
+        return {}
+    if not isinstance(value, dict) or set(value) - {"text", "receipt"}:
+        raise ValueError("insight is {text, receipt}: one line, and the receipt it is bound to.")
+    text = value.get("text")
+    if not isinstance(text, str) or not 1 <= len(text.strip()) <= MAX_INSIGHT:
+        raise ValueError(f"insight.text is one line of 1 to {MAX_INSIGHT} characters.")
+    line = " ".join(text.split())
+    from . import privacy
+
+    if privacy.scan(line):
+        raise ValueError("insight.text must not carry a path, a home directory or an address.")
+    url = _safe_url(value.get("receipt"), "insight.receipt")
+    bound = {receipt["url"] for receipt in public_outcome(run).get("receipts") or []}
+    if url not in bound:
+        raise ValueError("insight.receipt must be one of this run's receipts. An insight is shown "
+                         "only when a receipt on this run backs it.")
+    return {"insight": {"text": line, "receipt": url}}
 
 
 def public_code_route_fields(run: dict) -> dict:
