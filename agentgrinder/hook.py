@@ -438,14 +438,17 @@ def watch(directory=None, db=None, port: int = DEFAULT_PORT) -> int:
 
 def apply_review(root: Path, composer_id: str, *, outcome: str | None = None,
                  receipts: list | None = None, repo_url: str | None = None,
-                 shipped: list | None = None) -> dict:
-    """Attach a selected outcome and receipt links to a private draft, then rewrite the card.
+                 shipped: list | None = None, insight: dict | None = None) -> dict:
+    """Attach a selected outcome, receipt links and one selected insight to a private draft,
+    then rewrite the card.
 
     Only explicit fields are written. Absent fields stay absent. Validation matches
-    public_outcome: bad receipts raise; nothing is scraped or invented.
+    public_outcome: bad receipts raise; nothing is scraped or invented. The insight is validated
+    against the receipts THIS draft ends up with, so binding is checked after the patch, not
+    against whatever the draft held a moment ago.
     """
     from .capture import connect
-    from .contract import OUTCOME_FIELDS, public_outcome
+    from .contract import OUTCOME_FIELDS, public_outcome, selected_insight
     from .metrics import build_activity
     from .render import render_card
 
@@ -469,9 +472,11 @@ def apply_review(root: Path, composer_id: str, *, outcome: str | None = None,
             patch["receipts"] = receipts
         if repo_url is not None:
             patch["repo_url"] = repo_url
+        if insight is not None:
+            patch["insight"] = insight or None
         candidate = {field: run[field] for field in OUTCOME_FIELDS if field in run}
         candidate.update(patch)
-        declared = public_outcome(candidate)
+        declared = {**public_outcome(candidate), **selected_insight(candidate)}
         for field in OUTCOME_FIELDS:
             if field in patch:
                 if field in declared:
@@ -498,6 +503,7 @@ def apply_review(root: Path, composer_id: str, *, outcome: str | None = None,
         "composer_id": composer_id,
         "card": str(card),
         "selected_outcome": (run.get("shipped") or [None])[0],
+        "selected_insight": run.get("insight"),
         "receipts": run.get("receipts") or [],
         "has_code_route": bool(run.get("code_route")),
         "preview": f"http://127.0.0.1:{DEFAULT_PORT}/{composer_id}.html",
@@ -534,6 +540,12 @@ def add_parser(sub) -> None:
     review.add_argument("--outcome", help="one selected outcome line (1-120 chars)")
     review.add_argument("--receipt", action="append", default=[],
                         help="label=https://url (repeatable, max 5)")
+    review.add_argument("--insight",
+                        help="ONE line this run is worth remembering for (1-120 chars). "
+                             "Needs --insight-receipt naming one of this run's receipts: an "
+                             "insight with nothing behind it is not shown.")
+    review.add_argument("--insight-receipt",
+                        help="the https receipt URL the insight is bound to")
     review.add_argument("--repo-url")
     review.add_argument("--port", type=int, default=DEFAULT_PORT)
 
@@ -557,10 +569,17 @@ def run_cli(args) -> int:
                     raise ValueError("each --receipt is label=https://url")
                 label, url = item.split("=", 1)
                 receipts.append({"label": label.strip(), "url": url.strip()})
+            insight = None
+            if args.insight or args.insight_receipt:
+                if not (args.insight and args.insight_receipt):
+                    raise ValueError(
+                        "--insight and --insight-receipt travel together: the line is shown only "
+                        "when a receipt on this run backs it.")
+                insight = {"text": args.insight, "receipt": args.insight_receipt}
             output = apply_review(
                 args.directory, args.composer_id,
                 outcome=args.outcome, receipts=receipts or None,
-                repo_url=args.repo_url)
+                insight=insight, repo_url=args.repo_url)
             if args.port:
                 try:
                     _ensure_server(_root(args.directory), args.port)
