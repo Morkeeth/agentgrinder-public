@@ -49,6 +49,7 @@ Do not put any of these values in reusable Grok skills, prompts or committed fil
 - [ ] Keep the shared Supabase project's existing Site URL unchanged.
 - [ ] Append `https://<approved-strava-origin>/**` to Supabase Auth Redirect URLs. Keep localhost redirects needed for development.
 - [ ] In the GitHub OAuth app used by the shared Supabase provider, retain the Supabase provider callback: `https://<shared-project-ref>.supabase.co/auth/v1/callback`.
+- [ ] **Oscar only:** set that GitHub OAuth App's **Application name** to `STRIVE`. Strangers see "Sign in to GitHub to continue to …" from this field, not from STRIVE site copy. Cursor must not change GitHub Developer settings.
 - [ ] Confirm GitHub is enabled before exposing sign-in. X and Origin remain outside this cutover unless their separately reviewed identity work is already present.
 - [ ] Verify sign-in returns to the exact Pacecard path and draft and that signing out clears only `agentic-strava-auth`.
 
