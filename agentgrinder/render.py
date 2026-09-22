@@ -226,12 +226,40 @@ def _identity_block(a) -> str:
 
 
 
+def _insight_block(a) -> str:
+    """The one selected insight, at the head of the Code Route group. Absent draws nothing.
+
+    Everything printed here is either the author's own sentence or the receipt it is bound to,
+    and the block says which. The private note is on the card because a reader with no account
+    can open this file: it must not read as a published run.
+    """
+    if not a.insight or not a.insight_receipt_url:
+        return ""
+    from .insight import PRIVATE_NOTE
+    return (
+        '<section class="insight">'
+        '<div class="grp">Selected insight · bound to a receipt</div>'
+        f'<p class="insight-line">{a.insight}</p>'
+        f'<p class="insight-src">{a.insight_provenance} '
+        f'<a href="{a.insight_receipt_url}">{a.insight_receipt_label}</a>. '
+        f'{escape(PRIVATE_NOTE)}</p>'
+        '</section>')
+
+
 def _selected_outcome_html(a) -> str:
-    """Hero block for one selected, receipt-backed outcome. Absent fields stay absent."""
+    """Hero block for one selected, receipt-backed outcome. Absent fields stay absent.
+
+    The declared outcome is also the first rung of the outcome ladder, so on most runs the
+    headline at the top of the card IS this sentence. Printing it a second time under its own
+    heading does not make it truer; when they are the same line, only the receipts are drawn.
+    """
     if not a.selected_outcome and not a.receipts:
         return ""
+    repeated = bool(a.selected_outcome) and a.selected_outcome == a.outcome
+    if repeated and not a.receipts:
+        return ""
     parts = ['<section class="outcome-hero">']
-    if a.selected_outcome:
+    if a.selected_outcome and not repeated:
         parts.append('<div class="grp">Selected outcome</div>')
         parts.append(f'<p class="outcome-line">{a.selected_outcome}</p>')
     if a.receipts:
@@ -339,7 +367,7 @@ def render_card(a: Activity) -> str:
         # The hero already prints one of these counts in full size. Printing it again two rows
         # down is padding, so the stat the hero used is left out of the row.
         used = a.hero_label.split(" ")[-1]      # "landed", "changed", "touched", "calls"
-        body = f'''{_hero_block(a)}{_selected_outcome_html(a)}{_code_route_html(a)}<div class="ridgewrap">{route}<small>Tool calls over {basis_label}</small></div>
+        body = f'''{_hero_block(a)}{_insight_block(a)}{_selected_outcome_html(a)}{_code_route_html(a)}<div class="ridgewrap">{route}<small>Tool calls over {basis_label}</small></div>
     {_stats_block([(wall, "Wall time"), (a.distance, "Cost"),
                    ("" if used == "landed" else a.commits, "Commits"),
                    ("" if used in ("changed", "touched")
@@ -354,7 +382,7 @@ def render_card(a: Activity) -> str:
       {coach}
     </details>'''
     else:
-        body = f'''{_hero_block(a)}{_selected_outcome_html(a)}{_code_route_html(a)}<div class="hl" title="{hl_title}">
+        body = f'''{_hero_block(a)}{_insight_block(a)}{_selected_outcome_html(a)}{_code_route_html(a)}<div class="hl" title="{hl_title}">
       <div class="n">{a.headline}</div>
       <div class="lbl">{a.headline_label}<span class="f">{escape(a.headline_formula)}</span></div>
     </div>
@@ -446,7 +474,12 @@ def render_card(a: Activity) -> str:
   .foot{{display:flex;align-items:center;gap:16px;padding:12px 20px;border-top:1px solid var(--line);
     color:var(--muted);font-size:13px}}
 
-  .outcome-hero,.code-route-block{{padding:12px 20px;border-bottom:1px solid var(--line)}}
+  .outcome-hero,.code-route-block,.insight{{padding:12px 20px;border-bottom:1px solid var(--line)}}
+  .insight{{border-left:3px solid var(--accent)}}
+  .insight .grp{{padding:0 0 4px}}
+  .insight-line{{margin:0 0 6px;font-size:16px;font-weight:650;line-height:1.4}}
+  .insight-src{{margin:0;font-size:12px;color:var(--muted);line-height:1.5}}
+  .insight-src a{{color:var(--accent);font-weight:500}}
   .outcome-line{{margin:0 0 8px;font-size:16px;font-weight:650;line-height:1.35}}
   .outcome-links{{margin:0;font-size:13px}}
   .outcome-links a{{color:var(--accent);font-weight:500}}

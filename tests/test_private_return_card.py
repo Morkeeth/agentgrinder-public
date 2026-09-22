@@ -44,16 +44,25 @@ def test_private_card_omits_outcome_and_receipts_when_absent():
 
 
 def test_private_card_shows_selected_outcome_with_receipt_links():
+    """The declared outcome is the card's headline, and its receipts sit under it.
+
+    It used to be printed twice: once as the headline the outcome ladder takes from it, and
+    again under a "Selected outcome" heading. The sentence is the same sentence, so the second
+    copy is dropped and the receipts keep their own block.
+    """
+    line = "Pitch and Post your first run stay above the card at 390 px."
     run = _measured_run(
-        shipped=["Pitch and Post your first run stay above the card at 390 px."],
+        shipped=[line],
         receipts=[{
             "label": "PR 72",
             "url": "https://github.com/Morkeeth/agentgrinder-public/pull/72",
         }],
     )
     html = render_card(build_activity(run))
-    assert "Selected outcome" in html
-    assert "Pitch and Post your first run stay above the card at 390 px." in html
+    assert html.count(line) == 1
+    assert f'<h1 class="outcome shipped">{line}</h1>' in html
+    assert "declared by the author, with a receipt linked" in html
+    assert "Receipts" in html
     assert "PR 72" in html
     assert "https://github.com/Morkeeth/agentgrinder-public/pull/72" in html
 

@@ -143,6 +143,12 @@ class Activity:
     headline_label: str = "verified per turn"
     headline_metric_id: str = METRIC_VERIFIED_PER_TURN
     five: list = field(default_factory=list)   # five Cell rows, in the metric spec's order
+    # The one selected, receipt-bound insight (insight.py). Absent by default: every field here
+    # stays empty unless the author bound a line to a receipt this run carries.
+    insight: str = ""
+    insight_receipt_url: str = ""
+    insight_receipt_label: str = ""
+    insight_provenance: str = ""
     # Selected, uploader-declared outcome. Absent stays empty; never invented.
     selected_outcome: str = ""
     receipts: list = field(default_factory=list)  # [{label,url}, ...] after public_outcome
@@ -305,9 +311,10 @@ def build_activity(run: dict) -> Activity:
         from .code_route import validate_code_route
         route = validate_code_route(route)
 
-    from . import identity as identity_mod, privacy
+    from . import identity as identity_mod, insight as insight_mod, privacy
     from .outcome import hero_of, outcome_of
     who = identity_mod.of_run(run)
+    chosen = insight_mod.selected(run)
     shipped_outcome = outcome_of(run)
     hero = hero_of(run)
     # Every label the card prints comes from a directory name or a commit somebody wrote, so the
@@ -342,6 +349,10 @@ def build_activity(run: dict) -> Activity:
         worker_bins=run.get("worker_bins") or [],
         commit_bins=run.get("commit_bins") or [],
         output_url=run.get("output_url") or "",
+        insight=chosen.text if chosen else "",
+        insight_receipt_url=chosen.receipt_url if chosen else "",
+        insight_receipt_label=chosen.receipt_label if chosen else "",
+        insight_provenance=chosen.provenance if chosen else "",
         selected_outcome=selected,
         receipts=list(declared.get("receipts") or []),
         code_route=route,
