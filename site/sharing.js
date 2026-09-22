@@ -31,6 +31,10 @@ function metricStrip(run){
  return cells.map(([label,value])=>[label,String(value)]);
 }
 function projectName(run){
+ // One rule for the label a reader sees (site/run-contract.js projectLabel): it also takes the
+ // home directory out of a flattened workspace name.
+ const contract=(typeof globalThis!=='undefined'&&globalThis.GrinderContract)||null;
+ if(contract&&typeof contract.projectLabel==='function')return contract.projectLabel(run.project);
  const value=typeof run.project==='string'?run.project.trim():'';
  return value&&!['session','unknown','project unknown'].includes(value.toLowerCase())?value:null;
 }
