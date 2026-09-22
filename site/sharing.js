@@ -178,7 +178,7 @@ function mount({run,slot,status,moment=null,review=null}){
  const ready=form.elements.review.checked&&!!f.title&&(!(moment||review)||!clipped)&&(!review||!!f.result);slot.querySelector('#post-download').disabled=!ready;slot.querySelector('#post-copy').disabled=!ready;
  }
  form.addEventListener('input',e=>{if(e.target.name!=='review')form.elements.review.checked=false;draw()});form.addEventListener('submit',e=>e.preventDefault());
- slot.querySelector('#post-copy').onclick=async()=>{try{await navigator.clipboard.writeText(slot.querySelector('#post-caption').value);status('Caption copied.')}catch(_){status('Select and copy the caption below the image.')}};
+ slot.querySelector('#post-copy').onclick=async()=>{try{await navigator.clipboard.writeText(slot.querySelector('#post-caption').value);try{if(typeof window.va==='function')window.va('event',{name:'strive_share_copy',data:{kind:'caption'}});}catch(_){ }status('Caption copied.')}catch(_){status('Select and copy the caption below the image.')}};
  slot.querySelector('#post-download').onclick=()=>canvas.toBlob(blob=>{if(!blob){status('Image export failed. Try again.');return}const link=document.createElement('a'),object=URL.createObjectURL(blob);link.href=object;link.download='run-card-'+run.id+'-'+form.elements.format.value+'.png';link.click();setTimeout(()=>URL.revokeObjectURL(object),1000)},'image/png');
  if(moment){
   form.elements.title.value=moment.title;
