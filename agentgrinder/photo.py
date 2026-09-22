@@ -1,4 +1,4 @@
-"""THE RUN PHOTO — a picture of where you were while the agent worked, on your own local card.
+"""THE RUN PHOTO: a picture of where you were while the agent worked, on your own local card.
 
 The trace is the proof; the photo is what makes someone stop scrolling. It is the one thing on
 the card that is DECLARED, not measured, and the card says so under it.
