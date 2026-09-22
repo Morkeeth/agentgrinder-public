@@ -246,6 +246,13 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   padding:11px 13px;word-break:break-word}
 .ob-step .cmd .c{white-space:normal;overflow:visible}
 .ob-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+/* Phone onboard: honest desktop handoff. Hide the handoff on wide screens. */
+.ob-phone-handoff{display:none}
+.ob-desk-capture .ob-cmd-copy{display:inline-flex}
+@media(max-width:800px){
+  .ob-phone-handoff{display:block}
+  .ob-desk-capture .ob-cmd-copy{display:none}
+}
 .preview-story>p:first-child{margin-top:0}
 .preview-details,.profile-summary{border-top:1px solid var(--rule);margin-top:18px;padding-top:14px}
 .preview-details>summary,.profile-summary>summary{cursor:pointer;color:var(--soft);font-size:13px;min-height:40px}
@@ -1252,13 +1259,23 @@ async function viewOnboard(){
   const app=$('app'); const n=ME?2:1; const done=ME?1:0;
   frame(railHtml('onboard'),null);
   const cmd=t=>`<div class="cmd"><span class="c">${t}</span></div>`;
+  // Email OTP is for sign-in only. No path emails INSTALL_CMD; do not invent one.
   const step1=`<div class="ob-step"><h3>Create your profile${ME?' · done':''}</h3>
     <p class="hint">Your profile keeps your run history. Choose GitHub or email. GitHub sign-in does not request access to your repositories.</p>
     ${ME?`<p class="meta">Connected as <b style="color:var(--ink);font-weight:500">@${esc(profileHandle(ME))}</b></p>`:
     `<button id="ob-auth">Sign in</button>`}</div>`;
-  const step2=`<div class="ob-step"><h3>Record a run</h3>
+  const phoneHandoff=`<div class="ob-phone-handoff" data-phone-handoff="1">
+      <p class="hint"><b style="color:var(--ink);font-weight:500">Capture runs on the computer where your agent runs</b> (Cursor, Claude Code or Codex). This phone cannot record a sitting.</p>
+      <div class="ob-actions">
+        <button class="act" id="cp1" type="button">Copy the command</button>
+        <a class="act primary" href="/?example">Try the labelled example</a>
+      </div>
+      <p class="hint">Paste the command on that computer when you are ready. Or open the labelled example now to see a real card with no account.</p>
+    </div>`;
+  const step2=`<div class="ob-step ob-desk-capture"><h3>Record a run</h3>
     <p class="hint">Reads Claude Code, Cursor or Codex on your machine. Capture stays on your machine. Sharing opens a preview of the counts and any coach notes before you publish.</p>
-    <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
+    ${phoneHandoff}
+    <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act ob-cmd-copy" id="cp1-desk" type="button">Copy</button></div>
     <p class="hint">Your latest sitting becomes a private run card. You can inspect it before sharing.</p></div>`;
   const step3=`<div class="ob-step"><h3>What leaves your machine</h3>
     <div class="p-row" style="padding-left:0;padding-right:0"><span>Counts, timing, pace, commits, the curve</span><span class="v">shared</span></div>
@@ -1273,7 +1290,7 @@ async function viewOnboard(){
       <button class="ghost" id="ob-skip">Skip, browse the feed</button>
     </div></div>`;
   app.innerHTML=`<div class="head"><h2>Welcome to __BRAND__</h2><span class="meta">I tried this. Show me what changed.</span></div>
-      <p class="hint">Want the path with no account first? <a href="/?example">Try the bundled example</a>. Sign-in is only to keep your own runs.</p>
+      <p class="hint">Want the path with no account first? <a href="/?example">Try the labelled example</a>. Sign-in is only to keep your own runs.</p>
       ${stepBar(n,done)}${step1}${step2}${step3}${step4}`;
   wireCopy();
   const oa=$('ob-auth'); if(oa) oa.addEventListener('click',()=>$('auth').click());
@@ -1411,9 +1428,12 @@ function playStrip(){
     if(st) st.textContent = i===steps.length-1 ? x.querySelector('.o').textContent : x.querySelector('.n').textContent; },320+i*520));
 }
 function wireCopy(){
-  const b=document.getElementById('cp1'); if(!b) return;
-  b.addEventListener('click',()=>{ navigator.clipboard&&navigator.clipboard.writeText(INSTALL_CMD);
-    b.textContent='Copied'; setTimeout(()=>b.textContent='Copy',1600); });
+  for(const id of ['cp1','cp1-desk']){
+    const b=document.getElementById(id); if(!b) continue;
+    const label=b.textContent||'Copy';
+    b.addEventListener('click',()=>{ navigator.clipboard&&navigator.clipboard.writeText(INSTALL_CMD);
+      b.textContent='Copied'; setTimeout(()=>b.textContent=label,1600); });
+  }
 }
 
 
