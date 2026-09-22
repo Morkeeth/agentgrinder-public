@@ -1,4 +1,4 @@
-"""The public STRIVE entry shows a real public run first, without invented activity."""
+"""The public STRIVE entry leads with the pitch and first-run CTA, then a real public run."""
 from pathlib import Path
 
 HTML = (Path(__file__).resolve().parents[1] / 'site/index.html').read_text()
@@ -20,6 +20,9 @@ def test_logged_out_landing_exposes_browsing_and_first_post():
     assert 'Post your first run' in body
     assert 'href="/?onboard"' in body or 'href="/?post"' in body
     assert 'Sign in to browse' not in body
+    # Phone used to pull the feature card above the pitch via order:-1. Keep source order.
+    assert '.launch-grid>.landing-feature{order:-1}' not in HTML
+    assert body.index('landing-intro') < body.index('landing-feature')
 
 
 def test_landing_explains_deliberate_publication():
