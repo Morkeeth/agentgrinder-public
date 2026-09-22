@@ -4,13 +4,22 @@ Signature device: THE SESSION ROUTE — the run's rhythm (typed turns per bucket
 elevation profile, the way Strava draws a route. It is taken from the work itself, not a component
 library: the shape IS the session. Remove it and you lose the argument that this was a real effort.
 
-Headline: VERIFIED PER TURN — what the typed turns bought, never how many there were. The five
-numbers of a run sit under it in one row; every Strava-shaped number (prompts, moving time, pace,
-effort, cadence) is kept, grouped as COST. A dash carries a tooltip naming the tool that owns it.
+HEADLINE: THE OUTCOME (outcome.py). One sentence saying what the run shipped, or `No shipped
+output recorded` and the reason. Under it, the one count the run can prove. Verified per turn is
+still here — it is the metric identity, under More, where a ratio belongs — because it answers a
+different question from the one a reader asks first.
+
+WHAT IS NOT MEASURED IS NOT DRAWN. A cell with no value is left out of the row and named in one
+sentence of prose that keeps its tooltip. Four em-dashes and an `Unknown` in the measurement rows
+made a real 8m19s Cursor session look like a session in which nothing happened (22 Sep 2026), and
+the cost of that is not a cosmetic one: it is the reason the author would not share the card.
+
+Every Strava-shaped number (prompts, moving time, pace, effort, cadence) is kept, grouped as COST.
 """
 from __future__ import annotations
-from .brand import CARD_THEME
+from .brand import BRAND, CARD_THEME
 
+import re
 from html import escape
 
 from .metrics import ARTIFACTS_PER_TURN_TIP, HEADLINE_TIP, Activity, Cell
@@ -91,16 +100,129 @@ def _ridge_svg(a: Activity, w: int = 720, h: int = 150) -> str:
             + f'<circle class="ridge-end" cx="{w}" cy="{y(values[-1]):.1f}" r="5"/>{chip}</svg>')
 
 
+# WHAT COUNTS AS A VALUE. A cell or a stat is drawn only when the run measured something for it.
+# A row reading "—" is not a measurement, it is furniture: the 22 Sep card carried four of them
+# side by side and a fifth reading "Unknown", which is how a real session came to look like a
+# session where nothing happened.
+_MISSING = {"", "—", "-", "–", "unknown", "none", "n/a"}
+
+# THE ROW FITS THE NUMBER OF CELLS IT HAS. Hiding unmeasured cells means the count is no longer
+# five, and a five-column grid holding two cells leaves three empty boxes — the same hole the
+# em-dashes filled, with the dashes removed. The count travels as data-n so a phone can still
+# override it, which an inline style would not allow.
+GRID_CSS = """
+  .fiverow,.stats{display:grid;gap:1px;background:var(--line);
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .fiverow{grid-template-columns:repeat(5,1fr)}
+  .fiverow[data-n="1"]{grid-template-columns:1fr}
+  .fiverow[data-n="2"]{grid-template-columns:repeat(2,1fr)}
+  .fiverow[data-n="3"]{grid-template-columns:repeat(3,1fr)}
+  .fiverow[data-n="4"]{grid-template-columns:repeat(4,1fr)}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stats[data-n="1"]{grid-template-columns:1fr}
+  .stats[data-n="3"],.stats[data-n="5"]{grid-template-columns:repeat(3,1fr)}
+  .stats[data-n="4"]{grid-template-columns:repeat(4,1fr)}
+  .stats[data-n="5"] .stat:last-child{grid-column:span 2}
+  @media (max-width:520px){
+    .fiverow[data-n="4"],.fiverow[data-n="5"],.stats[data-n="3"],.stats[data-n="4"],
+    .stats[data-n="5"]{grid-template-columns:repeat(2,1fr)}
+    .fiverow[data-n="5"] .five:last-child,.stats[data-n="3"] .stat:last-child,
+    .stats[data-n="5"] .stat:last-child{grid-column:span 2}
+  }
+"""
+
+
+def _has_value(text: str) -> bool:
+    """True when this cell says something a reader can act on."""
+    plain = re.sub(r"<[^>]+>", "", str(text or "")).strip()
+    if plain.lower() in _MISSING:
+        return False
+    # "— ÷ —" measures nothing; "4 ÷ —" measures the half it has.
+    return any(ch.isalnum() for ch in plain)
+
+
 def _five_row(cells: list[Cell]) -> str:
     out = []
     for c in cells:
+        if not _has_value(c.value):
+            continue
         cls = "five cost" if c.cost else "five"
         tag = '<i class="costtag">cost</i>' if c.cost else ""
-        dash = ' data-missing="1"' if c.value.startswith("—") or " —" in c.value else ""
+        dash = ' data-missing="1"' if "—" in c.value else ""
         out.append(f'<div class="{cls}" title="{escape(c.source)}"{dash}>'
                    f'<div class="v">{escape(c.value)}</div>'
                    f'<div class="k">{escape(c.label)}{tag}</div></div>')
     return "".join(out)
+
+
+def _five_block(cells: list[Cell]) -> str:
+    """The five-number row, with every unmeasured cell left out. No cells, no row."""
+    row = _five_row(cells)
+    if not row:
+        return ""
+    shown = sum(1 for c in cells if _has_value(c.value))
+    return f'<div class="fiverow" data-n="{shown}">{row}</div>'
+
+
+def _unmeasured_note(cells: list[Cell], *extra) -> str:
+    """The cells that were left out, named in a sentence instead of drawn as em-dashes.
+
+    Hiding a dash must not hide the fact that something is unknown, or the card would be quietly
+    claiming completeness it does not have. So the missing numbers keep their names and keep the
+    sentence that says which fact is absent and whether a reader could supply it today — as one
+    line of prose, not as four empty boxes in the row of measurements.
+    """
+    missing = [c for c in list(cells) + [c for c in extra if c] if not _has_value(c.value)]
+    if not missing:
+        return ""
+    named = ", ".join(f'<span title="{escape(c.source)}">{escape(c.label)}</span>' for c in missing)
+    return f'<p class="unmeasured">Not measured in this run: {named}.</p>'
+
+
+def _stats_block(rows) -> str:
+    """A stat grid from (value, label) pairs. A pair with no measured value is not drawn."""
+    cells = [f'<div class="stat"><div class="v">{value}</div>'
+             f'<div class="k">{escape(label)}</div></div>'
+             for value, label in rows if _has_value(value)]
+    if not cells:
+        return ""
+    return f'<div class="stats" data-n="{len(cells)}">{"".join(cells)}</div>'
+
+
+def _just_the_number(value: str) -> str:
+    """"7 files" -> "7". The stat's own label already carries the unit; printing it twice
+    ("7 files" under FILES) is how a three-cell row ends up saying two things."""
+    text = str(value or "").strip()
+    head = text.split(" ", 1)[0]
+    return head if head and head[0].isdigit() else text
+
+
+def _hero_block(a) -> str:
+    """The one number this run can prove. A run that can prove none draws nothing here."""
+    if not a.hero_value:
+        return ""
+    return (f'<div class="hero" title="{escape(a.hero_source)}">'
+            f'<div class="n">{a.hero_value}</div>'
+            f'<div class="lbl">{a.hero_label}</div></div>')
+
+
+def _outcome_block(a) -> str:
+    """The headline: one sentence about what the run shipped, and where that sentence came from."""
+    state = "shipped" if a.outcome_shipped else "nothing"
+    return (f'<h1 class="outcome {state}">{a.outcome}</h1>'
+            f'<p class="outcome-basis">{a.outcome_basis}</p>')
+
+
+def _identity_block(a) -> str:
+    """Handle and avatar when this machine is signed in; a neutral label when it is not."""
+    if a.handle:
+        avatar = (f'<img class="avatar" src="{a.avatar_url}" alt="" width="42" height="42" '
+                  f'loading="lazy">')
+    else:
+        avatar = '<div class="avatar none" aria-hidden="true"></div>'
+    note = f' · {a.identity_note}' if a.identity_note else ""
+    return (f'{avatar}<div class="who" title="{a.identity_source}"><b>{a.athlete}</b>'
+            f'<small>{a.date_str}{note}</small></div>')
 
 
 
@@ -160,10 +282,9 @@ def _code_route_html(a) -> str:
 def render_card(a: Activity) -> str:
     from dataclasses import replace, fields
     a = replace(a, **{f.name: escape(getattr(a, f.name)) for f in fields(a) if isinstance(getattr(a, f.name), str)})
-    initial = (a.athlete or "?")[0].upper()
     pb = '<span class="pb" title="high sustained cadence">High cadence</span>' if a.focus_pb else ""
     has_ridge = 40 <= len(a.ridge) <= 60
-    product_name = "PACECARD" if has_ridge else "AGENTGRINDER"
+    product_name = BRAND
     title_separator = ":" if has_ridge else chr(8212)
     if has_ridge:
         route = _ridge_svg(a)
@@ -172,12 +293,19 @@ def render_card(a: Activity) -> str:
         route = svg(a.trace, a.trace_basis)
     else:
         route = _route_svg(a.rhythm) + ("<small>" + a.trace_basis + "</small>" if a.trace_basis else "")
-    five = _five_row(a.five)
+    five = _five_block(a.five)
     coach = (f'<section style="padding:20px"><h2>Next session</h2><small>{a.coach_mode}</small><p>{a.coach_verdict}</p><p style="white-space:pre-wrap">{a.coach_plan}</p></section>' if a.coach_verdict else "")
     tip = (ARTIFACTS_PER_TURN_TIP if a.headline_metric_id == "artifacts_per_turn"
            else HEADLINE_TIP)
     hl_title = escape(tip) + " · " + escape(a.headline_formula)
-    wall = "Unknown"
+    # A metric identity with no value is a sentence, not a number. It used to draw a 44px dash.
+    metric_block = (
+        f'<div class="hl" title="{hl_title}"><div class="n">{a.headline}</div>'
+        f'<div class="lbl">{a.headline_label}<span class="f">{escape(a.headline_formula)}</span>'
+        f'</div></div>' if _has_value(a.headline) else "")
+    metric_missing = (Cell(a.headline_label, "—", tip + " · " + a.headline_formula)
+                      if not metric_block else None)
+    wall = ""
     if a.ridge_wall_seconds is not None:
         seconds = int(a.ridge_wall_seconds)
         hours, rest = divmod(seconds, 3600)
@@ -189,9 +317,17 @@ def render_card(a: Activity) -> str:
             output_label = "PR"
         elif a.output_url.lower().split("?", 1)[0].endswith((".png", ".jpg", ".jpeg", ".webp")):
             output_label = "Screenshot"
-    has_commits = a.commits not in (chr(8212), "0")
-    third_value = a.commits if has_commits else (
-        f'<a href="{a.output_url}">{output_label}</a>' if a.output_url else "Unknown")
+    output_cell = f'<a href="{a.output_url}">{output_label}</a>' if a.output_url else ""
+    # The title line only earns its space when it says something the outcome sentence does not.
+    # The Cursor title is `repo · commit subject` and the outcome IS that subject, so on a run
+    # that shipped, the whole line is already above it — and the repository is in the line below.
+    title_line = "" if a.outcome and (a.title in a.outcome or a.outcome in a.title) else a.title
+    where = " · ".join(x for x in [
+        a.harness + (" · bot activity" if a.harness == "Grok Bot" else ""),
+        a.project if _has_value(a.project) else "",
+    ] if x)
+    if where and title_line and where in title_line:
+        where = ""      # "Cursor" under "Cursor sitting" is a line that says nothing twice
     if has_ridge:
         basis_label = (
             "wall time" if a.ridge_basis == "wall-time"
@@ -200,38 +336,36 @@ def render_card(a: Activity) -> str:
         )
         unavailable = ("" if a.ridge_basis == "wall-time" else
             '<p class="grp" style="text-transform:none;letter-spacing:0">Moving time, pace and cadence are unavailable: this harness trace is turn order, not a measured elapsed clock.</p>')
-        body = f'''{_selected_outcome_html(a)}{_code_route_html(a)}<div class="ridgewrap">{route}<small>Tool calls over {basis_label}</small></div>
-    <div class="stats">
-      <div class="stat"><div class="v">{wall}</div><div class="k">Wall time</div></div>
-      <div class="stat"><div class="v">{a.distance}</div><div class="k">Turns</div></div>
-      <div class="stat"><div class="v">{third_value}</div><div class="k">{"Commits" if has_commits else "Output"}</div></div>
-    </div>
+        # The hero already prints one of these counts in full size. Printing it again two rows
+        # down is padding, so the stat the hero used is left out of the row.
+        used = a.hero_label.split(" ")[-1]      # "landed", "changed", "touched", "calls"
+        body = f'''{_hero_block(a)}{_selected_outcome_html(a)}{_code_route_html(a)}<div class="ridgewrap">{route}<small>Tool calls over {basis_label}</small></div>
+    {_stats_block([(wall, "Wall time"), (a.distance, "Cost"),
+                   ("" if used == "landed" else a.commits, "Commits"),
+                   ("" if used in ("changed", "touched")
+                    else _just_the_number(a.segments), "Files"),
+                   (output_cell, "Output")])}
     <details class="more"><summary>More</summary>
-      <div class="hl" title="{hl_title}"><div class="n">{a.headline}</div><div class="lbl">{a.headline_label}<span class="f">{escape(a.headline_formula)}</span></div></div>
-      <div class="fiverow">{five}</div>
+      {metric_block}
+      {five}
+      {_unmeasured_note(a.five, metric_missing)}
       {unavailable}
-      <div class="sec"><div><span>Tool calls</span><br><b>{a.effort}</b></div><div><span>Files</span><br><b>{a.segments}</b></div></div>
+      <div class="sec"><div><span>Tool calls</span><br><b>{_just_the_number(a.effort)}</b></div></div>
       {coach}
     </details>'''
     else:
-        body = f'''{_selected_outcome_html(a)}{_code_route_html(a)}<div class="hl" title="{hl_title}">
+        body = f'''{_hero_block(a)}{_selected_outcome_html(a)}{_code_route_html(a)}<div class="hl" title="{hl_title}">
       <div class="n">{a.headline}</div>
       <div class="lbl">{a.headline_label}<span class="f">{escape(a.headline_formula)}</span></div>
     </div>
-    <div class="fiverow">{five}</div>
+    {five}
+    {_unmeasured_note(a.five)}
     <div class="routewrap">{route}</div>
     <div class="grp">Cost — what the run spent</div>
-    <div class="stats">
-      <div class="stat"><div class="v">{a.distance}</div><div class="k">Typed turns</div></div>
-      <div class="stat"><div class="v">{a.moving_time}</div><div class="k">Moving time</div></div>
-      <div class="stat"><div class="v">{a.pace}</div><div class="k">Pace</div></div>
-    </div>
+    {_stats_block([(a.distance, "Typed turns"), (a.moving_time, "Moving time"), (a.pace, "Pace")])}
     {"" if a.moving_time != "—" or not a.trace_basis else '<p class="grp" style="text-transform:none;letter-spacing:0;padding-top:0">Moving time, pace and cadence are unavailable: this harness trace is turn order, not a measured elapsed clock.</p>'}
     <div class="sec">
-      <div><span>Effort</span><br><b>{a.effort}</b></div>
-      <div><span>Segments</span><br><b>{a.segments}</b></div>
-      <div><span>Commits</span><br><b>{a.commits}</b></div>
-      <div><span>Cadence</span><br><b>{a.prompts_per_hour}</b></div>
+      {"".join(f"<div><span>{escape(k)}</span><br><b>{v}</b></div>" for v, k in [(a.effort, "Effort"), (a.segments, "Segments"), (a.commits, "Commits"), (a.prompts_per_hour, "Cadence")] if _has_value(v))}
     </div>
     {coach}'''
     ridge_css = """
@@ -262,10 +396,23 @@ def render_card(a: Activity) -> str:
     border-radius:2px;overflow:hidden;box-shadow:none}}
   .top{{display:flex;align-items:center;gap:12px;padding:18px 20px 12px}}
   .avatar{{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;
-    display:grid;place-items:center;font-weight:700;font-size:18px}}
-  .who b{{font-weight:650}} .who small{{color:var(--muted);display:block;font-size:12.5px}}
-  .brand{{margin-left:auto;font-weight:800;letter-spacing:.06em;color:var(--muted);font-size:12px}}
-  .title{{padding:0 20px 4px;font-size:19px;font-weight:680;display:flex;align-items:center;gap:10px}}
+    display:grid;place-items:center;font-weight:700;font-size:18px;object-fit:cover;flex:0 0 auto}}
+  .avatar.none{{background:var(--line)}}
+  .who{{min-width:0}} .who b{{font-weight:650}}
+  .who small{{color:var(--muted);display:block;font-size:12.5px}}
+  .brand{{margin-left:auto;font-weight:800;letter-spacing:.13em;color:var(--muted);font-size:12px}}
+  /* THE HEADLINE IS A SENTENCE. It is the first thing read and the only line that says what
+     this run was for; the metric identity now lives under More, where a ratio belongs. */
+  h1.outcome{{margin:2px 20px 0;font-size:25px;line-height:1.2;letter-spacing:-.018em;
+    font-weight:800}}
+  h1.outcome.nothing{{color:var(--muted);font-weight:700}}
+  .outcome-basis{{margin:6px 20px 10px;color:var(--muted);font-size:12.5px;line-height:1.45}}
+  .hero{{display:flex;align-items:baseline;gap:12px;padding:4px 20px 14px;cursor:help}}
+  .hero .n{{font:800 46px/1 "IBM Plex Sans",system-ui,sans-serif;letter-spacing:-.04em;
+    color:var(--accent)}}
+  .hero .lbl{{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}}
+  .title{{padding:0 20px 4px;font-size:15px;font-weight:600;color:var(--muted);
+    display:flex;align-items:center;gap:10px}}
   .pb{{font-size:11px;font-weight:700;color:var(--accent);border:1px solid var(--accent);
     border-radius:999px;padding:2px 8px}}
   .sub{{padding:0 20px 14px;color:var(--muted);font-size:13px}}
@@ -273,8 +420,7 @@ def render_card(a: Activity) -> str:
   .hl .n{{font-size:44px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--accent)}}
   .hl .lbl{{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}}
   .hl .f{{display:block;font-size:12px;color:var(--muted);text-transform:none;letter-spacing:0}}
-  .fiverow{{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);
-    border-top:1px solid var(--line);border-bottom:1px solid var(--line)}}
+{GRID_CSS}
   .five{{background:var(--card);padding:10px 8px 9px;text-align:center;cursor:help}}
   .five .v{{font-size:15px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}}
   .five .k{{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;
@@ -283,12 +429,12 @@ def render_card(a: Activity) -> str:
   .five.cost .v{{color:var(--muted)}}
   .costtag{{font-style:normal;display:inline-block;margin-left:4px;padding:0 4px;border-radius:4px;
     background:var(--line);color:var(--muted);font-size:9px;letter-spacing:.04em}}
+  .unmeasured{{margin:0;padding:10px 20px;color:var(--faint);font-size:12px;line-height:1.5}}
+  .unmeasured span{{border-bottom:1px dotted var(--line);cursor:help}}
   .grp{{padding:10px 20px 4px;font-size:10.5px;color:var(--muted);text-transform:uppercase;
     letter-spacing:.08em}}
-  .stats{{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
-    border-top:1px solid var(--line);border-bottom:1px solid var(--line)}}
-  @media (max-width:420px){{.fiverow{{grid-template-columns:repeat(2,1fr)}}.five:nth-child(5){{grid-column:span 2}}.hl .n{{font-size:36px}}
-    .stat .v{{font-size:17px}}}}
+  @media (max-width:420px){{h1.outcome{{font-size:21px}} .hero .n{{font-size:38px}}
+    .hl .n{{font-size:36px}} .stat .v{{font-size:17px}}}}
   .stat{{background:var(--card);padding:14px 16px}}
   .stat .v{{font-size:22px;font-weight:720;letter-spacing:-.01em}}
   .stat .k{{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}}
@@ -312,12 +458,12 @@ def render_card(a: Activity) -> str:
 <body>
   <div class="card">
     <div class="top">
-      <div class="avatar">{initial}</div>
-      <div class="who"><b>{a.athlete}</b><small>{a.date_str}</small></div>
+      {_identity_block(a)}
       <div class="brand">{product_name}</div>
     </div>
-    <div class="title">{a.title} {pb}</div>
-    <div class="sub">{a.harness}{" · bot activity" if a.harness == "Grok Bot" else ""} · {a.project}</div>
+    {_outcome_block(a)}
+    {f'<div class="title">{title_line} {pb}</div>' if title_line or pb else ''}
+    <div class="sub">{where}</div>
     {body}
     <div class="foot">
       <div class="kudo">🔥 <b>kudos</b></div>
@@ -343,7 +489,7 @@ def render_profile(p: dict) -> str:
     initial = (gh.get("name") or "?")[0].upper()
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{gh.get("name")} — AGENTGRINDER profile</title>
+<title>{gh.get("name")} — {BRAND} profile</title>
 <style>
   {CARD_THEME}
 
@@ -377,7 +523,7 @@ def render_profile(p: dict) -> str:
 </style></head><body><div class="wrap">
   <div class="hero"><div class="av">{initial}</div>
     <div><h1>{gh.get("name")}</h1><div class="bio">@{gh.get("login")}{" · " + gh.get("bio") if gh.get("bio") else ""}</div></div>
-    <div class="brand">AGENTGRINDER</div></div>
+    <div class="brand">{BRAND}</div></div>
   <div class="stats">
     <div class="s hl" title="{escape(HEADLINE_TIP)} · {escape(t["vpt_formula"])}"><div class="v">{t["verified_per_turn"]}</div><div class="k">Verified per turn</div></div>
     <div class="s"><div class="v">{t["runs"]}</div><div class="k">Runs</div></div>

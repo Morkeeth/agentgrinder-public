@@ -4,7 +4,7 @@ Every printed sentence on this surface is a claim, so each one names what it cou
 which population. Where a number cannot be traced it prints an em-dash, never a guess.
 """
 from __future__ import annotations
-from .brand import CARD_THEME
+from .brand import BRAND, CARD_THEME
 
 from datetime import datetime
 
@@ -121,7 +121,7 @@ def render_fleet_card(run: dict, title: str | None = None) -> str:
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{title} — AGENT GRINDER</title>
+<title>{title} — {BRAND}</title>
 <style>
   {CARD_THEME}
 
@@ -284,7 +284,7 @@ def render_fleet_card(run: dict, title: str | None = None) -> str:
     <div class="top">
       <div class="av">{(run["athlete"] or "?")[0].upper()}</div>
       <div class="who"><b>{run["athlete"]}</b><small>{date_line}</small></div>
-      <div class="brand">AGENT GRINDER</div>
+      <div class="brand">{BRAND}</div>
     </div>
     <h1>{title}</h1>
     <div class="sub">{run["harness"]} · {len(run["sessions"])} sessions · {len(lanes)} agent lanes ·

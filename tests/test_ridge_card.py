@@ -1,6 +1,5 @@
 """Run cards keep the blue trace and show honest, shareable session facts."""
 import json
-import hashlib
 import subprocess
 from pathlib import Path
 
@@ -48,13 +47,24 @@ def render():
 
 
 def test_card_without_ridge_keeps_its_recorded_trace():
+    """The trace survives a run with no ridge, and the card still leads with its outcome.
+
+    This assertion used to be a sha256 of the whole card. A byte pin freezes one rendering, it
+    does not test behaviour: it went red the moment the card changed for any reason, including
+    the reasons it was changed for, and it said nothing about what the card had to keep. What it
+    was reaching for is below — the recorded trace is drawn, and the numbers on it are the
+    numbers the run measured.
+    """
     assert 'class="run-signature"' in render()["plain"]
     activity = build_activity({
         "athlete": "you", "title": "Plain", "harness": "Cursor", "project": "sample",
         "turns_typed": 3, "tool_calls": 2, "commits": 1, "rhythm": [1, 2, 1],
     })
-    assert hashlib.sha256(render_card(activity).encode()).hexdigest() == \
-        "c4db61d25de3c0be88bd8e1b3916f82fa41b7cd1b8e0b9e2a4d385442eb1b827"
+    html = render_card(activity)
+    assert 'class="route"' in html and "polyline" in html
+    assert ">3 prompts<" in html          # the plain card keeps prompts, grouped as cost
+    assert '<div class="n">1</div>' in html and ">commit landed<" in html
+    assert "1 commit landed in sample" in html
 
 
 def test_card_draws_one_primary_ridge_and_story_before_effort():

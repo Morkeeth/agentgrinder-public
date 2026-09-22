@@ -147,6 +147,20 @@ class Activity:
     selected_outcome: str = ""
     receipts: list = field(default_factory=list)  # [{label,url}, ...] after public_outcome
     code_route: dict | None = None
+    # THE HEADLINE A STRANGER READS: one outcome sentence and its provenance (outcome.py), plus
+    # the single count the run can prove. An empty hero draws no block at all.
+    outcome: str = ""
+    outcome_basis: str = ""
+    outcome_shipped: bool = False
+    hero_value: str = ""
+    hero_label: str = ""
+    hero_source: str = ""
+    # Who the run belongs to (identity.py). `athlete` is the label; these two say whether there
+    # is a real account behind it.
+    handle: str = ""
+    avatar_url: str = ""
+    identity_note: str = ""
+    identity_source: str = ""
 
 
 @dataclass
@@ -291,11 +305,22 @@ def build_activity(run: dict) -> Activity:
         from .code_route import validate_code_route
         route = validate_code_route(route)
 
+    from . import identity as identity_mod, privacy
+    from .outcome import hero_of, outcome_of
+    who = identity_mod.of_run(run)
+    shipped_outcome = outcome_of(run)
+    hero = hero_of(run)
+    # Every label the card prints comes from a directory name or a commit somebody wrote, so the
+    # home directory is stripped from all three on the way in — the terminal summary reads the
+    # same strings as the card.
+    clean = privacy.strip_home_names
+    project = clean(run.get("project") or "")
+
     return Activity(
-        athlete=run.get("athlete", "athlete"),
-        title=run.get("title", "Untitled session"),
+        athlete=who.display,
+        title=clean(run.get("title") or "") or "Untitled session",
         harness=run.get("harness", "coding agent"),
-        project=run.get("project", "—"),
+        project=project or "—",
         date_str=date_str,
         distance=f"{turns} prompts" if turns is not None else "—",
         moving_time=moving,
@@ -320,6 +345,16 @@ def build_activity(run: dict) -> Activity:
         selected_outcome=selected,
         receipts=list(declared.get("receipts") or []),
         code_route=route,
+        outcome=shipped_outcome.text,
+        outcome_basis=shipped_outcome.basis,
+        outcome_shipped=shipped_outcome.shipped,
+        hero_value=hero.value,
+        hero_label=hero.label,
+        hero_source=hero.source,
+        handle=who.handle or "",
+        avatar_url=who.avatar_url,
+        identity_note=who.note,
+        identity_source=who.source,
         headline=hl.text,
         headline_val=hl.value,
         headline_formula=hl.formula,

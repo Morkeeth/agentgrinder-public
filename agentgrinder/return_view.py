@@ -10,7 +10,7 @@ import json
 from html import escape
 from pathlib import Path
 
-from .brand import CARD_THEME
+from .brand import BRAND, CARD_THEME
 from .metrics import headline_of
 
 
@@ -142,7 +142,7 @@ def render_return_html(model: dict) -> str:
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Return · practice review — AGENT GRINDER</title>
+<title>Return · practice review — {BRAND}</title>
 <style>
 {CARD_THEME}
 *{{box-sizing:border-box}} body{{margin:0;background:var(--bg);color:var(--ink);
@@ -179,7 +179,7 @@ textarea,input[type=text]{{width:100%;font:inherit;padding:8px;border:1px solid 
 </style></head>
 <body>
 <div class="wrap" id="return-root">
-  <div class="brand">AGENT GRINDER · LOCAL RETURN</div>
+  <div class="brand">{BRAND} · LOCAL RETURN</div>
   <h1>Your later run is in. Here is what is comparable.</h1>
   <p class="meta">Private on this machine. Nothing uploads until you export. Raw transcripts stay local.</p>
 
