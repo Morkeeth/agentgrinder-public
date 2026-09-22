@@ -430,6 +430,88 @@ def watch(directory=None, db=None, port: int = DEFAULT_PORT) -> int:
         time.sleep(30)
 
 
+def apply_review(root: Path, composer_id: str, *, outcome: str | None = None,
+                 receipts: list | None = None, repo_url: str | None = None,
+                 shipped: list | None = None) -> dict:
+    """Attach a selected outcome and receipt links to a private draft, then rewrite the card.
+
+    Only explicit fields are written. Absent fields stay absent. Validation matches
+    public_outcome: bad receipts raise; nothing is scraped or invented.
+    """
+    from .capture import connect
+    from .contract import OUTCOME_FIELDS, public_outcome
+    from .metrics import build_activity
+    from .render import render_card
+
+    root = _root(root)
+    db = connect(root / "capture")
+    draft_id = hashlib.sha256(("cursor-composer:" + composer_id).encode()).hexdigest()
+    try:
+        row = db.execute("select payload from drafts where id=?", (draft_id,)).fetchone()
+        if row is None:
+            raise FileNotFoundError(f"No private draft for composer {composer_id}.")
+        run = json.loads(row[0])
+        patch = {}
+        if outcome is not None:
+            text = outcome.strip()
+            if not 1 <= len(text) <= 120:
+                raise ValueError("outcome must be 1 to 120 characters.")
+            patch["shipped"] = [text]
+        if shipped is not None:
+            patch["shipped"] = shipped
+        if receipts is not None:
+            patch["receipts"] = receipts
+        if repo_url is not None:
+            patch["repo_url"] = repo_url
+        candidate = {field: run[field] for field in OUTCOME_FIELDS if field in run}
+        candidate.update(patch)
+        declared = public_outcome(candidate)
+        for field in OUTCOME_FIELDS:
+            if field in patch:
+                if field in declared:
+                    run[field] = declared[field]
+                else:
+                    run.pop(field, None)
+        if run.get("code_route") is not None:
+            from .code_route import validate_code_route
+            run["code_route"] = validate_code_route(run["code_route"])
+        digest = hashlib.sha256(json.dumps(run, sort_keys=True).encode()).hexdigest()
+        with db:
+            db.execute(
+                "update drafts set payload=?, digest=?, updated_at=CURRENT_TIMESTAMP where id=?",
+                (json.dumps(run), digest, draft_id),
+            )
+    finally:
+        db.close()
+    cards = root / "cards"
+    cards.mkdir(mode=0o700, exist_ok=True)
+    card = cards / f"{composer_id}.html"
+    card.write_text(render_card(build_activity(run)), encoding="utf-8")
+    os.chmod(card, 0o600)
+    return {
+        "composer_id": composer_id,
+        "card": str(card),
+        "selected_outcome": (run.get("shipped") or [None])[0],
+        "receipts": run.get("receipts") or [],
+        "has_code_route": bool(run.get("code_route")),
+        "preview": f"http://127.0.0.1:{DEFAULT_PORT}/{composer_id}.html",
+    }
+
+
+
+def store_run(root: Path, composer_id: str, run: dict) -> dict:
+    """Write a measured run into the private draft store and render its card."""
+    root = _root(root)
+    card_name = _store_private(root, composer_id, run)
+    return {
+        "composer_id": composer_id,
+        "card": str(root / "cards" / card_name),
+        "has_code_route": bool(run.get("code_route")),
+        "preview": f"http://127.0.0.1:{DEFAULT_PORT}/{card_name}",
+    }
+
+
+
 def add_parser(sub) -> None:
     parser = sub.add_parser("hook", help="capture completed sessions privately on this machine")
     commands = parser.add_subparsers(dest="hook_command", required=True)
@@ -440,6 +522,14 @@ def add_parser(sub) -> None:
         command.add_argument("--port", type=int, default=DEFAULT_PORT)
         if name in ("install", "run", "watch"):
             command.add_argument("--db")
+    review = commands.add_parser("review", help="select outcome and receipts on a private draft")
+    review.add_argument("--composer-id", required=True)
+    review.add_argument("--directory")
+    review.add_argument("--outcome", help="one selected outcome line (1-120 chars)")
+    review.add_argument("--receipt", action="append", default=[],
+                        help="label=https://url (repeatable, max 5)")
+    review.add_argument("--repo-url")
+    review.add_argument("--port", type=int, default=DEFAULT_PORT)
 
 
 def run_cli(args) -> int:
@@ -454,10 +544,26 @@ def run_cli(args) -> int:
             output = run_once(args.directory, args.db, args.port)
         elif args.hook_command == "watch":
             return watch(args.directory, args.db, args.port)
+        elif args.hook_command == "review":
+            receipts = []
+            for item in args.receipt or []:
+                if "=" not in item:
+                    raise ValueError("each --receipt is label=https://url")
+                label, url = item.split("=", 1)
+                receipts.append({"label": label.strip(), "url": url.strip()})
+            output = apply_review(
+                args.directory, args.composer_id,
+                outcome=args.outcome, receipts=receipts or None,
+                repo_url=args.repo_url)
+            if args.port:
+                try:
+                    _ensure_server(_root(args.directory), args.port)
+                except OSError:
+                    pass
         else:
             return serve(args.directory, args.port)
         print(json.dumps(output, indent=2))
         return 0
-    except (FileNotFoundError, OSError, sqlite3.DatabaseError, subprocess.SubprocessError) as error:
+    except (FileNotFoundError, OSError, sqlite3.DatabaseError, subprocess.SubprocessError, ValueError) as error:
         print(str(error), file=sys.stderr)
         return 1

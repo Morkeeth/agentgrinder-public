@@ -103,6 +103,60 @@ def _five_row(cells: list[Cell]) -> str:
     return "".join(out)
 
 
+
+def _selected_outcome_html(a) -> str:
+    """Hero block for one selected, receipt-backed outcome. Absent fields stay absent."""
+    if not a.selected_outcome and not a.receipts:
+        return ""
+    parts = ['<section class="outcome-hero">']
+    if a.selected_outcome:
+        parts.append('<div class="grp">Selected outcome</div>')
+        parts.append(f'<p class="outcome-line">{a.selected_outcome}</p>')
+    if a.receipts:
+        links = []
+        for row in a.receipts[:5]:
+            if not isinstance(row, dict):
+                continue
+            label = row.get("label") or ""
+            url = row.get("url") or ""
+            if not label or not url:
+                continue
+            links.append(f'<a href="{escape(url)}">{escape(label)}</a>')
+        if links:
+            parts.append('<div class="grp">Receipts</div>')
+            parts.append('<p class="outcome-links">' + " · ".join(links) + "</p>")
+    parts.append("</section>")
+    return "".join(parts)
+
+
+def _code_route_html(a) -> str:
+    """Compact commit-derived Code Route. Missing route stays absent."""
+    route = a.code_route
+    if not isinstance(route, dict):
+        return ""
+    stops = route.get("stops") or []
+    measured = [s for s in stops if isinstance(s, dict) and s.get("basis") == "measured"]
+    if len(measured) < 1:
+        return ""
+    projects = route.get("projects") or []
+    labels = []
+    for stop in measured:
+        kind = escape(str(stop.get("kind") or "stop"))
+        label = escape(str(stop.get("label") or kind))
+        labels.append(f"<li><b>{kind}</b> · {label}</li>")
+    proj = ""
+    if projects:
+        names = ", ".join(escape(str(p.get("label") or p.get("id") or "")) for p in projects if isinstance(p, dict))
+        if names:
+            proj = f'<p class="outcome-line">{names}</p>'
+    return (
+        '<section class="code-route-block">'
+        '<div class="grp">Code Route · measured</div>'
+        f'{proj}<ol class="code-route-stops">{"".join(labels)}</ol>'
+        "</section>"
+    )
+
+
 def render_card(a: Activity) -> str:
     from dataclasses import replace, fields
     a = replace(a, **{f.name: escape(getattr(a, f.name)) for f in fields(a) if isinstance(getattr(a, f.name), str)})
@@ -146,7 +200,7 @@ def render_card(a: Activity) -> str:
         )
         unavailable = ("" if a.ridge_basis == "wall-time" else
             '<p class="grp" style="text-transform:none;letter-spacing:0">Moving time, pace and cadence are unavailable: this harness trace is turn order, not a measured elapsed clock.</p>')
-        body = f'''<div class="ridgewrap">{route}<small>Tool calls over {basis_label}</small></div>
+        body = f'''{_selected_outcome_html(a)}{_code_route_html(a)}<div class="ridgewrap">{route}<small>Tool calls over {basis_label}</small></div>
     <div class="stats">
       <div class="stat"><div class="v">{wall}</div><div class="k">Wall time</div></div>
       <div class="stat"><div class="v">{a.distance}</div><div class="k">Turns</div></div>
@@ -160,7 +214,7 @@ def render_card(a: Activity) -> str:
       {coach}
     </details>'''
     else:
-        body = f'''<div class="hl" title="{hl_title}">
+        body = f'''{_selected_outcome_html(a)}{_code_route_html(a)}<div class="hl" title="{hl_title}">
       <div class="n">{a.headline}</div>
       <div class="lbl">{a.headline_label}<span class="f">{escape(a.headline_formula)}</span></div>
     </div>
@@ -245,6 +299,14 @@ def render_card(a: Activity) -> str:
   .sec div b{{font-weight:650}} .sec div span{{color:var(--muted)}}
   .foot{{display:flex;align-items:center;gap:16px;padding:12px 20px;border-top:1px solid var(--line);
     color:var(--muted);font-size:13px}}
+
+  .outcome-hero,.code-route-block{{padding:12px 20px;border-bottom:1px solid var(--line)}}
+  .outcome-line{{margin:0 0 8px;font-size:16px;font-weight:650;line-height:1.35}}
+  .outcome-links{{margin:0;font-size:13px}}
+  .outcome-links a{{color:var(--accent);font-weight:500}}
+  .code-route-stops{{margin:8px 0 0;padding-left:18px}}
+  .code-route-stops li{{margin:4px 0;font-size:13px}}
+
   .kudo{{display:flex;align-items:center;gap:6px}} .kudo b{{color:var(--ink)}}
 </style></head>
 <body>
