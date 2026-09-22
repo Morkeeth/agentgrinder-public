@@ -95,6 +95,12 @@ def _capture(composer_id: str, db=None) -> dict | None:
 
 def _store_private(root: Path, composer_id: str, run: dict) -> str:
     from .capture import connect
+    from .identity import resolve
+    # The account this machine already holds, read from local config (identity.py): no network,
+    # no sign-in change. Stored with the draft so a re-render after review says the same name.
+    who = resolve()
+    run["athlete_handle"] = who.handle
+    run["athlete"] = who.display
     db = connect(root / "capture")
     draft_id = hashlib.sha256(("cursor-composer:" + composer_id).encode()).hexdigest()
     source = "cursor-composer:" + composer_id
