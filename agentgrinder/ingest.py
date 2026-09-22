@@ -14,7 +14,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from . import gitwork, reach as reachmod
+from . import gitwork, privacy, reach as reachmod
 from .authorship import is_human_turn
 from .project_identity import identity as project_identity
 from .claims import ClaimTracker, is_tool_result, result_text
@@ -275,12 +275,28 @@ def _region_of(path: str, root: str | None) -> str:
 # Linux. The prefix is derived from that shape, not from a name. `expanduser` is deliberately not
 # used: the label has to be right for a transcript copied from another machine, where the home
 # directory in the name is not the one this process is running under.
-_HOME_PREFIX = _re.compile(r"^-?(?:Users|home)-[^-]+-")
+#
+# THE TRAILING DASH IS OPTIONAL, and that one character is a shipped leak. A session opened on
+# the home directory itself flattens to `-Users-<whoever>` with nothing after the account name,
+# the prefix rule missed it for want of a final dash, and the account name became the whole
+# label: a real card, 22 Sep 2026, was titled `Users-morkeeth · Cursor sitting`. There is no
+# project in that name to preserve, so the label is EMPTY and the caller says "unknown project"
+# rather than printing somebody's login.
+_HOME_PREFIX = _re.compile(r"^-?(?:Users|home)-[^-]+(?:-|$)")
 
 
 def project_label(dirname: str) -> str:
-    """The project part of a flattened-path directory name, with any user's home prefix removed."""
-    return _HOME_PREFIX.sub("", dirname) or dirname
+    """The project part of a flattened-path directory name, with any user's home prefix removed.
+
+    Returns "" when the directory names a home directory and nothing else: an unknown project is
+    a fact the card can state, an account name is not.
+    """
+    if not dirname:
+        return ""
+    stripped = _HOME_PREFIX.sub("", dirname)
+    if stripped == dirname:
+        return dirname
+    return stripped
 
 
 def latest_cursor_session() -> str | None:
@@ -389,10 +405,8 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
         rhythm[min(buckets - 1, i * buckets // typed)] += 1
 
     proj = project_label(os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(path)))))
-    # Safe public title: project + harness sitting — not a raw user_query excerpt.
     # The longest typed prompt stays local-only for the author; share/card defaults never paste it.
     private_title_prompt = best_prompt or first_prompt
-    title = f"{proj} · Cursor sitting" if proj else "Cursor sitting"
 
     # THE REPOSITORY, from the files the session actually wrote. Cursor never states a cwd, so the
     # root is the git work tree enclosing the most-edited path. A session that wrote nothing, or
@@ -412,6 +426,22 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
     # same thing by the same word.
     artifacts_produced = sum(1 for fp in written if os.path.exists(fp)) if written else None
 
+    # WHAT LANDED, asked of git over this run's window — the same witness reach uses. The
+    # transcript can only count `git commit` shell calls; git can say what those commits were
+    # called, and a commit subject is the one outcome sentence a card can print without a person
+    # writing one. No repository or no window means no subject, and the card says nothing shipped.
+    commits_list = []
+    if repo_root and len(pts) >= 2:
+        commits_list = [dict(hash=c["hash"], at=c["at"], subject=c["subject"])
+                        for c in gitwork.commits_in(repo_root, min(pts), max(pts))]
+
+    # THE TITLE: the repository and the work, never the workspace directory. Until 22 Sep 2026 it
+    # was `f"{proj} · Cursor sitting"` over a flattened filesystem path, which printed the
+    # author's macOS account name on a card they were asked to share.
+    subject = privacy.strip_home_names(commits_list[-1]["subject"]) if commits_list else ""
+    task = subject[:80] if subject and not privacy.scan(subject) else "Cursor sitting"
+    title = f"{public_project} · {task}" if public_project else task
+
     # REACH. It needs a repository AND a window. Cursor stamps times on typed turns only, so a
     # single-turn session has no window and reach stays None with the sentence that says why.
     if repo_root and len(pts) >= 2:
@@ -426,7 +456,8 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
 
     route = [_region_of(fp, repo_root) for fp in edits]
     run = {
-        "athlete": athlete, "title": title, "harness": "Cursor", "project": public_project or proj,
+        "athlete": athlete, "title": title, "harness": "Cursor",
+        "project": public_project or proj or None,
         "project_proven": repo_root is not None,
         "parser_version": "cursor-claims-unknown-2026-09-14",
         "project_identity": project_identity(repo_root),
@@ -436,7 +467,13 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
         "duration_s": dur, "turns_typed": typed, "tool_calls": tool_calls,
         "shell_calls": shell_calls,
         "files_touched": len(files) if files else None,
+        # Cursor's `files` set only ever holds paths a write tool named, so touched and changed
+        # are the same population here. The card needs the stronger word to be earned, so it is
+        # recorded under its own key rather than relabelled at render time.
+        "files_changed": len(written) if written else None,
         "commits": commits if edits or commits else None,
+        # hash, time and subject only. No file names, and no path ever reaches this list.
+        "commits_list": commits_list,
         "rhythm": rhythm,
         "artifacts_produced": artifacts_produced,
         "artifacts_promised": None,   # no harness records what a run said it would deliver

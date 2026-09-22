@@ -125,6 +125,37 @@ def safe_label(path: str, repo_root: str | None, opt_in: bool = False) -> tuple[
     return ELSEWHERE, "elsewhere"
 
 
+# A home directory reaches a label in two shapes: as a path (`/Users/<name>/code/app`) and as the
+# flattened directory name Cursor and Claude write for a workspace (`Users-<name>-code-app`). The
+# first is what `scan` already refuses. The second passed every control for months and reached a
+# real shared card as the run's title, because a card title is not a file path to any regex here.
+_HOME_PATH = re.compile(r"(?:/" + "Us" + "ers|/home)/[A-Za-z0-9._-]+" + r"|~/[^\s<>\"']*")
+_AT_TOKEN = r"(?:^|(?<=[\s·|/(\[]))"
+# macOS flattens `/Users/<name>/...`; the word is rare enough in prose to strip on sight.
+_HOME_FLAT_MAC = re.compile(_AT_TOKEN + r"-?" + "Us" + r"ers-[A-Za-z0-9._]+-?")
+# Linux flattens `/home/<name>/...`. `home-` IS ordinary English ("home-page"), so the Linux
+# shape is only stripped where a flattened path is unmistakable: a leading dash from the
+# absolute path, or a third segment after the account name.
+_HOME_FLAT_LINUX = re.compile(
+    _AT_TOKEN + r"(?:-home-[A-Za-z0-9._]+-?|home-[A-Za-z0-9._]+-(?=[A-Za-z0-9._]))")
+
+
+def strip_home_names(text: str) -> str:
+    """Remove the operating-system home directory, and the username inside it, from a label.
+
+    The card may print a repository, a commit subject or a project name. None of those needs the
+    machine's own account name, and the account name is the one string on a run card that
+    identifies a person who did not choose to be identified.
+    """
+    if not isinstance(text, str) or not text:
+        return text
+    out = _HOME_PATH.sub("", text)
+    out = _HOME_FLAT_LINUX.sub("", _HOME_FLAT_MAC.sub("", out))
+    # The account name is only stripped where a home directory put it. A repository that carries
+    # a person's name is that person's public identity, and deleting it would be its own defect.
+    return " ".join(out.replace("··", "·").split()).strip(" ·-/")
+
+
 def safe_prompt(prompt: str | None, opt_in: bool = False) -> str | None:
     """A typed prompt is a keystroke log. It is never printed unless it is opted in.
 
