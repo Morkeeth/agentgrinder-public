@@ -983,6 +983,17 @@ function runUploadIdentity(r){
   return `<div class="sub run-upload-identity">Agent contribution: <a href="${agentHref}">${esc(r.agent_name)}</a>${r.harness?` · <span class="card-harness">${esc(r.harness)}</span>`:''} · authorised by the owner</div>`;
 }
 
+// The project a run is SAVED with. Capture reads the folder the session ran in - Claude Code
+// published `the-fair` from `~/code/the-fair`, a private folder name a stranger then read as
+// "Project touched" - so the preview prefills this and the author can rename or clear it before
+// Save. A cleared field publishes no project; a typed path is scrubbed like every other free
+// text field, visibly, in the live preview.
+function projectForSave(captured,typed){
+  const text=typeof typed==='string'?typed.trim():'';
+  if(!text) return typed==null?GrinderContract.projectLabel(captured):null;
+  return GrinderContract.projectLabel(GrinderContract.rejectPaths(text));
+}
+
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
   const projectName=()=>{
     const value=typeof r.project==='string'?r.project.trim():'';
@@ -1889,7 +1900,14 @@ async function importRun(){
     run.coach_experiment=GrinderContract.rejectPaths(run.coach_experiment);
   }
   const sample=run.is_sample===true;
-  const importedProject=typeof run.project==='string'&&run.project.trim().toLowerCase()!=='session'?run.project.trim():null;
+  // THE PROJECT IS A DIRECTORY NAME UNTIL THE AUTHOR SAYS OTHERWISE. Claude Code capture reads
+  // the folder the session ran in, so a run posted from `~/code/the-fair` published `the-fair`
+  // as "Project touched" with no way to change it: a private folder name, chosen for a laptop,
+  // shown to strangers. It is now a field in the preview, prefilled with what was captured and
+  // editable before Save. projectLabel takes the home directory out of the prefill.
+  const capturedProject=GrinderContract.projectLabel(run.project);
+  const editedProject=()=>projectForSave(capturedProject,$('i_project')?.value ?? null);
+  const importedProject=capturedProject;
   const app=$('app');
   const rows=[['harness',run.harness],['model',run.model],['project',importedProject],['typed turns',run.turns_typed],
     ['minutes',run.duration_s==null?null:Math.round(run.duration_s/60)],['tool calls',run.tool_calls],
@@ -1907,6 +1925,7 @@ async function importRun(){
   app.innerHTML=`<div class="head"><h2>${sample?'Sample preview':'Preview your run'}</h2><span class="meta">${sample?'example data · not your activity':'private until you choose and save'}</span></div>
     ${sample?'<p role="note">This sample is for trying the preview. It cannot be saved or posted. Capture your own session to share a run.</p>':''}
     <div class="panel"><div class="pad preview-story">
+    <label>Project (optional)<input id="i_project" maxlength="80" value="${esc(capturedProject||'')}" placeholder="What to call this project"><span class="hint">Shown to readers as Project touched. Capture prefills the folder the session ran in; rename it or clear it.</span></label>
     <p class="meta">STORY FIRST</p>
     <label>What did you achieve?<input id="i_title" maxlength="120" required placeholder="Write the achievement. Prompt text is never used."></label>
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
@@ -1929,7 +1948,7 @@ async function importRun(){
     </details>
     <div id="i_recover" hidden></div></div></div>
     <div class="head"><h2>${sample?'Sample card preview':'Card preview'}</h2><span class="meta">not posted</span></div><div id="import-card-preview"></div>`;
-  const editFields=['i_title','i_model','i_segment','i_wall','i_caption','i_output_url','i_image_url','i_stack','i_vis'];
+  const editFields=['i_title','i_model','i_project','i_segment','i_wall','i_caption','i_output_url','i_image_url','i_stack','i_vis'];
   let savedImportEdits=null;
   try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){savedImportEdits=saved;for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
   if(!$('i_image_url').value&&run.image_url)$('i_image_url').value=run.image_url;
@@ -1937,7 +1956,7 @@ async function importRun(){
   function paintImportPreview(){
     const sceneUrl=($('i_image_url')?.value||'').trim()||run.image_url||null;
     const preview={id:'preview',profile_id:ME?.id||'preview',profiles:ME||{github_handle:'you',name:'Your preview'},title:$('i_title').value||'Untitled run',
-      project:importedProject,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
+      project:editedProject(),model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
       wall_time_s:importedWholeNumber('i_wall'),
       harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,shell_calls:run.shell_calls??null,files_touched:run.files_touched??null,artifacts_produced:run.artifacts_produced??null,
@@ -2006,7 +2025,7 @@ async function importRun(){
     try{ prior=await existingRun(); }catch(lookupError){ showRecovery(lookupError); return; }
     if(prior){ await openExisting(prior); return; }
     const base={profile_id:ME.id,title:$('i_title').value||'Untitled run',
-      project:importedProject,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
+      project:editedProject(),model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
       wall_time_s:wallTime,
       harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,shell_calls:run.shell_calls??null,files_touched:run.files_touched??null,
