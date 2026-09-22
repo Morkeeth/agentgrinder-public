@@ -995,10 +995,7 @@ function projectForSave(captured,typed){
 }
 
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
-  const projectName=()=>{
-    const value=typeof r.project==='string'?r.project.trim():'';
-    return value&&!['session','unknown','project unknown'].includes(value.toLowerCase())?value:null;
-  };
+  const projectName=()=>GrinderContract.projectLabel(r.project);
   const codeFacts=()=>{
     const facts=[];
     if(r.shell_calls!=null)facts.push(['Shell calls',r.shell_calls]);
@@ -1925,10 +1922,10 @@ async function importRun(){
   app.innerHTML=`<div class="head"><h2>${sample?'Sample preview':'Preview your run'}</h2><span class="meta">${sample?'example data · not your activity':'private until you choose and save'}</span></div>
     ${sample?'<p role="note">This sample is for trying the preview. It cannot be saved or posted. Capture your own session to share a run.</p>':''}
     <div class="panel"><div class="pad preview-story">
-    <label>Project (optional)<input id="i_project" maxlength="80" value="${esc(capturedProject||'')}" placeholder="What to call this project"><span class="hint">Shown to readers as Project touched. Capture prefills the folder the session ran in; rename it or clear it.</span></label>
     <p class="meta">STORY FIRST</p>
     <label>What did you achieve?<input id="i_title" maxlength="120" required placeholder="Write the achievement. Prompt text is never used."></label>
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
+    <label>Project (optional)<input id="i_project" maxlength="80" value="${esc(capturedProject||'')}" placeholder="What to call this project"><span class="hint">Shown to readers as Project touched. Capture prefills the folder the session ran in; rename it or clear it.</span></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
     <label>Scene photo URL (optional)<input id="i_image_url" type="url" maxlength="2048" placeholder="https://…/cafe.jpg"><span class="hint">Optional lifestyle scene beside a genuine output image. Paste a URL; nothing is taken from your camera roll automatically.</span></label>
     <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label>
