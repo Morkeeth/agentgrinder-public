@@ -153,6 +153,15 @@ class Activity:
     selected_outcome: str = ""
     receipts: list = field(default_factory=list)  # [{label,url}, ...] after public_outcome
     code_route: dict | None = None
+    # THE AUTHOR'S CHOICE OF HERO, and the measured file work every option is drawn from
+    # (filework.py, runviz.py). All five stay absent on a run that measured no files, and the
+    # card falls back to the ridge it already had.
+    file_work: dict | None = None
+    hero_visual: str = ""
+    image_url: str = ""
+    quote: dict | None = None
+    gear: dict | None = None
+    trophies: list = field(default_factory=list)
     # THE HEADLINE A STRANGER READS: one outcome sentence and its provenance (outcome.py), plus
     # the single count the run can prove. An empty hero draws no block at all.
     outcome: str = ""
@@ -310,6 +319,12 @@ def build_activity(run: dict) -> Activity:
     if route is not None:
         from .code_route import validate_code_route
         route = validate_code_route(route)
+    work = run.get("file_work")
+    if work is not None:
+        from .filework import validate_file_work
+        work = validate_file_work(work)
+    from .contract import public_components
+    components = public_components(run)
 
     from . import identity as identity_mod, insight as insight_mod, privacy
     from .outcome import hero_of, outcome_of
@@ -356,6 +371,12 @@ def build_activity(run: dict) -> Activity:
         selected_outcome=selected,
         receipts=list(declared.get("receipts") or []),
         code_route=route,
+        file_work=work,
+        hero_visual=components.get("hero_visual") or "",
+        image_url=declared.get("image_url") or "",
+        quote=components.get("quote"),
+        gear=components.get("gear"),
+        trophies=list(components.get("trophies") or []),
         outcome=shipped_outcome.text,
         outcome_basis=shipped_outcome.basis,
         outcome_shipped=shipped_outcome.shipped,

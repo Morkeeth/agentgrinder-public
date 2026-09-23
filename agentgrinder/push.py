@@ -6,7 +6,8 @@ import gzip
 import json
 import os
 import urllib.parse
-from .contract import public_code_route_fields, public_outcome, public_revision, validate_run
+from .contract import (public_code_route_fields, public_components, public_outcome,
+                       public_revision, validate_run)
 from .coach.experiment import public_experiment, public_text
 
 DEFAULT_URL = os.environ.get("AGENTGRINDER_URL", "http://localhost:8000")
@@ -72,6 +73,13 @@ def export_run(run: dict) -> dict:
     out.update(public_outcome(run))
     # Measured/declared Code Route (migration 009). Separate from rhythm/route integers.
     out.update(public_code_route_fields(run))
+    # The measured file work the run-card components are drawn from, and the author's choice of
+    # which one is the hero. No file name travels: the per-file rows are anonymous (filework.py).
+    if run.get("file_work") is not None:
+        from .filework import validate_file_work
+
+        out["file_work"] = validate_file_work(run["file_work"])
+    out.update(public_components(run))
     return {k: v for k, v in out.items() if v is not None}
 
 

@@ -59,6 +59,11 @@ def validate_run(run: dict) -> dict:
         from .code_route import validate_code_route
 
         run["code_route"] = validate_code_route(run["code_route"])
+    if run.get("file_work") is not None:
+        from .filework import validate_file_work
+
+        run["file_work"] = validate_file_work(run["file_work"])
+    public_components(run)
     return run
 
 
@@ -150,6 +155,125 @@ def selected_insight(run: dict) -> dict:
         raise ValueError("insight.receipt must be one of this run's receipts. An insight is shown "
                          "only when a receipt on this run backs it.")
     return {"insight": {"text": line, "receipt": url}}
+
+
+# THE AUTHOR'S CHOICE OF VISUAL, and the three small components beside it.
+#
+# One hero per run. A card that stacks a treemap, a folder line and an elevation profile is not
+# four views of one run, it is four claims competing for the same glance, and the reader has no
+# way to tell which one the author meant. So the choice is a single field, the options are fixed,
+# and an option the run has no data for is not offered (see runviz.available).
+HERO_VISUALS = ("size-map", "folder-line", "elevation", "screenshot", "ridge")
+# Round orange marks, and every one of them a measurement somebody can check. A trophy for
+# "consistency" or "effort" is a compliment; these four are counts and clocks.
+TROPHY_IDS = ("biggest-pr", "first-merge", "merge-streak", "longest-run")
+MAX_QUOTE = 140
+_GEAR_TEXT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._+/@#:()-]{0,47}$")
+
+
+def _sentence_case(text: str, field: str) -> str:
+    """Sentence case, never all caps. Oscar's ruling, 23 September, enforced at the boundary.
+
+    A card shouting at a reader is the house style of every dashboard this product is not. Short
+    acronyms (PR, CI) stay, because writing them in lower case would be a different error.
+    """
+    letters = [c for c in text if c.isalpha()]
+    if letters and text == text.upper() and len(letters) > 3:
+        raise ValueError(f"{field} is written in sentence case, never in capitals.")
+    return text
+
+
+def _short_text(value, field: str, limit: int) -> str:
+    if not isinstance(value, str) or not 1 <= len(value.strip()) <= limit:
+        raise ValueError(f"{field} is one line of 1 to {limit} characters.")
+    line = " ".join(value.split())
+    from . import privacy
+
+    if privacy.scan(line):
+        raise ValueError(f"{field} must not carry a path, a home directory or an address.")
+    return _sentence_case(line, field)
+
+
+def public_components(run: dict) -> dict:
+    """The author's hero choice, the quote they picked, their gear chip and their trophies.
+
+    All four default to ABSENT, and absent is the normal state. Nothing here is inferred: the
+    quote must say on its face that a person chose it, the trophies name the measurement each one
+    came from, and the gear chip carries only counts the local captures already hold.
+    """
+    out = {}
+    hero = run.get("hero_visual")
+    if hero is not None:
+        if hero not in HERO_VISUALS:
+            raise ValueError("hero_visual must be one of: " + ", ".join(HERO_VISUALS) + ".")
+        out["hero_visual"] = hero
+
+    quote = run.get("quote")
+    if quote is not None:
+        # THE QUOTE IS THE AUTHOR'S OR IT DOES NOT EXIST (PRODUCT.md: never read out of a
+        # transcript). `chosen_by` is not decoration: it is the field that makes an auto-filled
+        # quote impossible to write by accident, because a parser would have to state the lie.
+        if not isinstance(quote, dict) or set(quote) - {"text", "chosen_by"}:
+            raise ValueError("quote is {text, chosen_by}: one line the author picked.")
+        if quote.get("chosen_by") != "author":
+            raise ValueError("quote.chosen_by must be author. A quote is never auto-filled from "
+                             "a transcript.")
+        out["quote"] = {"text": _short_text(quote.get("text"), "quote.text", MAX_QUOTE),
+                        "chosen_by": "author"}
+
+    gear = run.get("gear")
+    if gear is not None:
+        if not isinstance(gear, dict) or set(gear) - {"agent", "harness", "model", "runs",
+                                                      "commits", "lines_changed", "basis"}:
+            raise ValueError("gear holds agent, harness, model, runs, commits, lines_changed and "
+                             "basis.")
+        clean = {}
+        for field in ("agent", "harness", "model"):
+            value = gear.get(field)
+            if value is None:
+                continue
+            text = _short_text(value, f"gear.{field}", 48)
+            if not _GEAR_TEXT.match(text):
+                raise ValueError(f"gear.{field} must be one short safe name.")
+            clean[field] = text
+        for field in ("runs", "commits", "lines_changed"):
+            value = gear.get(field)
+            if value is None:
+                continue
+            if type(value) is not int or value < 0:
+                raise ValueError(f"gear.{field} must be a non-negative whole number.")
+            clean[field] = value
+        if not clean:
+            raise ValueError("gear must carry at least one measured field.")
+        # Lifetime totals are only allowed to say where they came from, never how many runs
+        # exist somewhere else. A gear chip with counts must name the population it counted.
+        if any(field in clean for field in ("runs", "commits", "lines_changed")):
+            clean["basis"] = _short_text(gear.get("basis"), "gear.basis", 80)
+        elif gear.get("basis") is not None:
+            clean["basis"] = _short_text(gear.get("basis"), "gear.basis", 80)
+        out["gear"] = clean
+
+    trophies = run.get("trophies")
+    if trophies is not None:
+        if not isinstance(trophies, list) or len(trophies) > len(TROPHY_IDS):
+            raise ValueError(f"trophies holds at most {len(TROPHY_IDS)} badges.")
+        seen, clean_trophies = set(), []
+        for badge in trophies:
+            if not isinstance(badge, dict) or set(badge) - {"id", "label", "value", "basis"}:
+                raise ValueError("each trophy is {id, label, value, basis}.")
+            if badge.get("id") not in TROPHY_IDS:
+                raise ValueError("trophy.id must be one of: " + ", ".join(TROPHY_IDS) + ".")
+            if badge["id"] in seen:
+                raise ValueError("a run carries each trophy at most once.")
+            seen.add(badge["id"])
+            clean_trophies.append({
+                "id": badge["id"],
+                "label": _short_text(badge.get("label"), "trophy.label", 40),
+                "value": _short_text(badge.get("value"), "trophy.value", 24),
+                "basis": _short_text(badge.get("basis"), "trophy.basis", 80),
+            })
+        out["trophies"] = clean_trophies
+    return out
 
 
 def public_code_route_fields(run: dict) -> dict:

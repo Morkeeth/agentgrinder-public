@@ -309,6 +309,15 @@ def _code_route_html(a) -> str:
 
 def render_card(a: Activity) -> str:
     from dataclasses import replace, fields
+    from . import runviz
+    # THE COMPONENTS READ THE UNESCAPED RUN. Everything below this line works on a copy whose
+    # string fields have already been through `escape`, and passing an escaped URL to a renderer
+    # that escapes it again prints `&amp;amp;`. So the view the components draw from is taken
+    # first, and each component escapes its own values.
+    visuals = {"file_work": a.file_work, "hero_visual": a.hero_visual, "image_url": a.image_url,
+               "quote": a.quote, "gear": a.gear, "trophies": a.trophies, "ridge": a.ridge}
+    hero = runviz.hero_html(visuals)
+    components = runviz.components_html(visuals)
     a = replace(a, **{f.name: escape(getattr(a, f.name)) for f in fields(a) if isinstance(getattr(a, f.name), str)})
     pb = '<span class="pb" title="high sustained cadence">High cadence</span>' if a.focus_pb else ""
     has_ridge = 40 <= len(a.ridge) <= 60
@@ -367,7 +376,11 @@ def render_card(a: Activity) -> str:
         # The hero already prints one of these counts in full size. Printing it again two rows
         # down is padding, so the stat the hero used is left out of the row.
         used = a.hero_label.split(" ")[-1]      # "landed", "changed", "touched", "calls"
-        body = f'''{_hero_block(a)}{_insight_block(a)}{_selected_outcome_html(a)}{_code_route_html(a)}<div class="ridgewrap">{route}<small>Tool calls over {basis_label}</small></div>
+        # ONE HERO VISUAL. The author's pick replaces the ridge rather than sitting above it:
+        # two full-width drawings of one run is two arguments, and the ridge is still under More.
+        plane = hero or (f'<div class="ridgewrap">{route}'
+                         f'<small>Tool calls over {basis_label}</small></div>')
+        body = f'''{_hero_block(a)}{_insight_block(a)}{_selected_outcome_html(a)}{_code_route_html(a)}{plane}{components}
     {_stats_block([(wall, "Wall time"), (a.distance, "Cost"),
                    ("" if used == "landed" else a.commits, "Commits"),
                    ("" if used in ("changed", "touched")
@@ -382,13 +395,13 @@ def render_card(a: Activity) -> str:
       {coach}
     </details>'''
     else:
-        body = f'''{_hero_block(a)}{_insight_block(a)}{_selected_outcome_html(a)}{_code_route_html(a)}<div class="hl" title="{hl_title}">
+        body = f'''{_hero_block(a)}{_insight_block(a)}{_selected_outcome_html(a)}{_code_route_html(a)}{hero}{components}<div class="hl" title="{hl_title}">
       <div class="n">{a.headline}</div>
       <div class="lbl">{a.headline_label}<span class="f">{escape(a.headline_formula)}</span></div>
     </div>
     {five}
     {_unmeasured_note(a.five)}
-    <div class="routewrap">{route}</div>
+    {"" if hero else f'<div class="routewrap">{route}</div>'}
     <div class="grp">Cost — what the run spent</div>
     {_stats_block([(a.distance, "Typed turns"), (a.moving_time, "Moving time"), (a.pace, "Pace")])}
     {"" if a.moving_time != "—" or not a.trace_basis else '<p class="grp" style="text-transform:none;letter-spacing:0;padding-top:0">Moving time, pace and cadence are unavailable: this harness trace is turn order, not a measured elapsed clock.</p>'}
@@ -487,6 +500,7 @@ def render_card(a: Activity) -> str:
   .code-route-stops li{{margin:4px 0;font-size:13px}}
 
   .kudo{{display:flex;align-items:center;gap:6px}} .kudo b{{color:var(--ink)}}
+{runviz.CSS}
 </style></head>
 <body>
   <div class="card">
