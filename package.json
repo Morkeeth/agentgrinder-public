@@ -14,11 +14,14 @@
     "test:account": "node scripts/test-account.mjs",
     "test:origin": "node scripts/test-origin.mjs",
     "test:ridge": "node scripts/test-ridge-persistence.mjs",
+    "test:connect": "node --test scripts/test-connect-device.mjs",
+    "test:pair": "node --test scripts/test-connect-pair.mjs",
     "check:hosted-config": "node scripts/check-hosted-config.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
-    "jsdom": "^26.1.0"
+    "jsdom": "^26.1.0",
+    "qrcode": "^1.5.4"
   },
   "dependencies": {
     "@vercel/og": "0.8.5"

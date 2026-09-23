@@ -58,6 +58,14 @@ def check():
     for path in sorted((ROOT / 'site').glob('*.js')):
         run([node, '--check', path])
     run([sys.executable, ROOT / 'scripts/cold-first-minute.py'])
+    # Connect's device pairing lives in SQL and in the approve page, so its checks need the dev
+    # dependencies (an in-process Postgres, jsdom, a reference QR encoder). Say so when they are
+    # not installed rather than reporting a pass that never ran.
+    if (ROOT / 'node_modules/@electric-sql/pglite').exists():
+        run([node, '--test', ROOT / 'scripts/test-connect-device.mjs'])
+        run([node, '--test', ROOT / 'scripts/test-connect-pair.mjs'])
+    else:
+        print('Connect device pairing checks NOT RUN: run npm install, then npm run test:connect and npm run test:pair.', flush=True)
     print('Contributor checks passed. These do not test hosted sign-in or social writes.', flush=True)
 
 

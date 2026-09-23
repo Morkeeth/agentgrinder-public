@@ -22,6 +22,8 @@ jobs:
       - run: npm run test:shared-schema
       - run: npm run test:identity
       - run: npm run test:people
+      - run: npm run test:connect
+      - run: npm run test:pair
       - run: node scripts/test-runtime-config.mjs
       - run: npm run build
       - run: node scripts/test-people-identity.mjs
