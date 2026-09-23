@@ -1030,8 +1030,8 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   const eventChip=typeof GrinderContract==='object'&&GrinderContract.eventChip?GrinderContract.eventChip(r):'';
   const ridge=typeof GrinderContract==='object'&&GrinderContract.ridge?GrinderContract.ridge(r):'';
   // ONE HERO VISUAL, the author's. It replaces the Code Route and the ridge in the card's one
-  // visual plane rather than stacking on them; both are still under Explore this run. A run that
-  // measured no files and has no image draws exactly what it drew before.
+  // visual plane rather than stacking on them; both are still in the run's own details. A run
+  // that measured no files and has no image draws exactly what it drew before.
   const chosenVisual=typeof GrinderVisuals==='object'&&GrinderVisuals.heroHtml?GrinderVisuals.heroHtml(r):'';
   const runComponents=typeof GrinderVisuals==='object'&&GrinderVisuals.componentsHtml?GrinderVisuals.componentsHtml(r):'';
   const ridgeOutput=output?(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(output)?'PR':/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(output)?'Screenshot':'Output'):null;
