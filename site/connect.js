@@ -51,19 +51,29 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
     </section>`;
   }
 
+  const statusOf = () =>
+    (typeof window !== "undefined" && window.GrinderConnectStatus) || {
+      isStale: () => false,
+      lastSynced: (row) => (row && row.last_seen_at ? "Synced" : "No run yet"),
+    };
+
   function listHtml(rows) {
     if (!rows.length) {
-      return `<p class="account-hint">No connected agents yet. Name one below.</p>`;
+      return `<p class="account-hint">No connected devices yet. Pair one below.</p>`;
     }
-    return `<ul class="connect-tokens" aria-label="Connected agents">${rows
+    const status = statusOf();
+    return `<ul class="connect-tokens" aria-label="Connected devices">${rows
       .map((row) => {
         const revoked = row.revoked === true;
-        const label = row.label || "Connected agent";
+        const stale = status.isStale(row);
+        const label = row.device_name || row.label || "Connected device";
         const prefix = row.token_prefix || "********";
-        const exp = row.expires_at ? new Date(row.expires_at).toLocaleDateString() : "";
-        return `<li class="connect-token${revoked ? " is-revoked" : ""}">
+        const synced = status.lastSynced(row);
+        const note = stale ? " · no run for over a week" : "";
+        return `<li class="connect-token${revoked ? " is-revoked" : ""}${stale ? " is-stale" : ""}">
           <div><strong>${esc(label)}</strong>
-            <span class="account-hint">${esc(prefix)}…${revoked ? " · revoked" : exp ? " · expires " + esc(exp) : ""}</span>
+            <span class="account-hint connect-synced">${esc(synced)}${esc(note)}</span>
+            <span class="account-hint">${esc(prefix)}…${revoked ? " · revoked" : " · renews for 90 days on each run"}</span>
           </div>
           ${revoked ? "" : `<button type="button" class="act" data-revoke="${esc(row.id)}">Revoke</button>`}
         </li>`;
@@ -105,15 +115,28 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
         <form id="connect-create" class="account-form" novalidate>
           <label for="connect-label">Agent name</label>
           <input id="connect-label" name="label" maxlength="80" required placeholder="Grok laptop" autocomplete="off">
-          <p class="account-hint">Private draft and publish for 30 days. Other audiences stay on <a href="/?agents">Advanced Agents</a>.</p>
+          <p class="account-hint">Private draft and publish. The credential renews for another 90 days every time the
+          device uploads a run, so a device you use stays connected. Other audiences stay on <a href="/?agents">Advanced Agents</a>.</p>
           <p id="connect-create-state" class="account-state" role="status" aria-live="polite"></p>
           <div class="account-actions"><button type="submit" class="act blue" id="connect-create-go">Connect</button></div>
         </form>
         ${once}
       </section>
       ${agentVisibilityHtml(agent || null)}
+      <section class="card pad account-section" aria-labelledby="connect-device-title">
+        <h2 id="connect-device-title">Or pair the device itself</h2>
+        <p>An agent that supports the device flow asks for a code, you approve it here, and it keeps its own
+        credential. Nothing is pasted by hand.</p>
+        <pre class="connect-pair-snippet"><code>curl -sS -X POST ${esc(origin())}/api/connect/device \\
+  -H 'Content-Type: application/json' \\
+  -d '{"harness":"cursor","device_name":"Studio laptop"}'</code></pre>
+        <p class="account-hint">It answers with an eight character code and a link. Open <a href="/?pair">/?pair</a> on this
+        account, approve the device, and it collects the credential from <code>/api/connect/token</code>.</p>
+      </section>
       <section class="card pad account-section" aria-labelledby="connect-list-title">
         <h2 id="connect-list-title">Your connections</h2>
+        <p class="account-hint">One row per connected device, with when it last synced. A device with no run for
+        over a week is marked; revoke it and the next upload is refused.</p>
         <div id="connect-list">${listHtml(rows)}</div>
         <p id="connect-list-state" class="account-state" role="status" aria-live="polite"></p>
       </section>
