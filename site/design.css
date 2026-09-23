@@ -295,13 +295,17 @@ button,summary{touch-action:manipulation}
   .pc-draw{animation:none;stroke-dashoffset:0}
 }
 /* The picker, in the private preview. One hero per run, and only the visuals this run measured. */
-.visual-picker{border:1px solid var(--rule);border-radius:2px;padding:12px 14px;margin:0 0 14px}
+.visual-picker{border:1px solid var(--rule);border-radius:2px;padding:12px 14px;margin:0 0 14px;
+  text-align:left;background:var(--box)}
 .visual-picker legend{font-size:12px;color:var(--soft);padding:0 6px}
 .visual-choice{display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-size:14px;
-  cursor:pointer;min-height:40px}
-.visual-choice input{margin-top:3px;accent-color:#FC4C02}
-.visual-choice b{display:block;font-weight:600;color:var(--ink)}
-.visual-choice small{color:var(--soft);font-size:12px}
+  cursor:pointer;min-height:40px;text-align:left}
+/* The app's forms stretch every input to the width of its label. A radio button is not a text
+   field, so it keeps its own size and the description beside it takes the rest of the row. */
+.visual-choice input[type=radio]{flex:0 0 auto;width:auto;margin:3px 0 0;accent-color:#FC4C02}
+.visual-choice>span{flex:1 1 auto;min-width:0}
+.visual-choice b{display:block;font-weight:600;color:var(--ink);font-size:14px}
+.visual-choice small{display:block;color:var(--soft);font-size:12px;line-height:1.4}
 @media(max-width:390px){
   .pc-visual,.pc-gear,.pc-quote,.pc-trophies{padding-left:12px;padding-right:12px}
 }
