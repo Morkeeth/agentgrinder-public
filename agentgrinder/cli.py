@@ -14,6 +14,32 @@ from .profile import build_profile
 from .render import render_profile
 
 SAMPLE = Path(__file__).resolve().parent / "data" / "sample_run.json"
+_HERO_CHOICES = ("size-map", "folder-line", "elevation", "screenshot", "ridge")
+
+
+def _author_choices(run: dict, args) -> None:
+    """Apply the author's own choices to a run, and measure the gear chip and trophies.
+
+    The hero and the quote are the two fields on a card that nothing is allowed to infer. They
+    arrive from a person: a flag here, a picker in the private preview, and nowhere else.
+    """
+    from . import gear
+    from .contract import public_components
+    from .runviz import LABELS, available
+
+    picked = getattr(args, "hero", None)
+    if picked:
+        offered = available(run)
+        if picked not in offered:
+            names = ", ".join(LABELS[name] for name in offered) or "none"
+            raise ValueError(f"This run has no data for the {LABELS[picked]}. It can draw: "
+                             f"{names}.")
+        run["hero_visual"] = picked
+    line = getattr(args, "quote", None)
+    if line:
+        run["quote"] = {"text": line, "chosen_by": "author"}
+    gear.attach(run, getattr(args, "directory", None))
+    public_components(run)                   # a bad choice is a loud local error, not a quiet card
 
 
 # --coach ON A HARNESS THAT CANNOT FEED IT.
@@ -226,11 +252,28 @@ def main(argv=None) -> int:
     g.add_argument("--photo", default=None, metavar="JPEG_OR_PNG",
                    help="put your own photo at the top of the LOCAL card. Location, camera and time "
                         "data are removed first. The photo is never in --json or --push.")
+    # THE AUTHOR CHOOSES THE VISUAL. The private preview offers the same four in a picker; this is
+    # the same choice for someone who never leaves the terminal. A visual the run has no data for
+    # is refused here by name, rather than drawn empty.
+    g.add_argument("--hero", default=None, choices=list(_HERO_CHOICES),
+                   help="which visual leads the card: size-map (default when the run measured "
+                        "files), folder-line, elevation, screenshot (your --image-url), or ridge. "
+                        "A visual this run has no data for is refused, not drawn empty.")
+    g.add_argument("--quote", default=None, metavar="LINE",
+                   help="one line YOU pick from this run, printed on the card. Never taken from a "
+                        "transcript: if you do not write it, the card has no quote.")
     g.add_argument("--coach", nargs="?", const="local", choices=["local", "bedrock", "none"], default=None,
                    help="run the grind coach on this sitting before drawing the card. Default mode "
                         "local: a real Strands agent loop over a scripted model, keyless, nothing "
                         "leaves the machine. bedrock: a real model on Amazon Bedrock (AWS creds, "
                         "costs money, sends claim lines off the machine). none: no agent.")
+    fw = sub.add_parser("filework",
+                        help="measure one commit range the way a run card does: lines changed per "
+                             "file, line counts at the end, folders in visit order")
+    fw.add_argument("range", help="a commit range, e.g. ccef745..eadbc3e")
+    fw.add_argument("--repo", default=".", help="the work tree to ask (default: this directory)")
+    fw.add_argument("--json", dest="as_json", action="store_true",
+                    help="print the payload a card is drawn from instead of the summary")
     co = sub.add_parser("coach", help="the grind coach: an agent that checks every claim and file, then writes the verdict")
     co.add_argument("session", nargs="?", help="path to a .jsonl transcript (default: your most recent grind)")
     co.add_argument("--pick", type=int, default=None, help="which sitting (-1 = the last, 1 = the first)")
@@ -524,6 +567,8 @@ def main(argv=None) -> int:
             print(f"\n  ACK -> {url}\n  open, sign in, confirm reason: {args.reason}\n")
             webbrowser.open(url)
             return 0
+    if args.cmd == "filework":
+        return _filework(args)
     if args.cmd in ("grind", "run"):
         return _grind(args)
     if args.cmd == "coach":
@@ -705,6 +750,45 @@ def _load_latest_run(session: str | None = None) -> dict | None:
     return parse_session(path)
 
 
+def _filework(args) -> int:
+    """`agentgrinder filework BASE..HEAD` — the measurement the run-card components are drawn from.
+
+    It exists so the numbers on a card can be checked against git by hand, on any range, without
+    capturing a session first: the same function the capture calls, printed.
+    """
+    from . import filework, runviz
+
+    base, sep, head = args.range.partition("..")
+    if not sep or not base or not head:
+        print("  A range is BASE..HEAD, for example ccef745..eadbc3e."); return 1
+    try:
+        work = filework.measure_range(args.repo, base, head)
+    except (OSError, ValueError) as error:
+        print(f"  {error}"); return 1
+    if not work:
+        print(f"  No commit with a counted line change in {args.range}."); return 1
+    if args.as_json:
+        print(json.dumps(work, indent=2)); return 0
+    totals = work["totals"]
+    print(f"\n  {work.get('range', args.range)} · {work['commits']} commits · {work['source']}")
+    print(f"  {totals['lines_changed']:,} lines changed in {totals['files_touched']} of "
+          f"{totals['files_end']} files")
+    if work["deleted"]["files"]:
+        print(f"  also deleted: {work['deleted']['files']} files, "
+              f"{work['deleted']['lines']:,} lines")
+    print("\n  folders, in the order the work first reached them:")
+    for folder in work["folders"]:
+        if not folder["lines_changed"]:
+            continue
+        word = "line " if folder["lines_changed"] == 1 else "lines"
+        print(f"    {folder['name']:<22}{folder['lines_changed']:>8,} {word}  "
+              f"{folder['touched_files']:>4} of {folder['files_end']:<4} files  "
+              f"{folder['returns']} returns")
+    offered = ", ".join(runviz.LABELS[name] for name in runviz.available({"file_work": work}))
+    print(f"\n  this range can draw: {offered or 'nothing'}\n")
+    return 0
+
+
 def _grind(args) -> int:
     """`agentgrinder grind` — one ordinary session, the wide door.
 
@@ -852,6 +936,10 @@ def _grind(args) -> int:
             return 1
         run["input_digest"] = source_digest
         record_and_attach(run)
+    try:
+        _author_choices(run, args)
+    except ValueError as error:
+        print(f"  {error}"); return 1
     if args.as_json:
         from .coach.experiment import public_run_view
         print(json.dumps(public_run_view(run), indent=2)); return 0
@@ -969,6 +1057,10 @@ def _native_grind(run, args, path, source_digest, selected=None, total=None):
     run['input_digest']=source_digest
     if not args.no_series and run.get('started'):
         record_and_attach(run)
+    try:
+        _author_choices(run, args)
+    except ValueError as error:
+        print(str(error), file=sys.stderr); return 1
     requested=getattr(args,'coach',None) not in (None,'none')
     coach_text=None
     if requested:

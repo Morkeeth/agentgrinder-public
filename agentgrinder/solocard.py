@@ -202,6 +202,13 @@ def _photo_hero(photo_src: str | None, h_title: str, pill: str) -> str:
 
 def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = None,
                      photo_src: str | None = None) -> str:
+    from . import runviz
+
+    # OPT-IN ON THIS CARD. The grind trace below is already this card's hero, so a visual only
+    # appears here when the author named one (`grind --hero`). The quote, gear chip and trophies
+    # are absent by default like every other declared field.
+    chosen_visual = runviz.picked_hero_html(run)
+    components = runviz.components_html(run)
     svg, m = render_route_svg(run)
     # The SAME numbers in a layout a 390px screen can hold: see soloroute.Geo for the measurement
     # that forced two layouts rather than one responsive drawing.
@@ -499,6 +506,7 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
     .top,.sub,h1,.mapwrap,.maphead,.legend,.honest,.foot,.callout,.dead,.decl{{padding-left:14px;padding-right:14px}}
     .callout,.dead{{margin-left:14px;margin-right:14px;padding-left:12px;padding-right:12px}}
   }}
+{runviz.CSS}
 </style></head>
 <body>
   <div class="card">
@@ -513,6 +521,7 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
       {f'<span class="q">— “{prompt}”</span>' if prompt else ''}</div>
     {f'<div class="callout">{callout}</div>' if callout else ''}
     {prog}
+    {chosen_visual}{components}
 
     <div class="hl" title="{_esc(tip)} · {_esc(hl.formula)}">
       <div class="n">{hl.text}</div>

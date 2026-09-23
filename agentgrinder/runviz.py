@@ -407,6 +407,16 @@ def hero_html(run) -> str:
     return ""                                # the ridge is drawn by the card that already had one
 
 
+def picked_hero_html(run) -> str:
+    """The hero ONLY when the author asked for one by name.
+
+    The grind card (solocard.py) already opens on the trace of the session itself. A default that
+    put a size map above it would be two heroes on one card, which is the thing the picker exists
+    to prevent — so on that surface the components are opt-in and the default changes nothing.
+    """
+    return hero_html(run) if _view(run).get("hero_visual") else ""
+
+
 def components_html(run) -> str:
     """The quote, the gear chip and the trophies. Each one absent by default."""
     return quote_html(run) + gear_chip_html(run) + trophies_html(run)

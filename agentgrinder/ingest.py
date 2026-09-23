@@ -483,6 +483,13 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
         "route_legend": _dedupe(route),      # region names, LOCAL only, never pushed
         "private_title_prompt": private_title_prompt,  # LOCAL only — never a share default
     }
+    # THE FILE WORK, from the same window and the same witness as commits_list. It carries the
+    # line counts the transcript never had, and nothing else on the card can draw a size map, a
+    # folder line or an elevation without them (filework.py). Absent without a window.
+    if repo_root and len(pts) >= 2:
+        from . import filework
+
+        filework.attach(run, repo_root, min(pts), max(pts))
     # Cursor transcript JSONL has no agent event clock. Its local SQLite store does: bubble
     # createdAt. Read only the allowlisted structure, and fall back to call order if this export
     # was copied from another machine or any tool bubble lacks a timestamp.

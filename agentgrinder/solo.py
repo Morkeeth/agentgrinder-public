@@ -449,6 +449,12 @@ def parse_solo(path: str, athlete: str = "you", pick: int = -1, gap: int = SITTI
         git=dict(root=repo_name if repo_root else None, commits=len(commits),
                  reason=None if repo_root else "not inside a git work tree"),
     )
+    # The same window, asked a second question: how big is every file at the end, and how much of
+    # each one moved. The card's size map, folder line and elevation are all drawn from that one
+    # answer. No repository or no commit in the window means no answer and no components.
+    from . import filework
+
+    filework.attach(run, repo_root, t0, t1)
     return run
 
 

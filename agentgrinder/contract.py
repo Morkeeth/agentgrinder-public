@@ -269,7 +269,9 @@ def public_components(run: dict) -> dict:
             clean_trophies.append({
                 "id": badge["id"],
                 "label": _short_text(badge.get("label"), "trophy.label", 40),
-                "value": _short_text(badge.get("value"), "trophy.value", 24),
+                # The value is printed inside a 44px round mark, so it is short or it is not a
+                # mark. "2,639" and "2h 41m" fit; a sentence does not.
+                "value": _short_text(badge.get("value"), "trophy.value", 12),
                 "basis": _short_text(badge.get("basis"), "trophy.basis", 80),
             })
         out["trophies"] = clean_trophies
