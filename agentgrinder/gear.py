@@ -22,11 +22,21 @@ MAX_RUNS = 5000
 
 
 def _runs(directory=None) -> list:
-    """Every captured draft, newest last. An unreadable or absent capture database is no runs."""
+    """Every captured draft, newest last. An unreadable or absent capture database is no runs.
+
+    It is opened only when it already exists. `capture.connect` creates the private database on
+    the way in, and a chip that counts nothing is not worth making a file on the disk of someone
+    who has never run a capture.
+    """
+    from pathlib import Path
+
+    root = Path(directory) if directory else Path.home() / ".agentgrinder" / "capture"
+    if not (root / "capture.db").is_file():
+        return []
     try:
         from .capture import connect
 
-        db = connect(directory)
+        db = connect(root)
     except Exception:                                    # a capture database is optional
         return []
     try:
