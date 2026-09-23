@@ -123,12 +123,78 @@
         throw new Error("each receipt is {label, url}: a label of 1 to 60 characters and one https link.");
     }
     if (run.code_route != null) validateCodeRoute(run.code_route);
+    if (run.file_work != null) visuals().validateFileWork(run.file_work);
+    validateComponents(run);
     for (const field of ["measurement_revision", "baseline_revision"]) {
       if (
         run[field] != null &&
         (typeof run[field] !== "string" || !/^[a-f0-9]{64}$/.test(run[field]))
       )
         throw new Error("Invalid measurement revision reference.");
+    }
+    return run;
+  }
+  // The file_work contract lives beside the drawing that reads it (run-visuals.js), the way the
+  // Code Route contract lives beside its renderer. Resolved when it is called, not when this file
+  // loads, so the page can load the two scripts in either order.
+  function visuals() {
+    if (typeof GrinderVisuals !== "undefined" && GrinderVisuals) return GrinderVisuals;
+    if (typeof require === "function") return require("./run-visuals.js");
+    throw new Error("The run visuals module is not loaded, so file_work cannot be checked.");
+  }
+  const HERO_VISUALS = ["size-map", "folder-line", "elevation", "screenshot", "ridge"];
+  const TROPHY_IDS = ["biggest-pr", "first-merge", "merge-streak", "longest-run"];
+  function sentenceCase(text, field) {
+    const letters = text.replace(/[^A-Za-z]/g, "");
+    if (letters.length > 3 && text === text.toUpperCase())
+      throw new Error(field + " is written in sentence case, never in capitals.");
+    return text;
+  }
+  function shortText(value, field, limit) {
+    if (typeof value !== "string" || !value.trim().length || value.trim().length > limit)
+      throw new Error(field + " is one line of 1 to " + limit + " characters.");
+    const line = value.trim().replace(/\s+/g, " ");
+    if (PATHISH.test(line) || /(\/Users\/|\/home\/)/.test(line))
+      throw new Error(field + " must not carry a path or a home directory.");
+    return sentenceCase(line, field);
+  }
+  // THE AUTHOR'S FIELDS. The hero is a choice, the quote is a sentence a person wrote, and both
+  // are refused here rather than shown weakly. `chosen_by` is what makes an auto-filled quote
+  // impossible to write by accident: a parser would have to state the lie to get one through.
+  function validateComponents(run) {
+    if (run.hero_visual != null && HERO_VISUALS.indexOf(run.hero_visual) === -1)
+      throw new Error("hero_visual must be one of: " + HERO_VISUALS.join(", ") + ".");
+    if (run.quote != null) {
+      if (typeof run.quote !== "object" || Array.isArray(run.quote) ||
+          Object.keys(run.quote).some((k) => k !== "text" && k !== "chosen_by"))
+        throw new Error("quote is {text, chosen_by}: one line the author picked.");
+      if (run.quote.chosen_by !== "author")
+        throw new Error("quote.chosen_by must be author. A quote is never auto-filled from a transcript.");
+      shortText(run.quote.text, "quote.text", 140);
+    }
+    if (run.gear != null) {
+      if (typeof run.gear !== "object" || Array.isArray(run.gear))
+        throw new Error("gear must be an object.");
+      for (const field of ["agent", "harness", "model"])
+        if (run.gear[field] != null) shortText(run.gear[field], "gear." + field, 48);
+      for (const field of ["runs", "commits", "lines_changed"])
+        if (run.gear[field] != null && (!Number.isSafeInteger(run.gear[field]) || run.gear[field] < 0))
+          throw new Error("gear." + field + " must be a non-negative whole number.");
+      if (run.gear.basis != null) shortText(run.gear.basis, "gear.basis", 80);
+    }
+    if (run.trophies != null) {
+      if (!Array.isArray(run.trophies) || run.trophies.length > TROPHY_IDS.length)
+        throw new Error("trophies holds at most " + TROPHY_IDS.length + " badges.");
+      const seen = new Set();
+      for (const badge of run.trophies) {
+        if (!badge || typeof badge !== "object" || TROPHY_IDS.indexOf(badge.id) === -1)
+          throw new Error("trophy.id must be one of: " + TROPHY_IDS.join(", ") + ".");
+        if (seen.has(badge.id)) throw new Error("a run carries each trophy at most once.");
+        seen.add(badge.id);
+        shortText(badge.label, "trophy.label", 40);
+        shortText(badge.value, "trophy.value", 12);
+        shortText(badge.basis, "trophy.basis", 80);
+      }
     }
     return run;
   }
@@ -1108,7 +1174,7 @@
       .join("");
     return `<div class="code-route-stops">${stopList}</div>` + harnessHtml(route);
   }
-  const api = { validate, message, trace, ridge, outcome, coverHtml, eventChip, heroStats, toolCallCount, codeRoute, codeRouteDetail, routeInsight, routeShape, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, projectLabel, tree };
+  const api = { validate, message, trace, ridge, outcome, coverHtml, eventChip, heroStats, toolCallCount, codeRoute, codeRouteDetail, routeInsight, routeShape, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, projectLabel, tree, validateComponents };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

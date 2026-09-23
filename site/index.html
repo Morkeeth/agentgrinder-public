@@ -473,6 +473,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
+<script src="/run-visuals.js"></script>
 <script src="/run-access.js"></script>
 <script src="/fork-run.js"></script>
 <script src="/auth.js"></script>
@@ -1028,6 +1029,11 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   const cover=typeof GrinderContract==='object'&&GrinderContract.coverHtml?GrinderContract.coverHtml(r):'';
   const eventChip=typeof GrinderContract==='object'&&GrinderContract.eventChip?GrinderContract.eventChip(r):'';
   const ridge=typeof GrinderContract==='object'&&GrinderContract.ridge?GrinderContract.ridge(r):'';
+  // ONE HERO VISUAL, the author's. It replaces the Code Route and the ridge in the card's one
+  // visual plane rather than stacking on them; both are still under Explore this run. A run that
+  // measured no files and has no image draws exactly what it drew before.
+  const chosenVisual=typeof GrinderVisuals==='object'&&GrinderVisuals.heroHtml?GrinderVisuals.heroHtml(r):'';
+  const runComponents=typeof GrinderVisuals==='object'&&GrinderVisuals.componentsHtml?GrinderVisuals.componentsHtml(r):'';
   const ridgeOutput=output?(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(output)?'PR':/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(output)?'Screenshot':'Output'):null;
   const code=codeFacts();
   const project=projectName();
@@ -1047,7 +1053,9 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     runUploadIdentity(r),
     `<div class="sub run-effort-context"><span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}</div>`,
     codeRoute?codeRouteDetail:'',
-    codeRoute&&ridge?ridge:'',
+    // The ridge keeps its place under Explore whenever something else took the visual plane,
+    // so choosing a size map never costs a reader the activity map they could open before.
+    (codeRoute||chosenVisual)&&ridge?ridge:'',
     fiveRow(r),
     coachBlock(r),
     r.tree?GrinderContract.tree(r.tree):'',
@@ -1057,7 +1065,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   // Full receipts stay in the HTML for humans and agents. Collapsed for people; still in the
   // document for scrapers until a visibility-safe /runs/{id}.json exists.
   const explore=exploreInner?`<details class="ridge-more run-explore" id="run-detail-${esc(r.id)}" data-run-detail="1"><summary>Explore this run</summary><div class="run-detail-body">${exploreInner}</div></details>`:'';
-  const visual=codeRoute||ridge||`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>`;
+  const visual=chosenVisual||codeRoute||ridge||`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>`;
   const followSlot=(!opts.preview&&!selfAck&&r.profile_id)
     ?`<span class="card-follow" data-profile="${esc(r.profile_id)}" data-handle="${esc(h)}" data-label="Follow"></span>`
     :'';
@@ -1074,6 +1082,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     ${agentChip}
     ${r.segment_id?`<div class="sub"><a href="/?segment=${encodeURIComponent(r.segment_id)}">Open segment leaderboard</a></div>`:''}
     ${visual}
+    ${runComponents}
     ${metricStrip()}
     ${xudosTip}
     ${opts.preview?'<div class="foot"><span class="meta">Preview · not saved</span></div>':`<div class="foot run-social-actions"><span class="meta">${count||0} XUDOS${selfAck?' · your run':''}</span>
@@ -1928,6 +1937,8 @@ async function importRun(){
     <label>Project (optional)<input id="i_project" maxlength="80" value="${esc(capturedProject||'')}" placeholder="What to call this project"><span class="hint">Shown to readers as Project touched. Capture prefills the folder the session ran in; rename it or clear it.</span></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
     <label>Scene photo URL (optional)<input id="i_image_url" type="url" maxlength="2048" placeholder="https://…/cafe.jpg"><span class="hint">Optional lifestyle scene beside a genuine output image. Paste a URL; nothing is taken from your camera roll automatically.</span></label>
+    <label>Quote of the run (optional)<input id="i_quote" maxlength="140" value="${esc(run.quote?.text||'')}" placeholder="One line you pick from this run"><span class="hint">Your words. Nothing is read out of a transcript to fill this.</span></label>
+    <div id="i_visual_picker"></div>
     <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label>
     <p class="hint">Only me stays with you. Close friends is your private list. Link is for signed-in followers and close friends. Choosing Public is the deliberate action that adds the run to Feed and your profile.</p>
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample - preview only':(ME?'Save run':'Sign in to save')}</button>
@@ -1945,11 +1956,32 @@ async function importRun(){
     </details>
     <div id="i_recover" hidden></div></div></div>
     <div class="head"><h2>${sample?'Sample card preview':'Card preview'}</h2><span class="meta">not posted</span></div><div id="import-card-preview"></div>`;
-  const editFields=['i_title','i_model','i_project','i_segment','i_wall','i_caption','i_output_url','i_image_url','i_stack','i_vis'];
+  const editFields=['i_title','i_model','i_project','i_segment','i_wall','i_caption','i_output_url','i_image_url','i_quote','i_stack','i_vis'];
   let savedImportEdits=null;
   try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){savedImportEdits=saved;for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
   if(!$('i_image_url').value&&run.image_url)$('i_image_url').value=run.image_url;
   function saveImportEdits(){try{sessionStorage.setItem('ag_import_edits',JSON.stringify({token:m[1],...Object.fromEntries(editFields.map(key=>[key,$(key).value])),shareRig:$('i_share_rig').checked}))}catch(_){}}
+  // THE AUTHOR PICKS THE VISUAL, in the one place the run is still private. The picker offers
+  // only the visuals this capture measured the data for, so a choice can never produce an empty
+  // frame. Like the selected insight, the choice stays with this preview until the hosted runs
+  // table has a column for it; the card below is what it changes.
+  let heroChoice=run.hero_visual||null;
+  let paintedPicker=null;
+  function paintVisualPicker(preview){
+    const slot=$('i_visual_picker');
+    if(!slot||typeof GrinderVisuals!=='object'||!GrinderVisuals.pickerHtml)return;
+    // Repainted only when the offer changes. Rebuilding a fieldset under a reader's keyboard on
+    // every keystroke would take the focus off the radio they were about to choose.
+    const key=GrinderVisuals.available(preview).join(',')+'|'+GrinderVisuals.chosen(preview);
+    if(key===paintedPicker)return;
+    paintedPicker=key;
+    slot.innerHTML=GrinderVisuals.pickerHtml(preview,{name:'i_hero'})
+      +'<p class="hint">Your choice stays with this preview for now; a saved run keeps the card it had.</p>';
+    slot.querySelectorAll('input[name="i_hero"]').forEach(input=>input.addEventListener('change',()=>{
+      heroChoice=input.value;
+      paintImportPreview();
+    }));
+  }
   function paintImportPreview(){
     const sceneUrl=($('i_image_url')?.value||'').trim()||run.image_url||null;
     const preview={id:'preview',profile_id:ME?.id||'preview',profiles:ME||{github_handle:'you',name:'Your preview'},title:$('i_title').value||'Untitled run',
@@ -1966,9 +1998,15 @@ async function importRun(){
       repo_url:run.repo_url||null,receipts:run.receipts||null,shipped:run.shipped||null,
       artifact_url:run.artifact_url||null,image_url:sceneUrl,
       code_route:run.code_route||null,
+      // The measured file work, and the three small marks beside the hero. Absent stays absent:
+      // a run that measured no files offers no size map and the card looks exactly as it did.
+      file_work:run.file_work||null,gear:run.gear||null,trophies:run.trophies||null,
+      quote:($('i_quote')?.value||'').trim()?{text:$('i_quote').value.trim(),chosen_by:'author'}:null,
+      hero_visual:heroChoice,
       visibility:'private',started_at:run.started||null,created_at:new Date().toISOString()};
     $('import-card-preview').innerHTML=runCard(preview,false,0,{preview:true});
     if(typeof GrinderContract==='object'&&GrinderContract.mountRunMaps) GrinderContract.mountRunMaps($('import-card-preview'));
+    paintVisualPicker(preview);
   }
   editFields.forEach(key=>$(key).addEventListener('input',()=>{saveImportEdits();paintImportPreview()}));
   paintImportPreview();
