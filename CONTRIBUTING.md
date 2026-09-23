@@ -82,6 +82,7 @@ Keep the PR focused. If review asks for changes, push to the same branch. A main
 - `site/social.js`, `site/sharing.js`, `site/progress.js`: social actions, sharing and run history.
 - `agentgrinder/ingest.py`, `agentgrinder/mcp_server.py`: local capture and agent tools.
 - `server/public-run.mjs`: public link previews.
+- `site/pair.js`, `site/connect.js`, `server/connect-device.mjs`, `supabase/strava/011_connect_device.sql`: device pairing, the approve page and Connections. Checked by `npm run test:connect` and `npm run test:pair`.
 - `scripts/dev.py`: contributor commands.
 - `PRODUCT.md`: agreed scope. Old hackathon checklists are historical, not the backlog.
 
