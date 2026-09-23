@@ -222,8 +222,10 @@ def _notes(work: dict, tiny: int = 0) -> str:
         out.append(f'<p class="pc-note">{_plural(tiny, "file")} too small to draw at this size.'
                    f'</p>')
     if work.get("binary_end"):
-        out.append(f'<p class="pc-note">{_plural(work["binary_end"], "binary file")} have no '
-                   f'line count and are not drawn.</p>')
+        count = work["binary_end"]
+        out.append(f'<p class="pc-note">{_plural(count, "binary file")} '
+                   f'{"has" if count == 1 else "have"} no line count and '
+                   f'{"is" if count == 1 else "are"} not drawn.</p>')
     return "".join(out)
 
 

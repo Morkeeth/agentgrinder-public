@@ -336,7 +336,11 @@ def validate_file_work(value) -> dict:
             _bad("each folder is an object.")
         _keys(folder, _ALLOWED_FOLDER, "folder")
         name = folder.get("name")
-        if not isinstance(name, str) or not _FOLDER.match(name) or privacy.scan(name):
+        # A folder name is the only word from the filesystem that travels, so it is checked twice:
+        # for the shape of a path, and for a home directory flattened into a single segment
+        # (`Users-someone-code`), which is how an account name reached a public card before.
+        if (not isinstance(name, str) or not _FOLDER.match(name) or privacy.scan(name)
+                or privacy.strip_home_names(name) != name):
             _bad("a folder name must be one short safe segment, never a path.")
         if name in names:
             _bad("folder names must be unique.")

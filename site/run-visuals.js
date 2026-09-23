@@ -275,8 +275,9 @@
       out.push('<p class="pc-note">' + plural(tiny, "file") +
         " too small to draw at this size.</p>");
     if (work.binary_end)
-      out.push('<p class="pc-note">' + plural(work.binary_end, "binary file") +
-        " have no line count and are not drawn.</p>");
+      out.push('<p class="pc-note">' + plural(work.binary_end, "binary file") + " " +
+        (work.binary_end === 1 ? "has" : "have") + " no line count and " +
+        (work.binary_end === 1 ? "is" : "are") + " not drawn.</p>");
     return out.join("");
   }
   function sizeMapHtml(work) {

@@ -774,7 +774,8 @@ def _filework(args) -> int:
     print(f"  {totals['lines_changed']:,} lines changed in {totals['files_touched']} of "
           f"{totals['files_end']} files")
     if work["deleted"]["files"]:
-        print(f"  also deleted: {work['deleted']['files']} files, "
+        gone = work["deleted"]["files"]
+        print(f"  also deleted: {gone} file{'' if gone == 1 else 's'}, "
               f"{work['deleted']['lines']:,} lines")
     print("\n  folders, in the order the work first reached them:")
     for folder in work["folders"]:
