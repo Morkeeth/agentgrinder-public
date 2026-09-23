@@ -96,7 +96,7 @@ window.GrinderSocial = function ({
   }
 
   const RESPONSE_RETURN_KEY = "ag_response_return";
-  const SOCIAL_RETURN_RE = /^\?(post|mine|following|inbox|run|u|example|people|account|connect)(=|&|$)/;
+  const SOCIAL_RETURN_RE = /^\?(post|mine|following|inbox|run|u|example|people|account|connect|pair)(=|&|$)/;
   function isSocialReturn(pending) {
     return typeof pending === "string" && SOCIAL_RETURN_RE.test(pending);
   }

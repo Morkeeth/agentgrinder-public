@@ -89,7 +89,8 @@ def test_shell_is_integrated_not_patched_in_memory():
     assert "async function route(){ account.recover();" in INDEX
     assert "authErrorFromUrl" not in INDEX
     assert "if(q.has('account')){return account.view();}" in INDEX
-    assert "people|account|connect)(=|&|$)" in INDEX
+    # Approving a device is a phone path, so ?pair joins the sign-in return allowlist.
+    assert "people|account|connect|pair)(=|&|$)" in INDEX
     assert '<a href="/?account" role="menuitem" data-auth="1" hidden>Account settings</a>' in INDEX
     assert '<a href="/?account#danger" id="delete">Delete my __BRAND__ profile</a>' in INDEX
     delete_path = INDEX[INDEX.index("document.addEventListener('DOMContentLoaded'"):]

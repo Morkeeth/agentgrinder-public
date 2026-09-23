@@ -481,7 +481,10 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 <script src="/people.js"></script>
 <script src="/origin.js"></script>
 <script src="/account.js"></script>
+<script src="/connect-status.js"></script>
 <script src="/connect.js"></script>
+<script src="/qr.js"></script>
+<script src="/pair.js"></script>
 <script src="/challenges.js"></script>
 <script src="/practice-eligibility.js"></script>
 <script src="/practices.js"></script>
@@ -631,6 +634,7 @@ const challenges=GrinderChallenges({client:sb,me:()=>ME,app:()=>$('app'),frame,s
 const originConnection=GrinderOrigin.create();
 const account=GrinderAccount({auth,me:()=>ME,app:()=>$('app'),frame,status,providersEnabled:PROVIDERS_ENABLED,origin:originConnection,signIn:showSignIn,onProfileChange:p=>{ME=p;refreshAuth();}});
 const connect=typeof GrinderConnect==='function'?GrinderConnect({db:sb,me:()=>ME,app:()=>$('app'),frame,status,signInGitHub:()=>signInWithGitHub(),signIn:showSignIn}):null;
+const pair=typeof GrinderPair==='function'?GrinderPair({db:sb,me:()=>ME,app:()=>$('app'),frame,status,signInGitHub:()=>signInWithGitHub(),signIn:showSignIn,qr:typeof GrinderQR!=='undefined'?GrinderQR:null}):null;
 
 // THE MARK IS THE GRIND, drawn small.
 //
@@ -2159,7 +2163,7 @@ async function route(){ account.recover();
   if(IDENTITY_SETUP)return viewIdentitySetup();
   restoreImport();
   if(await importRun()) return;
-  if(social&&typeof social.applyStoredSocialReturn==='function'){social.applyStoredSocialReturn();}else if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example|people|account|connect)(=|&|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
+  if(social&&typeof social.applyStoredSocialReturn==='function'){social.applyStoredSocialReturn();}else if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example|people|account|connect|pair)(=|&|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
   const q=new URLSearchParams(location.search);
   if(q.has('example')){
     if(q.get('example')==='share') return GrinderExample.viewShare();
@@ -2176,6 +2180,7 @@ async function route(){ account.recover();
   if(q.has('people')){setPrimarySection('feed');return people.discover(q.get('q')||'');}
   if(q.has('account')){return account.view();}
   if(q.has('connect')){if(connect)return connect.view();return account.view();}
+  if(q.has('pair')){if(pair)return pair.view(q.get('pair'));return account.view();}
   if(q.has('following')){setPrimarySection('feed');return social.following();}
   if(q.has('inbox')){setPrimarySection('inbox');return social.inbox();}
   if(q.has('crews')){setPrimarySection('community');return social.crews();}
