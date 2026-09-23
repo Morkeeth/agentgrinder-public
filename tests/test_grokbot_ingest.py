@@ -53,7 +53,14 @@ def test_injected_user_turn_without_user_query_is_not_typed(tmp_path):
     assert parse_grokbot_session(str(path))["turns_typed"] == 2
 
 
-def test_cli_loads_grokbot_fixture_and_renders_unknowns_as_dashes(tmp_path, capsys):
+def test_cli_loads_grokbot_fixture_and_keeps_its_unknowns_unknown(tmp_path, capsys):
+    """An unknown is still stated, but the card names it in words instead of drawing a dash.
+
+    The terminal keeps the dashes: it prints the five cells as a table, where an em-dash in a
+    column is legible. On the card, four dashes side by side made a real session look like a
+    session in which nothing happened (verdict on the 22 Sep Cursor card), so the missing
+    measurements moved into one sentence that still carries each one's name and explanation.
+    """
     card = tmp_path / "grokbot.html"
     assert main([
         "grind",
@@ -74,7 +81,11 @@ def test_cli_loads_grokbot_fixture_and_renders_unknowns_as_dashes(tmp_path, caps
     assert "—" in output
     assert "bot activity" in html
     assert "Grok Bot" in html
-    assert "—" in html
+    assert "Not measured in this run:" in html
+    assert ">correction rate</span>" in html
+    assert "no harness records that" in html
+    for cell in html.split('<div class="stat">')[1:]:
+        assert "—" not in cell.split("</div>")[0]
 
 
 def test_mcp_preview_uses_grokbot_adapter(monkeypatch):

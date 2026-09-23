@@ -11,6 +11,25 @@
     "claims_verified",
     "artifacts_produced",
   ];
+  // THE PROJECT LABEL A READER SEES. A capture names a project after the workspace directory,
+  // and both harnesses flatten the absolute path into that name, so the account name arrives
+  // with it: `Users-morkeeth-code-app`, or, for a session opened on the home directory itself,
+  // the bare `Users-morkeeth`. Production 7858535 printed that slug as "Project touched" on the
+  // public share image, which is the one surface a stranger sees first.
+  //
+  // Same rule as agentgrinder/ingest.py `project_label` and server/public-run.mjs `projectName`;
+  // tests/fixtures/project_label_probe.mjs runs one table of cases through all three.
+  const HOME_SLUG = /^-?(?:Users|home)-[^-]+(?:-|$)/;
+  const NO_PROJECT = ["session", "unknown", "project unknown"];
+  function projectLabel(value) {
+    const text = typeof value === "string" ? value.trim() : "";
+    if (!text || NO_PROJECT.includes(text.toLowerCase())) return null;
+    const stripped = text.replace(HOME_SLUG, "");
+    // Nothing left means the workspace WAS a home directory: an unknown project is a fact, an
+    // account name is not.
+    return (stripped === text ? text : stripped) || null;
+  }
+
   function validate(run) {
     if (!run || typeof run !== "object" || Array.isArray(run))
       throw new Error("A grind must be a JSON object.");
@@ -1089,7 +1108,7 @@
       .join("");
     return `<div class="code-route-stops">${stopList}</div>` + harnessHtml(route);
   }
-  const api = { validate, message, trace, ridge, outcome, coverHtml, eventChip, heroStats, toolCallCount, codeRoute, codeRouteDetail, routeInsight, routeShape, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, tree };
+  const api = { validate, message, trace, ridge, outcome, coverHtml, eventChip, heroStats, toolCallCount, codeRoute, codeRouteDetail, routeInsight, routeShape, mountRunMaps, sittingsComparable, headlineMetric, rejectPaths, projectLabel, tree };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderContract = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

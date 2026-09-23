@@ -54,14 +54,32 @@ def coach_degraded_banner(harness: str, run: dict) -> str:
 # The old auto message said "no Claude or Cursor session found on this machine" and named no
 # path — while `_pick` right beside it already handled Codex. A stranger cannot check a claim
 # that names no object, so the message lists every location, every time.
-def no_session_message() -> str:
-    from .ingest import searched_paths
-    lines = ["", "  no agent session found on this machine. Searched:", ""]
+#
+# AND IT HAS TO SAY WHAT TO DO NEXT. A harness-specific miss printed one line — "no Cursor
+# session under ~/.cursor/projects/*/agent-transcripts" — and exited 1. The site promises four
+# tools, so the person who hit that line was usually a Claude Code, Codex or Grok Bot user who
+# had just copied the wrong command: the tool knew the answer and did not say it. Every miss now
+# names the four tools this reader supports and shows how to point at one file.
+def no_session_message(harness: str | None = None) -> str:
+    from .ingest import HARNESSES, searched_paths
+    named = HARNESSES.get(harness or "", "")
+    head = (f"  no {named} session found on this machine. Searched:" if named
+            else "  no agent session found on this machine. Searched:")
+    lines = ["", head, ""]
     lines += [f"      {g}" for g in searched_paths()]
     lines += ["",
-              "  AGENT GRINDER only reads transcripts you already have. To see a card anyway:",
+              "  This reader supports " + ", ".join(HARNESSES.values()) + ".",
+              "  It only reads transcripts you already have. Next step:",
+              "",
+              "      python3 -m agentgrinder grind --harness auto",
+              "          the freshest session of any of those four on this machine",
+              "",
+              "      python3 -m agentgrinder grind /path/to/session.jsonl --harness "
+              + (harness or "claude"),
+              "          one exact transcript, when it is somewhere else",
               "",
               "      python3 -m agentgrinder demo",
+              "          the bundled sample, to see what a card looks like",
               ""]
     return "\n".join(lines)
 
@@ -87,12 +105,35 @@ def coach_install_hint() -> str:
     )
 
 
+ATHLETE_HELP = ("name on the card. Default: the GitHub account this machine is already signed in "
+                "as (the gh CLI login, or github.user in this repository), otherwise a neutral "
+                "label. Write @handle to claim an account; a bare name is a display name only.")
+
+
+def _stamp_identity(run: dict, explicit=None) -> dict:
+    """Put the account this machine is signed in as on the run, or a neutral label.
+
+    Local reads only (identity.py): no network, no application, no change to sign-in. The card
+    said "you" over a "Y" avatar until 22 Sep 2026 because `--athlete` defaulted to the word.
+    """
+    from .identity import resolve
+    who = resolve(explicit if explicit is not None else run.get("athlete"))
+    run["athlete_handle"] = who.handle
+    run["athlete"] = who.display
+    return run
+
+
 def _render(run: dict, out: Path, open_it: bool) -> None:
-    a = build_activity(run)
+    a = build_activity(_stamp_identity(run))
     out.write_text(render_card(a), encoding="utf-8")
-    # terminal summary (Oscar reads the terminal too)
+    # terminal summary (Oscar reads the terminal too). Same order as the card: what shipped,
+    # then the one number that proves it, then the metric identity and the cost.
     print(f"\n  {a.athlete} · {a.title}")
     print(f"  {a.harness} · {a.project} · {a.date_str}")
+    print(f"\n  {a.outcome}")
+    print(f"  {a.outcome_basis}")
+    if a.hero_value:
+        print(f"\n  {a.hero_value}  {a.hero_label}")
     print(f"\n  {a.headline_label.upper()}  {a.headline}    {a.headline_formula}")
     print("  " + " · ".join(f"{c.label} {c.value}" + (" (cost)" if c.cost else "") for c in a.five))
     print(f"\n  cost: {a.distance} | {a.moving_time} | {a.pace}")
@@ -150,7 +191,9 @@ def main(argv=None) -> int:
     )
     g.add_argument("--gap", type=int, default=30,
                    help="minutes of total idle that end a grind (default 30)")
-    g.add_argument("--athlete", default="you")
+    # The name on the card. Default None: identity.resolve reads the account this machine is
+    # already signed in as, and prints a neutral label when there is none. It never prints "you".
+    g.add_argument("--athlete", default=None, help=ATHLETE_HELP)
     g.add_argument("-o", "--out", default="grind.html")
     g.add_argument("--json", dest="as_json", action="store_true")
     # AUTO IS THE DEFAULT. It was `claude` until 3 Sep 2026, so a Cursor or Codex user running the
@@ -195,7 +238,7 @@ def main(argv=None) -> int:
     co.add_argument("--model", choices=["local", "bedrock", "none"], default="local",
                     help="local (default, keyless, scripted model through the real Strands loop) · "
                          "bedrock (real model, AWS creds, costs money, opt-in) · none (no agent)")
-    co.add_argument("--athlete", default="you")
+    co.add_argument("--athlete", default=None, help=ATHLETE_HELP)
     co.add_argument("--json", dest="as_json", action="store_true",
                     help="print the run with the verdict attached, as JSON (counts only, no prompt text)")
     co.add_argument("--live-status", action="store_true",
@@ -258,7 +301,7 @@ def main(argv=None) -> int:
     r = sub.add_parser("v1card", help="the v1 sparkline card (kept for the bundled sample)")
     r.add_argument("session", nargs="?")
     r.add_argument("--harness", choices=["claude", "cursor", "codex", "grokbot"], default="claude")
-    r.add_argument("--athlete", default="you")
+    r.add_argument("--athlete", default=None, help=ATHLETE_HELP)
     r.add_argument("-o", "--out", default="card.html")
     r.add_argument("--no-open", action="store_true")
     nr = sub.add_parser("nightrun", help="aggregate a multi-agent fleet run (orchestrator + lanes) into one card")
@@ -266,7 +309,7 @@ def main(argv=None) -> int:
     nr.add_argument("--hours", type=float, default=12.0)
     nr.add_argument("--gap", type=int, default=30,
                     help="minutes of total idle (no human turn, no open lane) that end the run")
-    nr.add_argument("--athlete", default="you")
+    nr.add_argument("--athlete", default=None, help=ATHLETE_HELP)
     nr.add_argument("--title", help="card title (default: derived from the lane + repo counts)")
     nr.add_argument("-o", "--out", default="nightrun.html")
     nr.add_argument("--json", dest="as_json", action="store_true")
@@ -696,7 +739,7 @@ def _grind(args) -> int:
         from .ingest import parse_cursor_session, latest_cursor_session
         path = args.session or latest_cursor_session()
         if not path:
-            print("no Cursor session under ~/.cursor/projects/*/agent-transcripts"); return 1
+            print(no_session_message("cursor")); return 1
         from .contract import capture_digest
         source_digest=capture_digest(path)
         try:
@@ -718,11 +761,7 @@ def _grind(args) -> int:
         from .render import render_card
         path = args.session or latest_codex_session()
         if not path:
-            from .ingest import CODEX_GLOBS
-            print("\n  no Codex session with a human turn in it. Searched:")
-            for g in CODEX_GLOBS:
-                print(f"      {g}")
-            print("\n  try:  python3 -m agentgrinder demo\n"); return 1
+            print(no_session_message("codex")); return 1
         from .contract import capture_digest
         source_digest=capture_digest(path)
         try:
@@ -746,12 +785,7 @@ def _grind(args) -> int:
         from .ingest import latest_grokbot_session, parse_grokbot_session
         path = args.session or latest_grokbot_session()
         if not path:
-            from .ingest import GROKBOT_GLOB
-            print("\n  no imported Grok Bot export with a typed human turn. Searched:"
-                  f"\n      {GROKBOT_GLOB}"
-                  "\n\n  pass an export explicitly or place it in that import directory."
-                  "\n  try:  python3 -m agentgrinder demo\n")
-            return 1
+            print(no_session_message("grokbot")); return 1
         from .contract import capture_digest
         source_digest = capture_digest(path)
         try:
@@ -783,15 +817,7 @@ def _grind(args) -> int:
             # A JUDGE WITH NO CLAUDE CODE HITS THIS FIRST. Until 31 Aug it was a dead end: one
             # sentence naming a directory, exit 1, no next step. Measured by running the whole
             # CLI with HOME pointed at an empty directory.
-            print("\n  no Claude Code session with a human turn under ~/.claude/projects."
-                  "\n  AGENT GRINDER only reads transcripts you already have, so there is"
-                  "\n  nothing here to read. To see what a card looks like:"
-                  "\n"
-                  "\n      python3 -m agentgrinder demo"
-                  "\n"
-                  "\n  (that renders the bundled sample on the v1 card — the grind trace needs a"
-                  "\n  real transcript, because every mark on it is a timestamp from one.)\n")
-            return 1
+            print(no_session_message("claude")); return 1
         path, auto = found
         pick = auto if pick is None else pick
 
@@ -812,6 +838,7 @@ def _grind(args) -> int:
                          show_paths=getattr(args, "show_paths", False))
     except ValueError as e:
         print(f"  {e}"); return 1
+    _stamp_identity(run, args.athlete)
     coach_text = None
     if getattr(args, "coach", None):
         coach_text = _run_coach_into(run, path, pick, args.gap * 60, args.coach, args.athlete)
@@ -936,6 +963,7 @@ def _list_native_selection(path, harness, groups, parser, show_paths=False):
 def _native_grind(run, args, path, source_digest, selected=None, total=None):
     from .contract import capture_digest
     from .engine.series import record_and_attach
+    _stamp_identity(run, getattr(args, "athlete", None))
     if source_digest != capture_digest(path):
         print('The transcript changed during analysis. Try again.',file=sys.stderr);return 1
     run['input_digest']=source_digest

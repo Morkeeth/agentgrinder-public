@@ -3,6 +3,26 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>__BRAND__ · __TAGLINE__</title>
 <meta name="description" content="Turn a Cursor, Grok Bot, Claude Code or Codex session into a run card. Post your runs and see what other builders are making. Private until you choose to share.">
+<!-- The unfurl. A run page has carried these since it shipped; the home page had none, so the
+     address people actually post showed as a bare link. The image is the same @vercel/og
+     pipeline as /r/<id> (api/og.js), and __ORIGIN__ is replaced at build time because a crawler
+     will not resolve a relative image. -->
+<link rel="canonical" href="__ORIGIN__/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="__BRAND__">
+<meta property="og:title" content="__BRAND__ · __TAGLINE__">
+<meta property="og:description" content="Every run your agent made, on a card you can share. Capture a Cursor, Claude Code, Codex or Grok Bot session; private until you choose to share.">
+<meta property="og:url" content="__ORIGIN__/">
+<meta property="og:image" content="__ORIGIN__/api/og">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="__BRAND__ · __TAGLINE__">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="__BRAND__ · __TAGLINE__">
+<meta name="twitter:description" content="Every run your agent made, on a card you can share. Capture a Cursor, Claude Code, Codex or Grok Bot session; private until you choose to share.">
+<meta name="twitter:image" content="__ORIGIN__/api/og">
+<meta name="twitter:image:alt" content="__BRAND__ · __TAGLINE__">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/design.css">
@@ -963,11 +983,19 @@ function runUploadIdentity(r){
   return `<div class="sub run-upload-identity">Agent contribution: <a href="${agentHref}">${esc(r.agent_name)}</a>${r.harness?` · <span class="card-harness">${esc(r.harness)}</span>`:''} · authorised by the owner</div>`;
 }
 
+// The project a run is SAVED with. Capture reads the folder the session ran in - Claude Code
+// published `the-fair` from `~/code/the-fair`, a private folder name a stranger then read as
+// "Project touched" - so the preview prefills this and the author can rename or clear it before
+// Save. A cleared field publishes no project; a typed path is scrubbed like every other free
+// text field, visibly, in the live preview.
+function projectForSave(captured,typed){
+  const text=typeof typed==='string'?typed.trim():'';
+  if(!text) return typed==null?GrinderContract.projectLabel(captured):null;
+  return GrinderContract.projectLabel(GrinderContract.rejectPaths(text));
+}
+
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
-  const projectName=()=>{
-    const value=typeof r.project==='string'?r.project.trim():'';
-    return value&&!['session','unknown','project unknown'].includes(value.toLowerCase())?value:null;
-  };
+  const projectName=()=>GrinderContract.projectLabel(r.project);
   const codeFacts=()=>{
     const facts=[];
     if(r.shell_calls!=null)facts.push(['Shell calls',r.shell_calls]);
@@ -1283,7 +1311,7 @@ async function viewOnboard(){
     <div class="p-row" style="padding-left:0;padding-right:0"><span>Code and file paths</span><span class="v never">never</span></div>
     <p class="hint" style="margin-top:10px"><a href="/privacy">Privacy policy</a> · <a href="/methodology">methodology</a></p></div>`;
   const step4=`<div class="ob-step"><h3>Share your first run</h3>
-    ${cmd('python3 -m agentgrinder grind --harness cursor --push')}
+    ${cmd('python3 -m agentgrinder grind --harness auto --push')}
     <p class="hint">Opens this site with a preview. You choose public, link (followers and close friends), or private.</p>
     <div class="ob-actions">
       ${ME?`<button id="ob-push">Show my runs</button>`:`<button disabled>Sign in first</button>`}
@@ -1388,13 +1416,13 @@ function howItWorks(){
 // with exit 1, so the first thing anyone did from this page failed. There is no install in the
 // line any more, because the package needs none: it runs from the clone on the python macOS
 // already has. The coach is a second, honest line - it needs Python 3.10 or newer, and says so.
-const INSTALL_CMD="git clone https://github.com/Morkeeth/agentgrinder-public && cd agentgrinder-public && python3 -m agentgrinder grind --harness cursor";
+const INSTALL_CMD="git clone https://github.com/Morkeeth/agentgrinder-public && cd agentgrinder-public && python3 -m agentgrinder grind --harness auto";
 const COACH_CMD='python3.12 -m venv .venv && .venv/bin/pip install -e ".[coach]" && .venv/bin/agentgrinder grind --coach';
 function uploadBlock(){
   return `<div class="up">
-    <div class="up-top"><span class="t">Capture from Cursor or Grok Bot</span><span class="meta">private by default</span></div>
+    <div class="up-top"><span class="t">Capture from Cursor, Claude Code, Codex or Grok Bot</span><span class="meta">private by default</span></div>
     <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
-    <div class="cmd"><span class="c"><span class="card-harness">Cursor</span> · python3 -m agentgrinder grind --harness cursor --push</span><span class="d">opens a private preview</span></div>
+    <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness auto --push</span><span class="d">reads the freshest Cursor, Claude Code, Codex or imported Grok Bot session</span></div>
     <div class="cmd"><span class="c"><span class="card-harness">Grok Bot</span> · select an export on the bot's machine</span><a class="d" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Preview steps →</a></div>
     <div class="up-foot">Capture stays on the machine where the session happened. Review the caption, output link and recorded fields, then choose an audience. A dash means the metric was not measured.</div>
   </div>`;
@@ -1604,9 +1632,9 @@ function trendingBlock(repos){ if(!repos.length) return '';
 
 function postComposerHtml({first=false}={}){
   return `${first?'':`<div class="up post-panel">
-    <div class="up-top"><span class="t">Capture from Cursor</span><span class="meta">local and private until you choose</span></div>
+    <div class="up-top"><span class="t">Capture from Cursor, Claude Code, Codex or Grok Bot</span><span class="meta">local and private until you choose</span></div>
     <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
-    <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span><span class="d">opens a private preview</span></div>
+    <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness auto --push</span><span class="d">reads the freshest Cursor, Claude Code, Codex or imported Grok Bot session</span></div>
     <div class="cmd"><span class="c"><span class="card-harness">Grok Bot</span> · use an explicitly selected export</span><a class="d" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Preview steps →</a></div>
     <div class="up-foot">The reader sends recorded counts and timing, never prompt text, code or file paths. You review every field before choosing an audience.</div>
   </div>`}
@@ -1638,14 +1666,14 @@ function firstRunPrompt(){
     <p class="meta">YOUR FIRST RUN</p>
     <h2>Start with a private preview</h2>
     <p>Capture a real session on the machine where it happened. Your first post defaults to Only me. Review the title, caption and audience before pressing Save run.</p>
-    <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness cursor --push</span><button class="act" id="first-run-copy" type="button">Copy</button></div>
+    <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness auto --push</span><button class="act" id="first-run-copy" type="button">Copy</button></div>
     <div class="cta first-run-actions"><a class="act" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Using Grok Bot?</a><a class="act" href="/?people">Share profile / find a friend</a></div>
   </section>`;
 }
 
 function wireFirstRunPrompt(){
   const button=$('first-run-copy');if(!button)return;
-  button.onclick=async()=>{const command='python3 -m agentgrinder grind --harness cursor --push';try{await navigator.clipboard.writeText(command);button.textContent='Copied'}catch(_){status(command)}};
+  button.onclick=async()=>{const command='python3 -m agentgrinder grind --harness auto --push';try{await navigator.clipboard.writeText(command);button.textContent='Copied'}catch(_){status(command)}};
 }
 
 async function viewPost(){
@@ -1869,7 +1897,14 @@ async function importRun(){
     run.coach_experiment=GrinderContract.rejectPaths(run.coach_experiment);
   }
   const sample=run.is_sample===true;
-  const importedProject=typeof run.project==='string'&&run.project.trim().toLowerCase()!=='session'?run.project.trim():null;
+  // THE PROJECT IS A DIRECTORY NAME UNTIL THE AUTHOR SAYS OTHERWISE. Claude Code capture reads
+  // the folder the session ran in, so a run posted from `~/code/the-fair` published `the-fair`
+  // as "Project touched" with no way to change it: a private folder name, chosen for a laptop,
+  // shown to strangers. It is now a field in the preview, prefilled with what was captured and
+  // editable before Save. projectLabel takes the home directory out of the prefill.
+  const capturedProject=GrinderContract.projectLabel(run.project);
+  const editedProject=()=>projectForSave(capturedProject,$('i_project')?.value ?? null);
+  const importedProject=capturedProject;
   const app=$('app');
   const rows=[['harness',run.harness],['model',run.model],['project',importedProject],['typed turns',run.turns_typed],
     ['minutes',run.duration_s==null?null:Math.round(run.duration_s/60)],['tool calls',run.tool_calls],
@@ -1890,6 +1925,7 @@ async function importRun(){
     <p class="meta">STORY FIRST</p>
     <label>What did you achieve?<input id="i_title" maxlength="120" required placeholder="Write the achievement. Prompt text is never used."></label>
     <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
+    <label>Project (optional)<input id="i_project" maxlength="80" value="${esc(capturedProject||'')}" placeholder="What to call this project"><span class="hint">Shown to readers as Project touched. Capture prefills the folder the session ran in; rename it or clear it.</span></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
     <label>Scene photo URL (optional)<input id="i_image_url" type="url" maxlength="2048" placeholder="https://…/cafe.jpg"><span class="hint">Optional lifestyle scene beside a genuine output image. Paste a URL; nothing is taken from your camera roll automatically.</span></label>
     <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label>
@@ -1909,7 +1945,7 @@ async function importRun(){
     </details>
     <div id="i_recover" hidden></div></div></div>
     <div class="head"><h2>${sample?'Sample card preview':'Card preview'}</h2><span class="meta">not posted</span></div><div id="import-card-preview"></div>`;
-  const editFields=['i_title','i_model','i_segment','i_wall','i_caption','i_output_url','i_image_url','i_stack','i_vis'];
+  const editFields=['i_title','i_model','i_project','i_segment','i_wall','i_caption','i_output_url','i_image_url','i_stack','i_vis'];
   let savedImportEdits=null;
   try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){savedImportEdits=saved;for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
   if(!$('i_image_url').value&&run.image_url)$('i_image_url').value=run.image_url;
@@ -1917,7 +1953,7 @@ async function importRun(){
   function paintImportPreview(){
     const sceneUrl=($('i_image_url')?.value||'').trim()||run.image_url||null;
     const preview={id:'preview',profile_id:ME?.id||'preview',profiles:ME||{github_handle:'you',name:'Your preview'},title:$('i_title').value||'Untitled run',
-      project:importedProject,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
+      project:editedProject(),model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
       wall_time_s:importedWholeNumber('i_wall'),
       harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,shell_calls:run.shell_calls??null,files_touched:run.files_touched??null,artifacts_produced:run.artifacts_produced??null,
@@ -1986,7 +2022,7 @@ async function importRun(){
     try{ prior=await existingRun(); }catch(lookupError){ showRecovery(lookupError); return; }
     if(prior){ await openExisting(prior); return; }
     const base={profile_id:ME.id,title:$('i_title').value||'Untitled run',
-      project:importedProject,model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
+      project:editedProject(),model:$('i_model').value.trim()||null,segment_id:$('i_segment').value||null,
       wall_time_s:wallTime,
       harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,shell_calls:run.shell_calls??null,files_touched:run.files_touched??null,

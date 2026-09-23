@@ -12,7 +12,7 @@ what is missing, not a zero. `metrics.headline_of` is the one definition every s
 Every sentence here names what it counted and over which population, or prints an em-dash.
 """
 from __future__ import annotations
-from .brand import CARD_THEME
+from .brand import BRAND, CARD_THEME
 
 import os
 from datetime import datetime
@@ -20,7 +20,7 @@ from datetime import datetime
 from .authorship import CATEGORIES, COMMAND
 from . import privacy
 from .metrics import ARTIFACTS_PER_TURN_TIP, HEADLINE_TIP, headline_of
-from .render import _five_row
+from .render import GRID_CSS, _five_block, _has_value, _unmeasured_note
 from .soloroute import render_route_svg, render_phone_svg, _esc, span_minutes
 
 
@@ -178,6 +178,17 @@ def _verdict_block(run: dict) -> str:
     return "".join(parts)
 
 
+def _avatar(run: dict) -> str:
+    """The author's GitHub avatar when this run carries an account, a neutral disc when it does
+    not. Never an initial taken from a placeholder word: the old card drew a "Y" over "you"."""
+    from .identity import of_run
+    who = of_run(run)
+    if who.signed_in:
+        return (f'<img class="av" src="{who.avatar_url}" alt="" width="38" height="38" '
+                f'loading="lazy">')
+    return '<div class="av none" aria-hidden="true"></div>'
+
+
 def _photo_hero(photo_src: str | None, h_title: str, pill: str) -> str:
     """The headline, on the author's photo when there is one. The line under the photo says
     what it is: added by the author, not measured, location and camera data removed."""
@@ -215,11 +226,14 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
                 f'machine by {br[2]}. <span class="q">Ranked against every Claude Code sitting '
                 f'on this machine, split by the same 30-minute idle rule — '
                 f'<span class="mono">agentgrinder history</span>.</span></div>')
+    from .identity import of_run
+    who = of_run(run)
+    note = f" · {who.note}" if who.note else ""
     h_title, callout = headline(run)
     h_title = title or h_title
     hl = headline_of(run)          # verified per turn, or a dash that names what is missing
     tip = ARTIFACTS_PER_TURN_TIP if hl.metric_id == "artifacts_per_turn" else HEADLINE_TIP
-    five = _five_row(hl.five)
+    five = _five_block(hl.five)
     pace = (run["duration_s"] / run["turns_typed"]) if run["turns_typed"] else None
     per_prompt = (run["tool_calls"] / run["turns_typed"]) if run["turns_typed"] else None
     sit = run["sitting"]
@@ -268,6 +282,19 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
 
     commits_src = ("git log --all --name-only" if run["git"]["root"]
                    else run["git"]["reason"] or "no git work tree")
+    # A cost the grind did not measure is left out of the row entirely. An untimed harness used
+    # to draw "—" under Moving time and Pace, two empty boxes beside two real numbers.
+    cost_cells = [
+        f'<div class="stat"><div class="v">{value}</div><div class="k">{label}</div>'
+        f'<div class="src">{source}</div></div>'
+        for value, label, source in [
+            (run["turns_typed"], "Prompts · cost", "promptSource typed|queued"),
+            (_dur(run["duration_s"]), "Moving time", "gaps capped at 20m"),
+            (_pace(pace), "Pace /prompt", "moving time ÷ prompts"),
+            (run["commits"], "Commits", f"{commits_src}, during the grind"),
+        ] if _has_value(value)]
+    cost = (f'<div class="stats" data-n="{len(cost_cells)}">{"".join(cost_cells)}</div>'
+            if cost_cells else "")
     n_rows = len(run["rows"]) + (1 if (run.get("more") or {}).get("files") else 0)
     more = run.get("more") or {}
     trace_note = (f'one row per file · {run["files_touched"]} opened, {run["files_edited"]} changed'
@@ -308,7 +335,7 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{_esc(run["athlete"])} · {h_title} — AGENT GRINDER</title>
+<title>{_esc(who.display)} · {h_title} — {BRAND}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -322,7 +349,8 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
     border-radius:2px;overflow:hidden;box-shadow:none}}
   .top{{display:flex;align-items:center;gap:12px;padding:18px 22px 8px}}
   .av{{width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;font-weight:800;
-    display:grid;place-items:center;font-size:17px}}
+    display:grid;place-items:center;font-size:17px;object-fit:cover;flex:0 0 auto}}
+  .av.none{{background:var(--line)}}
   .who b{{font-weight:700}}
   .who small{{display:block;color:var(--faint);font-size:11.5px;white-space:nowrap;
     font-family:"IBM Plex Sans",system-ui,sans-serif}}
@@ -345,8 +373,7 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
   .hl .lbl{{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}}
   .hl .f{{display:block;font-size:12px;color:var(--faint);text-transform:none;letter-spacing:0;
     font-family:"IBM Plex Sans",system-ui,sans-serif}}
-  .fiverow{{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);
-    border-top:1px solid var(--line);border-bottom:1px solid var(--line)}}
+{GRID_CSS}
   .five{{background:var(--card);padding:10px 8px 9px;text-align:center;cursor:help}}
   .five .v{{font:700 15px/1.2 "IBM Plex Sans",system-ui,sans-serif;letter-spacing:-.01em;white-space:nowrap}}
   .five .k{{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;
@@ -356,6 +383,8 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
   .costtag{{font-style:normal;display:inline-block;margin-left:4px;padding:0 4px;border-radius:4px;
     background:var(--line);color:var(--muted);font-size:9px;letter-spacing:.04em}}
   .grp{{padding:12px 22px 0;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.14em}}
+  .unmeasured{{margin:0;padding:10px 22px;color:var(--faint);font-size:12px;line-height:1.5}}
+  .unmeasured span{{border-bottom:1px dotted var(--line);cursor:help}}
   .verdict{{padding:10px 22px 4px;font-size:13.5px;line-height:1.55}}
   .verdict .who{{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;margin-bottom:4px}}
   .verdict .who b{{color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;text-transform:none;letter-spacing:0}}
@@ -363,8 +392,7 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
   .verdict .prog{{margin:8px 0 0;padding:8px 10px;border-left:3px solid var(--accent);background:var(--card);
     color:var(--muted);font-size:12.5px}} .verdict .prog b{{color:var(--ink)}}
   .verdict .pred{{color:var(--faint);font-style:italic}}
-  .stats{{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
-    border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:8px}}
+  .stats{{margin-top:8px}}
   .stat{{background:var(--card);padding:14px 18px}}
   .stat .v{{font:700 25px/1.1 "IBM Plex Sans",system-ui,sans-serif;letter-spacing:-.02em}}
   .stat .k{{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:4px}}
@@ -466,8 +494,6 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
     .who{{min-width:0}} .who small{{font-size:10px}}
     .brand{{flex:0 0 auto;font-size:9.5px;letter-spacing:.1em}}
     .top{{gap:9px}}
-    .stats{{grid-template-columns:repeat(2,1fr)}}
-    .fiverow{{grid-template-columns:repeat(2,1fr)}} .five:nth-child(5){{grid-column:span 2}}
     .hl{{padding-left:14px;padding-right:14px}} .hl .n{{font-size:36px}} .grp{{padding-left:14px}}
     h1{{font-size:20px}} .stat .v{{font-size:21px}}
     .top,.sub,h1,.mapwrap,.maphead,.legend,.honest,.foot,.callout,.dead,.decl{{padding-left:14px;padding-right:14px}}
@@ -477,9 +503,9 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
 <body>
   <div class="card">
     <div class="top">
-      <div class="av">{(run["athlete"] or "?")[0].upper()}</div>
-      <div class="who"><b>{_esc(run["athlete"])}</b><small>{date_line}</small></div>
-      <div class="brand">AGENT GRINDER</div>
+      {_avatar(run)}
+      <div class="who"><b>{_esc(who.display)}</b><small>{date_line}{_esc(note)}</small></div>
+      <div class="brand">{BRAND}</div>
     </div>
     {_photo_hero(photo_src, h_title, pill)}
     <div class="sub">{run["harness"]} · {_esc(run["project"])} ·
@@ -492,21 +518,13 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
       <div class="n">{hl.text}</div>
       <div class="lbl">{_esc(hl.label)}<span class="f">{_esc(hl.formula)}</span></div>
     </div>
-    <div class="fiverow">{five}</div>
+    {five}
+    {_unmeasured_note(hl.five)}
     {_verdict_block(run)}
     {_practice_block(run)}
 
     <div class="grp">Cost — what the grind spent</div>
-    <div class="stats">
-      <div class="stat"><div class="v">{run["turns_typed"]}</div><div class="k">Prompts · cost</div>
-        <div class="src">promptSource typed|queued</div></div>
-      <div class="stat"><div class="v">{_dur(run["duration_s"])}</div><div class="k">Moving time</div>
-        <div class="src">gaps capped at 20m</div></div>
-      <div class="stat"><div class="v">{_pace(pace)}</div><div class="k">Pace /prompt</div>
-        <div class="src">moving time ÷ prompts</div></div>
-      <div class="stat"><div class="v">{run["commits"]}</div><div class="k">Commits</div>
-        <div class="src">{commits_src}, during the grind</div></div>
-    </div>
+    {cost}
 
     <div class="maphead"><h2>The grind trace</h2>
       <span class="note">{trace_note} · peak {m["peak_per_min"]:.0f} tool calls/min</span></div>

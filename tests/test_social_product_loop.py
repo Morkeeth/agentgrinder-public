@@ -11,8 +11,10 @@ MIGRATION = (ROOT / "supabase" / "migrations" / "2026-09-14-run-post-fields.sql"
 def test_post_page_exposes_priority_harnesses_and_private_preview():
     block = INDEX[INDEX.index("async function viewPost()") : INDEX.index("async function viewExplore()")]
     composer = INDEX[INDEX.index("function postComposerHtml(") : INDEX.index("function firstRunPrompt()")]
-    assert "Capture from Cursor" in INDEX
-    assert "python3 -m agentgrinder grind --harness cursor --push" in INDEX
+    # The page promises four tools, so the command it hands out must read all four.
+    assert "Capture from Cursor, Claude Code, Codex or Grok Bot" in INDEX
+    assert "python3 -m agentgrinder grind --harness auto --push" in INDEX
+    assert "--harness cursor" not in INDEX
     assert "Grok Bot" in composer
     assert "docs/GROK-PUSH.md" in composer
     assert "capture → preview → choose audience" in block

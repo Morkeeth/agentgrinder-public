@@ -1,5 +1,5 @@
 import {runtimeConfig} from './runtime-config.mjs';
-import {BRAND} from './brand.mjs';
+import {BRAND,TAGLINE} from './brand.mjs';
 const config=runtimeConfig();
 export const origin=config.ORIGIN;
 export const validId=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -179,15 +179,31 @@ export const toolCallCount=run=>{
  if(recorded===0&&ridgeLive&&!(Number.isFinite(fromRidge)&&fromRidge>0))return null;
  return recorded;
 };
+// A workspace name is a flattened absolute path, so it arrives with the account name in front of
+// it: `Users-morkeeth-code-app`, or a bare `Users-morkeeth` when the session was opened on the
+// home directory. Production 7858535 printed that slug as "Project touched" on the share image a
+// stranger meets first. Same rule as site/run-contract.js projectLabel and ingest.project_label;
+// tests/fixtures/project_label_probe.mjs runs one table of cases through all three.
+const HOME_SLUG=/^-?(?:Users|home)-[^-]+(?:-|$)/;
 const projectName=run=>{
  let value=typeof run.project==='string'?run.project.trim():'';
  if(!value||['session','unknown','project unknown'].includes(value.toLowerCase()))return null;
- const cleaned=value.replace(/^CODE-(?:worktrees-)?/i,'').replace(/-\d{8}$/,'');
+ const unslugged=value.replace(HOME_SLUG,'');
+ if(unslugged!==value)value=unslugged;
+ if(!value)return null;
+ // `CODE-` is one author's worktree convention and is matched as written. It was
+ // case-insensitive, which was harmless while a home slug hid what followed it and wrong the
+ // moment the slug came off: `Users-alice-code-myapp` cleaned to `code-myapp`, and a lowercase
+ // `code-` is a directory somebody named, not a convention to strip.
+ const cleaned=value.replace(/^CODE-(?:worktrees-)?/,'').replace(/-\d{8}$/,'');
  // Only turn dashes into spaces when we stripped a worktree prefix or date stamp.
  if(cleaned!==value)value=cleaned.replace(/-/g,' ').replace(/\s+/g,' ').trim();
  else value=cleaned;
  return value||null;
 };
+// Exported for tests/fixtures/project_label_probe.mjs, which runs one table of workspace names
+// through this reader, the browser contract and the Python one, so the three cannot drift.
+export const projectNameForTest=projectName;
 const outputKind=run=>{
  try{
   const url=new URL(run.output_url);
@@ -264,6 +280,22 @@ export function card(run){
      el('div',{style:{display:'flex',fontSize:plotted?27:64,fontWeight:700,marginTop:3,color:'#111'}},value)))):null,
    el('div',{style:{display:'flex',fontSize:13,color:'#687083',marginTop:'auto'}},'Counts describe activity, not result quality.')));
 }
+// THE HOME PAGE'S OWN CARD. Until now `/` carried no og: or twitter: tags at all, so a post that
+// sent a thousand people to the address showed them a bare link with no title, no description and
+// no image — the first impression of the product was the URL. This reuses the run image pipeline
+// (@vercel/og at 1200x630, served by api/og.js) rather than committing a static PNG, so the
+// brand and tagline come from server/brand.mjs like every other name on the site.
+export function homeCard(){
+ return el('div',{style:{width:'100%',height:'100%',background:'#f5f7fb',display:'flex',padding:'30px',fontFamily:'sans-serif',color:'#111'}},
+  el('div',{style:{width:'100%',height:'100%',background:'#fff',border:'1px solid #d9deea',borderRadius:22,display:'flex',flexDirection:'column',justifyContent:'center',padding:'54px'}},
+   el('div',{style:{display:'flex',color:'#123cff',fontSize:30,fontWeight:800,letterSpacing:6}},BRAND),
+   el('div',{style:{display:'flex',fontSize:64,fontWeight:700,marginTop:26,lineHeight:1.1}},TAGLINE),
+   el('div',{style:{display:'flex',fontSize:26,color:'#687083',marginTop:24,lineHeight:1.35}},
+     'Every run your agent made, on a card you can share.'),
+   el('div',{style:{display:'flex',fontSize:20,color:'#687083',marginTop:'auto'}},
+     'Capture a Cursor, Claude Code, Codex or Grok Bot session · private until you choose to share')));
+}
+
 export function privateCard(){
  return el('div',{style:{width:'100%',height:'100%',background:'#f5f7fb',display:'flex',padding:'30px',fontFamily:'sans-serif',color:'#111'}},
   el('div',{style:{width:'100%',height:'100%',background:'#fff',border:'1px solid #d9deea',borderRadius:22,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}},

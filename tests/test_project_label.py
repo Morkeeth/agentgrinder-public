@@ -30,7 +30,27 @@ def test_no_username_is_hardcoded_anywhere_in_the_reader():
 
 def test_a_name_with_no_home_prefix_is_left_alone():
     assert project_label("agentgrinder") == "agentgrinder"
-    assert project_label("Users-alice") == "Users-alice"   # too short to be a home prefix
+
+
+def test_a_workspace_that_is_only_a_home_directory_yields_no_label(tmp_path):
+    """`Users-alice` used to be "too short to be a home prefix" and was printed whole.
+
+    It is a home directory with no project in it — a session opened on `~` — so the only thing
+    that label can tell a reader is the author's account name. A real card shared on 22 Sep 2026
+    was titled `Users-morkeeth · Cursor sitting`. An unknown project is a fact; a login is not.
+    """
+    assert project_label("Users-alice") == ""
+    assert project_label("-Users-alice") == ""
+    assert project_label("home-alice") == ""
+
+    d = tmp_path / "Users-alice" / "agent-transcripts" / "bbbb"
+    d.mkdir(parents=True)
+    p = d / "t.jsonl"
+    p.write_text(CURSOR_LINES, encoding="utf-8")
+    run = parse_cursor_session(str(p))
+    assert run["project"] is None
+    assert "alice" not in run["title"]
+    assert run["title"] == "Cursor sitting"
 
 
 def test_cursor_workspace_label_is_not_published_without_git_evidence(tmp_path):
