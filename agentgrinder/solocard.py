@@ -209,6 +209,8 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
     # are absent by default like every other declared field.
     chosen_visual = runviz.picked_hero_html(run)
     components = runviz.components_html(run)
+    # No source sentence under the drawing: the provenance opens beside it instead.
+    visual_provenance = runviz.provenance_details_html(run) if chosen_visual else ""
     svg, m = render_route_svg(run)
     # The SAME numbers in a layout a 390px screen can hold: see soloroute.Geo for the measurement
     # that forced two layouts rather than one responsive drawing.
@@ -521,7 +523,7 @@ def render_solo_card(run: dict, title: str | None = None, ranks: dict | None = N
       {f'<span class="q">— “{prompt}”</span>' if prompt else ''}</div>
     {f'<div class="callout">{callout}</div>' if callout else ''}
     {prog}
-    {chosen_visual}{components}
+    {chosen_visual}{visual_provenance}{components}
 
     <div class="hl" title="{_esc(tip)} · {_esc(hl.formula)}">
       <div class="n">{hl.text}</div>

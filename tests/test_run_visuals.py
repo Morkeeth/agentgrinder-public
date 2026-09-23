@@ -120,20 +120,66 @@ def test_the_author_chooses_and_a_choice_without_data_is_not_honoured():
         dict(with_image, hero_visual="screenshot"))
 
 
-def test_every_view_of_one_run_states_the_same_total_and_its_source():
+def test_every_view_of_one_run_states_the_same_total_and_the_source_is_one_layer_down():
+    """One total on every view. The source of it is provenance, so it is under Explore this run."""
     work = measured_work()
     total = f"{work['totals']['lines_changed']:,} lines changed"
     views = [runviz.size_map_html(work), runviz.folder_line_html(work),
              runviz.elevation_html(work)]
     for view in views:
         assert total in view, view[:200]
-        assert escape(work["source"]) in view
+        assert escape(work["source"]) not in view      # no source sentence under a picture
+    assert escape(work["source"]) in runviz.provenance_html({"file_work": work})
     # And the elevation climbs to exactly that total rather than to a fourth number.
     assert sum(mark[1] for mark in work["marks"]) == work["totals"]["lines_changed"]
-    # The size map cannot draw a file that no longer exists, so the difference is a sentence.
-    assert "Also deleted: 1 file, 120 lines." in views[0]
+    # The size map cannot draw a file that no longer exists, so the difference is counted.
+    assert "also deleted 1 file, 120 lines" in views[0]
     drawn = sum(row[2] for row in work["files"])
     assert drawn + work["deleted"]["lines"] == work["totals"]["lines_changed"]
+
+
+# Oscar's correction, 23 September: no helper copy on the card. These are the shapes it takes —
+# a sentence explaining how to read the drawing, a source line, or an honest caveat printed as a
+# footnote. All of them are provenance, and provenance is one open question away.
+FOOTNOTE_WORDS = ("Area =", "the number in", "climbing to", "not drawn", "too small to draw",
+                  "came back to", "chosen, not measured", "git numstat", "Also deleted:",
+                  "at this size", "no line count")
+
+
+def test_the_card_carries_no_footnote_style_helper_paragraph():
+    work = measured_work()
+    cards = {name: draw for name, draw in (
+        ("size-map", runviz.size_map_html(work)),
+        ("folder-line", runviz.folder_line_html(work)),
+        ("elevation", runviz.elevation_html(work)),
+        ("screenshot", runviz.screenshot_html({"image_url": "https://example.com/a.png"})),
+    )}
+    for name, drawn in cards.items():
+        assert drawn, name
+        assert 'class="pc-note"' not in drawn, name
+        caption = drawn.split('<figcaption', 1)[1]
+        paragraphs = re.findall(r"<p[^>]*>(.*?)</p>", caption, re.S)
+        assert len(paragraphs) == 1, (name, paragraphs)          # one compact caption, no more
+        words = re.sub(r"<[^>]+>", "", paragraphs[0])
+        assert "." not in words, (name, words)                   # numbers and labels, no sentence
+        assert len(words.split()) <= 16, (name, words)
+        for phrase in FOOTNOTE_WORDS:
+            assert phrase.lower() not in drawn.lower(), (name, phrase)
+    # The one compact key the ruling allows on a drawing: the ramp, and the word `returns`.
+    assert '<ul class="pc-keys">' in cards["size-map"]
+    assert ">returns</text>" in cards["folder-line"]
+
+
+def test_the_copy_the_card_lost_is_in_the_detail_layer():
+    """Nothing was deleted, it moved. A reader who wants the caveat can still open it."""
+    work = measured_work()
+    detail = runviz.provenance_html({"file_work": work})
+    for phrase in ("git numstat", "came back to that folder", "orange outline",
+                   "binary file", "under 50, 50 to 199, 200 or more"):
+        assert phrase in detail, phrase
+    wrapped = runviz.provenance_details_html({"file_work": work})
+    assert "<summary>Explore this run</summary>" in wrapped
+    assert runviz.provenance_html({}) == "" and runviz.provenance_details_html({}) == ""
 
 
 @pytest.mark.parametrize("break_it", [
@@ -153,10 +199,37 @@ def test_a_coloured_tile_carries_no_text():
     svg, drawn, _tiny = runviz.size_map_svg(measured_work())
     assert drawn == 6
     assert "<text" not in svg and "</text>" not in svg
-    assert svg.count("<rect") == 6
+    assert svg.count("<rect") == 7      # six tiles, plus the outline on the biggest change
     # The words are underneath, in the legend, with the folder names and the totals.
     legend = runviz.size_map_html(measured_work()).split("</svg>", 1)[1]
     assert "agentgrinder" in legend and "Untouched" in legend and "200 or more" in legend
+
+
+def test_the_components_are_blue_and_orange_is_three_small_accents():
+    """Oscar's correction, 23 September. An accent that colours half a treemap is not an accent."""
+    sheets = {"runviz.py": runviz.CSS, "design.css": (ROOT / "site/design.css").read_text()}
+    for name, sheet in sheets.items():
+        block = sheet[sheet.index(".pc-visual"):]
+        block = block[:block.index(".visual-picker")] if ".visual-picker" in block else block
+        tight = block.replace(" ", "").replace("\n", "")
+        # The three marks orange is allowed to make, and no others.
+        orange = re.findall(r"([.\w-]+)\{[^}]*#FC4C02", tight)
+        assert sorted(set(orange)) == [".pc-mark", ".pc-peak", ".pc-peak-mark"], (name, orange)
+        for rule in (".pc-rail{stroke:#0047FF", ".pc-station{fill:#fff;stroke:#0047FF",
+                     ".pc-fill{fill:#0047FF", ".pc-stroke{fill:none;stroke:#0047FF"):
+            assert rule in tight, (name, rule)
+    work = measured_work()
+    assert 'class="pc-peak"' in runviz.size_map_svg(work)[0]      # one tile, the biggest change
+    assert runviz.size_map_svg(work)[0].count('class="pc-peak"') == 1
+    assert 'class="pc-peak-mark"' in runviz.elevation_html(work)
+    quiet = measured_work(files=[[0, 500, 0], [0, 300, 0], [0, 100, 0], [1, 300, 0], [1, 100, 0],
+                                 [2, 60, 0]],
+                          folders=[dict(f, lines_changed=0, touched_files=0, deleted_files=0,
+                                        deleted_lines=0) for f in measured_work()["folders"]],
+                          deleted={"files": 0, "lines": 0}, marks=[],
+                          totals={"files_end": 6, "files_touched": 0, "lines_end": 1360,
+                                  "lines_changed": 0})
+    assert "pc-peak" not in runviz.size_map_svg(quiet)[0]         # nothing changed, nothing marked
 
 
 def test_the_keyed_ramp_is_the_ruling_and_both_surfaces_carry_it():
@@ -178,8 +251,8 @@ def test_the_keyed_ramp_is_the_ruling_and_both_surfaces_carry_it():
     for name in ("pc-t0", "pc-t1", "pc-t2", "pc-t3"):
         assert f'class="{name}"' in svg
     css = (ROOT / "site/design.css").read_text()
-    for name, colour in (("pc-t0", "#EEF0F3"), ("pc-t1", "#FFD8C4"), ("pc-t2", "#FF9A6B"),
-                         ("pc-t3", "#FC4C02")):
+    for name, colour in (("pc-t0", "#EEF0F3"), ("pc-t1", "#C4D2FF"), ("pc-t2", "#6A87FF"),
+                         ("pc-t3", "#0047FF")):
         assert f"{name}{{fill:{colour}}}" in runviz.CSS.replace(" ", "").replace("\n", "")
         assert f"{name}{{fill:{colour}}}" in css.replace(" ", "").replace("\n", "")
 
@@ -276,13 +349,14 @@ def test_the_browser_draws_the_same_pixels_as_the_local_card():
         "const v=require(process.argv[1]);const w=JSON.parse(process.argv[2]);"
         "v.validateFileWork(w);"
         "process.stdout.write(JSON.stringify([v.sizeMapHtml(w),v.folderLineHtml(w),"
-        "v.elevationHtml(w),v.heroHtml({file_work:w})]));",
+        "v.elevationHtml(w),v.heroHtml({file_work:w}),v.provenanceHtml({file_work:w})]));",
         VISUALS_JS, json.dumps(work))
-    size, folder, lift, hero = json.loads(out)
+    size, folder, lift, hero, detail = json.loads(out)
     assert size == runviz.size_map_html(work)
     assert folder == runviz.folder_line_html(work)
     assert lift == runviz.elevation_html(work)
     assert hero == runviz.hero_html({"file_work": work})
+    assert detail == runviz.provenance_html({"file_work": work})
 
 
 def test_the_browser_boundary_refuses_what_the_local_contract_refuses():

@@ -245,40 +245,44 @@ button,summary{touch-action:manipulation}
 }
 
 /* THE RUN-CARD COMPONENTS. One hero the author chose, and three small marks beside it.
-   Oscar's ruling, 23 September: light mode, IBM Plex Sans, sentence case, Strava orange as the
-   one accent on THESE marks. The app's blue trace is untouched: this is an addition, not a
-   restyle, and the orange never leaves the components it belongs to.
+   Oscar's ruling of 23 September and its two corrections: light mode, IBM Plex Sans, sentence
+   case, and the app's own STRIVE blue carrying every drawing. Strava orange is spent on three
+   accents and nothing else: the biggest-change tile's outline, the elevation peak, and the
+   trophy marks. There is no helper copy; the provenance block is shown under Explore this run.
    The same block exists in agentgrinder/runviz.py CSS for the local card, and a test compares
    the ramp in both so a colour cannot drift between the two surfaces. */
 .pc-visual{margin:0;padding:12px 20px;border-bottom:1px solid var(--rule)}
 .pc-visual svg,.pc-shot img{display:block;width:100%;height:auto}
 .pc-shot img{max-height:360px;object-fit:cover}
-.pc-t0{fill:#EEF0F3} .pc-t1{fill:#FFD8C4} .pc-t2{fill:#FF9A6B} .pc-t3{fill:#FC4C02}
-.pc-keys i.pc-t0{background:#EEF0F3} .pc-keys i.pc-t1{background:#FFD8C4}
-.pc-keys i.pc-t2{background:#FF9A6B} .pc-keys i.pc-t3{background:#FC4C02}
+.pc-t0{fill:#EEF0F3} .pc-t1{fill:#C4D2FF} .pc-t2{fill:#6A87FF} .pc-t3{fill:#0047FF}
+.pc-keys i.pc-t0{background:#EEF0F3} .pc-keys i.pc-t1{background:#C4D2FF}
+.pc-keys i.pc-t2{background:#6A87FF} .pc-keys i.pc-t3{background:#0047FF}
+.pc-peak{fill:none;stroke:#FC4C02;stroke-width:2}
 .pc-legend{margin-top:8px;font-size:12px;color:var(--soft);line-height:1.5}
 .pc-total{margin:0 0 6px;color:var(--ink);font-size:12.5px}
+.pc-gone,.pc-when{color:var(--soft)}
 .pc-keys,.pc-folders,.pc-trophies{list-style:none;margin:0;padding:0}
 .pc-keys{display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:6px}
 .pc-keys li{display:flex;align-items:center;gap:5px}
 .pc-keys i{width:11px;height:11px;border-radius:2px;display:inline-block}
 .pc-folders li{margin:1px 0} .pc-folders b{color:var(--ink);font-weight:600}
-.pc-note{margin:4px 0 0}
-.pc-rail{stroke:#FC4C02;stroke-width:2;stroke-linecap:round}
-.pc-station{fill:#fff;stroke:#FC4C02;stroke-width:2}
-.pc-station-n{fill:#FC4C02;font:600 11px 'IBM Plex Sans',system-ui,sans-serif;text-anchor:middle}
+.pc-rail{stroke:#0047FF;stroke-width:2;stroke-linecap:round}
+.pc-station{fill:#fff;stroke:#0047FF;stroke-width:2}
+.pc-station-n{fill:#0047FF;font:600 11px 'IBM Plex Sans',system-ui,sans-serif;text-anchor:middle}
 .pc-label{fill:var(--ink);font:600 10px 'IBM Plex Sans',system-ui,sans-serif}
-.pc-sub{fill:var(--soft);font:10px 'IBM Plex Sans',system-ui,sans-serif}
+.pc-sub,.pc-key{fill:var(--soft);font:10px 'IBM Plex Sans',system-ui,sans-serif}
 .pc-axis{stroke:var(--rule);stroke-width:1}
-.pc-fill{fill:#FC4C02;opacity:.12}
-.pc-stroke{fill:none;stroke:#FC4C02;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-.pc-end{fill:#FC4C02}
+.pc-fill{fill:#0047FF;opacity:.10}
+.pc-stroke{fill:none;stroke:#0047FF;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.pc-peak-mark{fill:#FC4C02}
+.pc-provenance{font-size:13px;color:var(--soft);line-height:1.55}
+.pc-provenance ul{margin:0;padding-left:18px} .pc-provenance li{margin:3px 0}
 .pc-gear{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0;padding:10px 20px;
   border-bottom:1px solid var(--rule);font-size:12px}
 .pc-gear-bit{border:1px solid var(--rule);border-radius:999px;padding:2px 9px;color:var(--ink)}
 .pc-gear small{color:var(--soft)}
 .pc-quote{margin:0;padding:12px 20px;border-bottom:1px solid var(--rule);
-  border-left:3px solid #FC4C02}
+  border-left:3px solid #0047FF}
 .pc-quote blockquote{margin:0;font-size:16px;font-weight:600;line-height:1.4;color:var(--ink)}
 .pc-quote figcaption{margin-top:4px;font-size:12px;color:var(--soft)}
 .pc-trophies{display:flex;flex-wrap:wrap;gap:14px;padding:12px 20px;
@@ -302,7 +306,7 @@ button,summary{touch-action:manipulation}
   cursor:pointer;min-height:40px;text-align:left}
 /* The app's forms stretch every input to the width of its label. A radio button is not a text
    field, so it keeps its own size and the description beside it takes the rest of the row. */
-.visual-choice input[type=radio]{flex:0 0 auto;width:auto;margin:3px 0 0;accent-color:#FC4C02}
+.visual-choice input[type=radio]{flex:0 0 auto;width:auto;margin:3px 0 0;accent-color:var(--blue)}
 .visual-choice>span{flex:1 1 auto;min-width:0}
 .visual-choice b{display:block;font-weight:600;color:var(--ink);font-size:14px}
 .visual-choice small{display:block;color:var(--soft);font-size:12px;line-height:1.4}

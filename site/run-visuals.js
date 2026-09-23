@@ -6,9 +6,12 @@
  * rounds half to even and `Number.toFixed(1)` rounds half away from zero, so both sides floor the
  * half in `one()` instead and a coordinate cannot drift by a tenth of a pixel between them.
  *
- * Oscar's ruling, 23 September: light mode, IBM Plex Sans, sentence case, Strava orange as the
- * one accent on these marks, every mark tied to real captured data. The app's own blue trace is
- * untouched — this file adds components, it does not restyle the card.
+ * Oscar's ruling, 23 September, with the two corrections of the same day: light mode, IBM Plex
+ * Sans, sentence case, every mark tied to real captured data — the components are drawn in the
+ * app's own STRIVE blue, with Strava orange spent on three small accents (the biggest-change
+ * tile's outline, the elevation peak, the trophy marks), and NO HELPER COPY on the card. The
+ * source sentence, the ramp's thresholds and what a station's number counts are provenance, and
+ * provenance lives under Explore this run (`provenanceHtml`), not under the picture.
  *
  * NO FILE NAME IS DRAWN AND NONE IS CARRIED. The per-file rows are anonymous triples of
  * [folder, lines at the end, lines changed]; only folder names, counts and totals are words on
@@ -36,7 +39,7 @@
   const MAP_W = 390, MAP_H = 220, LINE_W = 390, LINE_H = 122, LIFT_W = 390, LIFT_H = 150;
   const MAX_STATIONS = 6, MIN_TILE = 1.2, MAX_FILES = 2000, MAX_FOLDERS = 40, MAX_MARKS = 400;
   const MIN_MARKS = 5, MIN_SPAN_S = 600;
-  const RAMP = [[50, "pc-t1", "Under 50 lines"], [200, "pc-t2", "50 to 199"],
+  const RAMP = [[50, "pc-t1", "Under 50"], [200, "pc-t2", "50 to 199"],
                 [null, "pc-t3", "200 or more"]];
   const UNTOUCHED = ["pc-t0", "Untouched"];
   const FOLDER_NAME = /^[A-Za-z0-9._][A-Za-z0-9._-]{0,39}$/;
@@ -213,6 +216,8 @@
     for (const [edge, name] of RAMP) if (edge === null || changed < edge) return name;
     return RAMP[RAMP.length - 1][1];
   }
+  /* One tile is outlined in orange: the file this run changed most. It is the only mark on the
+   * map that is not the blue ramp, so it reads as "start here" without a sentence saying so. */
   function sizeMapSvg(work) {
     const files = work.files || [];
     const groups = new Map();
@@ -224,8 +229,12 @@
     const order = Array.from(groups.keys()).sort((a, b) => weight(b) - weight(a) || a - b);
     const boxes = [];
     sliceTiles(order.map((slot) => [slot, weight(slot)]), 0, 0, MAP_W, MAP_H, boxes);
+    let biggest = -1;
+    files.forEach((row, index) => {
+      if (row[2] > 0 && (biggest < 0 || row[2] > files[biggest][2])) biggest = index;
+    });
     const parts = [];
-    let drawn = 0, tiny = 0;
+    let peak = "", drawn = 0, tiny = 0;
     for (let [slot, x, y, w, h] of boxes) {
       if (w > 3 && h > 3) { x += 1; y += 1; w -= 2; h -= 2; }
       const rows = groups.get(slot).slice().sort((a, b) => b[1][1] - a[1][1] || a[0] - b[0]);
@@ -236,6 +245,9 @@
         drawn += 1;
         parts.push('<rect class="' + rampClass(files[index][2]) + '" x="' + one(fx) +
           '" y="' + one(fy) + '" width="' + one(fw) + '" height="' + one(fh) + '"/>');
+        if (index === biggest)
+          peak = '<rect class="pc-peak" x="' + one(fx) + '" y="' + one(fy) + '" width="' +
+            one(fw) + '" height="' + one(fh) + '"/>';
       }
     }
     const label = "Size map: " + count(work.totals.files_end) +
@@ -243,7 +255,7 @@
       count(work.totals.files_touched) + " of them changed";
     const svg = '<svg class="pc-map" viewBox="0 0 ' + MAP_W + " " + MAP_H +
       '" preserveAspectRatio="none" role="img" aria-label="' + esc(label) + '">' +
-      parts.join("") + "</svg>";
+      parts.join("") + peak + "</svg>";
     return [svg, drawn, tiny];
   }
   function folderRows(work, limit) {
@@ -259,37 +271,31 @@
         count(rest.reduce((acc, f) => acc + f.lines_changed, 0)) + " lines</li>");
     return out.join("");
   }
-  function totalLine(work) {
+  /* The caption: numbers with short labels, and not one word of instruction. Where the numbers
+   * came from and what the ramp means are provenance, and provenance is in the detail layer. */
+  function totalLine(work, options) {
+    const opts = options || {};
     const totals = work.totals;
-    return '<p class="pc-total">' + count(totals.lines_changed) + " lines changed in " +
-      count(totals.files_touched) + " of " + count(totals.files_end) + " files · " +
-      esc(work.source) + "</p>";
-  }
-  function notes(work, tiny) {
-    const out = [];
     const deleted = work.deleted || {files: 0, lines: 0};
-    if (deleted.files)
-      out.push('<p class="pc-note">Also deleted: ' + plural(deleted.files, "file") + ", " +
-        count(deleted.lines) + " lines.</p>");
-    if (tiny)
-      out.push('<p class="pc-note">' + plural(tiny, "file") +
-        " too small to draw at this size.</p>");
-    if (work.binary_end)
-      out.push('<p class="pc-note">' + plural(work.binary_end, "binary file") + " " +
-        (work.binary_end === 1 ? "has" : "have") + " no line count and " +
-        (work.binary_end === 1 ? "is" : "are") + " not drawn.</p>");
-    return out.join("");
+    const gone = opts.deleted && deleted.files
+      ? ' · <span class="pc-gone">also deleted ' + plural(deleted.files, "file") + ", " +
+        count(deleted.lines) + " lines</span>"
+      : "";
+    const tail = opts.extra ? ' · <span class="pc-when">' + opts.extra + "</span>" : "";
+    return '<p class="pc-total">' + count(totals.lines_changed) + " lines changed · " +
+      count(totals.files_touched) + " of " + count(totals.files_end) + " files" + gone +
+      tail + "</p>";
   }
   function sizeMapHtml(work) {
     if (!hasSizeMap(work)) return "";
-    const [svg, , tiny] = sizeMapSvg(work);
+    const [svg] = sizeMapSvg(work);
     let keys = RAMP.map(([, name, label]) => '<li><i class="' + name + '"></i>' + label + "</li>").join("");
     keys += '<li><i class="' + UNTOUCHED[0] + '"></i>' + UNTOUCHED[1] + "</li>";
     return '<figure class="pc-visual pc-size" data-visual="size-map">' + svg +
-      '<figcaption class="pc-legend">' + totalLine(work) +
+      '<figcaption class="pc-legend">' + totalLine(work, {deleted: true}) +
       '<ul class="pc-keys">' + keys + "</ul>" +
       '<ul class="pc-folders">' + folderRows(work) + "</ul>" +
-      notes(work, tiny) + "</figcaption></figure>";
+      "</figcaption></figure>";
   }
 
   /* ---- the folder line -------------------------------------------------------------------------- */
@@ -323,20 +329,15 @@
       labels.push('<text class="pc-sub" text-anchor="' + anchor + '" x="' + one(tx) +
         '" y="90">' + count(folder.lines_changed) + " lines</text>");
     });
+    // One word, once: the compact key for the number inside every station.
     const svg = '<svg class="pc-line" viewBox="0 0 ' + LINE_W + " " + LINE_H +
       '" role="img" aria-label="Folder line: ' + plural(n, "folder") +
-      ' in the order the run first reached them">' +
+      ' in the order the run first reached them, with the number of returns in each">' +
+      '<text class="pc-key" x="2" y="20">returns</text>' +
       '<line class="pc-rail pc-draw" x1="' + one(left) + '" y1="' + one(axis) + '" x2="' +
       one(right) + '" y2="' + one(axis) + '"/>' + marks.join("") + labels.join("") + "</svg>";
-    const hidden = every.slice(MAX_STATIONS);
-    let rest = "";
-    if (hidden.length)
-      rest = '<p class="pc-note">' + plural(hidden.length, "further folder") + " changed, " +
-        count(hidden.reduce((acc, f) => acc + f.lines_changed, 0)) + " lines, not drawn.</p>";
     return '<figure class="pc-visual pc-folders-visual" data-visual="folder-line">' + svg +
-      '<figcaption class="pc-legend">' + totalLine(work) +
-      '<p class="pc-note">The number in each station is how many times the run came back to ' +
-      "that folder after leaving it.</p>" + rest + "</figcaption></figure>";
+      '<figcaption class="pc-legend">' + totalLine(work) + "</figcaption></figure>";
   }
 
   /* ---- the elevation ---------------------------------------------------------------------------- */
@@ -363,26 +364,27 @@
       '" y2="' + one(base) + '"/>' +
       '<polygon class="pc-fill" points="' + area + '"/>' +
       '<polyline class="pc-stroke pc-draw" points="' + line + '"/>' +
-      '<circle class="pc-end" cx="' + one(last[0]) + '" cy="' + one(last[1]) + '" r="4"/>' +
+      '<circle class="pc-peak-mark" cx="' + one(last[0]) + '" cy="' + one(last[1]) + '" r="4.5"/>' +
       '<text class="pc-sub" x="2" y="' + one(top + 4) + '">' + count(total) + " lines</text>" +
       '<text class="pc-sub" x="' + one(left) + '" y="' + one(base + 16) + '">0m</text>' +
       '<text class="pc-sub" text-anchor="end" x="' + one(right) + '" y="' + one(base + 16) +
       '">' + span(seconds) + "</text></svg>";
+    const when = plural(marks.length, "commit") + " · " + span(seconds);
     return '<figure class="pc-visual pc-elevation" data-visual="elevation">' + svg +
-      '<figcaption class="pc-legend">' + totalLine(work) +
-      '<p class="pc-note">' + plural(marks.length, "timestamped commit") + " over " +
-      span(seconds) + ", climbing to the same total.</p></figcaption></figure>";
+      '<figcaption class="pc-legend">' + totalLine(work, {extra: when}) +
+      "</figcaption></figure>";
   }
 
   /* ---- the screenshot, and the three small components -------------------------------------------- */
   function screenshotHtml(run) {
     const url = run && run.image_url;
     if (!url) return "";
+    // Four words, not a sentence: a reader must not take a picture for a measurement.
     return '<figure class="pc-visual pc-shot" data-visual="screenshot">' +
       '<img src="' + esc(url) + '" alt="Image added by the author" loading="lazy" ' +
       'decoding="async" referrerpolicy="no-referrer">' +
-      '<figcaption class="pc-legend"><p class="pc-note">Image added by the author. ' +
-      "Chosen, not measured.</p></figcaption></figure>";
+      '<figcaption class="pc-legend"><p class="pc-total">Added by the author</p>' +
+      "</figcaption></figure>";
   }
   function gearChipHtml(run) {
     const gear = run && run.gear;
@@ -410,6 +412,53 @@
       '<span class="pc-mark">' + esc(badge.value) + "</span><b>" + esc(badge.label) +
       "</b><small>" + esc(badge.basis) + "</small></li>").join("");
     return items ? '<ul class="pc-trophies">' + items + "</ul>" : "";
+  }
+  /* THE HOME OF THE COPY THE CARD NO LONGER CARRIES. The app already has one place for "how was
+   * this measured": Explore this run. So the source line, the ramp's thresholds, what a station's
+   * number counts and every caveat about a file too small to draw live here — one open question
+   * away from the card, and never a paragraph under a picture. */
+  function provenanceHtml(run) {
+    const work = (run && run.file_work) || null;
+    if (!work || typeof work !== "object") return "";
+    const totals = work.totals;
+    const deleted = work.deleted || {files: 0, lines: 0};
+    const rows = [count(totals.lines_changed) + " lines changed across " +
+      count(totals.files_touched) + " of " + count(totals.files_end) + " files, " +
+      esc(work.source)];
+    if (work.range)
+      rows.push("Range " + esc(work.range) + " · " + plural(work.commits || 0, "commit"));
+    if (deleted.files)
+      rows.push(plural(deleted.files, "deleted file") + ", " + count(deleted.lines) +
+        " lines. A deleted file has no size at the end of the run, so it has no tile on the " +
+        "size map and its lines are counted in the total instead.");
+    if (hasSizeMap(work)) {
+      const tiny = sizeMapSvg(work)[2];
+      rows.push("Size map: one tile per file, area is its line count at the end commit, colour " +
+        "is how many lines changed — under 50, 50 to 199, 200 or more. The orange outline is " +
+        "the file this run changed most.");
+      if (tiny)
+        rows.push(plural(tiny, "file") + " too small to draw one pixel wide at this size.");
+    }
+    if (work.binary_end)
+      rows.push(plural(work.binary_end, "binary file") + " " +
+        (work.binary_end === 1 ? "has" : "have") + " no line count and " +
+        (work.binary_end === 1 ? "is" : "are") + " not drawn.");
+    const changed = (work.folders || []).filter((f) => f.lines_changed);
+    if (changed.length) {
+      rows.push("Folder line: the folders in the order the run first reached them, sized by the " +
+        "lines changed there. The number inside a station is how many times the run came back " +
+        "to that folder after leaving it.");
+      const hidden = changed.slice(MAX_STATIONS);
+      if (hidden.length)
+        rows.push(plural(hidden.length, "further folder") + " changed, " +
+          count(hidden.reduce((acc, f) => acc + f.lines_changed, 0)) + " lines, beyond the " +
+          MAX_STATIONS + " stations drawn.");
+    }
+    if (hasElevation(work))
+      rows.push("Elevation: one point per commit that changed lines, against the commit clock, " +
+        "climbing to the same total. The orange mark is the peak.");
+    return '<div class="pc-provenance"><ul>' +
+      rows.map((row) => "<li>" + row + "</li>").join("") + "</ul></div>";
   }
   function heroHtml(run) {
     const pick = chosen(run);
@@ -448,7 +497,7 @@
   const api = {
     HEROES, LABELS, WHY, validateFileWork, available, chosen, heroHtml, componentsHtml,
     sizeMapHtml, folderLineHtml, elevationHtml, screenshotHtml, gearChipHtml, quoteHtml,
-    trophiesHtml, pickerHtml,
+    trophiesHtml, pickerHtml, provenanceHtml,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.GrinderVisuals = api;

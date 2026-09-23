@@ -1034,6 +1034,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   // that measured no files and has no image draws exactly what it drew before.
   const chosenVisual=typeof GrinderVisuals==='object'&&GrinderVisuals.heroHtml?GrinderVisuals.heroHtml(r):'';
   const runComponents=typeof GrinderVisuals==='object'&&GrinderVisuals.componentsHtml?GrinderVisuals.componentsHtml(r):'';
+  const runProvenance=chosenVisual&&GrinderVisuals.provenanceHtml?GrinderVisuals.provenanceHtml(r):'';
   const ridgeOutput=output?(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(output)?'PR':/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(output)?'Screenshot':'Output'):null;
   const code=codeFacts();
   const project=projectName();
@@ -1053,6 +1054,9 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     runUploadIdentity(r),
     `<div class="sub run-effort-context"><span class="card-harness">${esc(r.harness||'Coding agent')}</span>${r.harness==='Grok Bot'?' · bot activity':''} · ${esc(started)}</div>`,
     codeRoute?codeRouteDetail:'',
+    // Where the hero's numbers came from. The card carries no source sentence and no footnote,
+    // so the provenance sits in the detail layer the app already has for raw metrics.
+    runProvenance,
     // The ridge keeps its place under Explore whenever something else took the visual plane,
     // so choosing a size map never costs a reader the activity map they could open before.
     (codeRoute||chosenVisual)&&ridge?ridge:'',

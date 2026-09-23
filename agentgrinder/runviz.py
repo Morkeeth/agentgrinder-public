@@ -1,9 +1,21 @@
 """THE RUN-CARD COMPONENTS — one hero the author chose, and three small marks beside it.
 
-Oscar's ruling, 23 September: light mode, the app's own IBM Plex Sans, sentence case, Strava
-orange as the one accent, and "let people use what visualisation they want, or add a screenshot".
-So this module does not decide what a run looks like. It offers the visuals the run has the data
-for, draws the one the author picked, and draws nothing at all for the rest.
+Oscar's ruling, 23 September: light mode, the app's own IBM Plex Sans, sentence case, and "let
+people use what visualisation they want, or add a screenshot". So this module does not decide
+what a run looks like. It offers the visuals the run has the data for, draws the one the author
+picked, and draws nothing at all for the rest.
+
+TWO CORRECTIONS THE SAME DAY, and both are structural rather than cosmetic:
+
+  THE COMPONENTS ARE BLUE. The app's STRIVE blue carries every drawing, and Strava orange is
+  spent on exactly three marks — the outline of the single biggest-change tile, the elevation's
+  peak, and the trophy marks. An accent that colours half a treemap is not an accent.
+
+  NO HELPER COPY ON THE CARD. No "Area = ...", no "The number inside = ...", no source sentence
+  under a picture. A visual is self-explanatory or it is unfinished: a compact key where one is
+  strictly needed (the ramp, and the single word `returns`), numbers with short labels, and
+  nothing else. Every line of provenance moved to `provenance_html`, which the card shows in the
+  detail layer the app already has for raw metrics.
 
 Four heroes, and each one is a different question about the same run:
 
@@ -19,10 +31,11 @@ Four heroes, and each one is a different question about the same run:
                not a profile.
   SCREENSHOT   the author's own image, on the path the card already has for one (image_url).
 
-ONE RUN, ONE TOTAL. Every view prints the same number of lines changed and says where it came
-from, because they are all slices of the same sum (filework._agree checks that before anything is
-drawn). The size map's tiles cannot show a file that no longer exists, so the deleted files are
-one sentence under it rather than a silent difference between two views.
+ONE RUN, ONE TOTAL. Every view prints the same number of lines changed, because they are all
+slices of the same sum (filework._agree checks that before anything is drawn) — and the source of
+that sum is one open question away, in the detail layer. The size map's tiles cannot show a file
+that no longer exists, so the deleted files are counted in the caption rather than left as a
+silent difference between two views.
 
 WHAT IS NOT MEASURED IS NOT DRAWN, which here means: not offered. A run with no file work has no
 size map option in the picker at all, and its hero falls back to the ridge the card already had.
@@ -41,10 +54,14 @@ LINE_W, LINE_H = 390, 122
 LIFT_W, LIFT_H = 390, 150
 MAX_STATIONS = 6
 MIN_TILE = 1.2
-# The keyed ramp. Three steps and an untouched grey, so a tile's colour is a number a reader can
-# look up rather than a gradient they have to feel.
-RAMP = ((50, "pc-t1", "Under 50 lines"), (200, "pc-t2", "50 to 199"),
-        (None, "pc-t3", "200 or more"))
+# THE COMPONENTS ARE BLUE. Oscar's correction, 23 September: the app's own STRIVE blue carries
+# the drawing, and Strava orange is kept for three tiny accents and nothing else — the single
+# biggest-change tile's outline, the elevation's peak marker, and the trophy marks. An accent
+# that colours half a treemap is not an accent.
+#
+# The keyed ramp is three steps of that blue on an untouched grey, so a tile's colour is a number
+# a reader can look up rather than a gradient they have to feel.
+RAMP = ((50, "pc-t1", "Under 50"), (200, "pc-t2", "50 to 199"), (None, "pc-t3", "200 or more"))
 UNTOUCHED = ("pc-t0", "Untouched")
 
 
@@ -159,9 +176,12 @@ def _ramp_class(changed: int) -> str:
 
 
 def size_map_svg(work: dict) -> tuple:
-    """(svg, tiles drawn, tiles too small to draw). No text node: the legend carries the words."""
+    """(svg, tiles drawn, tiles too small to draw). No text node: the legend carries the words.
+
+    One tile is outlined in orange: the file this run changed most. It is the only mark on the map
+    that is not the blue ramp, so it reads as "start here" without a sentence saying so.
+    """
     files = work.get("files") or []
-    folders = work.get("folders") or []
     groups = {}
     for index, row in enumerate(files):
         groups.setdefault(row[0], []).append((index, row))
@@ -169,7 +189,11 @@ def size_map_svg(work: dict) -> tuple:
     boxes = []
     _slice_tiles([(slot, sum(row[1] for _, row in groups[slot])) for slot in order],
                  0.0, 0.0, float(MAP_W), float(MAP_H), boxes)
-    parts, drawn, tiny = [], 0, 0
+    biggest = -1
+    for index, row in enumerate(files):
+        if row[2] > 0 and (biggest < 0 or row[2] > files[biggest][2]):
+            biggest = index
+    parts, peak, drawn, tiny = [], "", 0, 0
     for slot, x, y, w, h in boxes:
         if w > 3 and h > 3:                  # a one-pixel inset so a folder reads as one block
             x, y, w, h = x + 1, y + 1, w - 2, h - 2
@@ -183,11 +207,14 @@ def size_map_svg(work: dict) -> tuple:
             drawn += 1
             parts.append(f'<rect class="{_ramp_class(files[index][2])}" x="{_n(fx)}" '
                          f'y="{_n(fy)}" width="{_n(fw)}" height="{_n(fh)}"/>')
+            if index == biggest:
+                peak = (f'<rect class="pc-peak" x="{_n(fx)}" y="{_n(fy)}" width="{_n(fw)}" '
+                        f'height="{_n(fh)}"/>')
     touched = work["totals"]["files_touched"]
     label = (f'Size map: {_c(work["totals"]["files_end"])} files at the end of the run, '
              f'sized by line count, {_c(touched)} of them changed')
     svg = (f'<svg class="pc-map" viewBox="0 0 {MAP_W} {MAP_H}" preserveAspectRatio="none" '
-           f'role="img" aria-label="{escape(label)}">' + "".join(parts) + "</svg>")
+           f'role="img" aria-label="{escape(label)}">' + "".join(parts) + peak + "</svg>")
     return svg, drawn, tiny
 
 
@@ -205,42 +232,38 @@ def _folder_rows(work: dict, limit: int = 8) -> str:
     return "".join(out)
 
 
-def _total_line(work: dict) -> str:
+def _total_line(work: dict, *, deleted: bool = False, extra: str = "") -> str:
+    """The caption: numbers with short labels, and not one word of instruction.
+
+    Oscar's correction, 23 September: no helper copy on the card. Where the measurement came from,
+    what the ramp means and what a station's number counts are all facts a reader can want — and
+    all of them are provenance, so they live in the run's own detail layer (`provenance_html`)
+    where the app already keeps the raw metrics. A drawing that needs a paragraph under it to be
+    read is a drawing that has not been finished.
+    """
     totals = work["totals"]
-    return (f'<p class="pc-total">{_c(totals["lines_changed"])} lines changed in '
-            f'{_c(totals["files_touched"])} of {_c(totals["files_end"])} files · '
-            f'{escape(work["source"])}</p>')
-
-
-def _notes(work: dict, tiny: int = 0) -> str:
-    out = []
-    deleted = work["deleted"]
-    if deleted["files"]:
-        out.append(f'<p class="pc-note">Also deleted: {_plural(deleted["files"], "file")}, '
-                   f'{_c(deleted["lines"])} lines.</p>')
-    if tiny:
-        out.append(f'<p class="pc-note">{_plural(tiny, "file")} too small to draw at this size.'
-                   f'</p>')
-    if work.get("binary_end"):
-        count = work["binary_end"]
-        out.append(f'<p class="pc-note">{_plural(count, "binary file")} '
-                   f'{"has" if count == 1 else "have"} no line count and '
-                   f'{"is" if count == 1 else "are"} not drawn.</p>')
-    return "".join(out)
+    gone = ""
+    if deleted and work["deleted"]["files"]:
+        gone = (f' · <span class="pc-gone">also deleted '
+                f'{_plural(work["deleted"]["files"], "file")}, '
+                f'{_c(work["deleted"]["lines"])} lines</span>')
+    tail = f' · <span class="pc-when">{extra}</span>' if extra else ""
+    return (f'<p class="pc-total">{_c(totals["lines_changed"])} lines changed · '
+            f'{_c(totals["files_touched"])} of {_c(totals["files_end"])} files{gone}{tail}</p>')
 
 
 def size_map_html(work: dict) -> str:
     if not filework.has_size_map(work):
         return ""
-    svg, _drawn, tiny = size_map_svg(work)
+    svg, _drawn, _tiny = size_map_svg(work)
     keys = "".join(f'<li><i class="{name}"></i>{label}</li>'
                    for _edge, name, label in RAMP)
     keys += f'<li><i class="{UNTOUCHED[0]}"></i>{UNTOUCHED[1]}</li>'
     return (f'<figure class="pc-visual pc-size" data-visual="size-map">{svg}'
-            f'<figcaption class="pc-legend">{_total_line(work)}'
+            f'<figcaption class="pc-legend">{_total_line(work, deleted=True)}'
             f'<ul class="pc-keys">{keys}</ul>'
             f'<ul class="pc-folders">{_folder_rows(work)}</ul>'
-            f'{_notes(work, tiny)}</figcaption></figure>')
+            f'</figcaption></figure>')
 
 
 # ---------------------------------------------------------------------------------------------
@@ -284,20 +307,16 @@ def folder_line_html(work: dict) -> str:
                       f'{escape(_clip(folder["name"], room))}</text>')
         labels.append(f'<text class="pc-sub" text-anchor="{anchor}" x="{_n(tx)}" y="90">'
                       f'{_c(folder["lines_changed"])} lines</text>')
+    # One word, once: the compact key for the number inside every station. A sentence explaining
+    # it belongs in the detail layer, and four words on the drawing beat forty under it.
     svg = (f'<svg class="pc-line" viewBox="0 0 {LINE_W} {LINE_H}" role="img" '
            f'aria-label="Folder line: {_plural(count, "folder")} in the order the run first '
-           f'reached them">'
+           f'reached them, with the number of returns in each">'
+           f'<text class="pc-key" x="2" y="20">returns</text>'
            f'<line class="pc-rail pc-draw" x1="{_n(left)}" y1="{_n(axis)}" x2="{_n(right)}" '
            f'y2="{_n(axis)}"/>' + "".join(marks) + "".join(labels) + "</svg>")
-    hidden = [f for f in work["folders"] if f["lines_changed"]][MAX_STATIONS:]
-    rest = ""
-    if hidden:
-        rest = (f'<p class="pc-note">{_plural(len(hidden), "further folder")} changed, '
-                f'{_c(sum(f["lines_changed"] for f in hidden))} lines, not drawn.</p>')
     return (f'<figure class="pc-visual pc-folders-visual" data-visual="folder-line">{svg}'
-            f'<figcaption class="pc-legend">{_total_line(work)}'
-            f'<p class="pc-note">The number in each station is how many times the run came back '
-            f'to that folder after leaving it.</p>{rest}</figcaption></figure>')
+            f'<figcaption class="pc-legend">{_total_line(work)}</figcaption></figure>')
 
 
 # ---------------------------------------------------------------------------------------------
@@ -326,15 +345,16 @@ def elevation_html(work: dict) -> str:
            f'y2="{_n(base)}"/>'
            f'<polygon class="pc-fill" points="{area}"/>'
            f'<polyline class="pc-stroke pc-draw" points="{line}"/>'
-           f'<circle class="pc-end" cx="{_n(points[-1][0])}" cy="{_n(points[-1][1])}" r="4"/>'
+           f'<circle class="pc-peak-mark" cx="{_n(points[-1][0])}" cy="{_n(points[-1][1])}" '
+           f'r="4.5"/>'
            f'<text class="pc-sub" x="2" y="{_n(top + 4)}">{_c(total)} lines</text>'
            f'<text class="pc-sub" x="{_n(left)}" y="{_n(base + 16)}">0m</text>'
            f'<text class="pc-sub" text-anchor="end" x="{_n(right)}" y="{_n(base + 16)}">'
            f'{_span(span)}</text></svg>')
+    when = _plural(len(marks), "commit") + " · " + _span(span)
     return (f'<figure class="pc-visual pc-elevation" data-visual="elevation">{svg}'
-            f'<figcaption class="pc-legend">{_total_line(work)}'
-            f'<p class="pc-note">{_plural(len(marks), "timestamped commit")} over {_span(span)}, '
-            f'climbing to the same total.</p></figcaption></figure>')
+            f'<figcaption class="pc-legend">{_total_line(work, extra=when)}'
+            f'</figcaption></figure>')
 
 
 # ---------------------------------------------------------------------------------------------
@@ -346,11 +366,13 @@ def screenshot_html(run) -> str:
     url = _view(run).get("image_url")
     if not url:
         return ""
+    # Four words, not a sentence: a reader must not take a picture for a measurement, and that
+    # is a label on the image rather than a paragraph under it.
     return (f'<figure class="pc-visual pc-shot" data-visual="screenshot">'
             f'<img src="{escape(url)}" alt="Image added by the author" loading="lazy" '
             f'decoding="async" referrerpolicy="no-referrer">'
-            f'<figcaption class="pc-legend"><p class="pc-note">Image added by the author. '
-            f'Chosen, not measured.</p></figcaption></figure>')
+            f'<figcaption class="pc-legend"><p class="pc-total">Added by the author</p>'
+            f'</figcaption></figure>')
 
 
 def gear_chip_html(run) -> str:
@@ -409,6 +431,66 @@ def hero_html(run) -> str:
     return ""                                # the ridge is drawn by the card that already had one
 
 
+def provenance_html(run) -> str:
+    """Where the numbers came from, and everything the drawing does not say on its face.
+
+    THIS IS THE HOME OF THE COPY THE CARD NO LONGER CARRIES. The app already has one place for
+    "how was this measured": the run's own detail layer, under Explore this run. So the source
+    line, the ramp's thresholds, what a station's number counts, and every caveat about a file
+    too small to draw or a binary blob with no lines to count live here — one open question away
+    from the card, and never a paragraph under a picture.
+    """
+    view = _view(run)
+    work = view.get("file_work")
+    if not isinstance(work, dict):
+        return ""
+    totals = work["totals"]
+    rows = [f'{_c(totals["lines_changed"])} lines changed across '
+            f'{_c(totals["files_touched"])} of {_c(totals["files_end"])} files, '
+            f'{escape(work["source"])}']
+    if work.get("range"):
+        rows.append(f'Range {escape(work["range"])} · {_plural(work.get("commits", 0), "commit")}')
+    deleted = work["deleted"]
+    if deleted["files"]:
+        rows.append(f'{_plural(deleted["files"], "deleted file")}, {_c(deleted["lines"])} lines. '
+                    f'A deleted file has no size at the end of the run, so it has no tile on the '
+                    f'size map and its lines are counted in the total instead.')
+    if filework.has_size_map(work):
+        _svg, _drawn, tiny = size_map_svg(work)
+        rows.append("Size map: one tile per file, area is its line count at the end commit, "
+                    "colour is how many lines changed — under 50, 50 to 199, 200 or more. The "
+                    "orange outline is the file this run changed most.")
+        if tiny:
+            rows.append(f'{_plural(tiny, "file")} too small to draw one pixel wide at this size.')
+    if work.get("binary_end"):
+        count = work["binary_end"]
+        rows.append(f'{_plural(count, "binary file")} {"has" if count == 1 else "have"} no line '
+                    f'count and {"is" if count == 1 else "are"} not drawn.')
+    changed = [folder for folder in work["folders"] if folder["lines_changed"]]
+    if changed:
+        rows.append("Folder line: the folders in the order the run first reached them, sized by "
+                    "the lines changed there. The number inside a station is how many times the "
+                    "run came back to that folder after leaving it.")
+        hidden = changed[MAX_STATIONS:]
+        if hidden:
+            rows.append(f'{_plural(len(hidden), "further folder")} changed, '
+                        f'{_c(sum(folder["lines_changed"] for folder in hidden))} lines, beyond '
+                        f'the {MAX_STATIONS} stations drawn.')
+    if filework.has_elevation(work):
+        rows.append(f'Elevation: one point per commit that changed lines, against the commit '
+                    f'clock, climbing to the same total. The orange mark is the peak.')
+    items = "".join(f"<li>{row}</li>" for row in rows)
+    return f'<div class="pc-provenance"><ul>{items}</ul></div>'
+
+
+def provenance_details_html(run) -> str:
+    """The provenance, in its own disclosure, for a card that has no detail layer of its own."""
+    inner = provenance_html(run)
+    if not inner:
+        return ""
+    return (f'<details class="pc-more"><summary>Explore this run</summary>{inner}</details>')
+
+
 def picked_hero_html(run) -> str:
     """The hero ONLY when the author asked for one by name.
 
@@ -435,40 +517,46 @@ WHY = {
     "ridge": "Tool calls across the run, the card's original visual.",
 }
 
-# The components' own styles. Light mode, IBM Plex Sans, one accent. The same block exists in
-# site/design.css for the browser; tests/test_run_visuals.py checks the two carry the same
-# colours, so a ramp cannot drift between the local card and the app.
+# The components' own styles. Light mode, IBM Plex Sans, the app's STRIVE blue carrying the
+# drawing and Strava orange on three small accents. The same block exists in site/design.css for
+# the browser; tests/test_run_visuals.py checks the two carry the same colours, so a ramp cannot
+# drift between the local card and the app.
 CSS = """
   .pc-visual{margin:0;padding:12px 20px;border-bottom:1px solid var(--line)}
   .pc-visual svg,.pc-shot img{display:block;width:100%;height:auto}
   .pc-shot img{max-height:360px;object-fit:cover}
-  .pc-t0{fill:#EEF0F3} .pc-t1{fill:#FFD8C4} .pc-t2{fill:#FF9A6B} .pc-t3{fill:#FC4C02}
-  .pc-keys i.pc-t0{background:#EEF0F3} .pc-keys i.pc-t1{background:#FFD8C4}
-  .pc-keys i.pc-t2{background:#FF9A6B} .pc-keys i.pc-t3{background:#FC4C02}
+  .pc-t0{fill:#EEF0F3} .pc-t1{fill:#C4D2FF} .pc-t2{fill:#6A87FF} .pc-t3{fill:#0047FF}
+  .pc-keys i.pc-t0{background:#EEF0F3} .pc-keys i.pc-t1{background:#C4D2FF}
+  .pc-keys i.pc-t2{background:#6A87FF} .pc-keys i.pc-t3{background:#0047FF}
+  .pc-peak{fill:none;stroke:#FC4C02;stroke-width:2}
   .pc-legend{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5}
   .pc-total{margin:0 0 6px;color:var(--ink);font-size:12.5px}
+  .pc-gone,.pc-when{color:var(--muted)}
   .pc-keys,.pc-folders,.pc-trophies{list-style:none;margin:0;padding:0}
   .pc-keys{display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:6px}
   .pc-keys li{display:flex;align-items:center;gap:5px}
   .pc-keys i{width:11px;height:11px;border-radius:2px;display:inline-block}
   .pc-folders li{margin:1px 0} .pc-folders b{color:var(--ink);font-weight:600}
-  .pc-note{margin:4px 0 0}
-  .pc-rail{stroke:#FC4C02;stroke-width:2;stroke-linecap:round}
-  .pc-station{fill:#fff;stroke:#FC4C02;stroke-width:2}
-  .pc-station-n{fill:#FC4C02;font:600 11px "IBM Plex Sans",system-ui,sans-serif;
+  .pc-rail{stroke:#0047FF;stroke-width:2;stroke-linecap:round}
+  .pc-station{fill:#fff;stroke:#0047FF;stroke-width:2}
+  .pc-station-n{fill:#0047FF;font:600 11px "IBM Plex Sans",system-ui,sans-serif;
     text-anchor:middle}
   .pc-label{fill:var(--ink);font:600 10px "IBM Plex Sans",system-ui,sans-serif}
-  .pc-sub{fill:var(--muted);font:10px "IBM Plex Sans",system-ui,sans-serif}
+  .pc-sub,.pc-key{fill:var(--muted);font:10px "IBM Plex Sans",system-ui,sans-serif}
   .pc-axis{stroke:var(--line);stroke-width:1}
-  .pc-fill{fill:#FC4C02;opacity:.12}
-  .pc-stroke{fill:none;stroke:#FC4C02;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-  .pc-end{fill:#FC4C02}
+  .pc-fill{fill:#0047FF;opacity:.10}
+  .pc-stroke{fill:none;stroke:#0047FF;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  .pc-peak-mark{fill:#FC4C02}
+  .pc-provenance{padding:0 20px 12px;font-size:12.5px;color:var(--muted);line-height:1.55}
+  .pc-provenance ul{margin:0;padding-left:18px} .pc-provenance li{margin:3px 0}
+  .pc-more{border-top:1px solid var(--line)}
+  .pc-more>summary{padding:12px 20px;cursor:pointer;color:var(--muted);font-size:13px}
   .pc-gear{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0;padding:10px 20px;
     border-bottom:1px solid var(--line);font-size:12px}
   .pc-gear-bit{border:1px solid var(--line);border-radius:999px;padding:2px 9px;color:var(--ink)}
   .pc-gear small{color:var(--muted)}
   .pc-quote{margin:0;padding:12px 20px;border-bottom:1px solid var(--line);
-    border-left:3px solid #FC4C02}
+    border-left:3px solid #0047FF}
   .pc-quote blockquote{margin:0;font-size:16px;font-weight:600;line-height:1.4;color:var(--ink)}
   .pc-quote figcaption{margin-top:4px;font-size:12px;color:var(--muted)}
   .pc-trophies{display:flex;flex-wrap:wrap;gap:14px;padding:12px 20px;

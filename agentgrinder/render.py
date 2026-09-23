@@ -318,6 +318,9 @@ def render_card(a: Activity) -> str:
                "quote": a.quote, "gear": a.gear, "trophies": a.trophies, "ridge": a.ridge}
     hero = runviz.hero_html(visuals)
     components = runviz.components_html(visuals)
+    # The card carries no source sentence and no footnote under a drawing: where the numbers came
+    # from belongs with the other raw metrics, one open question away.
+    provenance = runviz.provenance_html(visuals) if hero else ""
     a = replace(a, **{f.name: escape(getattr(a, f.name)) for f in fields(a) if isinstance(getattr(a, f.name), str)})
     pb = '<span class="pb" title="high sustained cadence">High cadence</span>' if a.focus_pb else ""
     has_ridge = 40 <= len(a.ridge) <= 60
@@ -387,6 +390,7 @@ def render_card(a: Activity) -> str:
                     else _just_the_number(a.segments), "Files"),
                    (output_cell, "Output")])}
     <details class="more"><summary>More</summary>
+      {provenance}
       {metric_block}
       {five}
       {_unmeasured_note(a.five, metric_missing)}
@@ -401,6 +405,7 @@ def render_card(a: Activity) -> str:
     </div>
     {five}
     {_unmeasured_note(a.five)}
+    {runviz.provenance_details_html(visuals) if hero else ""}
     {"" if hero else f'<div class="routewrap">{route}</div>'}
     <div class="grp">Cost — what the run spent</div>
     {_stats_block([(a.distance, "Typed turns"), (a.moving_time, "Moving time"), (a.pace, "Pace")])}
