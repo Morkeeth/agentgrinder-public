@@ -23,7 +23,7 @@
     return {
       id: "dropin", title: title || "", harness: run.harness, prompts: run.turns_typed, turns_typed: run.turns_typed,
       tool_calls: run.tool_calls, files_touched: run.files_touched, commits: run.commits, duration_s: run.duration_s,
-      rhythm: run.rhythm, started_hour: GrinderDropin.uploadPayload(run, "").started_hour,
+      rhythm: run.line || run.rhythm, started_hour: GrinderDropin.uploadPayload(run, "").started_hour,
       // created_at is when the card is made, as on the shared page, so both say the same thing.
       started_at: run.started, created_at: new Date().toISOString(), visibility: "anonymous",
     };
@@ -152,7 +152,7 @@
   function post() {
     const token = encodeURIComponent(btoa(JSON.stringify({
       schema_version: 0, harness: run.harness, turns_typed: run.turns_typed, tool_calls: run.tool_calls,
-      files_touched: run.files_touched, commits: run.commits, duration_s: run.duration_s, started: run.started, rhythm: run.rhythm,
+      files_touched: run.files_touched, commits: run.commits, duration_s: run.duration_s, started: run.started, rhythm: run.line || run.rhythm,
     })));
     try { sessionStorage.setItem("ag_import_edits", JSON.stringify({ token, i_title: ($("drop-title").value || "").trim(), i_vis: "public" })); } catch (_) {}
     if (opts.post) opts.post(token); else location.href = "/#import=" + token;

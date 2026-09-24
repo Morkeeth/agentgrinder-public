@@ -116,7 +116,7 @@
 
   function cursorReader() {
     let typed = 0, tools = 0, commits = 0;
-    const files = new Set(), stamps = [];
+    const files = new Set(), stamps = [], perTurn = [];
     let edits = 0;
     return {
       harness: "Cursor",
@@ -126,11 +126,12 @@
           const text = cursorText(msg);
           if (!text.includes("<user_query>")) return;
           typed += 1;
+          perTurn.push(0);
           const t = /<timestamp>/.test(text) ? cursorTime(text) : null;
           if (t != null) stamps.push(t);
         } else if (o.role === "assistant") {
           for (const b of blocks(msg)) {
-            if (isObj(b) && b.type != null && b.type !== "text") tools += 1;
+            if (isObj(b) && b.type != null && b.type !== "text") { tools += 1; if (perTurn.length) perTurn[perTurn.length - 1] += 1; }
             if (!isObj(b) || b.type !== "tool_use" || !isObj(b.input)) continue;
             if (b.name === "Write" || b.name === "StrReplace") {
               if (typeof b.input.path === "string" && b.input.path) { files.add(b.input.path); edits += 1; }
@@ -145,9 +146,16 @@
         for (let i = 0; i < typed; i++) rhythm[Math.min(n - 1, Math.floor((i * n) / typed))] += 1;
         // Cursor's transcript stamps typed turns only, so it has no agent clock. The Python reader
         // refuses a wall time from it too (ingest.py, "Refuse elapsed rates here").
+        // THE LINE THE CARD DRAWS. `rhythm` above is the Python rhythm (parity-tested), and for
+        // Cursor it is flat by construction: typed turns bucketed by their own position. The file
+        // does measure how much the agent did after each typed turn, so the card draws that:
+        // tool calls per typed turn, in turn order, summed into at most 24 bins. Not elapsed time.
+        const bins = Math.min(24, perTurn.length);
+        const line = new Array(bins).fill(0);
+        perTurn.forEach((v, i) => { line[Math.min(bins - 1, Math.floor((i * bins) / perTurn.length))] += v; });
         return { turns_typed: typed, tool_calls: tools, files_touched: files.size || null,
           commits: edits || commits ? commits : null, duration_s: null,
-          started: stamps.length ? Math.min(...stamps) : null, rhythm };
+          started: stamps.length ? Math.min(...stamps) : null, rhythm, line, line_basis: "tool calls per typed turn, in turn order" };
       },
     };
   }
@@ -309,7 +317,7 @@
       commits: whole(run.commits),
       duration_s: whole(run.duration_s),
       started_hour: started && Number.isFinite(started.getTime()) ? started.getHours() : null,
-      rhythm: Array.isArray(run.rhythm) ? run.rhythm.slice(0, 24).map((v) => whole(v) ?? 0) : [],
+      rhythm: (Array.isArray(run.line) && run.line.length ? run.line : Array.isArray(run.rhythm) ? run.rhythm : []).slice(0, 24).map((v) => whole(v) ?? 0),
     };
   }
 
