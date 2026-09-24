@@ -78,14 +78,12 @@ def test_cli_loads_grokbot_fixture_and_keeps_its_unknowns_unknown(tmp_path, caps
     assert "selected session -> Grok Bot · Unknown project" in output
     assert f"{FIXTURE.name} · sitting 1 of 1" in output
     assert "Grok Bot" in output
-    assert "—" in output
+    assert "—" not in output          # unknowns are left out of the summary, not dashed
     assert "bot activity" in html
     assert "Grok Bot" in html
-    assert "Not measured in this run:" in html
-    assert ">correction rate</span>" in html
-    assert "no harness records that" in html
-    for cell in html.split('<div class="stat">')[1:]:
-        assert "—" not in cell.split("</div>")[0]
+    # The local card is the feed card: a figure the export did not measure is not drawn at all.
+    card_html = html.split('<article class="card fc">')[1].split("</article>")[0]
+    assert "—" not in card_html and "Unknown" not in card_html
 
 
 def test_mcp_preview_uses_grokbot_adapter(monkeypatch):

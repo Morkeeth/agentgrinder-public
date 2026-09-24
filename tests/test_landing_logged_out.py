@@ -5,7 +5,7 @@ HTML = (Path(__file__).resolve().parents[1] / 'site/index.html').read_text()
 
 
 def landing():
-    return HTML[HTML.index('function landingHTML()'):HTML.index('\nasync function fetchLatestPublicRun()')]
+    return HTML[HTML.index('function landingHTML()'):HTML.index('\nasync function fetchLatestPublicRuns(')]
 
 
 def view_landing():
@@ -47,9 +47,10 @@ def test_landing_puts_sample_behind_example_link_not_first_fold():
 
 def test_landing_loads_latest_public_run_only():
     view = view_landing()
-    assert "fetchLatestPublicRun()" in view
-    assert "runCard(featured" in view
-    fetch = HTML[HTML.index('async function fetchLatestPublicRun()'):HTML.index('async function viewLanding()')]
+    # Real run cards above the fold: the newest Public runs, drawn with the feed card.
+    assert "fetchLatestPublicRuns(3)" in view
+    assert "feedCards(featured" in view
+    fetch = HTML[HTML.index('async function fetchLatestPublicRuns('):HTML.index('async function viewLanding()')]
     assert ".eq('visibility','public')" in fetch
     assert "visibility','link'" not in fetch
     assert "HOME_SAMPLE" not in view
@@ -79,3 +80,11 @@ def test_sign_in_explains_github_and_private_runs():
 def test_capture_command_points_to_the_public_product():
     assert 'git clone https://github.com/Morkeeth/agentgrinder-public' in HTML
     assert 'git clone &lt;repo&gt;' not in HTML
+
+
+def test_landing_has_one_action_and_no_numbered_steps():
+    body = landing()
+    assert body.count('class="act primary"') == 1
+    assert 'Explore runs</a>' not in body
+    assert '01 ·' not in body and 'launch-steps' not in body
+    assert 'if you want the path' not in body

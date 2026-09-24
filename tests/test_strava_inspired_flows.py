@@ -1,4 +1,4 @@
-"""The Strava-inspired pass stays inside Pacecard's response-led core loop."""
+"""The Strava-inspired pass stays inside STRIVE's response-led core loop."""
 from pathlib import Path
 
 

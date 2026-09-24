@@ -71,11 +71,8 @@ def _card(**over):
 def test_headline_is_an_outcome_sentence_and_never_reads_unknown():
     html = _card()
     assert "Unknown" not in html
-    assert f'<h1 class="outcome nothing">{NOTHING_SHIPPED}</h1>' in html
-    # and it says what it looked for, so "nothing" is a measurement rather than a shrug
-    assert "no commit, pull request or shipped artifact was recorded" in html
-
-
+    # "nothing shipped" is a measurement, said once under the card with what it looked for
+    assert f"{NOTHING_SHIPPED}: no commit, pull request or shipped artifact was recorded in this run." in html
 def test_a_commit_makes_its_subject_the_headline():
     run = _cursor_run(commits=2, project="agentgrinder-public", project_proven=True,
                       commits_list=[{"hash": "aaa1111", "at": "2026-09-22T16:31:00",
@@ -136,32 +133,31 @@ def test_no_stat_on_the_card_is_a_dash():
             assert any(ch.isdigit() for ch in value), value
 
 
-def test_what_is_missing_is_named_in_words_instead_of_drawn_as_dashes():
-    """Hiding a dash must not hide the unknown: the fact keeps its name and its explanation."""
-    html = _card()
-    assert "Not measured in this run:" in html
-    for label in ("verified claims", "correction rate", "reach"):
-        assert f">{label}</span>" in html
-    assert "not measured yet: it needs every turn labelled as undoing the one before it" in html
-
-
+def test_what_is_missing_is_not_drawn():
+    """The card is the feed card: a figure the run did not measure is left out, not dashed.
+    Missing time on a turn-order trace is still said in words, under the card."""
+    html = _card(ridge=[], ridge_basis="", ridge_wall_seconds=None, trace_basis="typed-turn order")
+    card = html.split('<article class="card fc">')[1].split("</article>")[0]
+    assert "—" not in card and "Unknown" not in card and "<dt>Time</dt>" not in card
+    assert "not a measured elapsed clock" in html
 # ---- 3. identity and title ---------------------------------------------------------------------
 
 def test_the_card_never_says_you_and_never_draws_a_y_avatar():
     html = _card()
-    assert ">you<" not in html and ">Y</div>" not in html
-    assert f">{identity.NEUTRAL_LABEL}</b>" in html
+    assert ">you<" not in html and ">Y<" not in html
+    assert f'<span class="fc-name">{identity.NEUTRAL_LABEL}</span>' in html
     assert identity.NOT_SIGNED_IN in html
-    assert 'class="avatar none"' in html
-
-
-def test_a_signed_in_run_carries_the_github_handle_and_avatar():
+    # no account: the initial of the neutral label, never a blank disc and never a remote image
+    assert f'<span class="fc-face fc-mono" style="--s:40px" aria-hidden="true">{identity.NEUTRAL_LABEL[0]}</span>' in html
+    assert "<img" not in html
+def test_a_signed_in_run_carries_the_github_handle_and_an_initial_not_a_remote_avatar():
+    # A local card loads nothing from the network (review of 24 Sep 2026): the face is the
+    # handle's initial, so opening the card tells GitHub nothing.
     html = _card(athlete_handle="morkeeth")
-    assert ">@morkeeth</b>" in html
-    assert 'src="https://github.com/morkeeth.png?size=96"' in html
+    assert '<span class="fc-name">@morkeeth</span>' in html
+    assert '<span class="fc-face fc-mono" style="--s:40px" aria-hidden="true">@</span>' in html
+    assert "github.com/morkeeth.png" not in html and "<img" not in html
     assert identity.NOT_SIGNED_IN not in html
-
-
 def test_a_named_athlete_is_a_display_name_and_never_fetches_an_avatar(tmp_path, monkeypatch):
     # A machine with no GitHub login anywhere: no gh config, no github.user, no environment.
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
@@ -260,11 +256,10 @@ def test_the_grind_card_is_branded_strive_and_never_says_you(tmp_path):
     html = render_solo_card(run)
     assert '<div class="brand">STRIVE</div>' in html
     assert "AGENT GRINDER" not in html
-    assert ">you</b>" not in html and ">Y</div>" not in html
-    assert f">{identity.NEUTRAL_LABEL}</b>" in html
-    for cell in html.split('<div class="stat">')[1:]:
-        value = cell.split('<div class="v">')[1].split("</div>")[0]
-        assert value.strip() not in ("—", "", "Unknown"), value
+    assert ">you<" not in html and ">Y<" not in html
+    assert f'<span class="fc-name">{identity.NEUTRAL_LABEL}</span>' in html
+    card = html.split('<article class="card fc">')[1].split("</article>")[0]
+    assert "—" not in card and "Unknown" not in card
 
 
 # ---- the terminal says the same thing as the card ----------------------------------------------
@@ -281,4 +276,4 @@ def test_the_command_line_summary_leads_with_the_same_outcome(tmp_path):
                          capture_output=True, text=True, check=True).stdout
     assert "Put the outcome at the top of the card" in out
     assert " you " not in out
-    assert "1 commit landed" in " ".join(out.split())
+    assert "1 commit ·" in " ".join(out.split())        # the card's big number, singular

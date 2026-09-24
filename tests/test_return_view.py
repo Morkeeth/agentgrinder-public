@@ -69,6 +69,8 @@ def test_card_html_uses_artifacts_per_turn_label():
            "commits": 0, "duration_s": 900, "rhythm": [1, 1, 1],
            "capabilities": {"claim_evidence": False}, "trace_basis": "typed-turn order"}
     html = render_card(build_activity(run))
-    assert ">artifacts per turn<" in html or "artifacts per turn" in html
-    assert "verified per turn<span" not in html
+    # The ratio is the terminal's and the return view's. The card is the feed card, whose one big
+    # number is a count the run measured, never a ratio and never the prompt count (here: files, before tool calls).
+    assert "verified per turn" not in html and "artifacts per turn" not in html
+    assert '<span class="fc-n num">2</span><span class="fc-u">files changed</span>' in html
     assert headline_of(run).label == "artifacts per turn"

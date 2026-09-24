@@ -5,7 +5,7 @@ Research checked on 15 September 2026. Product behavior was tested locally on
 
 ## Decision
 
-A Pacecard run card cannot honestly promise "Fork this run." The public card
+A STRIVE run card cannot honestly promise "Fork this run." The public card
 does not contain a private transcript, and the three harnesses do not accept one
 portable public session format.
 
@@ -16,19 +16,19 @@ link. It does not restore the original conversation or automatically run the
 prompt.
 
 Every saved card with public context also offers "Copy prompt." This is the
-fallback when Pacecard has no supported deep link, the desktop app is absent, or
+fallback when STRIVE has no supported deep link, the desktop app is absent, or
 the browser refuses to open a custom URL scheme. The card labels the harness
 that captured the run.
 
 ## What each harness accepts
 
-| Harness surface | Accepted input | What opens | Can Pacecard call this a fork? |
+| Harness surface | Accepted input | What opens | Can STRIVE call this a fork? |
 | --- | --- | --- | --- |
 | Cursor prompt deeplink | A URL encoded prompt string in the `text` parameter | A new chat with the prompt prefilled for review | No. No transcript or repository parameter is documented for this link. |
-| Cursor shared transcript | A Cursor hosted `cursor.com/s/<id>` transcript created by the chat owner | A read-only full conversation; "Fork to Cursor" continues with that shared history | Only for an actual Cursor shared transcript. Pacecard does not create or store one. |
-| Claude Code `--resume` | A Claude session ID or name, or the absolute path to a Claude Code `.jsonl` transcript | That native Claude Code session | No. A Pacecard prompt and a rendered `/export` text file are not a native resumable session. |
+| Cursor shared transcript | A Cursor hosted `cursor.com/s/<id>` transcript created by the chat owner | A read-only full conversation; "Fork to Cursor" continues with that shared history | Only for an actual Cursor shared transcript. STRIVE does not create or store one. |
+| Claude Code `--resume` | A Claude session ID or name, or the absolute path to a Claude Code `.jsonl` transcript | That native Claude Code session | No. A STRIVE prompt and a rendered `/export` text file are not a native resumable session. |
 | Codex app deeplink | A prompt, an absolute local workspace path, a Git remote URL, or a local thread ID | A new local chat or an existing local chat | No. The documented link is local app routing, not a public transcript share. |
-| Pacecard fallback | The same generated public prompt copied to the clipboard | A prompt the reader can paste into any harness after opening the right repository | No. It is explicitly a new start from public context. |
+| STRIVE fallback | The same generated public prompt copied to the clipboard | A prompt the reader can paste into any harness after opening the right repository | No. It is explicitly a new start from public context. |
 
 ## Cursor evidence
 
@@ -54,7 +54,7 @@ redaction is not guaranteed. The feature is limited to Teams and Enterprise,
 with public links available on Teams and team links on Enterprise by default.
 It is unavailable with No Storage Privacy Mode.
 
-Pacecard must not manufacture a shared transcript from a private local capture.
+STRIVE must not manufacture a shared transcript from a private local capture.
 Doing that would change the privacy boundary and would still depend on a paid
 Cursor sharing feature.
 
@@ -69,11 +69,11 @@ session's `.jsonl` transcript file.
 documents continuous local transcript storage and `/export`. It says the JSONL
 entry format is internal and can change between versions. `/export` produces a
 rendered transcript for a person to read. The docs do not say that an arbitrary
-text file, a foreign harness transcript, or a Pacecard run card can be imported
+text file, a foreign harness transcript, or a STRIVE run card can be imported
 as a resumable Claude Code session.
 
 This means a native Claude transcript file can resume on a machine that has the
-file, but a public Pacecard cannot safely create that file from card fields.
+file, but a public STRIVE card cannot safely create that file from card fields.
 Copying the bounded public prompt into a new Claude Code session is the honest
 fallback.
 
@@ -98,7 +98,7 @@ Those commands require local Codex session state. They do not turn a public run
 card into a portable transcript.
 
 Codex could be a later direct target because its app link accepts both a prompt
-and `originUrl`. Pacecard should add it only after an installed-app test confirms
+and `originUrl`. STRIVE should add it only after an installed-app test confirms
 the exact behavior and the public output link can be identified as the intended
 Git remote without guessing.
 
@@ -125,7 +125,7 @@ The development environment is Linux and does not have the macOS Cursor app, so
 the custom URL launch remains unverified.
 
 1. On macOS, install or update Cursor and open any local repository.
-2. Start Pacecard with `python3 scripts/dev.py serve`.
+2. Start STRIVE with `python3 scripts/dev.py serve`.
 3. Open a saved Cursor run card at `http://127.0.0.1:8000/?run=<id>`.
 4. Confirm the card says "Captured from Cursor" and offers "Continue in Cursor"
    and "Copy prompt."

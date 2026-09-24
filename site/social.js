@@ -301,7 +301,12 @@ window.GrinderSocial = function ({
       "Public runs from people you follow. Close-friends runs stay on their profile, not here. Responses keeps ACK and reply returns.",
       "feed",
     );
-    if (!signedIn()) return;
+    if (!signedIn()) {
+      const slot = document.createElement("div");
+      byId("social-body")?.appendChild(slot);
+      await suggestBuilders(slot);
+      return;
+    }
     try {
       const follows = await result(
         db
@@ -314,7 +319,8 @@ window.GrinderSocial = function ({
           empty(
             "Find one builder by handle or open a profile from a real run. Following is deliberate: nobody is imported or followed automatically.",
             `<div class="cta"><a class="act blue" href="/?people">Find people</a><a class="act" href="/?post">Post your first run</a><a class="act" href="/?explore">Discover runs</a></div>`,
-          );
+          ) + '<div id="following-suggest"></div>';
+        await suggestBuilders(byId("following-suggest"));
         return;
       }
       const followedIds = follows.map((f) => f.followed_id);
@@ -361,6 +367,33 @@ window.GrinderSocial = function ({
       );
       fail(e);
     }
+  }
+
+  // DAY ONE. An empty Following tab offers the builders who have posted in public, newest first,
+  // each with a Follow button. Nobody is followed for the reader; the tap is theirs.
+  async function suggestBuilders(slot) {
+    if (!slot || typeof window.GrinderFeed !== "object") return;
+    try {
+      const runs = await result(
+        db
+          .from("runs")
+          .select("id,title,profile_id,visibility,created_at,profiles!runs_profile_id_fkey(github_handle,name,handle,display_name,avatar_url)")
+          .eq("visibility", "public")
+          .order("created_at", { ascending: false })
+          .limit(50),
+      );
+      const seen = new Set();
+      const picks = (runs || []).filter((r) => {
+        if (!r.profile_id || seen.has(r.profile_id) || (me() && me().id === r.profile_id)) return false;
+        seen.add(r.profile_id);
+        return true;
+      }).slice(0, 6);
+      if (!picks.length) return;
+      slot.innerHTML = `<section class="fc-builders" aria-label="Builders to follow"><h2>Builders posting runs</h2>${picks.map((r) => window.GrinderFeed.builderRow(r)).join("")}</section>`;
+      for (const el of slot.querySelectorAll(".card-follow[data-profile]")) {
+        await followControl({ id: el.dataset.profile, handle: el.dataset.handle || null, github_handle: el.dataset.handle || null }, el);
+      }
+    } catch (_) {}
   }
 
   async function followControl(person, slot) {

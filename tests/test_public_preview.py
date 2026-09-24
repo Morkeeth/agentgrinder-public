@@ -17,7 +17,8 @@ def test_sample_and_private_og_images_render_to_png():
 
 
 def test_private_and_missing_image_requests_share_the_neutral_response():
-    assert "run?card(run):privateCard()" in API_RUN
+    assert "run?card(run,{avatar}):privateCard()" in API_RUN
+    assert "const avatar=run?await readAvatar(run):null" in API_RUN   # no avatar lookup for a private run
     assert "res.statusCode=200" in API_RUN
     assert "This run is private on ${BRAND}" in PUBLIC_RUN
     assert "run.visibility==='public'" in PUBLIC_RUN

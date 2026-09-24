@@ -78,3 +78,15 @@ def test_ridge_fields_travel_to_publish():
     ridge=[1]*50
     payload=run_payload({'turns_typed':2,'ridge':ridge,'worker_bins':[0]*50,'commit_bins':[3],'ridge_basis':'turn-order'})
     assert payload['ridge']==ridge and payload['ridge_basis']=='turn-order' and payload['commit_bins']==[3]
+
+
+def test_product_origin_publishes_through_the_upload_endpoint():
+    # A stranger passes the app's URL. It has no /rest/v1 path, so publish must go to
+    # /api/agent/runs; other actions need the Supabase URL and fail before any request.
+    client=AgentClient('fixture-token','https://agentic-strava.vercel.app')
+    assert client._product=='https://agentic-strava.vercel.app/api/agent/runs'
+    assert AgentClient('fixture-token','https://abc.supabase.co')._product is None
+    assert AgentClient('fixture-token','http://127.0.0.1:54321')._product is None
+    import pytest
+    with pytest.raises(ValueError):
+        client.perform('reply',{'run_id':'00000000-0000-0000-0000-000000000000','body':'x'})

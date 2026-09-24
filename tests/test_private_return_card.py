@@ -60,7 +60,7 @@ def test_private_card_shows_selected_outcome_with_receipt_links():
     )
     html = render_card(build_activity(run))
     assert html.count(line) == 1
-    assert f'<h1 class="outcome shipped">{line}</h1>' in html
+    assert f'<p class="lead">{line}</p>' in html.split("What shipped", 1)[1]
     assert "declared by the author, with a receipt linked" in html
     assert "Receipts" in html
     assert "PR 72" in html
@@ -71,7 +71,9 @@ def test_caption_alone_does_not_become_selected_outcome():
     # Guard: a caption without receipts must not invent a receipt-backed hero.
     html = render_card(build_activity(_measured_run(caption="Looks great")))
     assert "Selected outcome" not in html
-    assert "Looks great" not in html
+    assert "said by the uploader" not in html
+    # it is the card's caption, as on the feed, and nothing else
+    assert html.count("Looks great") == 1 and '<p class="fc-cap">Looks great</p>' in html
 
 
 def test_review_rejects_non_https_receipt(tmp_path):

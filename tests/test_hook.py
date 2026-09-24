@@ -50,7 +50,8 @@ def test_finished_composer_captures_exactly_once(tmp_path, monkeypatch):
         tmp_path / "private", source, capture_one=capture, open_one=opened.append)
     second = hook.run_once(
         tmp_path / "private", source, capture_one=capture, open_one=opened.append)
-    assert first == {"captured": 1, "composer_ids": [COMPOSER]}
+    assert first == {"captured": 1, "composer_ids": [COMPOSER],
+                     "preview": f"http://127.0.0.1:8765/{COMPOSER}.html"}
     assert second == {"captured": 0, "composer_ids": []}
     assert captured == [COMPOSER]
     assert opened == [f"http://127.0.0.1:8765/{COMPOSER}.html"]
@@ -131,3 +132,25 @@ def test_concurrent_timer_runs_claim_composer_once(tmp_path, monkeypatch):
 def test_custom_database_is_kept_in_scheduled_command(tmp_path):
     command = hook._command(tmp_path / "private", 8765, db=tmp_path / "custom.vscdb")
     assert command[-2:] == ["--db", str(tmp_path / "custom.vscdb")]
+
+
+def test_a_capture_opens_no_browser_unless_asked(tmp_path, monkeypatch):
+    """Oscar's ruling, 24 Sep 2026: no surprise windows. The scheduled hook writes the loopback
+    URL to its output and opens nothing unless it was installed or run with --open."""
+    source = store(tmp_path)
+    monkeypatch.setattr(hook, "_store_private", lambda root, composer_id, run: f"{composer_id}.html")
+    monkeypatch.setattr(hook, "_ensure_server", lambda root, port: None)
+
+    def no_window(*_a, **_k):
+        raise AssertionError("the hook opened a browser without --open")
+    monkeypatch.setattr(hook.webbrowser, "open", no_window)
+    capture = lambda composer_id: {"composer_id": composer_id, "ridge": [0] * 50}
+    result = hook.run_once(tmp_path / "private", source, capture_one=capture)
+    assert result["captured"] == 1
+    assert result["preview"] == f"http://127.0.0.1:8765/{COMPOSER}.html"
+
+
+def test_install_command_carries_open_only_when_asked(tmp_path):
+    assert "--open" not in hook._command(tmp_path, 8765, "run")
+    assert "--open" not in hook._command(tmp_path, 8765, "watch")
+    assert hook._command(tmp_path, 8765, "run", open_preview=True)[-1] == "--open"

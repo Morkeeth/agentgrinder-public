@@ -320,7 +320,7 @@ assert.deepEqual((await A.identities()).map((i) => [i.provider, i.handle]), [['x
 // A real GitHub identity fills the legacy column once; a chosen handle never does.
 const synced = await A.syncGithubHandle();
 assert.equal(synced.github_handle, 'XPersonGH'); assert.equal(synced.id, first.profile.id);
-assert.equal((await A.current()).profile.id, first.profile.id, 'GitHub + X keep one stable Pacecard profile id');
+assert.equal((await A.current()).profile.id, first.profile.id, 'GitHub + X keep one stable STRIVE profile id');
 assert.deepEqual(await A.unlink('i9'), { removed: 'i9' });
 assert.equal((await A.identities()).length, 1);
 // Local sign-out only, then the profile row is still there for the next sign-in.

@@ -8,6 +8,32 @@ from __future__ import annotations
 import argparse, json, sys, webbrowser
 from pathlib import Path
 from .metrics import build_activity
+
+
+class _Browser:
+    """The one door to a browser. A run with no terminal (an agent, a script, a scheduler) does
+    not get a window popped in front of the person: it prints the card path and the hosted
+    preview URL, and opens nothing unless it was asked to with --open."""
+    allowed = False
+
+    def open(self, url):
+        return webbrowser.open(url) if self.allowed else False
+
+
+_BROWSER = _Browser()
+
+
+def _plain(text: str) -> str:
+    """A card sentence for the terminal: its <b> marks removed."""
+    import re as _re
+    return _re.sub(r"</?b>", "", text)
+
+
+def _browser_allowed(args) -> bool:
+    # A browser opens only when the person asked for one with --open. An interactive terminal is
+    # not consent: a surprise window is a request the person did not make. --no-open is kept as
+    # an accepted no-op so older scripts and docs still run.
+    return bool(getattr(args, "open", False)) and not getattr(args, "no_open", False)
 from .render import render_card
 from .ingest import parse_session, latest_session, parse_cursor_session, latest_cursor_session, best_recent_session, coach_lines
 from .profile import build_profile
@@ -36,7 +62,7 @@ def coach_degraded_banner(harness: str, run: dict) -> str:
     bar = "!" * 72
     lines = [
         "", bar,
-        f"!! DEGRADED — --coach was asked for and the coach cannot run on a {harness} transcript.",
+        f"!! DEGRADED: --coach was asked for and the coach cannot run on a {harness} transcript.",
         f"!! {harness} sessions do not carry: {', '.join(missing)}.",
         "!! The coach checks every claim against the evidence in its own turn, every written file",
         "!! against the disk, and every file against git. None of those three has an input here,",
@@ -126,22 +152,17 @@ def _stamp_identity(run: dict, explicit=None) -> dict:
 def _render(run: dict, out: Path, open_it: bool) -> None:
     a = build_activity(_stamp_identity(run))
     out.write_text(render_card(a), encoding="utf-8")
-    # terminal summary (Oscar reads the terminal too). Same order as the card: what shipped,
-    # then the one number that proves it, then the metric identity and the cost.
-    print(f"\n  {a.athlete} · {a.title}")
-    print(f"  {a.harness} · {a.project} · {a.date_str}")
-    print(f"\n  {a.outcome}")
-    print(f"  {a.outcome_basis}")
-    if a.hero_value:
-        print(f"\n  {a.hero_value}  {a.hero_label}")
-    print(f"\n  {a.headline_label.upper()}  {a.headline}    {a.headline_formula}")
-    print("  " + " · ".join(f"{c.label} {c.value}" + (" (cost)" if c.cost else "") for c in a.five))
-    print(f"\n  cost: {a.distance} | {a.moving_time} | {a.pace}")
-    print(f"  effort {a.effort} · {a.segments} · {a.commits} commits · {a.prompts_per_hour}"
-          + ("  high cadence" if a.focus_pb else ""))
+    # terminal summary (Oscar reads the terminal too): the card's own lines, in the card's order,
+    # then the outcome and the ratio. A figure the run did not measure is left out, not dashed.
+    from .feedcard import terminal_lines
+    for line in terminal_lines(a.card_row):
+        print(line)
+    print(f"\n  {a.outcome} ({a.outcome_basis})")
+    if a.headline not in ("", "—"):
+        print(f"  {a.headline_label}: {a.headline}, {a.headline_formula}")
     print(f"\n  card -> {out}\n")
     if open_it:
-        webbrowser.open(out.resolve().as_uri())
+        _BROWSER.open(out.resolve().as_uri())
 
 
 def main(argv=None) -> int:
@@ -166,12 +187,12 @@ def main(argv=None) -> int:
     rv.add_argument("--after", required=True, help="later run JSON")
     rv.add_argument("--review", default=None, help="optional practice review JSON")
     rv.add_argument("-o", "--out", default="return-view.html")
-    rv.add_argument("--no-open", action="store_true")
+    rv.add_argument("--no-open", action="store_true"); rv.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
     d = sub.add_parser("demo", help="render the bundled sample run")
-    d.add_argument("--no-open", action="store_true")
+    d.add_argument("--no-open", action="store_true"); d.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
     c = sub.add_parser("card", help="render a run JSON to a card")
     c.add_argument("run"); c.add_argument("-o", "--out", default="card.html")
-    c.add_argument("--no-open", action="store_true")
+    c.add_argument("--no-open", action="store_true"); c.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
     g = sub.add_parser(
         "grind",
         aliases=["run"],
@@ -207,7 +228,7 @@ def main(argv=None) -> int:
                    help="OPT IN to printing paths outside this repo and the sentence you typed. "
                         "Off by default: see agentgrinder/privacy.py. Even on, a home path, a "
                         "synced-notes path or a memory filename is still refused.")
-    g.add_argument("--no-open", action="store_true")
+    g.add_argument("--no-open", action="store_true"); g.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
     g.add_argument(
         "--push",
         action="store_true",
@@ -218,8 +239,8 @@ def main(argv=None) -> int:
     g.add_argument(
         "--push-url",
         default=None,
-        help="preview origin for --push (default: AGENTGRINDER_URL or http://localhost:8000; "
-             "hosted: https://agentic-strava.vercel.app)",
+        help="preview origin for --push (default: AGENTGRINDER_URL or https://agentic-strava.vercel.app; "
+             "a local UI is http://localhost:8000)",
     )
     g.add_argument("--no-series", action="store_true",
                    help="do not record this grind in the local per-project series (~/.agentgrinder/series.db)")
@@ -255,7 +276,7 @@ def main(argv=None) -> int:
     sh.add_argument("--handle", default="you", help="GitHub handle on the card")
     sh.add_argument("--harness", choices=["claude", "cursor", "codex", "grokbot", "auto"], default="auto")
     sh.add_argument("-o", "--out", default="share.html")
-    sh.add_argument("--no-open", action="store_true")
+    sh.add_argument("--no-open", action="store_true"); sh.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
     sh.add_argument("--push-url", default=None, help="base URL printed on the claim stub")
     sh.add_argument("--vibe", action="store_true", help="stamp meme vibe on the card")
     sh.add_argument("--roast", action="store_true", help="add roast-shape lines to the card")
@@ -271,17 +292,18 @@ def main(argv=None) -> int:
     rg.add_argument("--share-names", action="store_true", help="print MCP server names on the card")
     rg.add_argument("--anon", action="store_true", help="ghost rig card — no handle")
     rg.add_argument("-o", "--out", default="rig.html")
-    rg.add_argument("--no-open", action="store_true")
+    rg.add_argument("--no-open", action="store_true"); rg.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
     hs = sub.add_parser("heist", help="rig heist card — someone ACKed your stack")
     hs.add_argument("victim", help="whose rig was ACKed (@handle)")
     hs.add_argument("--thief", default="friend", help="who ACKed")
     hs.add_argument("--harness", default="Claude Code")
     hs.add_argument("-o", "--out", default="heist.html")
-    hs.add_argument("--no-open", action="store_true")
+    hs.add_argument("--no-open", action="store_true"); hs.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
     hi = sub.add_parser("history", help="every grind on this machine, ranked (local only)")
     hi.add_argument("--top", type=int, default=15)
-    lg = sub.add_parser("login", help="open the web app to sign in with GitHub")
+    lg = sub.add_parser("login", help="print the web app link to sign in with GitHub (--open opens it)")
     lg.add_argument("--url", default=None, help="web app base URL")
+    lg.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
     a2 = sub.add_parser("a2a", help="Agent Activity protocol — export, feed, onboarding")
     a2sub = a2.add_subparsers(dest="a2cmd", required=True)
     a2sub.add_parser("onboard", help="print A2A agent onboarding (for MCP agents)")
@@ -296,6 +318,7 @@ def main(argv=None) -> int:
     ak.add_argument("--reason", default="shipped",
                     choices=["shipped", "focus", "pace", "rig", "comeback", "handoff"])
     ak.add_argument("--url", default=None, help="web app base URL")
+    ak.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
     akls = a2sub.add_parser("acks", help="list ACKs on a grind (network)")
     akls.add_argument("run_id")
     r = sub.add_parser("v1card", help="the v1 sparkline card (kept for the bundled sample)")
@@ -303,7 +326,7 @@ def main(argv=None) -> int:
     r.add_argument("--harness", choices=["claude", "cursor", "codex", "grokbot"], default="claude")
     r.add_argument("--athlete", default=None, help=ATHLETE_HELP)
     r.add_argument("-o", "--out", default="card.html")
-    r.add_argument("--no-open", action="store_true")
+    r.add_argument("--no-open", action="store_true"); r.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
     nr = sub.add_parser("nightrun", help="aggregate a multi-agent fleet run (orchestrator + lanes) into one card")
     nr.add_argument("--since", help="ISO start of the window (default: --hours ago)")
     nr.add_argument("--hours", type=float, default=12.0)
@@ -316,7 +339,7 @@ def main(argv=None) -> int:
     nr.add_argument("--public", action="store_true",
                     help="redact repo and lane names for a card you can show a stranger "
                          "(shape and every number unchanged)")
-    nr.add_argument("--no-open", action="store_true")
+    nr.add_argument("--no-open", action="store_true"); nr.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
     au = sub.add_parser("authorship",
                         help="who wrote every type:user record in a window (the card's honest paragraph, as a table)")
     au.add_argument("--since", help="ISO start of the window (default: --hours ago)")
@@ -328,8 +351,9 @@ def main(argv=None) -> int:
     pc.add_argument("paths", nargs="+", help="rendered .html cards (or any text file) to scan")
     pr = sub.add_parser("profile", help="build a builder profile + run feed from a GitHub user + local runs")
     pr.add_argument("username"); pr.add_argument("--runs", default="samples")
-    pr.add_argument("-o", "--out", default="profile.html"); pr.add_argument("--no-open", action="store_true")
+    pr.add_argument("-o", "--out", default="profile.html"); pr.add_argument("--no-open", action="store_true"); pr.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
     args = p.parse_args(argv)
+    _BROWSER.allowed = _browser_allowed(args)
 
     if args.cmd == "connect":
         from .connect import run_cli
@@ -355,7 +379,7 @@ def main(argv=None) -> int:
         print(f"  comparable: {model['metric']['comparable']} "
               f"({model['metric']['before_id']} → {model['metric']['after_id']})")
         if not args.no_open:
-            webbrowser.open(Path(args.out).resolve().as_uri())
+            _BROWSER.open(Path(args.out).resolve().as_uri())
         return 0
     if args.cmd == "agent":
         from .agent_api import run_cli
@@ -401,14 +425,14 @@ def main(argv=None) -> int:
         else:
             run = _load_latest_run()
             if not run:
-                print("no session found — try: agentgrinder share --claim"); return 1
+                print("no session found. Try: agentgrinder share --claim"); return 1
             html = from_run_dict(run, handle=args.handle, base_url=base, vibe=args.vibe, roast=args.roast)
         out = Path(args.out)
         out.write_text(html, encoding="utf-8")
         print(f"\n  share card -> {out}")
         print("  screenshot it · the stub says claim your handle\n")
         if not args.no_open:
-            webbrowser.open(out.resolve().as_uri())
+            _BROWSER.open(out.resolve().as_uri())
         return 0
     if args.cmd == "vibe":
         from .meme import format_vibe, vibe_or_default
@@ -450,7 +474,7 @@ def main(argv=None) -> int:
             print(f"  MCP names on card: {', '.join(rig['mcp_names'][:8])}")
         print("  screenshot it · friends steal your stack\n")
         if not args.no_open:
-            webbrowser.open(out.resolve().as_uri())
+            _BROWSER.open(out.resolve().as_uri())
         return 0
     if args.cmd == "heist":
         from .ingest import detect_rig
@@ -466,13 +490,16 @@ def main(argv=None) -> int:
         out.write_text(html, encoding="utf-8")
         print(f"\n  rig heist card -> {out}\n")
         if not args.no_open:
-            webbrowser.open(out.resolve().as_uri())
+            _BROWSER.open(out.resolve().as_uri())
         return 0
     if args.cmd == "login":
         from .push import DEFAULT_URL
         base = args.url or DEFAULT_URL
-        webbrowser.open(f"{base.rstrip('/')}/?onboard")
-        print(f"\n  opened {base.rstrip('/')}/?onboard — sign in with GitHub\n")
+        print(f"  sign in -> {base.rstrip('/')}/?onboard")
+        if _BROWSER.open(f"{base.rstrip('/')}/?onboard"):
+            print(f"\n  opened {base.rstrip('/')}/?onboard: sign in with GitHub\n")
+        else:
+            print(f"\n  open that link in a browser and sign in with GitHub (or rerun with --open)\n")
         return 0
     if args.cmd == "a2a":
         from .a2a import export_grind, onboarding_text
@@ -522,7 +549,7 @@ def main(argv=None) -> int:
             from .push import DEFAULT_URL
             url = ack_url(args.run_id, args.reason, args.url or DEFAULT_URL)
             print(f"\n  ACK -> {url}\n  open, sign in, confirm reason: {args.reason}\n")
-            webbrowser.open(url)
+            _BROWSER.open(url)
             return 0
     if args.cmd in ("grind", "run"):
         return _grind(args)
@@ -598,7 +625,7 @@ def main(argv=None) -> int:
               f"{g.get('public_repos')} repos")
         print(f"  profile -> {out}\n")
         if not args.no_open:
-            webbrowser.open(out.resolve().as_uri())   # module-level import (line 8); a LOCAL
+            _BROWSER.open(out.resolve().as_uri())   # module-level import (line 8); a LOCAL
             # `import webbrowser` here made the name local to all of main(), so `nightrun` at
             # line ~191 died with UnboundLocalError on every run that was not --no-open.
     elif args.cmd == "authorship":
@@ -677,7 +704,7 @@ def main(argv=None) -> int:
         print(f"\n  card -> {out}")
         print("  nothing was uploaded or posted; sharing it is your click\n")
         if not args.no_open:
-            webbrowser.open(out.resolve().as_uri())
+            _BROWSER.open(out.resolve().as_uri())
     return 0
 
 
@@ -828,6 +855,11 @@ def _grind(args) -> int:
         for i, s in enumerate(sits, 1):
             print(f"   --pick {i:<3} {s['start']:%a %d %b %H:%M} -> {s['end']:%H:%M}  "
                   f"{s['typed']:>3} prompts  {s['minutes']:>6.0f}m  {s['events']:>5} records")
+        if not sits:
+            # An unattended SDK run or a subagent transcript has no typed turns, so it has no
+            # sitting. It is still a run: `agent capture` measures it without a human turn.
+            print("  No typed turns: this looks like an unattended or subagent run. Measure it with\n"
+                  f"      agentgrinder agent capture /path/to/{Path(path).name} > run.json")
         print()
         return 0
 
@@ -875,28 +907,25 @@ def _grind(args) -> int:
     out = Path(args.out)
     out.write_text(render_solo_card(run, ranks=ranks, photo_src=photo_src), encoding="utf-8")
 
-    from .solocard import headline
-    t0 = run["started"][11:16]; t1 = run["ended"][11:16]
+    from .solocard import headline, card_row
+    from .feedcard import terminal_lines
     h, _ = headline(run)
     a = run["authorship"]
-    print(f"\n  {run['athlete']} · {run['project']} · {run['started'][:10]} {t0} -> {t1}"
-          f"   (sitting {run['sitting']['index']} of {run['sitting']['of']})")
-    print(f"  {h}\n")
-    # the same numbers the card prints, in the same order: headline, five, then COST
+    for line in terminal_lines(card_row(run)):
+        print(line)
+    print(f"  sitting {run['sitting']['index']} of {run['sitting']['of']}")
+    print(f"\n  {_plain(h)}")
     from .metrics import headline_of
     hl = headline_of(run)
-    print(f"  {hl.text:>5} verified per turn   {hl.formula}")
-    for c in hl.five:
-        print(f"        {c.label:<20} {c.value:<14}{'cost' if c.cost else ''}")
-    print("\n  cost — what the grind spent")
-    _pw = "prompt " if run['turns_typed'] == 1 else "prompts"
-    print(f"  {run['turns_typed']:>5} {_pw} you typed   (promptSource typed|queued, of "
-          f"{a['user_records_total']:,} type:user records)")
-    print(f"  {run['tool_calls']:>5} tool calls")
-    print(f"  {run['files_touched']:>5} files opened        ({run['files_edited']} changed, "
-          f"{len(run['deadends'])} nothing has committed since)")
-    print(f"  {run['commits']:>5} commit{'  ' if run['commits'] == 1 else 's '}            "
-          f"(git log --all --name-only, during the grind)")
+    if hl.text not in ("", "—"):
+        print(f"  {hl.label}: {hl.text}, {hl.formula}")
+    measured = [c for c in hl.five if c.value and "—" not in c.value]
+    if measured:
+        print("  " + " · ".join(f"{c.label} {c.value}" for c in measured))
+    print(f"  {a['user_records_total']:,} type:user records, {run['turns_typed']} typed by you "
+          f"(promptSource typed|queued)")
+    print(f"  {run['files_touched']} files opened, {run['files_edited']} changed, "
+          f"{len(run['deadends'])} not committed since")
     if ranks and ranks.get("enough"):
         from .history import best_rank
         br = best_rank(ranks)
@@ -925,13 +954,13 @@ def _grind(args) -> int:
         if getattr(args, "share_rig_names", False) and run.get("rig"):
             run["rig"]["share_names"] = True
         url = import_url(run, args.push_url)
-        print(f"  push -> {url}")
-        print("  sign in on the web page to publish — metrics only, nothing uploaded yet\n")
-        webbrowser.open(url)
+        print(f"  preview -> {url}")
+        print("  sign in on the web page to publish. Metrics only, nothing uploaded yet.\n")
+        _BROWSER.open(url)
     else:
         print("  nothing was uploaded or posted; sharing it is your click\n")
         if not args.no_open:
-            webbrowser.open(out.resolve().as_uri())
+            _BROWSER.open(out.resolve().as_uri())
     return 0
 
 
@@ -1000,11 +1029,13 @@ def _native_grind(run, args, path, source_digest, selected=None, total=None):
         run['rig']=detect_rig()
         if args.share_rig_names:run['rig']['share_names']=True
         url=import_url(run,args.push_url)
+        # Printed, not only opened: when no browser opens, this line is the only way to the preview.
+        print(f'  preview -> {url}')
         print('  Private preview; not saved. Review it, choose an audience deliberately, then Save run.')
         print('  Nothing has been uploaded by this command.')
-        webbrowser.open(url)
+        _BROWSER.open(url)
     elif not args.no_open:
-        webbrowser.open(Path(args.out).resolve().as_uri())
+        _BROWSER.open(Path(args.out).resolve().as_uri())
     return 0
 
 def _run_coach_into(run: dict, path: str, pick: int, gap_s: int, mode: str, athlete: str) -> str | None:

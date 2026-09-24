@@ -32,7 +32,7 @@ await db.exec(sql);
 assert.deepEqual(await snapshot(),before,'Strava bootstrap must not change Grinder');
 await assert.rejects(db.exec(sql),/already exists/);
 await db.exec('rollback; set search_path=strava,pg_temp');
-// Same auth identity has no Pacecard profile until explicit onboarding.
+// Same auth identity has no STRIVE profile until explicit onboarding.
 await db.query("select set_config('request.jwt.claim.sub',$1,false)",[a]);
 assert.equal((await db.query('select strava.grinder_profile_id() id')).rows[0].id,null);
 await db.exec(`set role authenticated;

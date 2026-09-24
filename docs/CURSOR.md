@@ -11,6 +11,8 @@ Keep the capture tool outside your own project:
 ```sh
 git clone https://github.com/Morkeeth/agentgrinder-public.git ~/.agentgrinder/agentgrinder-public
 python3 -m venv ~/.agentgrinder/venv
+# macOS system Python 3.9 ships pip 21.2, which cannot do an editable install of this project.
+~/.agentgrinder/venv/bin/pip install -U pip
 ~/.agentgrinder/venv/bin/pip install -e ~/.agentgrinder/agentgrinder-public
 ```
 
@@ -57,15 +59,17 @@ Now open that exact sitting as a private preview on the live app:
 AGENTGRINDER_URL=https://agentic-strava.vercel.app \
 ~/.agentgrinder/venv/bin/agentgrinder grind \
   /exact/path/to/selected-cursor-session.jsonl \
-  --harness cursor --pick 2 --push
+  --harness cursor --pick 1 --push
 ```
 
-Replace `2` with the sitting you selected. `--push` is a historical flag name: it builds and
-opens a metrics-only `#import` URL. It does not upload or save the run. Imports at 1,500 bytes or
+Replace `1` with the sitting you selected; `--list` numbers them from 1, and `--pick -1` takes the
+latest. `--push` is a historical flag name: it builds and
+prints a metrics-only `#import` URL, and opens it only with `--open`. It does not upload or save the run. Imports at 1,500 bytes or
 more use gzip inside the private fragment. The hosted page expands that payload before applying
 the same run validator. Smaller imports keep the original encoding, so existing links remain
-readable. The terminal prints the selected harness, project, source filename and sitting again
-before opening the page.
+readable. The terminal prints the selected harness, project, source filename and sitting again, then
+prints the hosted preview URL (`preview -> https://…#import=…`). Copy that URL into a browser, or
+add `--open` to have the command open it.
 
 The long-hash failure hypothesis is not confirmed here. Chromium documents a 2 MB URL limit and
 a separate 32 KB address-bar display limit in its
@@ -81,17 +85,24 @@ would copy, wrap or truncate the complete preview URL. Normal Cursor capture ope
 hosted preview directly and does not require a handoff file.
 
 On the hosted page, review the white card and blue trace. Missing measurements remain unknown.
-Write only public-facing title, caption and optional HTTPS output link. Leave the audience unset
-to stop at preview. Saving requires an intentional choice of **Only me**, **Anyone with the
-link**, or **Public feed and profile**, followed by **Save run**.
-Production Auth allowlisting for this origin remains a separate configuration check.
+Write only a public-facing title, caption and optional HTTPS output link. Leave the audience unset
+to stop at preview. Saving needs an account: while you are signed out the button reads
+**Sign in to save**, and pressing it starts sign-in with GitHub or an email link. Signed in, pick
+one audience on purpose:
+
+- **Only me**: just you.
+- **Close friends**: people on your private list.
+- **Link**: signed-in followers and close friends. It is not open to anyone who holds the URL.
+- **Public**: the feed and your profile.
+
+Then press **Save run**.
 
 The equivalent explicit-origin command is:
 
 ```sh
 ~/.agentgrinder/venv/bin/agentgrinder grind \
   /exact/path/to/selected-cursor-session.jsonl \
-  --harness cursor --pick 2 --push \
+  --harness cursor --pick 1 --push \
   --push-url https://agentic-strava.vercel.app
 ```
 
@@ -108,14 +119,16 @@ Run this once from the checkout:
 python3 -m agentgrinder hook install --harness cursor
 ```
 
-Cursor does not expose a documented local composer-complete hook. Pacecard therefore checks
+Cursor does not expose a documented local composer-complete hook. STRIVE therefore checks
 Cursor's local `state.vscdb` on a timer. It installs a launchd agent on macOS, a systemd user timer
 on Linux when a user service manager is available, or a private polling watcher. The watcher is
 the fallback because it keeps the desktop session needed to open the loopback card.
 
 The install records all composers already complete and ignores them. A future completed composer
-is captured once by composer id into `~/.agentgrinder/hook`, then its card opens from
-`http://127.0.0.1:8765`. The reader uses only allowlisted counts, timestamps and worker structure
+is captured once by composer id into `~/.agentgrinder/hook`, then its card is served from
+`http://127.0.0.1:8765` and the link is written to `~/.agentgrinder/hook/hook.log`. No browser
+window opens unless the hook was installed with `hook install --harness cursor --open`. The card
+itself loads no fonts or pictures from the network: the builder's face is an initial. The reader uses only allowlisted counts, timestamps and worker structure
 from Cursor's database. Message text, tool arguments and paths do not enter the automatic card.
 There are no credentials and no external requests.
 

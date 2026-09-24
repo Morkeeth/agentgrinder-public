@@ -4,6 +4,28 @@
 
 A free, MIT-licensed social app for people building with coding agents. Capture a session, preview its card, choose to post it, and follow other builders. Keep it minimal: runs, a feed, profiles, ACKs and replies.
 
+## Post your first run
+
+One command. It reads your latest Claude Code, Cursor or Codex session on this machine, writes
+`grind.html`, and prints a private preview link to the live app:
+
+```sh
+uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --push
+```
+
+No `uv`? Use a virtual environment instead (macOS system Python needs the pip upgrade):
+
+```sh
+python3 -m venv ~/.strive && ~/.strive/bin/pip install -U pip
+~/.strive/bin/pip install git+https://github.com/Morkeeth/agentgrinder-public
+~/.strive/bin/agentgrinder grind --push
+```
+
+Nothing is uploaded by the command. Open the `preview ->` link, sign in with GitHub or an email
+link, write a title and caption, pick who can see it, then press **Save run**. No model API key
+and no account are needed to make the card. Run `agentgrinder grind --list` first to see which
+session it picked.
+
 **Come build it with us.** Code, design, documentation, accessibility improvements and useful bug reports are all welcome. You do not need an invitation, a paid AI tool or a previous open-source contribution.
 
 [Start contributing](CONTRIBUTING.md) · [Find a first contribution](docs/FIRST-PR.md) · [Get help](SUPPORT.md) · [Product direction](PRODUCT.md)
@@ -46,7 +68,8 @@ AGENTGRINDER_URL=https://agentic-strava.vercel.app \
 ```
 
 No model API key is required. The command reads that session on this machine, writes
-`./grind.html`, and opens an unsaved metrics-only import. Review the card, account and destination;
+`./grind.html`, and prints the link to an unsaved metrics-only import (add `--open` to open it in
+a browser; nothing opens by default). Review the card, account and destination;
 choosing an audience and pressing **Save run** are deliberate later actions.
 
 With the tool installed in the active Python environment, the equivalent command prefix is
@@ -58,8 +81,10 @@ To capture each future completed Cursor composer automatically:
 python3 -m agentgrinder hook install --harness cursor
 ```
 
-The hook records private local drafts and opens a card at `127.0.0.1`. It has no keys, makes no
-external request and never posts. Use `python3 -m agentgrinder hook status` to inspect it and
+The hook records private local drafts and serves each card at `127.0.0.1`, writing the link to
+`~/.agentgrinder/hook/hook.log`. It opens no browser window unless you install it with `--open`.
+The local card loads no fonts or pictures from the network. It has no keys, makes no external
+request and never posts. Use `python3 -m agentgrinder hook status` to inspect it and
 `python3 -m agentgrinder hook uninstall` to stop it.
 
 ## What help matters now?

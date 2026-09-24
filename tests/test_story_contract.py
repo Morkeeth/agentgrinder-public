@@ -8,7 +8,7 @@ from agentgrinder.push import export_run
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MIGRATION = (ROOT / "supabase" / "strava" / "004_shell_calls.sql").read_text()
+MIGRATION = (ROOT / "supabase" / "strava" / "005_shell_calls.sql").read_text()
 PUBLIC_RUN = (ROOT / "server" / "public-run.mjs").read_text()
 
 

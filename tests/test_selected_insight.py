@@ -112,9 +112,10 @@ def test_a_bound_insight_leads_the_code_route_group_with_its_receipt():
     assert LINE in html
     assert f'href="{RECEIPT}"' in html and ">PR 77</a>" in html
     assert "Not measured, and not taken from anything typed." in html
-    # It sits at the head of the Code Route group: above the route, below the outcome.
-    assert html.index('class="outcome') < html.index('class="insight"')
-    assert html.index('class="insight"') < html.index('<div class="ridgewrap">')
+    # It sits under the card (the feed card carries no insight), after the outcome.
+    assert html.index("</article>") < html.index('class="below insight"')
+    if 'class="below outcome"' in html:
+        assert html.index('class="below outcome"') < html.index('class="below insight"')
 
 
 def test_an_insight_bound_to_a_receipt_this_run_does_not_carry_is_refused():
@@ -176,9 +177,9 @@ def test_the_card_needs_no_account_and_does_not_claim_to_be_published():
     html = render_card(build_activity(_bound()))
     assert insight.PRIVATE_NOTE in html
     for published in ("Public", "published to", "posted", "Feed"):
-        assert published not in html.split('class="insight"')[1].split("</section>")[0]
+        assert published not in html.split('class="below insight"')[1].split("</section>")[0]
     # Nothing in the insight block needs an account or a network call to render.
-    block = html.split('class="insight"')[1].split("</section>")[0]
+    block = html.split('class="below insight"')[1].split("</section>")[0]
     assert "sign in" not in block.lower() and "<script" not in block
     assert block.count("http") == 1 and RECEIPT in block
 
@@ -186,9 +187,9 @@ def test_the_card_needs_no_account_and_does_not_claim_to_be_published():
 def test_the_insight_survives_a_phone_width_card_without_a_fixed_grid():
     html = render_card(build_activity(_bound()))
     assert '<meta name="viewport" content="width=device-width,initial-scale=1">' in html
-    block = html[html.index('class="insight"'):]
+    block = html[html.index('class="below insight"'):]
     assert "width:" not in block.split("</section>")[0]      # no fixed pixel width to overflow
-    assert ".insight-line{margin:0 0 6px;font-size:16px" in html
+    assert ".below{background:var(--box)" in html
 
 
 # ---- the private draft path: selection is an explicit act --------------------------------

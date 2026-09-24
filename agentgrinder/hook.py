@@ -1,8 +1,9 @@
 """Private post-session capture for Cursor.
 
-Cursor exposes no documented local post-composer hook. Pacecard therefore checks the local
+Cursor exposes no documented local post-composer hook. STRIVE therefore checks the local
 state.vscdb with a user scheduler. It reads completed composer ids and the redacted bubble clock,
-stores one private draft per composer, and opens only a loopback preview.
+stores one private draft per composer, and serves it on a loopback preview. It opens no browser
+window unless it was installed or run with --open: the preview URL is written to hook.log.
 """
 from __future__ import annotations
 
@@ -27,8 +28,17 @@ from . import cursor_tree
 
 DEFAULT_ROOT = Path.home() / ".agentgrinder" / "hook"
 DEFAULT_PORT = 8765
-LABEL = "app.pacecard.cursor-hook"
-CRON_MARKER = "# pacecard-cursor-hook"
+LABEL = "app.strive.cursor-hook"
+CRON_MARKER = "# strive-cursor-hook"
+UNIT = "strive-cursor-hook"
+# Hooks installed before the rename to STRIVE carry the old product name. A live install is found
+# by the path recorded in install.json, and every cron marker is swept, so an existing hook still
+# reports active and still uninstalls cleanly instead of running twice beside a new one.
+LEGACY_CRON_MARKERS = ("# pacecard-cursor-hook",)
+
+
+def _has_marker(line: str) -> bool:
+    return any(marker in line for marker in (CRON_MARKER, *LEGACY_CRON_MARKERS))
 
 
 def _root(value=None) -> Path:
@@ -189,11 +199,14 @@ def _finished_everywhere(source: Path) -> list[str]:
 
 
 def run_once(directory=None, db=None, port: int = DEFAULT_PORT,
-             capture_one=None, open_one=None) -> dict:
+             capture_one=None, open_one=None, open_preview: bool = False) -> dict:
     root = _root(directory)
     source = Path(db).expanduser() if db else cursor_tree.db_path()
     capture_one = capture_one or (lambda composer_id: _capture(composer_id, source))
-    open_one = open_one or (lambda url: webbrowser.open(url))
+    # No surprise windows: a scheduled capture opens a browser only when the person installed
+    # the hook with --open. Otherwise the preview URL goes to hook.log and the command output.
+    if open_one is None and open_preview:
+        open_one = lambda url: webbrowser.open(url)
     created = []
     finished = _finished_everywhere(source)
     state = _state(root)
@@ -218,17 +231,24 @@ def run_once(directory=None, db=None, port: int = DEFAULT_PORT,
             created.append((composer_id, card_name))
     finally:
         state.close()
+    result = {"captured": len(created), "composer_ids": [item[0] for item in created]}
     if created:
         _ensure_server(root, port)
-        open_one(f"http://127.0.0.1:{port}/{created[-1][1]}")
-    return {"captured": len(created), "composer_ids": [item[0] for item in created]}
+        preview = f"http://127.0.0.1:{port}/{created[-1][1]}"
+        result["preview"] = preview
+        if open_one is not None:
+            open_one(preview)
+    return result
 
 
-def _command(directory: Path, port: int, action: str = "run", db=None) -> list[str]:
+def _command(directory: Path, port: int, action: str = "run", db=None,
+             open_preview: bool = False) -> list[str]:
     command = [sys.executable, "-m", "agentgrinder", "hook", action, "--harness", "cursor",
                "--directory", str(directory), "--port", str(port)]
     if db is not None and action in ("run", "watch"):
         command.extend(["--db", str(Path(db).expanduser())])
+    if open_preview and action in ("run", "watch"):
+        command.append("--open")
     return command
 
 
@@ -247,13 +267,13 @@ def _seed(root: Path, db=None) -> int:
     return len(ids)
 
 
-def _install_launchd(root: Path, port: int, db=None) -> dict:
+def _install_launchd(root: Path, port: int, db=None, open_preview: bool = False) -> dict:
     agents = Path.home() / "Library/LaunchAgents"
     agents.mkdir(parents=True, exist_ok=True)
     path = agents / f"{LABEL}.plist"
     payload = {
         "Label": LABEL,
-        "ProgramArguments": _command(root, port, db=db),
+        "ProgramArguments": _command(root, port, db=db, open_preview=open_preview),
         "WorkingDirectory": str(Path(__file__).resolve().parents[1]),
         "StartInterval": 30,
         "RunAtLoad": True,
@@ -275,14 +295,14 @@ def _systemd_available() -> bool:
     ).returncode == 0
 
 
-def _install_systemd(root: Path, port: int, db=None) -> dict:
+def _install_systemd(root: Path, port: int, db=None, open_preview: bool = False) -> dict:
     folder = Path.home() / ".config/systemd/user"
     folder.mkdir(parents=True, exist_ok=True)
-    service = folder / "pacecard-cursor-hook.service"
-    timer = folder / "pacecard-cursor-hook.timer"
-    command = " ".join(shlex.quote(part) for part in _command(root, port, db=db))
+    service = folder / f"{UNIT}.service"
+    timer = folder / f"{UNIT}.timer"
+    command = " ".join(shlex.quote(part) for part in _command(root, port, db=db, open_preview=open_preview))
     service.write_text(
-        "[Unit]\nDescription=Pacecard private Cursor capture\n\n"
+        "[Unit]\nDescription=STRIVE private Cursor capture\n\n"
         "[Service]\nType=oneshot\n"
         f"WorkingDirectory={Path(__file__).resolve().parents[1]}\nExecStart={command}\n")
     timer.write_text(
@@ -294,21 +314,21 @@ def _install_systemd(root: Path, port: int, db=None) -> dict:
     return {"mode": "systemd-user-timer", "config": str(timer), "service": str(service)}
 
 
-def _install_cron(root: Path, port: int, db=None) -> dict | None:
+def _install_cron(root: Path, port: int, db=None, open_preview: bool = False) -> dict | None:
     if not shutil.which("crontab"):
         return None
     current = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
     lines = [] if current.returncode else [
-        line for line in current.stdout.splitlines() if CRON_MARKER not in line]
-    command = " ".join(shlex.quote(part) for part in _command(root, port, db=db))
+        line for line in current.stdout.splitlines() if not _has_marker(line)]
+    command = " ".join(shlex.quote(part) for part in _command(root, port, db=db, open_preview=open_preview))
     lines.append(f"* * * * * cd {shlex.quote(str(Path(__file__).resolve().parents[1]))} && {command} {CRON_MARKER}")
     subprocess.run(["crontab", "-"], input="\n".join(lines) + "\n", text=True, check=True)
     return {"mode": "cron", "config": "user crontab"}
 
 
-def _install_watcher(root: Path, port: int, db=None) -> dict:
+def _install_watcher(root: Path, port: int, db=None, open_preview: bool = False) -> dict:
     process = subprocess.Popen(
-        _command(root, port, "watch", db), cwd=Path(__file__).resolve().parents[1],
+        _command(root, port, "watch", db, open_preview), cwd=Path(__file__).resolve().parents[1],
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
         stderr=open(root / "hook.log", "a"), start_new_session=True,
     )
@@ -316,21 +336,22 @@ def _install_watcher(root: Path, port: int, db=None) -> dict:
     return {"mode": "polling-watcher", "config": str(root / "watcher.pid")}
 
 
-def install(directory=None, db=None, port: int = DEFAULT_PORT) -> dict:
+def install(directory=None, db=None, port: int = DEFAULT_PORT, open_preview: bool = False) -> dict:
     root = _root(directory)
     current = status(root)
     if current.get("installed") and current.get("active"):
         return current
     seeded = _seed(root, db)
     if sys.platform == "darwin":
-        record = _install_launchd(root, port, db)
+        record = _install_launchd(root, port, db, open_preview)
     elif _systemd_available():
-        record = _install_systemd(root, port, db)
+        record = _install_systemd(root, port, db, open_preview)
     else:
-        record = _install_watcher(root, port, db)
+        record = _install_watcher(root, port, db, open_preview)
     record.update({"harness": "cursor", "directory": str(root), "port": port,
+                   "opens_browser": bool(open_preview),
                    "existing_composers_ignored": seeded,
-                   "reason": "Cursor exposes no documented local completion hook, so Pacecard checks state.vscdb on a local timer."})
+                   "reason": "Cursor exposes no documented local completion hook, so STRIVE checks state.vscdb on a local timer."})
     (root / "install.json").write_text(json.dumps(record, indent=2))
     return record
 
@@ -339,17 +360,17 @@ def _active(record: dict, root: Path) -> bool:
     mode = record.get("mode")
     if mode == "launchd":
         return subprocess.run(
-            ["launchctl", "print", f"gui/{os.getuid()}/{LABEL}"],
+            ["launchctl", "print", f"gui/{os.getuid()}/{Path(record.get('config') or LABEL).stem or LABEL}"],
             capture_output=True,
         ).returncode == 0
     if mode == "systemd-user-timer":
         return subprocess.run(
-            ["systemctl", "--user", "is-active", "--quiet", "pacecard-cursor-hook.timer"],
+            ["systemctl", "--user", "is-active", "--quiet", Path(record.get("config") or f"{UNIT}.timer").name],
             capture_output=True,
         ).returncode == 0
     if mode == "cron":
         current = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
-        return current.returncode == 0 and CRON_MARKER in current.stdout
+        return current.returncode == 0 and any(_has_marker(line) for line in current.stdout.splitlines())
     if mode == "polling-watcher":
         try:
             return _pid_alive(int((root / "watcher.pid").read_text().strip()))
@@ -396,14 +417,14 @@ def uninstall(directory=None) -> dict:
         subprocess.run(["launchctl", "unload", str(path)], capture_output=True)
         path.unlink(missing_ok=True)
     elif mode == "systemd-user-timer":
-        subprocess.run(["systemctl", "--user", "disable", "--now", "pacecard-cursor-hook.timer"],
+        subprocess.run(["systemctl", "--user", "disable", "--now", Path(prior["config"]).name],
                        capture_output=True)
         Path(prior["config"]).unlink(missing_ok=True)
         Path(prior["service"]).unlink(missing_ok=True)
         subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
     elif mode == "cron" and shutil.which("crontab"):
         current = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
-        lines = [line for line in current.stdout.splitlines() if CRON_MARKER not in line]
+        lines = [line for line in current.stdout.splitlines() if not _has_marker(line)]
         subprocess.run(["crontab", "-"], input="\n".join(lines) + ("\n" if lines else ""),
                        text=True, check=True)
     _kill_pid(root / "watcher.pid")
@@ -427,10 +448,10 @@ def serve(directory=None, port: int = DEFAULT_PORT) -> int:
     return 0
 
 
-def watch(directory=None, db=None, port: int = DEFAULT_PORT) -> int:
+def watch(directory=None, db=None, port: int = DEFAULT_PORT, open_preview: bool = False) -> int:
     while True:
         try:
-            run_once(directory, db, port)
+            run_once(directory, db, port, open_preview=open_preview)
         except (FileNotFoundError, sqlite3.DatabaseError, OSError, ValueError):
             pass
         time.sleep(30)
@@ -534,6 +555,9 @@ def add_parser(sub) -> None:
         command.add_argument("--port", type=int, default=DEFAULT_PORT)
         if name in ("install", "run", "watch"):
             command.add_argument("--db")
+            command.add_argument("--open", action="store_true",
+                                 help="open each new private preview in a browser "
+                                      "(default: write its loopback URL to hook.log, open nothing)")
     review = commands.add_parser("review", help="select outcome and receipts on a private draft")
     review.add_argument("--composer-id", required=True)
     review.add_argument("--directory")
@@ -553,15 +577,15 @@ def add_parser(sub) -> None:
 def run_cli(args) -> int:
     try:
         if args.hook_command == "install":
-            output = install(args.directory, args.db, args.port)
+            output = install(args.directory, args.db, args.port, args.open)
         elif args.hook_command == "status":
             output = status(args.directory)
         elif args.hook_command == "uninstall":
             output = uninstall(args.directory)
         elif args.hook_command == "run":
-            output = run_once(args.directory, args.db, args.port)
+            output = run_once(args.directory, args.db, args.port, open_preview=args.open)
         elif args.hook_command == "watch":
-            return watch(args.directory, args.db, args.port)
+            return watch(args.directory, args.db, args.port, args.open)
         elif args.hook_command == "review":
             receipts = []
             for item in args.receipt or []:

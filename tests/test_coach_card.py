@@ -30,8 +30,8 @@ def test_card_with_coach_and_series_draws_both(tmp_path):
     assert "1 of 2 claims had evidence" in html
     assert "<li>Name the test</li><li>Commit out.md</li>" in html
     assert "<b>helped</b>" in html and "you predicted: ships 2 files" in html
-    # the block sits between the five row and the cost group, so the verdict reads before the cost
-    assert html.index('class="fiverow"') < html.index('class="verdict"') < html.index("Cost — what the grind spent")
+    # the verdict sits under the card, never inside it: the card is the feed card
+    assert html.index("</article>") < html.index('class="below verdict"')
 
 
 def test_series_alone_draws_the_progress_line(tmp_path):

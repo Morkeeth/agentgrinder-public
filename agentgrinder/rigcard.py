@@ -7,7 +7,9 @@ import os
 
 from .ingest import detect_rig
 
-DEFAULT_URL = os.environ.get("AGENTGRINDER_URL", "http://localhost:8000")
+# The hosted app, so a stranger's --push opens a page that exists. A contributor running the
+# local UI sets AGENTGRINDER_URL=http://localhost:8000.
+DEFAULT_URL = os.environ.get("AGENTGRINDER_URL", "https://agentic-strava.vercel.app")
 
 
 def _esc(s) -> str:
@@ -54,7 +56,6 @@ def render_rig_card(
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rig · @{_esc(handle)} · Agent Grinder</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   {CARD_THEME}
 
@@ -128,7 +129,6 @@ def render_heist_card(
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <title>Rig heist · @{_esc(victim_handle)}</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   {CARD_THEME}
   body{{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);font-family:var(--disp)}}

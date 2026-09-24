@@ -1,4 +1,4 @@
-# Pacecard end-to-end flows
+# STRIVE end-to-end flows
 
 Reviewed 15 September 2026. This map adapts the useful parts of Strava's activity, profile,
 recognition, conversation, sharing, privacy and first-activity paths to agent work. It does not
@@ -41,7 +41,7 @@ the visual anchor. Unknown measurements remain unknown.
 2. **Strava-inspired improvement:** make identity, not totals, the profile's first layer. Explain
    that the handle is the public address, the display name is the human label and neither grants
    repository access.
-3. **This PR:** clarifies both fields and changes the action to **Create Pacecard profile**. Recent
+3. **This PR:** clarifies both fields and changes the action to **Create STRIVE profile**. Recent
    runs now precede collapsed profile totals.
 4. **Backlog / lane:** verify GitHub-only, email-only and duplicate-handle cases in #23. No Auth or
    profile-schema change is required.
@@ -94,7 +94,7 @@ the visual anchor. Unknown measurements remain unknown.
    relationship-gated URL for followers and close friends. Only me: explain that sharing requires an audience change.
 3. **This PR:** moves audience-aware share success directly below the card and makes the relevant
    next action primary. It adds no write or OG endpoint.
-4. **Backlog / lane:** #26 owns public-only Pacecard OG. Its Close friends migration is separate
+4. **Backlog / lane:** #26 owns public-only STRIVE OG. Its Close friends migration is separate
    and not pulled into this flow.
 
 ### 8. Friend arrival · run → profile → follow
@@ -122,7 +122,7 @@ the visual anchor. Unknown measurements remain unknown.
 1. **Current:** tap ACK → choose a specific reason → send; or write a reply → post. Both require
    sign-in and blocked writes are denied. Phone actions meet touch targets.
 2. **Strava-inspired improvement:** make recognition easy to start like kudos, while retaining
-   Pacecard's deliberate reason. Keep the reply composer full-width and close to the activity.
+   STRIVE's deliberate reason. Keep the reply composer full-width and close to the activity.
 3. **This PR:** keeps ACK visually primary on phone, clarifies **Talk about this run**, and leaves
    the reason picker and server write path intact.
 4. **Backlog / lane:** #23 verifies one real ACK and reply each way. No automatic ACK and no

@@ -1,4 +1,4 @@
-# Contributing to Pacecard
+# Contributing to STRIVE
 
 Welcome. Help us make a small, useful place to share agent runs. You can contribute code, design, docs, translations, accessibility checks, testing or a clear bug report. Cursor and Grok Bot are supported development paths; neither is required.
 
@@ -30,7 +30,7 @@ python3 scripts/dev.py setup
 python3 scripts/dev.py serve
 ```
 
-Open http://127.0.0.1:8000. `setup` installs test dependencies in `.venv`; it does not alter global Python. `serve` needs only Python. Use `python3 scripts/dev.py serve --port 8001` if port 8000 is busy. Stop it with Ctrl+C.
+Open http://127.0.0.1:8000. `setup` installs test dependencies in `.venv`; it does not alter global Python. `serve` needs only Python. Use `python3 scripts/dev.py serve --port 8001` if port 8000 is busy. Stop it with Ctrl+C. The capture commands (`grind --push`, `login`, `share`) open the hosted app by default. Set `AGENTGRINDER_URL=http://localhost:8000` to send them to this local UI instead.
 
 This local server is the UI with no database behind it. The hosted app at https://agentic-strava.vercel.app has sign-in, posting and replies; a local checkout does not connect to it. You can work on layouts, docs, local capture and tests now. To test sign-in, posting and replies locally you need your own database, set up as described below. The inherited coaching fixture at `/?example` is development material, outside the product’s main flow.
 
