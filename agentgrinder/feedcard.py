@@ -58,6 +58,10 @@ CARD_CSS = """/* the card */
 .fc-area{fill:var(--blue-wash)}
 .fc-line{fill:none;stroke:var(--blue);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 .fc-peak{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--strive-orange);box-shadow:0 0 0 2px var(--box)}
+.fc-badge{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:13px;line-height:1.3;color:var(--soft);min-width:0}
+.fc-badge svg{flex:none;color:var(--blue)}
+.fc-badge b{font-weight:600;color:var(--blue)}
+.fc-badge span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fc .fc-foot{display:flex;border-top:1px solid var(--rule-2);margin:14px 0 0;padding:0;max-width:none;color:inherit;font-size:inherit}
 .fc .fc-top{max-width:none;margin:0}
 .landing-feature .fc{margin:0 0 12px}
@@ -70,9 +74,11 @@ button.fc-act:hover,a.fc-act:hover{background:var(--blue-wash);color:var(--blue)
 .fc-kudos-mine{cursor:default}
 .fc .ack-picker{padding:14px 16px;border-top:1px solid var(--rule-2)}
 @media (prefers-reduced-motion:no-preference){
-  .fc-act.kudo svg{transition:transform .18s ease-out,color .18s ease-out}
+  .fc-act.kudo svg{transition:transform .18s cubic-bezier(.23,1,.32,1),color .18s ease-out}
   .fc-act.kudo:active svg{transform:scale(.86)}
-}"""
+  .fc-act.kudo.on.pop svg{animation:fc-kudo .32s cubic-bezier(.23,1,.32,1)}
+}
+@keyframes fc-kudo{from{transform:scale(.72)}to{transform:scale(1)}}"""
 
 
 def esc(s) -> str:
@@ -201,6 +207,44 @@ def stats(r: dict, lead) -> list:
     return out
 
 
+def achievement(r: dict):
+    """site/feed-card.js achievement(): one badge from the run's own numbers, first rule wins."""
+    secs = whole(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s"))
+    turns = whole(r.get("prompts") if r.get("prompts") is not None else r.get("turns_typed"))
+    tools = _tools(r)
+    commits, files = whole(r.get("commits")), whole(r.get("files_touched"))
+    h = r.get("started_hour")
+    hour = h if isinstance(h, int) and not isinstance(h, bool) and 0 <= h <= 23 else None
+    if secs is not None and secs >= 10800:
+        return {"key": "marathon", "label": "Marathon", "detail": f"{duration_label(secs)} in one session"}
+    if turns == 1 and tools is not None and tools >= 60:
+        return {"key": "one-shot", "label": "One-shot", "detail": f"1 prompt, {_thousands(tools)} tool calls"}
+    if hour is not None and (hour >= 23 or hour < 5):
+        return {"key": "night-owl", "label": "Night owl", "detail": "started after 23:00" if hour >= 23 else "started before 05:00"}
+    if commits is not None and commits >= 5:
+        return {"key": "shipper", "label": "Shipper", "detail": f"{_thousands(commits)} commits in one run"}
+    if files is not None and files >= 25:
+        return {"key": "wide-net", "label": "Wide net", "detail": f"{_thousands(files)} files changed"}
+    if turns is not None and turns >= 2 and tools and tools / turns >= 30:
+        return {"key": "delegator", "label": "Delegator", "detail": f"{_thousands(whole(tools / turns))} tool calls per prompt"}
+    if secs and secs < 900 and commits is not None and commits >= 1:
+        return {"key": "sprint", "label": "Sprint", "detail": "a commit in under 15 minutes"}
+    if secs is not None and secs >= 3600:
+        return {"key": "deep-focus", "label": "Deep focus", "detail": "over an hour in one session"}
+    if hour is not None and 5 <= hour < 7:
+        return {"key": "early-bird", "label": "Early bird", "detail": "started before 07:00"}
+    return None
+
+
+BADGE_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 1.5h6l-1.6 4.2M5 1.5l1.6 4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="10" r="4.2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>'
+
+
+def badge(r: dict) -> str:
+    a = achievement(r)
+    return (f'<p class="fc-badge" data-badge="{esc(a["key"])}">{BADGE_ICON}<b>{esc(a["label"])}</b><span>{esc(a["detail"])}</span></p>'
+            if a else "")
+
+
 def profile_of(r: dict) -> dict:
     p = r.get("profiles") or {}
     handle = p.get("handle") or p.get("github_handle") or ""
@@ -313,7 +357,7 @@ def card(r: dict, meta_extra: str = "", avatars: bool = False) -> str:
     <h1 class="fc-title">{esc(title_of(r))}</h1>
     {cap_html}
     <div class="fc-numbers">{hero}{dl}</div>
-    {spark(r)}
+    {badge(r)}{spark(r)}
   """
     return f"""<article class="card fc">
   <header class="fc-top">{face(r, avatars=avatars)}<div class="fc-who">{who}<small>{meta}</small></div>{shipped}</header>

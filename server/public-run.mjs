@@ -246,8 +246,9 @@ export function card(run,opts={}){
  const plotted=routePlot?null:series(run);
  const lead=Feed.headline(run),facts=Feed.stats(run,lead);
  const who=Feed.profileOf(run);
- const name=run.visibility==='public'?who.name:'Builder';
- const initial=(String(name||'?').trim().charAt(0)||'?').toUpperCase();
+ const name=run.visibility==='public'?who.name:run.visibility==='anonymous'?'Anonymous builder':'Builder';
+ const badge=Feed.achievement(run);
+ const initial=run.visibility==='anonymous'?'?':(String(name||'?').trim().charAt(0)||'?').toUpperCase();
  const avatar=run.visibility==='public'&&typeof opts.avatar==='string'&&opts.avatar.startsWith('data:image/')?opts.avatar:null;
  // The same line the page's card prints under the name: the agent and when.
  const meta=[run.harness,Feed.when(run.created_at||run.started_at)].filter(Boolean).join(' · ');
@@ -297,6 +298,12 @@ export function card(run,opts={}){
     ...facts.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',marginRight:44,paddingBottom:4}},
      el('div',{style:{display:'flex',fontSize:17,color:SOFT}},label),
      el('div',{style:{display:'flex',fontSize:32,fontWeight:500,marginTop:2}},String(value))))):null,
+   // The badge, as on the card: blue label, soft detail. Same function, so the image cannot award
+   // a badge the page does not.
+   badge?el('div',{style:{display:'flex',alignItems:'center',fontSize:22,marginTop:drawn?12:22}},
+    el('div',{style:{display:'flex',width:14,height:14,borderRadius:7,border:`3px solid ${BLUE}`,marginRight:10}}),
+    el('div',{style:{display:'flex',color:BLUE,fontWeight:700,marginRight:10}},badge.label),
+    el('div',{style:{display:'flex',color:SOFT}},badge.detail)):null,
    drawing,
    el('div',{style:{display:'flex',fontSize:15,color:SOFT,marginTop:'auto'}},'Counts describe activity, not result quality.')));
 }
