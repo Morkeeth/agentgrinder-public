@@ -32,16 +32,16 @@ const stopEvidence=stop=>{
 };
 
 const actionUrl=(runId,canonical,finish)=>{
- const title=finish?.label?`Continue after ${finish.label}`:'Continue this measured route';
+ const title='Challenge the fleet-ops handoff';
  const body=[
   'Decision story: '+canonical,
   '',
-  'Decision to continue: carry the measured route beyond its densest stretch to the fleet control plane.',
+  'Decision to challenge: carry the measured route beyond its densest stretch to fleet-ops.',
   finish?.label?'Last measured stop: '+finish.label+'.':'',
   '',
-  'Proposed next verified stop:',
+  'Challenge or next verified stop:',
  ].filter(Boolean).join('\n');
- const url=new URL('https://github.com/Morkeeth/fleet-ops/issues/new');
+ const url=new URL('https://github.com/Morkeeth/agentgrinder-public/issues/new');
  url.searchParams.set('title',title);
  url.searchParams.set('body',body);
  return url.href;
@@ -91,7 +91,7 @@ export function decisionHtml(run,options={}){
  const goal=run.title;
  const action=actionUrl(run.id,canonical,facts.finish);
  const description=`${decision} ${insight}`;
- return `<!doctype html><html lang="en"><head>${head(run.title,description,canonical)}</head><body><main><a class="brand" href="/" aria-label="${BRAND} home">${BRAND} · decision story</a><article class="story">${options.preview?`<p class="preview"><strong>Local preview</strong> of ${esc(run.id.slice(0,8))} · not a public run</p>`:''}<h1>${esc(run.title)}</h1><p class="goal"><span class="label">Human goal</span>${esc(goal)}</p><div class="route-wrap">${routePlot(facts)}<div class="lanes">${lanes}</div></div><section class="decision"><span class="label">Agent decision that changed the route</span><h2>${esc(decision)}</h2><p class="because">${esc(insight)}</p></section><section class="evidence"><div class="evidence-head"><h2>Evidence on this route</h2><span class="measured">${facts.measured.length}/${facts.stops.length} measured stops</span></div><ul class="receipts">${receipts}</ul><p class="finish">Finish · <strong>${esc(facts.finish?.label||'Recorded finish')}</strong></p></section><a class="action" href="${esc(action)}" rel="noopener noreferrer">Continue from the fleet repair</a><p class="boundary">Opens a prefilled fleet-ops issue draft. GitHub sign-in is required to post; opening it posts nothing.</p></article></main></body></html>`;
+ return `<!doctype html><html lang="en"><head>${head(run.title,description,canonical)}</head><body><main><a class="brand" href="/" aria-label="${BRAND} home">${BRAND} · decision story</a><article class="story">${options.preview?`<p class="preview"><strong>Local preview</strong> of ${esc(run.id.slice(0,8))} · not a public run</p>`:''}<h1>${esc(run.title)}</h1><p class="goal"><span class="label">Human goal</span>${esc(goal)}</p><div class="route-wrap">${routePlot(facts)}<div class="lanes">${lanes}</div></div><section class="decision"><span class="label">Agent decision that changed the route</span><h2>${esc(decision)}</h2><p class="because">${esc(insight)}</p></section><section class="evidence"><div class="evidence-head"><h2>Evidence on this route</h2><span class="measured">${facts.measured.length}/${facts.stops.length} measured stops</span></div><ul class="receipts">${receipts}</ul><p class="finish">Finish · <strong>${esc(facts.finish?.label||'Recorded finish')}</strong></p></section><a class="action" href="${esc(action)}" rel="noopener noreferrer">Challenge the fleet handoff</a><p class="boundary">Opens a prefilled agentgrinder-public issue draft. GitHub sign-in is required to post; opening it posts nothing.</p></article></main></body></html>`;
 }
 
 export function neutralDecisionHtml(id,options={}){
