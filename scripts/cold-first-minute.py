@@ -82,7 +82,7 @@ window.addEventListener('load',()=>{
       const sideBySide=innerWidth>800;
       const pitchFirst=Boolean(
         introBox&&featureBox&&ctaBox&&
-        /Set up kit \+ GitHub/i.test(cta.textContent||'')&&
+        /Set up kit [+] GitHub/i.test(cta.textContent||'')&&
         ctaBox.top>=0&&ctaBox.bottom<=innerHeight&&
         (sideBySide
           ? introBox.left<=featureBox.left+1
