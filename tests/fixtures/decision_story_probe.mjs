@@ -30,7 +30,7 @@ for(const text of [
  'Code Route deployed and used',
  'Legacy ruling crash reproduced',
  'State renderer repaired',
- 'Continue from the fleet repair',
+ 'Challenge the fleet handoff',
  'GitHub sign-in is required to post',
  canonical,
 ])assert.ok(page.includes(text),`missing ${text}`);
@@ -44,7 +44,7 @@ const href=page.match(/<a class="action" href="([^"]+)"/)?.[1].replaceAll('&amp;
 assert.ok(href,'continuation URL missing');
 const continuation=new URL(href);
 assert.equal(continuation.hostname,'github.com');
-assert.equal(continuation.pathname,'/Morkeeth/fleet-ops/issues/new');
+assert.equal(continuation.pathname,'/Morkeeth/agentgrinder-public/issues/new');
 assert.ok(continuation.searchParams.get('body').includes(canonical));
 assert.ok(continuation.searchParams.get('body').includes('carry the measured route'));
 assert.ok(continuation.searchParams.get('body').includes('State renderer repaired'));
