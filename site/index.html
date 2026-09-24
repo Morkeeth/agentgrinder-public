@@ -1487,8 +1487,8 @@ function landingHTML(){
 }
 
 async function fetchLatestPublicRun(){
-  // TODO: Feature Grok Bot here only when the database contains a real, public,
-  // evidence-backed Grok run. Never substitute the bundled Claude Code fixture.
+  // TODO: Restore a Grok demo only after an owner publishes a real, evidence-backed
+  // Grok Bot run as Public. Never substitute the bundled Claude Code fixture.
   if(!sb) return null;
   try{
     const {data,error}=await sb.from('runs')
