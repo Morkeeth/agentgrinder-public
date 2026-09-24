@@ -30,7 +30,7 @@ def test_landing_explains_deliberate_publication():
     assert 'local Cursor/Grok capture kit' in body
     assert 'signed-in Connect' in body
     assert 'Preview locally first' in body
-    assert 'You choose what goes public' in body
+    assert 'you choose what goes public' in body
 
 
 def test_signed_out_setup_paths_name_capture_and_github_before_private_save():

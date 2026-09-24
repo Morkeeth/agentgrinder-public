@@ -82,7 +82,7 @@ window.addEventListener('load',()=>{
       const sideBySide=innerWidth>800;
       const pitchFirst=Boolean(
         introBox&&featureBox&&ctaBox&&
-        /Post your first run/i.test(cta.textContent||'')&&
+        /Set up kit \+ GitHub/i.test(cta.textContent||'')&&
         ctaBox.top>=0&&ctaBox.bottom<=innerHeight&&
         (sideBySide
           ? introBox.left<=featureBox.left+1
@@ -246,7 +246,7 @@ def main() -> None:
     assert "Cold public run" in phone
     assert "A measured outcome from a real public post." in phone
     assert "1 public run is live." in phone
-    assert "Post your first run" in phone
+    assert "Set up kit + GitHub" in phone
     assert 'href="/?example"' in phone
     assert 'data-cold-signin-rendered="true"' in modal
     assert EXPLANATION in modal
