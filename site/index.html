@@ -1293,7 +1293,7 @@ async function viewOnboard(){
     ${ME?`<p class="meta">Connected as <b style="color:var(--ink);font-weight:500">@${esc(profileHandle(ME))}</b></p>`:
     `<button id="ob-auth">Sign in</button>`}</div>`;
   const phoneHandoff=`<div class="ob-phone-handoff" data-phone-handoff="1">
-      <p class="hint"><b style="color:var(--ink);font-weight:500">Capture runs on the computer where your agent runs</b> (Cursor, Claude Code or Codex). This phone cannot record a sitting.</p>
+      <p class="hint"><b style="color:var(--ink);font-weight:500">Capture runs on the computer where your agent runs</b> (Cursor, Claude Code, Codex or Grok Bot). This phone cannot record a sitting.</p>
       <div class="ob-actions">
         <button class="act" id="cp1" type="button">Copy the command</button>
         <a class="act primary" href="/?example">Try the labelled example</a>
@@ -1318,6 +1318,7 @@ async function viewOnboard(){
       <button class="ghost" id="ob-skip">Skip, browse the feed</button>
     </div></div>`;
   app.innerHTML=`<div class="head"><h2>Welcome to __BRAND__</h2><span class="meta">I tried this. Show me what changed.</span></div>
+      <p class="hint">To save a private card you own, use the local Cursor/Grok capture kit and sign in with GitHub, or sign in first and use <a href="/?connect">Connect</a> on the agent's computer.</p>
       <p class="hint">Want the path with no account first? <a href="/?example">Try the labelled example</a>. Sign-in is only to keep your own runs.</p>
       ${stepBar(n,done)}${step1}${step2}${step3}${step4}`;
   wireCopy();
@@ -1469,8 +1470,8 @@ function landingHTML(){
   return `<div class="launch-grid"><section class="landing-intro"><p class="meta">__BRAND__ · __TAGLINE__</p>
     <h1>Every run your agent made, on a card you can share.</h1>
     <p>Turn a Cursor, Grok Bot, Claude Code or Codex session into a run card. Post your run. Follow builders. See what they ship.</p>
-    <div class="cta"><a class="act primary" href="/?onboard">Post your first run</a><a class="act" href="/?explore">Explore runs</a></div>
-    <p class="hint">Capture locally. Preview privately. You choose what goes public.</p>
+    <div class="cta"><a class="act primary" href="/?onboard">Set up kit + GitHub</a><a class="act" href="/?explore">Explore runs</a></div>
+    <p class="hint">A saved private card needs GitHub sign-in plus the local Cursor/Grok capture kit, or signed-in Connect on the agent's computer. Preview locally first; you choose what goes public.</p>
     <p class="hint"><a href="/?example">Try a labelled example</a> if you want the path with no live run yet.</p>
     </section>
     <section class="landing-feature" aria-label="A public run" id="landing-feature">
@@ -1486,6 +1487,8 @@ function landingHTML(){
 }
 
 async function fetchLatestPublicRun(){
+  // TODO: Feature Grok Bot here only when the database contains a real, public,
+  // evidence-backed Grok run. Never substitute the bundled Claude Code fixture.
   if(!sb) return null;
   try{
     const {data,error}=await sb.from('runs')
@@ -1681,9 +1684,9 @@ async function viewPost(){
   frame(railHtml('post'),null);
   const first=ME&&(await runCount())===0;
   $('app').innerHTML=`<div class="head"><h1>Post a run</h1><span class="meta">capture → preview → choose audience</span></div>
-    <p>Turn a real coding-agent session into a card. Cursor capture stays on your machine until the preview is open.</p>
+    <p>To save a private card, sign in with GitHub and use this local Cursor/Grok capture kit—or sign in first and use Connect on the agent's computer. Capture stays there until the preview is open.</p>
     ${first?firstRunPrompt():''}
-    ${ME?postComposerHtml({first}):uploadBlock()+'<div class="panel pad auth-empty"><h3>Sign in to save</h3><p>Preview stays private on this device until you choose an audience. GitHub sign-in keeps your handle; nothing posts until Save.</p><button id="post-signin" class="act blue">Sign in with GitHub</button></div>'}`;
+    ${ME?postComposerHtml({first}):uploadBlock()+'<div class="panel pad auth-empty"><h3>Sign in to save</h3><p>The local kit can open an unsaved private preview; GitHub sign-in is required to save it. Or sign in, then use Connect for private upload. Nothing becomes public until you choose Public and Save.</p><button id="post-signin" class="act blue">Sign in with GitHub</button></div>'}`;
   if(ME){await loadSegmentChoices('f_segment');wireComposer();} else $('post-signin').onclick=signInWithGitHub;
   wireFirstRunPrompt();
   wireCopy();

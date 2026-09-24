@@ -17,7 +17,7 @@ def test_logged_out_landing_exposes_browsing_and_first_post():
     assert "<title>__BRAND__ · __TAGLINE__</title>" in HTML
     assert "Every run your agent made, on a card you can share." in body
     assert 'href="/?explore"' in body
-    assert 'Post your first run' in body
+    assert 'Set up kit + GitHub' in body
     assert 'href="/?onboard"' in body or 'href="/?post"' in body
     assert 'Sign in to browse' not in body
     # Phone used to pull the feature card above the pitch via order:-1. Keep source order.
@@ -27,8 +27,20 @@ def test_logged_out_landing_exposes_browsing_and_first_post():
 
 def test_landing_explains_deliberate_publication():
     body = landing()
-    assert 'Capture locally' in body and 'Preview privately' in body
+    assert 'local Cursor/Grok capture kit' in body
+    assert 'signed-in Connect' in body
+    assert 'Preview locally first' in body
     assert 'You choose what goes public' in body
+
+
+def test_signed_out_setup_paths_name_capture_and_github_before_private_save():
+    onboard = HTML[HTML.index("async function viewOnboard(){"):HTML.index("async function viewOnboardAgent(){")]
+    post = HTML[HTML.index("async function viewPost(){"):HTML.index("async function viewExplore(){")]
+    for body in (onboard, post):
+        assert "private card" in body
+        assert "GitHub" in body
+        assert "Cursor/Grok" in body
+        assert "Connect" in body
 
 
 def test_landing_puts_sample_behind_example_link_not_first_fold():
