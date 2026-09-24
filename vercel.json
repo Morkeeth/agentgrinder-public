@@ -8,6 +8,10 @@
       "destination": "/api/proof?id=:id"
     },
     {
+      "source": "/d/:id",
+      "destination": "/api/decision?id=:id"
+    },
+    {
       "source": "/r/:id",
       "destination": "/api/run?id=:id"
     },

@@ -1,0 +1,128 @@
+{
+  "id": "bb5bb2e0-241e-47c1-90ab-8ce338b78493",
+  "title": "Four repos shipped in one night",
+  "project": "Astra night run",
+  "harness": "Cursor + Claude CLI + Codex",
+  "schema_version": 1,
+  "commits": 4,
+  "files_touched": 41,
+  "artifacts_produced": 4,
+  "repo_url": "https://github.com/Morkeeth/agentgrinder-public",
+  "shipped": [
+    "STRIVE draws a live four-project Code Route",
+    "ZUP now selects today’s authority after a real wake",
+    "Helicon 0.2.1 slim release candidate is merged",
+    "Shared state renders historical rulings without crashing"
+  ],
+  "receipts": [
+    {"label": "STRIVE Code Route", "url": "https://github.com/Morkeeth/agentgrinder-public/pull/61"},
+    {"label": "ZUP current authority", "url": "https://github.com/Morkeeth/zup/pull/41"},
+    {"label": "Helicon slim candidate", "url": "https://github.com/Morkeeth/mountain-of-helicon/pull/33"},
+    {"label": "Fleet state repair", "url": "https://github.com/Morkeeth/fleet-ops/pull/9"}
+  ],
+  "artifact_url": "https://agentic-strava.vercel.app/",
+  "note": "A measured route through ZUP, STRIVE, Helicon and the fleet control plane. Each stop names a real check, merge, deployment or artifact.",
+  "trace_basis": "explicit cross-project manifest backed by merged pull requests, live reads and test receipts",
+  "measurement_revision": "fe82d9bba06a68f9049acf497400598fa6a76846cbdd52b787d124a6730f2d6d",
+  "code_route": {
+    "v": 1,
+    "projects": [
+      {"id": "zup", "label": "zup", "basis": "measured"},
+      {"id": "agentgrinder-public", "label": "agentgrinder-public", "basis": "measured"},
+      {"id": "mountain-of-helicon", "label": "mountain-of-helicon", "basis": "measured"},
+      {"id": "fleet-ops", "label": "fleet-ops", "basis": "measured"}
+    ],
+    "stops": [
+      {
+        "id": "zup-probe",
+        "project": "zup",
+        "kind": "check",
+        "label": "Live wake found stale priority",
+        "basis": "measured",
+        "evidence": ["wake and next JSON saved locally"]
+      },
+      {
+        "id": "zup-merge",
+        "project": "zup",
+        "kind": "merge",
+        "label": "Fresh authority repair merged",
+        "basis": "measured",
+        "evidence": ["PR 41 merged after 720 tests"]
+      },
+      {
+        "id": "strive-upload",
+        "project": "agentgrinder-public",
+        "kind": "artifact",
+        "label": "Connect run uploaded and read back",
+        "basis": "measured",
+        "evidence": ["hosted run opened in My Runs"]
+      },
+      {
+        "id": "strive-route",
+        "project": "agentgrinder-public",
+        "kind": "merge",
+        "label": "Code Route merged",
+        "basis": "measured",
+        "evidence": ["PR 61 checks passed"]
+      },
+      {
+        "id": "strive-live",
+        "project": "agentgrinder-public",
+        "kind": "deploy",
+        "label": "Code Route deployed and used",
+        "basis": "measured",
+        "evidence": ["migration 009 success and hosted readback"]
+      },
+      {
+        "id": "helicon-build",
+        "project": "mountain-of-helicon",
+        "kind": "artifact",
+        "label": "Slim wheel and source archive built",
+        "basis": "measured",
+        "evidence": ["byte identical builds and cold install"]
+      },
+      {
+        "id": "helicon-merge",
+        "project": "mountain-of-helicon",
+        "kind": "merge",
+        "label": "Helicon 0.2.1 candidate merged",
+        "basis": "measured",
+        "evidence": ["PR 33 seven checks passed"]
+      },
+      {
+        "id": "fleet-fail",
+        "project": "fleet-ops",
+        "kind": "check",
+        "label": "Legacy ruling crash reproduced",
+        "basis": "measured",
+        "evidence": ["live render raised missing quote key"]
+      },
+      {
+        "id": "fleet-merge",
+        "project": "fleet-ops",
+        "kind": "merge",
+        "label": "State renderer repaired",
+        "basis": "measured",
+        "evidence": ["PR 9 merged and live render passed"]
+      }
+    ],
+    "connectors": [
+      {"from": "zup-merge", "to": "strive-upload", "kind": "handoff", "label": "Authority to product proof"},
+      {"from": "strive-live", "to": "helicon-build", "kind": "handoff", "label": "Hosted proof to package release"},
+      {"from": "helicon-merge", "to": "fleet-fail", "kind": "handoff", "label": "Release to control plane"}
+    ],
+    "finish": {"stop": "fleet-merge", "kind": "artifact", "label": "Four verified lanes reconciled"},
+    "stats": {
+      "commits": 4,
+      "files_changed": 41,
+      "projects_touched": 4,
+      "shipped_artifacts": 4,
+      "verified_checkpoints": 9
+    },
+    "harnesses": {
+      "observed": ["cursor", "claude-cli", "codex"],
+      "absent": ["grok-bot"],
+      "basis": "manifest"
+    }
+  }
+}
