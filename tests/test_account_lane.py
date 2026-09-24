@@ -90,7 +90,10 @@ def test_shell_is_integrated_not_patched_in_memory():
     assert "authErrorFromUrl" not in INDEX
     assert "if(q.has('account')){return account.view();}" in INDEX
     assert "people|account|connect)(=|&|$)" in INDEX
-    assert '<a href="/?account" role="menuitem" data-auth="1" hidden>Account settings</a>' in INDEX
+    # The You menu is drawn by menuLinks() and lists Account settings only for a signed-in reader.
+    you = INDEX[INDEX.index("function menuLinks(kind)"):INDEX.index("function syncAuthNav()")]
+    assert '<a href="/?account" role="menuitem">Account settings</a>' in you
+    assert you.index("if(!ME)") < you.index('href="/?account"')
     assert '<a href="/?account#danger" id="delete">Delete my __BRAND__ profile</a>' in INDEX
     delete_path = INDEX[INDEX.index("document.addEventListener('DOMContentLoaded'"):]
-    assert "$('delete').addEventListener" not in delete_path and "Delete your Pacecard profile and owned work?" not in delete_path
+    assert "$('delete').addEventListener" not in delete_path and "Delete your STRIVE profile and owned work?" not in delete_path

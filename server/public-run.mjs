@@ -1,42 +1,39 @@
 import {runtimeConfig} from './runtime-config.mjs';
 import {BRAND,TAGLINE} from './brand.mjs';
+// The feed's card. A CommonJS module (site/feed-card.js), so its default import is its exports.
+import Feed from '../site/feed-card.js';
 const config=runtimeConfig();
 export const origin=config.ORIGIN;
 export const validId=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function readPublic(id,fetcher=fetch){
  if(!validId(id))return null;
- const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,title,caption,output_url,repo_url,receipts,shipped,artifact_url,image_url,project,harness,started_at,duration_s,wall_time_s,prompts,tool_calls,shell_calls,files_touched,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,code_route,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
+ const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,created_at,title,caption,output_url,repo_url,receipts,shipped,artifact_url,image_url,project,harness,started_at,duration_s,wall_time_s,prompts,tool_calls,shell_calls,files_touched,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,code_route,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
  const response=await fetcher(config.SB_URL+'/rest/v1/runs?'+query,{headers:{apikey:config.SB_KEY,"Accept-Profile":config.SB_SCHEMA},cache:'no-store',signal:AbortSignal.timeout(8000)});
  if(!response.ok)throw new Error('Public run unavailable');const rows=await response.json();
  // The query asks for public rows only. The row is checked again here, so a lost filter or a
  // permissive REST layer still cannot put a close friends, link or only-me run on this page.
  return Array.isArray(rows)&&rows.length===1&&rows[0]?.visibility==='public'?rows[0]:null;
 }
-const pageStyle=`*{box-sizing:border-box}body{background:#f8f8f6;color:#111;font:17px/1.5 system-ui;margin:0;padding:clamp(16px,4vw,32px)}main{max-width:760px;margin:24px auto}a{color:#123cff}a.home{display:inline-block;font-weight:750;text-decoration:none;padding:10px 0;margin-bottom:20px}article{background:#fff;border:1px solid #d9deea;border-radius:20px;padding:clamp(20px,4vw,32px);min-width:0}h1{font-size:clamp(28px,6vw,42px);line-height:1.15;margin:0 0 16px;overflow-wrap:anywhere}p{overflow-wrap:anywhere}.caption{white-space:pre-wrap}.byline,.note{color:#596174;font-size:15px}.byline{margin:0 0 12px}figure{margin:24px 0}.run-map h2{font-size:18px;margin:0 0 12px}.run-map svg{display:block;width:100%;height:150px;overflow:visible}.run-map figcaption{font-size:14px;color:#596174;margin-top:10px}dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:20px 16px;margin:24px 0}dt{font-size:14px;color:#596174}dd{font-size:22px;font-weight:700;margin:4px 0 0;line-height:1.2;overflow-wrap:anywhere}a.open{display:inline-block;background:#123cff;color:white;text-decoration:none;padding:14px 20px;border-radius:8px;margin:8px 8px 8px 0}a.open-profile{display:inline-block;color:#123cff;text-decoration:none;padding:14px 0;font-weight:650;margin:8px 0}a:focus-visible{outline:3px solid #111;outline-offset:4px}.note{margin-bottom:0}.outcome{margin:24px 0 0;padding:16px 18px;border:1px solid #d9deea;border-radius:12px}.outcome h2{font-size:14px;color:#596174;font-weight:600;margin:0 0 8px;text-transform:none}.outcome p,.outcome li{font-size:15px;margin:6px 0}.outcome ul{margin:8px 0;padding-left:20px}.code-route{margin:8px 0 0;color:#123cff;min-width:0;overflow-wrap:anywhere}.code-route h2{font-size:14px;color:#123cff;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px}.code-route svg{display:block;width:100%;height:auto}.code-route-projects{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;color:#111;font-size:14px}.code-route-projects li{display:flex;gap:8px;align-items:baseline;min-width:0}.code-route-projects li[data-dense="1"] .code-route-project-name{font-weight:650}.code-route-lane-mark{flex:none;min-width:1.1em;color:#123cff;font-weight:600;font-variant-numeric:tabular-nums}.code-route-insight{font-size:18px;line-height:1.35;color:#111;margin:12px 0 0;font-weight:600}.code-route-stats,.code-route-harnesses,.code-route-why{font-size:14px;color:#596174;margin:8px 0 0;overflow-wrap:anywhere}.code-route-stops{margin:8px 0 0;display:grid;gap:6px;min-width:0}.code-route-point summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;min-width:0}.code-route-kind{color:#123cff;font-size:12px;font-weight:600;text-transform:uppercase}.code-route-stop-label,.code-route-stop-project{min-width:0;overflow-wrap:anywhere}.code-route-basis{color:#596174}`;
-const recordedCount=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0?String(value):null;
-const pageMetrics=run=>{
- const session=duration((run.ridge_basis==='wall-time'?run.ridge_wall_seconds:null)??run.wall_time_s??run.duration_s);
- return [
-  ['Session',session==='Unknown'?null:session],
-  ['Turns',recordedCount(run.prompts)],
-  ['Tool calls',recordedCount(toolCallCount(run))],
-  ['Files touched',recordedCount(run.files_touched)],
-  ['Commits',recordedCount(run.commits)],
- ].filter(([,value])=>value!==null);
-};
-// The social preview is a fixed 1200px image, not a phone layout. Keep its metadata but
-// draw the measured map natively here; labels and counts remain readable HTML.
-const pageRunMap=run=>{
- const ridge=ridgeSeries(run);
- const basis=run.ridge_basis==='wall-time'?'wall time':run.ridge_basis==='turn-order'?'turn order':run.ridge_basis==='call-index'?'call order':null;
- if(!ridge||!basis||!ridge.values.every(Number.isSafeInteger))return '';
- const values=ridge.values,width=800,baseline=132,peak=Math.max(1,...values);
- const points=values.map((v,i)=>`${(i*width/(values.length-1)).toFixed(1)},${(baseline-v*116/peak).toFixed(1)}`).join(' ');
- const commits=Array.isArray(run.commit_bins)?run.commit_bins.filter(v=>Number.isSafeInteger(v)&&v>=0&&v<values.length):[];
- const ticks=commits.map(v=>{const x=(v*width/(values.length-1)).toFixed(1);return `<line x1="${x}" y1="132" x2="${x}" y2="122" stroke="#111" stroke-width="2" vector-effect="non-scaling-stroke"/>`;}).join('');
- return `<figure class="run-map"><h2>Run map</h2><svg viewBox="0 0 800 150" preserveAspectRatio="none" role="img" aria-label="Tool calls over ${basis}"><polygon points="0,132 ${points} 800,132" fill="#123cff" fill-opacity="0.1"/><polyline points="${points}" fill="none" stroke="#123cff" stroke-width="3" vector-effect="non-scaling-stroke"/>${ticks}</svg><figcaption>Tool calls over ${basis}${commits.length?' · Commit marks show recorded locations':''}</figcaption></figure>`;
-};
+// THE SHARED CARD. /r/<id> draws the run with the same function the feed uses (site/feed-card.js),
+// so the card a stranger opens from a link is the card they would have scrolled past in the feed:
+// face, name, agent, title, one big number, up to three small figures, the activity line, and the
+// heart, discuss and share row. The page links the app's own stylesheets for the look; nothing
+// below the card is part of it.
+const pageStyle=`*{box-sizing:border-box}html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}body{background:var(--paper);color:var(--ink);font:15px/1.5 'IBM Plex Sans',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;padding:0 16px 40px}a{color:inherit;text-decoration:none}.num{font-variant-numeric:tabular-nums}main{max-width:560px;margin:0 auto}a.home{display:inline-flex;align-items:center;min-height:48px;margin:8px 0;font-weight:600;letter-spacing:.08em;color:var(--blue)}.fc{margin:0 0 16px}.fc h1.fc-title{font-size:24px}.share-open{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:0 0 16px}a.open{display:inline-flex;align-items:center;min-height:48px;background:var(--blue);color:#fff;padding:0 20px;font-weight:500}a.open-profile{display:inline-flex;align-items:center;min-height:48px;color:var(--blue);font-weight:500}a.output{color:var(--blue);font-weight:500}a:focus-visible{outline:2px solid var(--blue);outline-offset:3px}.note{color:var(--soft);font-size:13px;margin:0}.private-card{background:var(--box);border:1px solid var(--rule);padding:24px 16px;margin:0 0 16px}.private-card h1{font-size:22px;line-height:1.25;font-weight:600;margin:0 0 8px}.private-card p{color:var(--soft);margin:0 0 16px}.outcome{background:var(--box);border:1px solid var(--rule);padding:14px 16px;margin:0 0 16px;overflow-wrap:anywhere}.outcome h2{font-size:13px;color:var(--soft);font-weight:500;margin:0 0 6px}.outcome p,.outcome li{font-size:14px;margin:6px 0}.outcome ul{margin:8px 0;padding-left:20px}.outcome a{color:var(--blue)}.code-route{background:var(--box);border:1px solid var(--rule);padding:14px 16px;margin:0 0 16px;color:var(--blue);min-width:0;overflow-wrap:anywhere}.code-route h2{font-size:13px;color:var(--blue);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px}.code-route svg{display:block;width:100%;height:auto}.code-route-projects{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;color:var(--ink);font-size:14px}.code-route-projects li{display:flex;gap:8px;align-items:baseline;min-width:0}.code-route-projects li[data-dense="1"] .code-route-project-name{font-weight:600}.code-route-lane-mark{flex:none;min-width:1.1em;color:var(--blue);font-weight:600}.code-route-insight{font-size:16px;line-height:1.35;color:var(--ink);margin:12px 0 0;font-weight:600}.code-route-stats,.code-route-harnesses,.code-route-why{font-size:13px;color:var(--soft);margin:8px 0 0}.code-route-stops{margin:8px 0 0;display:grid;gap:6px;min-width:0;color:var(--ink);font-size:14px}.code-route-point summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;min-width:0}.code-route-kind{color:var(--blue);font-size:12px;font-weight:600;text-transform:uppercase}.code-route-stop-label,.code-route-stop-project{min-width:0;overflow-wrap:anywhere}.code-route-basis{color:var(--soft)}`;
+const pageHead=`<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght%40400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/design.css"><link rel="stylesheet" href="/feed.css"><style>${pageStyle}</style>`;
+// How many XUDOS a public run has. The acks policy lets anyone read the acks of a run they can
+// read, and this is only called for a row that came back public. A failed read returns null and
+// the heart is drawn without a number rather than with a zero nobody measured.
+export async function readKudos(id,fetcher=fetch){
+ if(!validId(id))return null;
+ try{
+  const query=new URLSearchParams({run_id:'eq.'+id,select:'run_id'});
+  const response=await fetcher(config.SB_URL+'/rest/v1/acks?'+query,{headers:{apikey:config.SB_KEY,"Accept-Profile":config.SB_SCHEMA},cache:'no-store',signal:AbortSignal.timeout(4000)});
+  if(!response.ok)return null;const rows=await response.json();
+  return Array.isArray(rows)?rows.filter(row=>row&&row.run_id===id).length:null;
+ }catch(_){return null}
+}
 // A stored row is untrusted input: it was written by an agent through the upload endpoint. Every
 // link is re-checked here before it reaches a signed-out page, with the same rule the database and
 // the browser contract use.
@@ -120,15 +117,14 @@ const pageCodeRoute=run=>{
  return `<section class="code-route" aria-label="${esc(aria)}"><h2>Code Route</h2><svg viewBox="0 0 ${width} ${height}" role="img" aria-hidden="true"><path class="code-route-line" pathLength="1" d="${line}" fill="none" stroke="#123cff" stroke-width="2.5"/>${dots}${lanes}</svg><ol class="code-route-projects">${projectList}</ol>${insight?`<p class="code-route-insight">${esc(insight)}</p>`:''}<div class="code-route-stops">${stopList}</div>${harness}</section>`;
 };
 
-export function html(run){const title=esc(run.title||'Agent run'),insight=routeInsight(run&&run.code_route),description=esc(insight||run.caption||'See the work, its recorded activity and the conversation.'),id=encodeURIComponent(run.id),image=origin+'/api/run?id='+id+'&image=1',url=origin+'/r/'+id;
- const facts=pageMetrics(run),handle=run.profiles?.handle||run.profiles?.github_handle;
+export function html(run,opts={}){const title=esc(Feed.titleOf(run)),insight=routeInsight(run&&run.code_route),description=esc(insight||run.caption||'See the work, its recorded activity and the conversation.'),id=encodeURIComponent(run.id),image=origin+'/api/run?id='+id+'&image=1',url=origin+'/r/'+id;
+ const handle=run.profiles?.handle||run.profiles?.github_handle;
  const profileHref=handle?'/?u='+encodeURIComponent(handle):'';
- const byline=handle?`<a href="${esc(profileHref)}">@${esc(handle)}</a>${projectName(run)?' · '+esc(projectName(run)):''}${run.harness?' · '+esc(run.harness):''}`:[projectName(run),run.harness].filter(Boolean).map(esc).join(' · ');
- const routeHtml=pageCodeRoute(run);
- const metrics=facts.length&&!routeHtml?`<dl aria-label="Recorded activity">${facts.map(([label,value])=>`<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>`:'';
- const output=outputKind(run)?`<p><a href="${esc(run.output_url)}" rel="noopener noreferrer">View linked output</a></p>`:'';
+ // opts.kudos is the count readKudos returned: a number, or null when it could not be read.
+ const shared=Feed.card(run,{page:true,count:opts.kudos===undefined?null:opts.kudos});
+ const output=outputKind(run)&&safeUrl(run.output_url)?`<a class="output" href="${esc(run.output_url)}" rel="noopener noreferrer">View linked output</a>`:'';
  const profileAct=profileHref?`<a class="open-profile" href="${esc(profileHref)}">Open builder profile</a>`:'';
- return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · ${BRAND}</title><meta property="og:type" content="article"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}"><link rel="canonical" href="${url}"><style>${pageStyle}</style></head><body><main><a class="home" href="/" aria-label="${BRAND} home">${BRAND} · Home</a><article>${byline?`<p class="byline">${byline}</p>`:''}<h1>${title}</h1>${run.caption?`<p class="caption">${esc(run.caption)}</p>`:''}${routeHtml||pageRunMap(run)}${output}${pageOutcome(run)}<p>${profileAct}<a class="open" href="/?run=${id}">Open run and discussion</a></p>${metrics}<p class="note">Counts describe activity, not result quality.</p></article></main></body></html>`;
+ return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · ${BRAND}</title><meta property="og:type" content="article"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}"><link rel="canonical" href="${url}">${pageHead}</head><body><main><a class="home" href="/" aria-label="${BRAND} home">${BRAND}</a>${shared}${pageCodeRoute(run)}${pageOutcome(run)}<p class="share-open"><a class="open" href="/?run=${id}">Open run and discussion</a>${profileAct}${output}</p><p class="note">Counts describe activity, not result quality.</p></main></body></html>`;
 }
 // The page for a run that is missing or not public. Same words as privateCard, same neutral
 // image, and nothing from a row, because there is no row: the public-only query returns
@@ -138,7 +134,7 @@ export function html(run){const title=esc(run.title||'Agent run'),insight=routeI
 export function neutralHtml(id){const safe=encodeURIComponent(id),image=origin+'/api/run?id='+safe+'&image=1',url=origin+'/r/'+safe,title=esc(`This run is private on ${BRAND}`),description='Sign in and open the shared run link to check your access.';
  // Crawlers and strangers keep this neutral card. A signed-in permitted reader is sent to
  // /?run=<id>, where the SPA enforces follow or close-friends before showing the truthful card.
- return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><meta name="robots" content="noindex"><meta property="og:type" content="article"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}"><style>${pageStyle}</style></head><body><main><a class="home" href="/" aria-label="${BRAND} home">${BRAND} · Home</a><article><h1>${title}</h1><p>${description}</p><a class="open" href="/?run=${safe}">Sign in and open the run</a></article></main><script>try{var id=${JSON.stringify(String(id||''))};if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))location.replace("/?run="+encodeURIComponent(id))}catch(e){}</script></body></html>`;
+ return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><meta name="robots" content="noindex"><meta property="og:type" content="article"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}">${pageHead}</head><body><main><a class="home" href="/" aria-label="${BRAND} home">${BRAND}</a><article class="private-card"><h1>${title}</h1><p>${description}</p><a class="open" href="/?run=${safe}">Sign in and open the run</a></article></main><script>try{var id=${JSON.stringify(String(id||''))};if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))location.replace("/?run="+encodeURIComponent(id))}catch(e){}</script></body></html>`;
 }
 const el=(type,props,...children)=>({type,props:{...props,children:children.length===1?children[0]:children}});
 // The persisted ridge wins when the run carries one. It is the same 40 to 60 bins the run page
@@ -160,12 +156,6 @@ const series=run=>{
   if(Array.isArray(values)&&values.length>1&&values.length<=10000&&values.every(v=>Number.isFinite(v)&&v>=0)&&values.some(v=>v>0))return{values,label,filled:false};
  }
  return null;
-};
-const duration=value=>{
- if(value==null)return'Unknown';
- const seconds=Number(value);if(!Number.isFinite(seconds)||seconds<0)return'Unknown';
- if(seconds<60)return`${Math.round(seconds)}s`;
- const minutes=Math.round(seconds/60);return minutes>=60?`${Math.floor(minutes/60)}h ${minutes%60}m`:`${minutes}m`;
 };
 // Prefer the transcript count. When it is zero or missing and the stored ridge carried a
 // real call count, print that count so the label matches the graph and the SPA strip.
@@ -213,13 +203,6 @@ const outputKind=run=>{
   return'Output linked';
  }catch(_){return null}
 };
-const codeFacts=run=>{
- const facts=[];
- if(run.shell_calls!=null)facts.push(run.shell_calls+' shell calls');
- if(run.files_touched!=null)facts.push(run.files_touched+' files changed');
- if(run.commits!=null)facts.push(run.commits+' commits');
- return facts.join(' · ')||null;
-};
 const codeRoutePlot=run=>{
  const route=run&&run.code_route;
  if(!route||route.v!==1||route.unavailable||!Array.isArray(route.projects)||!Array.isArray(route.stops)||!route.projects.length||!route.stops.length)return null;
@@ -227,58 +210,95 @@ const codeRoutePlot=run=>{
  const n=Math.max(1,route.projects.length);
  return {projects:route.projects,stops:route.stops,idx,n,finish:route.finish&&route.finish.stop,stats:route.stats||{},label:(route.stats&&route.stats.projects_touched!=null)?`${route.stats.projects_touched} projects touched · Code Route`:'Code Route'};
 };
-export function card(run){
+// THE SHARE IMAGE is the feed card at 1200x630. The numbers come from the same functions the feed
+// and /r/<id> use (Feed.headline, Feed.stats), so the image, the page and the feed cannot print
+// different figures for one run. No remote image is fetched: the face is the builder's initial.
+const INK='#0a0a0a',SOFT='#6f6f6b',BLUE='#0047ff',WASH='#f2f5ff',BLUE_SOFT='#c4d2ff',RULE='#e3e3df',PAPER='#f7f7f5',ORANGE='#fc4c02';
+// The builder's face for the share image: their GitHub picture, fetched here on the server (a
+// fixed host, never a URL from the row), so the image shows the same face as the page. Any
+// failure returns null and the image draws the initial.
+// Redirects are followed by hand, and every hop must stay on GitHub's own avatar hosts over
+// https: a redirect to any other host (an internal address included) ends the lookup.
+const AVATAR_HOSTS=new Set(['github.com','avatars.githubusercontent.com']);
+const avatarHop=url=>{try{const u=new URL(url);return u.protocol==='https:'&&AVATAR_HOSTS.has(u.hostname)&&!u.username&&!u.password&&(u.port===''||u.port==='443')?u.href:null}catch(_){return null}};
+export async function readAvatar(run,fetcher=fetch){
+ const gh=run&&run.visibility==='public'&&run.profiles?.github_handle;
+ if(typeof gh!=='string'||!/^[A-Za-z0-9-]{1,39}$/.test(gh))return null;
+ try{
+  let url=`https://github.com/${gh}.png?size=128`,response=null;
+  for(let hop=0;hop<4;hop++){
+   response=await fetcher(url,{redirect:'manual',signal:AbortSignal.timeout(3000)});
+   if(response.status<300||response.status>=400)break;
+   const next=avatarHop(new URL(response.headers.get('location')||'',url).href);
+   if(!next||hop===3)return null;
+   url=next;
+  }
+  const type=response.headers.get('content-type')||'';
+  if(!response.ok||!/^image\/(png|jpeg)$/.test(type.split(';')[0]))return null;
+  const bytes=Buffer.from(await response.arrayBuffer());
+  if(!bytes.length||bytes.length>400000)return null;
+  return `data:${type.split(';')[0]};base64,${bytes.toString('base64')}`;
+ }catch(_){return null}
+}
+export function card(run,opts={}){
  const routePlot=codeRoutePlot(run);
  const insight=routePlot?routeInsight(run.code_route):'';
- const plotted=routePlot?null:series(run),max=plotted?Math.max(...plotted.values)||1:1;
- const points=plotted?plotted.values.map((v,i)=>`${i/(plotted.values.length-1)*1030},${125-v/max*105}`).join(' '):'';
- const area=plotted?`0,125 ${points} 1030,125`:'';
- const session=run.ridge_basis==='wall-time'?run.ridge_wall_seconds:null;
- const metric=(label,value)=>[label,recordedCount(value)];
- const effort=[
-  ['Session',duration(session??run.wall_time_s??run.duration_s)],
-  metric('Turns',run.prompts),
-  metric('Tool calls',toolCallCount(run)),
- ].filter(([,value])=>value!==null&&value!=='Unknown');
- const story=[];
- const output=outputKind(run);if(output)story.push(['Output',output]);
- const project=projectName(run);if(project)story.push(['Project touched',project]);
- const code=codeFacts(run);if(code)story.push(['Code activity',code]);
- const handle=run.visibility==='public'&&(run.profiles?.handle||run.profiles?.github_handle);
- return el('div',{style:{width:'100%',height:'100%',background:'#f5f7fb',color:'#111',display:'flex',padding:'30px',fontFamily:'sans-serif'}},
-  el('div',{style:{width:'100%',height:'100%',background:'#fff',border:'1px solid #d9deea',borderRadius:22,display:'flex',flexDirection:'column',padding:'34px 48px'}},
-   el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
-    el('div',{style:{display:'flex',color:'#123cff',fontSize:27,fontWeight:800}},BRAND),
-    handle?el('div',{style:{display:'flex',fontSize:20,color:'#555'}},'@'+handle):null),
-   el('div',{style:{display:'flex',fontSize:13,color:'#123cff',fontWeight:700,letterSpacing:1.2,marginTop:10}},'ACHIEVED'),
-   el('div',{style:{display:'flex',fontSize:(plotted||routePlot)?38:48,fontWeight:750,marginTop:(plotted||routePlot)?3:18,height:(plotted||routePlot)?56:74,lineHeight:1.2,overflow:'hidden'}},String(run.title||'Agent run').slice(0,120)),
-   run.caption?el('div',{style:{display:'flex',fontSize:18,color:'#333',marginTop:2,height:24,overflow:'hidden'}},String(run.caption).slice(0,160)):null,
-   story.length?el('div',{style:{display:'flex',marginTop:10,borderTop:'1px solid #d9deea',borderBottom:'1px solid #d9deea'}},
-    ...story.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',width:1030/story.length,padding:'9px 8px 10px 0'}},
-     el('div',{style:{display:'flex',fontSize:13,color:'#687083'}},label),
-     el('div',{style:{display:'flex',fontSize:19,fontWeight:650,marginTop:3,color:label==='Output'?'#123cff':'#111',height:26,overflow:'hidden',border:label==='Output'?'1px solid #c4d2ff':'none',background:label==='Output'?'#f2f5ff':'transparent',padding:label==='Output'?'2px 7px':'0'}},value)))):null,
-   routePlot?el('div',{style:{display:'flex',flexDirection:'column',marginTop:9}},
-    el('svg',{width:1030,height:Math.max(90,routePlot.n*22+20),viewBox:`0 0 1030 ${Math.max(90,routePlot.n*22+20)}`},
-     el('path',{d:routePlot.stops.map((stop,i)=>{const row=routePlot.idx[stop.project]||0;const x=36+i/Math.max(1,routePlot.stops.length-1)*960;const y=16+row*22+11;return `${i?'L':'M'}${x} ${y}`;}).join(' '),stroke:'#123cff',strokeWidth:4,fill:'none'}),
-     ...routePlot.stops.map((stop,i)=>{const row=routePlot.idx[stop.project]||0;const x=36+i/Math.max(1,routePlot.stops.length-1)*960;const y=16+row*22+11;const finish=routePlot.finish===stop.id;return el('circle',{cx:x,cy:y,r:finish?7:4.5,fill:finish?'#111':'#123cff'});})
-    ),
-    el('div',{style:{display:'flex',flexDirection:'column',fontSize:15,color:'#333',marginTop:6,gap:2}},
-     ...routePlot.projects.map((p,i)=>el('div',{style:{display:'flex'}},`${i+1} · ${p.label}`))),
-    insight?el('div',{style:{display:'flex',fontSize:18,color:'#111',fontWeight:650,marginTop:8,height:52,overflow:'hidden'}},insight):el('div',{style:{display:'flex',fontSize:13,color:'#687083',marginTop:4}},routePlot.label))
-    :plotted?el('div',{style:{display:'flex',flexDirection:'column',marginTop:9}},
-    el('svg',{width:1030,height:100,viewBox:'0 0 1030 130'},...(plotted.filled?[
-     el('polygon',{points:area,fill:'#123cff',fillOpacity:0.16}),
-     el('line',{x1:0,y1:125,x2:1030,y2:125,stroke:'#d9deea',strokeWidth:2}),
-     el('polyline',{points,stroke:'#123cff',strokeWidth:4,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'})]:[
-     el('polyline',{points,stroke:'#123cff',strokeWidth:5,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'})])),
-    el('div',{style:{display:'flex',fontSize:13,color:'#687083',marginTop:1}},plotted.label))
-    :null,
-   !routePlot&&effort.length?el('div',{style:{display:'flex',fontSize:13,color:'#123cff',fontWeight:700,letterSpacing:1.2,marginTop:plotted?7:32}},'ACTIVITY'):null,
-   !routePlot&&effort.length?el('div',{style:{display:'flex',marginTop:3,borderTop:'1px solid #d9deea',paddingTop:plotted?8:18}},
-    ...effort.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',width:1030/effort.length}},
-     el('div',{style:{display:'flex',fontSize:13,color:'#687083'}},label),
-     el('div',{style:{display:'flex',fontSize:plotted?27:64,fontWeight:700,marginTop:3,color:'#111'}},value)))):null,
-   el('div',{style:{display:'flex',fontSize:13,color:'#687083',marginTop:'auto'}},'Counts describe activity, not result quality.')));
+ const plotted=routePlot?null:series(run);
+ const lead=Feed.headline(run),facts=Feed.stats(run,lead);
+ const who=Feed.profileOf(run);
+ const name=run.visibility==='public'?who.name:'Builder';
+ const initial=(String(name||'?').trim().charAt(0)||'?').toUpperCase();
+ const avatar=run.visibility==='public'&&typeof opts.avatar==='string'&&opts.avatar.startsWith('data:image/')?opts.avatar:null;
+ // The same line the page's card prints under the name: the agent and when.
+ const meta=[run.harness,Feed.when(run.created_at||run.started_at)].filter(Boolean).join(' · ');
+ const output=outputKind(run);
+ const drawn=!!(plotted||routePlot);
+ const W=1044;
+ let drawing=null;
+ if(plotted){
+  // The page's rule for a short sitting (Feed.settle): a comb of ones and zeros is not a shape.
+  const values=Feed.settle(plotted.values),max=Math.max(...values)||1,h=110,top=10;
+  const x=i=>i*W/(values.length-1),y=v=>h-v/max*(h-top);
+  const points=values.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const peak=values.indexOf(Math.max(...values));
+  drawing=el('div',{style:{display:'flex',flexDirection:'column',marginTop:18}},
+   el('svg',{width:W,height:h,viewBox:`0 0 ${W} ${h}`},...(plotted.filled?[
+    el('polygon',{points:`0,${h} ${points} ${W},${h}`,fill:WASH}),
+    el('polyline',{points,stroke:BLUE,strokeWidth:4,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'}),
+    el('circle',{cx:x(peak),cy:y(values[peak]),r:9,fill:ORANGE,stroke:'#fff',strokeWidth:3})]:[
+    el('polyline',{points,stroke:BLUE,strokeWidth:5,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'})])));
+ }else if(routePlot){
+  const h=Math.max(70,routePlot.n*22+16);
+  const at=(stop,i)=>({x:24+i/Math.max(1,routePlot.stops.length-1)*(W-48),y:12+(routePlot.idx[stop.project]||0)*22+11});
+  drawing=el('div',{style:{display:'flex',flexDirection:'column',marginTop:14}},
+   el('svg',{width:W,height:h,viewBox:`0 0 ${W} ${h}`},
+    el('path',{d:routePlot.stops.map((stop,i)=>{const p=at(stop,i);return `${i?'L':'M'}${p.x} ${p.y}`;}).join(' '),stroke:BLUE,strokeWidth:4,fill:'none'}),
+    ...routePlot.stops.map((stop,i)=>{const p=at(stop,i),finish=routePlot.finish===stop.id;return el('circle',{cx:p.x,cy:p.y,r:finish?8:5,fill:finish?ORANGE:BLUE});})),
+   el('div',{style:{display:'flex',flexWrap:'wrap',fontSize:17,color:INK,marginTop:4}},
+    ...routePlot.projects.map((p,i)=>el('div',{style:{display:'flex',marginRight:22}},`${i+1} · ${p.label}`))),
+   insight?el('div',{style:{display:'flex',fontSize:18,color:INK,fontWeight:600,marginTop:6,height:26,overflow:'hidden'}},insight):el('div',{style:{display:'flex',fontSize:16,color:SOFT,marginTop:4}},routePlot.label));
+ }
+ return el('div',{style:{width:'100%',height:'100%',background:PAPER,color:INK,display:'flex',padding:'28px',fontFamily:'sans-serif'}},
+  el('div',{style:{width:'100%',height:'100%',background:'#fff',border:`1px solid ${RULE}`,display:'flex',flexDirection:'column',padding:'32px 48px 28px'}},
+   el('div',{style:{display:'flex',alignItems:'center'}},
+    avatar?el('img',{src:avatar,width:64,height:64,style:{width:64,height:64,borderRadius:32,border:`2px solid ${BLUE_SOFT}`}}):
+    el('div',{style:{display:'flex',width:64,height:64,borderRadius:32,background:WASH,border:`2px solid ${BLUE_SOFT}`,color:BLUE,fontSize:28,fontWeight:600,alignItems:'center',justifyContent:'center'}},initial),
+    el('div',{style:{display:'flex',flexDirection:'column',marginLeft:18,flexGrow:1,minWidth:0}},
+     el('div',{style:{display:'flex',fontSize:26,fontWeight:700}},String(name).slice(0,60)),
+     meta?el('div',{style:{display:'flex',fontSize:19,color:SOFT,marginTop:2,height:26,overflow:'hidden'}},meta):null),
+    output?el('div',{style:{display:'flex',fontSize:18,color:BLUE,background:WASH,border:`1px solid ${BLUE_SOFT}`,borderRadius:999,padding:'4px 14px',marginRight:18}},output):null,
+    el('div',{style:{display:'flex',color:BLUE,fontSize:24,fontWeight:700,letterSpacing:4}},BRAND)),
+   el('div',{style:{display:'flex',fontSize:drawn?44:56,fontWeight:700,letterSpacing:-1,marginTop:22,height:drawn?56:140,lineHeight:1.2,overflow:'hidden'}},String(Feed.titleOf(run)).slice(0,120)),
+   run.caption&&!routePlot?el('div',{style:{display:'flex',fontSize:20,color:INK,marginTop:4,height:28,overflow:'hidden'}},String(run.caption).slice(0,160)):null,
+   lead||facts.length?el('div',{style:{display:'flex',alignItems:'flex-end',marginTop:drawn?14:28}},
+    lead?el('div',{style:{display:'flex',flexDirection:'column',marginRight:56}},
+     el('div',{style:{display:'flex',fontSize:drawn?84:120,fontWeight:700,letterSpacing:-3,lineHeight:1}},lead.n),
+     el('div',{style:{display:'flex',fontSize:20,color:SOFT,marginTop:6}},lead.unit)):null,
+    ...facts.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',marginRight:44,paddingBottom:4}},
+     el('div',{style:{display:'flex',fontSize:17,color:SOFT}},label),
+     el('div',{style:{display:'flex',fontSize:32,fontWeight:500,marginTop:2}},String(value))))):null,
+   drawing,
+   el('div',{style:{display:'flex',fontSize:15,color:SOFT,marginTop:'auto'}},'Counts describe activity, not result quality.')));
 }
 // THE HOME PAGE'S OWN CARD. Until now `/` carried no og: or twitter: tags at all, so a post that
 // sent a thousand people to the address showed them a bare link with no title, no description and

@@ -191,7 +191,7 @@ assert.ok(publicRow, "a public run is readable by the image path");
 assert.deepEqual(ridgeFields(publicRow), SENT, "the public preview select carries the ridge");
 const withRidge = JSON.stringify(card(publicRow));
 assert.ok(withRidge.includes('"type":"polygon"'), "a persisted ridge draws a filled polygon");
-assert.ok(withRidge.includes("Agent ridge"), "the ridge image is labelled Agent ridge");
+assert.ok(!withRidge.includes("Agent ridge"), "the image draws the line without a series label, as the page does");
 
 const legacyRun = await saveRun(CASEY, {
   profile_id: CASEY,
@@ -205,7 +205,7 @@ const legacyRow = await readPublic(legacyRun, anonFetch);
 assert.equal(legacyRow.ridge, null, "a run saved without a ridge stays null, no backfill");
 const withoutRidge = JSON.stringify(card(legacyRow));
 assert.ok(!withoutRidge.includes('"type":"polygon"'), "no bins means no filled ridge");
-assert.ok(withoutRidge.includes("Session trace"), "a run with no bins keeps the rhythm polyline label");
+assert.ok(withoutRidge.includes('"type":"polyline"') && !withoutRidge.includes("Session trace"), "a run with no bins keeps the rhythm polyline, unlabelled");
 assert.ok(!withoutRidge.includes("Agent ridge"), "a run with no bins is not labelled as a ridge");
 
 // Rasterize both. A tree that satori refuses would make /api/run?image=1 return 503 for every

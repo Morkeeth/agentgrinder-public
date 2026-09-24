@@ -10,7 +10,9 @@ import html
 import os
 from urllib.parse import quote
 
-DEFAULT_URL = os.environ.get("AGENTGRINDER_URL", "http://localhost:8000")
+# The hosted app, so a stranger's --push opens a page that exists. A contributor running the
+# local UI sets AGENTGRINDER_URL=http://localhost:8000.
+DEFAULT_URL = os.environ.get("AGENTGRINDER_URL", "https://agentic-strava.vercel.app")
 
 
 def _esc(s) -> str:
@@ -23,14 +25,6 @@ def _dur(s: int | None) -> str:
     h, r = divmod(int(s), 3600)
     m, sec = divmod(r, 60)
     return f"{h}h {m:02d}m" if h else f"{m}m"
-
-
-def _pace(duration_s: int | None, prompts: int | None) -> str:
-    if not duration_s or not prompts:
-        return "—"
-    sec = duration_s / prompts
-    m, s = divmod(int(round(sec)), 60)
-    return f"{m}:{s:02d}"
 
 
 def _rhythm_svg(rhythm: list | None, w: int = 420, h: int = 100) -> str:
@@ -113,7 +107,6 @@ def render_share_card(
     if show_stats and mode == "grind":
         stat_cells = f"""
         <div class="stat"><div class="v">{_esc(_dur(duration_s))}</div><div class="k">moving</div></div>
-        <div class="stat"><div class="v">{_esc(_pace(duration_s, prompts))}</div><div class="k">pace</div></div>
         <div class="stat"><div class="v">{commits if commits is not None else '—'}</div><div class="k">commits</div></div>
         <div class="stat"><div class="v">{tool_calls if tool_calls is not None else '—'}</div><div class="k">tools</div></div>"""
     elif show_stats and mode == "profile":
@@ -140,8 +133,6 @@ def render_share_card(
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>@{_esc(handle)} · Agent Grinder</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   {CARD_THEME}
 
@@ -175,7 +166,7 @@ def render_share_card(
   .hero .k{{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}}
   .headline{{font-size:17px;font-weight:600;line-height:1.45;color:var(--ink);margin:12px 0 18px;
     padding-left:14px;border-left:3px solid var(--accent)}}
-  .stats{{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
+  .stats{{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:1px;background:var(--line);
     border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:auto}}
   .stat{{background:var(--card);padding:14px 16px}}
   .stat .v{{font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:-.02em}}

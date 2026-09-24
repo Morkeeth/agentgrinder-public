@@ -47,14 +47,14 @@ const fs=require('fs'),vm=require('vm');
 const root=process.argv[1],html=fs.readFileSync(root+'/site/index.html','utf8');
 const start=html.indexOf('function safeOutputUrl('),end=html.indexOf('function wireKudos(');
 const context={
-  PacecardFork:require(root+'/site/fork-run.js'),ME:null,GrinderContract:require(root+'/site/run-contract.js'),
+  StriveFork:require(root+'/site/fork-run.js'),ME:null,GrinderContract:require(root+'/site/run-contract.js'),
   esc:s=>String(s??'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])),
   runAttribution:()=>({handle:'builder',name:'Builder',link:null,ghost:false}),
   avatar:()=>'',fmtDur:m=>m+'m',ackPickerHtml:()=>'',suggestAckReasons:()=>[],fiveRow:()=>'',coachBlock:()=>''
 };
 vm.createContext(context);vm.runInContext(html.slice(start,end),context);
 const base={id:'run-1',profile_id:'other',created_at:'2026-09-15T00:00:00Z',
-  started_at:'2026-09-15T00:00:00Z',title:'Repair the feed',project:'Pacecard',
+  started_at:'2026-09-15T00:00:00Z',title:'Repair the feed',project:'STRIVE',
   caption:'Kept the public card focused.',output_url:'https://example.com/output'};
 const render=harness=>vm.runInContext('runCard('+JSON.stringify({...base,harness})+',false,0)',context);
 const cursor=render('Cursor');

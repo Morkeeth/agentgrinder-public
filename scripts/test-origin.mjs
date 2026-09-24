@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 const Origin = createRequire(import.meta.url)("../site/origin.js");
 
 assert.equal(Origin.state({ signedIn: false, configured: true }).kind, "hidden");
-assert.equal(Origin.html(Origin.state({ signedIn: false, configured: true })), "", "Origin is absent before Pacecard sign-in");
+assert.equal(Origin.html(Origin.state({ signedIn: false, configured: true })), "", "Origin is absent before STRIVE sign-in");
 
 const unconfigured = Origin.state({ signedIn: true, configured: false });
 assert.equal(unconfigured.kind, "hidden", "no connector means no Origin panel");

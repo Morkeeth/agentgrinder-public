@@ -167,6 +167,10 @@ class Activity:
     avatar_url: str = ""
     identity_note: str = ""
     identity_source: str = ""
+    # The run as the web feed stores it (site/index.html importRun): the raw counts the feed card
+    # draws. agentgrinder/feedcard.py reads only this, so the local card and the feed card are
+    # built from the same fields by the same rules.
+    card_row: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -329,7 +333,7 @@ def build_activity(run: dict) -> Activity:
         harness=run.get("harness", "coding agent"),
         project=project or "—",
         date_str=date_str,
-        distance=f"{turns} prompts" if turns is not None else "—",
+        distance=(f"{turns} prompt" + ("" if turns == 1 else "s")) if turns is not None else "—",
         moving_time=moving,
         pace=pace,
         effort=f"{tools} tool calls" if tools is not None else "—",
@@ -372,4 +376,25 @@ def build_activity(run: dict) -> Activity:
         headline_label=hl.label,
         headline_metric_id=hl.metric_id,
         five=hl.five,
+        card_row={
+            "title": clean(run.get("title") or ""),
+            "caption": run.get("caption") if isinstance(run.get("caption"), str) else None,
+            "harness": run.get("harness"),
+            "started": run.get("started"),
+            "created_at": run.get("started"),
+            "prompts": turns,
+            "duration_s": dur,
+            "wall_time_s": (run.get("ridge_wall_seconds")
+                            if run.get("ridge_basis") == "wall-time" else None),
+            "tool_calls": tools,
+            "ridge_tool_calls": run.get("ridge_tool_calls"),
+            "files_touched": files,
+            "commits": commits,
+            "ridge": run.get("ridge") or None,
+            "rhythm": rhythm or None,
+            "output_url": run.get("output_url") or None,
+            "visibility": "private",
+            "profiles": {"handle": who.handle or "", "github_handle": who.handle or None,
+                         "display_name": who.display, "avatar_url": who.avatar_url or None},
+        },
     )

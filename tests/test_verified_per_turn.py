@@ -70,23 +70,16 @@ def test_no_surface_points_a_stranger_at_a_project_only_the_author_can_run():
             assert private not in text, text
 
 
-def test_card_headlines_verified_per_turn_not_prompts():
+def test_card_never_headlines_prompts():
+    """The local card is the feed card. Its one big number is the strongest count the run
+    measured (commits, files, tool calls, time), never the prompt count; prompts are a small figure.
+    Verified per turn stays the terminal's and the return view's headline (headline_of)."""
     run = json.load(open(os.path.join(os.path.dirname(__file__), "..", "samples", "sample_run.json")))
     html = render_card(build_activity(run))
-    assert '<div class="n">0.21</div>' in html
-    assert "verified per turn" in html
-    # prompts are still on the card, but grouped as cost, never as Distance
+    hero = re.search(r'<span class="fc-n num">([^<]*)</span><span class="fc-u">([^<]*)</span>', html)
+    assert hero and "prompt" not in hero.group(2)
+    assert '<dt>Turns</dt><dd class="num">47</dd>' in html
     assert ">Distance<" not in html
-    assert "<summary>More</summary>" in html
-    assert "47 prompts" in html
-    # every dash carries a tooltip saying which fact is missing, and none of them names a
-    # project a stranger cannot install
-    assert "not measured yet: it needs every turn labelled as undoing the one before it" in html
-    assert "Promised is not measured yet" in html
-    for private in ("Transcripto", "repo E", "Helicon"):
-        assert private not in html
-
-
 # ---- the claim rule (calibrated 3 Sep 2026, see tests/test_claim_rule.py) --------------
 
 def test_claim_lines_and_tokens():
@@ -184,7 +177,7 @@ def _solo_jsonl(tmp_path):
     return str(p)
 
 
-def test_grind_card_headlines_verified_per_turn_not_prompts(tmp_path):
+def test_grind_card_never_headlines_prompts(tmp_path):
     run = parse_solo(_solo_jsonl(tmp_path), athlete="t")
     # the five parts travel in the run dict as counts, same window as everything else
     assert run["turns_typed"] == 2
@@ -193,21 +186,12 @@ def test_grind_card_headlines_verified_per_turn_not_prompts(tmp_path):
     assert run["corrections"] is None and run["artifacts_promised"] is None and run["reach"] is None
 
     html = render_solo_card(run)
-    # the number at the top is verified per turn = (1 + 1) ÷ 2
-    hl = html.index('class="hl"')
-    assert '<div class="n">1.00</div>' in html
-    assert "(1 verified + 1 artifacts) ÷ 2 typed turns" in html
-    # the five row sits under it; typed turns is labelled cost
-    assert hl < html.index('class="fiverow"') < html.index("Cost — what the grind spent") < html.index('class="stats"')
-    assert ">typed turns<i class=\"costtag\">cost</i>" in html
-    # prompts survive, but only as cost: the old first-cell label is gone
-    assert '<div class="k">Prompts</div>' not in html
-    assert '<div class="k">Prompts · cost</div>' in html
+    hero = re.search(r'<span class="fc-n num">([^<]*)</span><span class="fc-u">([^<]*)</span>', html)
+    assert hero and "prompt" not in hero.group(2)
+    assert '<dt>Turns</dt><dd class="num">2</dd>' in html
     # the h1 (the largest text on the card) does not open with the prompt count either
-    h1 = re.search(r"<h1>(.*?)<", html).group(1)
-    assert not re.match(r"\d+ prompts?\b(?! →)", h1), h1   # "1 prompt → 104 tool calls" is leverage, allowed
-
-
+    h1 = re.search(r'<h1 class="fc-title">(.*?)<', html).group(1)
+    assert not re.match(r"\d+ prompts?\b", h1), h1
 def test_grind_headline_ladder_fallbacks_lead_with_the_outcome():
     base = dict(stretch=None, project="p", turns_typed=12, started="2026-09-03T10:00:00",
                 ended="2026-09-03T10:30:00", ship_states={"never": 0}, tool_calls=20,
@@ -220,17 +204,14 @@ def test_grind_headline_ladder_fallbacks_lead_with_the_outcome():
         assert not re.match(r"\d+ prompts?\b(?! →)", headline({**base, k: 3})[0])
 
 
-def test_grind_card_with_no_claim_counts_prints_a_dash_never_a_zero(tmp_path):
-    # an older `--json` dump has no claims_verified: the headline is a dash naming the gap
+def test_grind_card_with_no_claim_counts_prints_no_dash_and_no_zero(tmp_path):
+    # an older `--json` dump has no claims_verified: nothing about claims is drawn, nothing invented
     run = parse_solo(_solo_jsonl(tmp_path), athlete="t")
     for k in ("claims", "claims_verified", "artifacts_produced"):
         run.pop(k)
     html = render_solo_card(run)
-    assert '<div class="n">—</div>' in html
-    assert "needs verified claims, artifacts produced" in html
-    assert "0.00" not in html.split('class="fiverow"')[0]
-
-
+    card = re.sub(r"<[^>]+>", " ", html.split('<article class="card fc">')[1].split("</article>")[0])
+    assert "—" not in card and "0.00" not in card and "Unknown" not in card
 def test_web_app_never_headlines_prompts():
     src = open(os.path.join(REPO, "site", "index.html"), encoding="utf-8").read()
     # Posts lead with the builder's work. Counts remain supporting observations.

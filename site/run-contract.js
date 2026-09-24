@@ -20,7 +20,8 @@
   // Same rule as agentgrinder/ingest.py `project_label` and server/public-run.mjs `projectName`;
   // tests/fixtures/project_label_probe.mjs runs one table of cases through all three.
   const HOME_SLUG = /^-?(?:Users|home)-[^-]+(?:-|$)/;
-  const NO_PROJECT = ["session", "unknown", "project unknown"];
+  // "." is a relative cwd with no name in it (the bundled fixture writes one): not a project.
+  const NO_PROJECT = ["session", "unknown", "project unknown", "."];
   function projectLabel(value) {
     const text = typeof value === "string" ? value.trim() : "";
     if (!text || NO_PROJECT.includes(text.toLowerCase())) return null;

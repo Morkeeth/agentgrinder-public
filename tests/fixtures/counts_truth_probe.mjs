@@ -36,10 +36,13 @@ const fixture = {
 };
 
 const page = html(fixture);
-assert.match(page, new RegExp(`<dt>Tool calls</dt><dd>${ridgeSum}</dd>`));
+// The page draws the feed card: tool calls lead as the one big number when nothing larger was
+// measured, else sit among the small figures. Either way it is the ridge's count, never 0 or 10.
+const toolCallsOnPage = n => new RegExp(`<span class="fc-n num">${n}</span><span class="fc-u">tool calls</span>|<dt>Tool calls</dt><dd class="num">${n}</dd>`);
+assert.match(page, toolCallsOnPage(ridgeSum));
 assert.doesNotMatch(page, /Code Route/);
-assert.doesNotMatch(page, new RegExp(`<dt>Tool calls</dt><dd>0</dd>`));
-assert.doesNotMatch(page, new RegExp(`<dt>Tool calls</dt><dd>10</dd>`));
+assert.doesNotMatch(page, toolCallsOnPage(0));
+assert.doesNotMatch(page, toolCallsOnPage(10));
 
 const strip = GrinderContract.heroStats(fixture);
 const toolCell = strip.find(([label]) => label === 'Tool calls');

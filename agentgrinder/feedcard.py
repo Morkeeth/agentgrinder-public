@@ -1,0 +1,374 @@
+"""THE FEED CARD, drawn on this computer.
+
+The web feed, the shared link page /r/<id> and the share image all draw a run with one function,
+`card` in site/feed-card.js. The command line cannot run that file (it stays dependency-free
+Python), so this module is a line-for-line port of it: the same face, name, agent, title, one big
+number, up to three small figures, activity line, and heart, discuss and share row, from the same
+rules. tests/test_feed_card_parity.py renders the same rows through both and compares the visible
+text, and compares CARD_CSS with the card section of site/feed.css, so the two cannot drift.
+
+Every value is a field of the run. A number the run did not measure is not drawn; nothing is
+estimated and nothing is invented to fill a gap.
+"""
+from __future__ import annotations
+
+import html as _html
+import math
+import re
+import time
+from datetime import datetime, timezone
+
+MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+# Copied from site/design.css (:root) and site/feed.css (the card section). The parity test fails
+# the moment either file changes without this copy.
+TOKENS_CSS = """:root{
+  --paper:#f7f7f5;--box:#fff;--ink:#0a0a0a;--soft:#6f6f6b;--dim:#73736f;
+  --rule:#e3e3df;--rule-2:#efefec;--blue:#0047ff;--blue-soft:#c4d2ff;--blue-wash:#f2f5ff;
+  /* the old token names, aliased, so no inline style left in this file can bring the green back */
+  --bg:#f7f7f5;--card:#fff;--line:#e3e3df;--muted:#6f6f6b;
+  --accent:#0047ff;--accent-ink:#0047ff;--accent-soft:#f2f5ff;
+}"""
+CARD_CSS = """/* the card */
+.fc{background:var(--box);border:1px solid var(--rule);margin:0 0 12px;padding:0;overflow:hidden}
+.fc-top{display:flex;align-items:center;gap:12px;padding:16px 16px 0}
+.fc-top>a{display:inline-flex}
+.fc-who{min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.fc-name{font-size:15px;font-weight:600;color:var(--ink)}
+.fc-who small{font-size:13px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fc-chip{margin-left:auto;align-self:flex-start;font-size:12px;font-weight:500;color:var(--blue);background:var(--blue-wash);border:1px solid var(--blue-soft);padding:3px 8px;border-radius:999px;white-space:nowrap}
+.fc-face{--s:40px;width:var(--s);height:var(--s);flex:0 0 var(--s);border-radius:50%;overflow:hidden;display:inline-grid;place-items:center;background:var(--blue-wash);border:1px solid var(--blue-soft)}
+.fc-face img{width:100%;height:100%;object-fit:cover;display:block}
+.fc-mono{color:var(--blue);font-weight:600;font-size:calc(var(--s) * .42)}
+.fc-body{display:block;padding:12px 16px 0;color:inherit}
+.fc-body:hover{color:inherit}
+.fc-body:hover .fc-title{color:var(--blue)}
+.fc-title{font-size:20px;line-height:1.25;font-weight:600;letter-spacing:-.01em;margin:0}
+.fc-cap{margin:4px 0 0;font-size:14px;color:var(--ink)}
+.fc-numbers{display:flex;align-items:flex-end;gap:12px 28px;flex-wrap:wrap;margin:14px 0 0}
+.fc-hero{display:flex;flex-direction:column;line-height:1}
+.fc-n{font-size:44px;font-weight:600;letter-spacing:-.03em;color:var(--ink)}
+.fc-u{font-size:13px;color:var(--soft);margin-top:6px}
+.fc-stats{display:flex;gap:22px;margin:0;padding-bottom:2px}
+.fc-stats div{display:flex;flex-direction:column}
+.fc-stats dt{font-size:12px;color:var(--soft)}
+.fc-stats dd{margin:2px 0 0;font-size:17px;font-weight:500}
+.fc-spark{position:relative;height:56px;margin:14px 0 0}
+.fc-spark svg{display:block;width:100%;height:100%}
+.fc-area{fill:var(--blue-wash)}
+.fc-line{fill:none;stroke:var(--blue);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.fc-peak{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--strive-orange);box-shadow:0 0 0 2px var(--box)}
+.fc .fc-foot{display:flex;border-top:1px solid var(--rule-2);margin:14px 0 0;padding:0;max-width:none;color:inherit;font-size:inherit}
+.fc .fc-top{max-width:none;margin:0}
+.landing-feature .fc{margin:0 0 12px}
+.fc-act{flex:1 1 0;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 8px;font:500 14px/1 'IBM Plex Sans',system-ui,sans-serif;color:var(--soft);background:none;border:0;border-radius:0;cursor:pointer}
+.fc-act+.fc-act{border-left:1px solid var(--rule-2)}
+button.fc-act:hover,a.fc-act:hover{background:var(--blue-wash);color:var(--blue);border-color:var(--rule-2)}
+.fc-act.kudo{color:var(--ink)}
+.fc-act.kudo svg{color:var(--soft)}
+.fc-act.kudo.on,.fc-act.kudo.on svg{color:var(--strive-orange)}
+.fc-kudos-mine{cursor:default}
+.fc .ack-picker{padding:14px 16px;border-top:1px solid var(--rule-2)}
+@media (prefers-reduced-motion:no-preference){
+  .fc-act.kudo svg{transition:transform .18s ease-out,color .18s ease-out}
+  .fc-act.kudo:active svg{transform:scale(.86)}
+}"""
+
+
+def esc(s) -> str:
+    return _html.escape("" if s is None else str(s), quote=True).replace("&#x27;", "&#39;")
+
+
+def _num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def whole(v):
+    return int(math.floor(v + 0.5)) if _num(v) and v >= 0 else None   # Math.round, not banker's
+
+
+def _thousands(n: int) -> str:
+    return f"{n:,}"
+
+
+def duration_label(seconds):
+    if not _num(seconds) or seconds <= 0:
+        return None
+    m = int(math.floor(seconds / 60 + 0.5))
+    if m < 1:
+        return "<1m"
+    return f"{m // 60}h {m % 60}m" if m >= 60 else f"{m}m"
+
+
+def _parse(iso):
+    if not iso:
+        return None
+    try:
+        t = datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if t.tzinfo is None:
+        t = t.astimezone()
+    return t
+
+
+def when(iso, now: float | None = None) -> str:
+    t = _parse(iso)
+    if t is None:
+        return ""
+    now = time.time() if now is None else now
+    days = math.floor((now - t.timestamp()) / 86400)
+    if days <= 0:
+        return "Today"
+    if days == 1:
+        return "Yesterday"
+    if days < 7:
+        return f"{days} days ago"
+    local = t.astimezone()
+    return f"{local.day} {MONTHS[local.month - 1]}"
+
+
+def _day_of(iso) -> str:
+    t = _parse(iso)
+    if t is None:
+        return ""
+    local = t.astimezone()
+    return f"{local.day} {MONTHS[local.month - 1]}"
+
+
+def title_of(r: dict) -> str:
+    """A folder name or a bare "<harness> sitting" becomes "<harness> session, 24 Sep"."""
+    t = str(r.get("title") or "").strip()
+    generic = (
+        not t
+        or re.search(r"(^|·\s*)-?Users-\S", t)
+        or re.search(r"(^|·\s*)-?home-[a-z0-9_]+(\s*·|$)", t)
+        or re.search(r"(^|·\s*)(Cursor|Claude Code|Claude|Codex|Grok Bot|Agent) sitting$", t, re.I)
+        or re.fullmatch(r"(untitled run|a run|agent run)", t, re.I)
+    )
+    if not generic:
+        return t
+    day = _day_of(r.get("started_at") or r.get("started") or r.get("created_at"))
+    return f"{r.get('harness') or 'Agent'} session" + (f", {day}" if day else "")
+
+
+def tool_call_count(r: dict):
+    """site/run-contract.js toolCallCount."""
+    recorded = r.get("tool_calls")
+    from_ridge = r.get("ridge_tool_calls")
+    if (recorded is None or recorded == 0) and _num(from_ridge) and from_ridge > 0:
+        return from_ridge
+    ridge = r.get("ridge") if isinstance(r.get("ridge"), list) else None
+    live = bool(ridge) and all(_num(v) and v >= 0 for v in ridge) and any(v > 0 for v in ridge)
+    if recorded == 0 and live and not (_num(from_ridge) and from_ridge > 0):
+        return None
+    return recorded
+
+
+def _tools(r):
+    return whole(tool_call_count(r))
+
+
+def headline(r: dict):
+    """The one number: the first measured, non-zero value of commits, files, tool calls, time."""
+    commits, files, tools = whole(r.get("commits")), whole(r.get("files_touched")), _tools(r)
+    t = duration_label(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s"))
+    if commits:
+        return {"n": _thousands(commits), "unit": "commit" if commits == 1 else "commits", "key": "commits"}
+    if files:
+        return {"n": _thousands(files), "unit": "file changed" if files == 1 else "files changed", "key": "files"}
+    if tools:
+        return {"n": _thousands(tools), "unit": "tool calls", "key": "tools"}
+    if t:
+        return {"n": t, "unit": "session", "key": "time"}
+    return None
+
+
+def stats(r: dict, lead) -> list:
+    out = []
+
+    def add(key, label, value):
+        if len(out) >= 3 or value is None or value == "" or (lead and lead["key"] == key):
+            return
+        out.append((label, value))
+
+    add("time", "Time", duration_label(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s")))
+    add("turns", "Turns", whole(r.get("prompts") if r.get("prompts") is not None else r.get("turns_typed")))
+    tools = _tools(r)
+    add("tools", "Tool calls", _thousands(tools) if tools else None)
+    add("commits", "Commits", whole(r.get("commits")) or None)
+    add("files", "Files", whole(r.get("files_touched")) or None)
+    return out
+
+
+def profile_of(r: dict) -> dict:
+    p = r.get("profiles") or {}
+    handle = p.get("handle") or p.get("github_handle") or ""
+    name = p.get("display_name") or p.get("name") or handle or "Builder"
+    return {"handle": handle, "name": name, "github": p.get("github_handle") or None,
+            "avatar": p.get("avatar_url") or None}
+
+
+def face(r: dict, size: int = 40, avatars: bool = False) -> str:
+    """The builder's face. On a local card (avatars=False, the default) it is always the initial:
+    a card on this computer loads nothing from the network, so opening it cannot tell GitHub who
+    is looking or when. avatars=True draws the web's face (the profile avatar or the GitHub
+    picture) and exists only so the parity test can compare against site/feed-card.js."""
+    s = size
+    if r.get("visibility") == "anonymous":
+        return f'<span class="fc-face fc-mono" style="--s:{s}px" aria-hidden="true">?</span>'
+    p = profile_of(r)
+    initial = esc(((p["name"] or "?").strip()[:1].upper()) or "?")
+    src = None
+    if avatars:
+        if re.match(r"^https://", p["avatar"] or "", re.I):
+            src = p["avatar"]
+        elif p["github"] and re.fullmatch(r"[A-Za-z0-9-]{1,39}", p["github"]):
+            src = f"https://github.com/{p['github']}.png?size={s * 2}"
+    if not src:
+        return f'<span class="fc-face fc-mono" style="--s:{s}px" aria-hidden="true">{initial}</span>'
+    return (f'<span class="fc-face" style="--s:{s}px" data-initial="{initial}" aria-hidden="true">'
+            f'<img src="{esc(src)}" alt="" width="{s}" height="{s}" loading="lazy" referrerpolicy="no-referrer" '
+            "onerror=\"this.parentNode.classList.add('fc-mono');this.parentNode.textContent=this.parentNode.dataset.initial\"></span>")
+
+
+def _fixed(v: float, places: int) -> str:
+    """Number.prototype.toFixed: the exact binary value, halves rounded up (not to even)."""
+    from decimal import ROUND_HALF_UP, Decimal
+    return str(Decimal(v).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP))
+
+
+def _fx(v: float) -> str:
+    return _fixed(v, 1)
+
+
+def settle(values: list) -> list:
+    """A comb of ones and zeros is not a shape: with fewer than two calls per bin on average,
+    neighbouring bins are added together until there are. The total is kept."""
+    total = sum(values)
+    if total >= 2 * len(values):
+        return values
+    n = max(2, min(len(values), int(total // 2)))
+    if n >= len(values):
+        return values
+    out = [0] * n
+    for i, v in enumerate(values):
+        out[(i * n) // len(values)] += v
+    return out
+
+
+def spark(r: dict) -> str:
+    src = None
+    for key in ("ridge", "rhythm"):
+        v = r.get(key)
+        if isinstance(v, list) and len(v) > 1:
+            src = v
+            break
+    if not src or any(not _num(v) or v < 0 for v in src):
+        return ""
+    src = settle(src)
+    mx = max(src)
+    if not mx:
+        return ""
+    w, h, top = 300, 56, 6
+    x = lambda i: (i * w) / (len(src) - 1)
+    y = lambda v: h - (v / mx) * (h - top)
+    line = " ".join(f"{_fx(x(i))},{_fx(y(v))}" for i, v in enumerate(src))
+    peak = src.index(mx)
+    px = _fixed((peak / (len(src) - 1)) * 100, 2)
+    py = _fixed((y(mx) / h) * 100, 2)
+    return (f'<div class="fc-spark" aria-hidden="true"><svg viewBox="0 0 {w} {h}" preserveAspectRatio="none">'
+            f'<polygon points="0,{h} {line} {w},{h}" class="fc-area"/><polyline points="{line}" class="fc-line"/></svg>'
+            f'<span class="fc-peak" style="left:{px}%;top:{py}%"></span></div>')
+
+
+KUDOS_ICON = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 17.2 3.3 10.6A4.1 4.1 0 0 1 9.1 4.8l.9.9.9-.9a4.1 4.1 0 0 1 5.8 5.8L10 17.2Z" fill="currentColor"/></svg>'
+TALK_ICON = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M3.5 4.5h13v9h-8l-3.5 3v-3H3.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+SHARE_ICON = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 3v10M6 7l4-4 4 4M4 11v5.5h12V11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+
+
+def card(r: dict, meta_extra: str = "", avatars: bool = False) -> str:
+    """The feed card in its preview form (site/feed-card.js card(r, {preview: true, heading:
+    "h1"})): a run that is only on this computer. Nothing on it links anywhere, because there is
+    no saved run to open, react to or share, and the heart carries no count because none exists.
+    The markup is the JavaScript's, character for character; tests/test_feed_card_parity.py.
+    One deliberate difference: the face is the initial unless avatars=True, so a local card makes
+    no network request when it is opened."""
+    p = profile_of(r)
+    anon = r.get("visibility") == "anonymous"
+    lead = headline(r)
+    facts = stats(r, lead)
+    who = '<span class="fc-name">Anonymous builder</span>' if anon else f'<span class="fc-name">{esc(p["name"])}</span>'
+    meta = " · ".join(x for x in [esc(r["harness"]) if r.get("harness") else "",
+                                  esc(when(r.get("created_at"))), esc(meta_extra) if meta_extra else ""] if x)
+    shipped = ('<span class="fc-chip">Shipped</span>'
+               if r.get("output_url") and re.match(r"^https://", str(r["output_url"]), re.I) else "")
+    cap = r.get("caption") or r.get("note")
+    hero = (f'<div class="fc-hero"><span class="fc-n num">{esc(lead["n"])}</span><span class="fc-u">{esc(lead["unit"])}</span></div>'
+            if lead else "")
+    dl = ('<dl class="fc-stats">' + "".join(f'<div><dt>{esc(k)}</dt><dd class="num">{esc(v)}</dd></div>' for k, v in facts) + "</dl>"
+          if facts else "")
+    cap_html = f'<p class="fc-cap">{esc(cap)}</p>' if cap else ""
+    body = f"""
+    <h1 class="fc-title">{esc(title_of(r))}</h1>
+    {cap_html}
+    <div class="fc-numbers">{hero}{dl}</div>
+    {spark(r)}
+  """
+    return f"""<article class="card fc">
+  <header class="fc-top">{face(r, avatars=avatars)}<div class="fc-who">{who}<small>{meta}</small></div>{shipped}</header>
+  <div class="fc-body">{body}</div>
+  <footer class="fc-foot"><span class="fc-act" aria-label="Send XUDOS">{KUDOS_ICON}</span><span class="fc-act" aria-label="Discuss">{TALK_ICON}<span>Discuss</span></span><span class="fc-act" aria-label="Share">{SHARE_ICON}<span>Share</span></span></footer>
+</article>"""
+
+
+def terminal_lines(r: dict) -> list:
+    """The card, as terminal lines: who and what, then the one big number and the small figures.
+    Same rules as the card, so the terminal and the card cannot disagree."""
+    p = profile_of(r)
+    lead = headline(r)
+    facts = stats(r, lead)
+    day = _day_of(r.get("started") or r.get("created_at"))
+    out = [f"\n  {p['name']} · {title_of(r)}",
+           "  " + " · ".join(x for x in [r.get("harness") or "", day] if x)]
+    figures = ([f"{lead['n']} {lead['unit']}"] if lead else []) + [f"{k} {v}" for k, v in facts]
+    if figures:
+        out.append("\n  " + " · ".join(figures))
+    return out
+
+
+PAGE_CSS = """*{box-sizing:border-box}html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;padding:0 16px 40px}
+a{color:inherit;text-decoration:none}.num{font-variant-numeric:tabular-nums}
+main{max-width:560px;margin:0 auto}
+.brand{display:flex;align-items:center;min-height:48px;margin:8px 0;font-weight:600;letter-spacing:.08em;color:var(--blue)}
+.fc{margin:0 0 16px}.fc h1.fc-title{font-size:24px}.fc-act{cursor:default}
+.below{background:var(--box);border:1px solid var(--rule);padding:14px 16px;margin:0 0 16px;overflow-wrap:anywhere}
+.below h2{font-size:13px;color:var(--soft);font-weight:500;margin:0 0 6px}
+.below p,.below li{font-size:14px;margin:6px 0}.below ul,.below ol{margin:8px 0;padding-left:20px}
+.below a{color:var(--blue)}.below .lead{font-size:16px;font-weight:600;line-height:1.35}
+.note{color:var(--soft);font-size:13px;margin:0 0 6px}
+.photo{display:block;margin:0 0 8px;border:1px solid var(--rule)}.photo img{display:block;width:100%;height:auto}"""
+
+
+def page(row: dict, *, title: str, below: str = "", notes: list | None = None, meta_extra: str = "",
+         brand: str = "STRIVE", above: str = "") -> str:
+    """One whole local page: the card, then whatever the run says beyond the card, then notes."""
+    note_html = "".join(f'<p class="note">{esc(n)}</p>' for n in (notes or []) if n)
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
+<title>{esc(title)}</title>
+<style>
+{TOKENS_CSS}
+{CARD_CSS}
+{PAGE_CSS}
+</style></head>
+<body><main>
+<div class="brand">{esc(brand)}</div>
+{above}
+{card(row, meta_extra=meta_extra)}
+{below}
+{note_html}
+</main></body></html>"""

@@ -40,7 +40,7 @@ def test_a_verdictless_run_is_never_pushed(no_strands, tmp_path, capsys):
                    "-o", str(tmp_path / "card.html")])
     out = capsys.readouterr().out
     assert rc == 1
-    assert "push ->" not in out and "#import=" not in out
+    assert "push ->" not in out and "preview ->" not in out and "#import=" not in out
 
 
 def test_without_coach_the_same_run_is_still_exit_zero(no_strands, tmp_path, capsys):

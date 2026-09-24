@@ -70,13 +70,13 @@ def test_download_share_strip_preserves_zero_and_hides_missing():
 
 
 def test_public_link_preview_preserves_zero_and_omits_unrecorded_fields():
+    # The share image draws the feed card's figures (Feed.headline, Feed.stats): a recorded zero
+    # turn count is drawn, and nothing the row did not record is drawn or guessed.
     result = render()
-    zero = " ".join(result["ogZero"])
-    for value in ("0s", "0 files changed", "0 commits"):
-        assert value in zero
-    assert result["ogZero"].count("0") == 2
+    zero = result["ogZero"]
+    assert zero[zero.index("Turns") + 1] == "0"
     assert "Unknown" not in result["ogUnknown"]
-    for label in ("Session", "Turns", "Tool calls", "Project touched", "Code activity"):
+    for label in ("Time", "Turns", "Tool calls", "Files", "Commits"):
         assert label not in result["ogUnknown"]
 
 
@@ -93,8 +93,11 @@ def test_share_surfaces_tell_output_project_and_code_story_without_raw_data():
         "code": "9 tool calls",
     }
     joined = " ".join(result["ogRich"])
-    for value in ("PR linked", "agentgrinder-public", "4 shell calls", "7 files changed", "2 commits"):
+    for value in ("PR linked", "2 commits"):
         assert value in joined
+    assert "agentgrinder-public" not in joined     # the page's card names no project either
+    rich = result["ogRich"]
+    assert rich[rich.index("Tool calls") + 1] == "22" and rich[rich.index("Files") + 1] == "7"
     for private in ("PRIVATE PROMPT", "PRIVATE COMMAND", "/private/", "PRIVATE OUTPUT"):
         assert private not in joined
     assert "Output" not in result["ogGeneric"]

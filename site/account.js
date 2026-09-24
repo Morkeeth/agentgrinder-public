@@ -1,9 +1,9 @@
-/* Account control for Pacecard: the /?account panel.
+/* Account control for STRIVE: the /?account panel.
  *
  * What a signed-in person can do here, and only here:
  *   edit the chosen handle and display name (profile id never changes),
  *   see which sign-in methods are linked to the shared Auth user, link a supported one, unlink
- *   any but the last, sign out of this browser only, and delete the Pacecard profile with a
+ *   any but the last, sign out of this browser only, and delete the STRIVE profile with a
  *   typed confirmation that says what goes and what stays.
  * What it recovers from: a provider round trip that was cancelled, failed or expired, and a
  * sign-in that was started and never finished. The draft a person was posting stays put.

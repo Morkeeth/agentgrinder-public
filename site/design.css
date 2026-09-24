@@ -123,7 +123,7 @@ button,summary{touch-action:manipulation}
   .segment-metrics div{padding:12px 14px}
 }
 
-/* Pacecard ridge. The worker signal is layered behind one primary line, capped at three layers. */
+/* STRIVE ridge. The worker signal is layered behind one primary line, capped at three layers. */
 .ridge-wrap{padding:18px 16px 0}.ridge-wrap svg{display:block;width:100%;height:auto;min-height:132px}
 .ridge-fill{fill:var(--blue);opacity:.12}.ridge-line{fill:none;stroke:var(--blue);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .ridge-base{stroke:var(--rule);stroke-width:1}.ridge-worker{fill:var(--blue)}.ridge-worker-1{opacity:.045}.ridge-worker-2{opacity:.065}.ridge-worker-3{opacity:.085}

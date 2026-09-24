@@ -1,4 +1,4 @@
-/* Origin is Cursor's code forge. This module models repository installation after Pacecard
+/* Origin is Cursor's code forge. This module models repository installation after STRIVE
  * sign-in; it is not an Auth provider and never participates in account matching.
  *
  * No Origin application is registered today, so the shipped controller has no connector and

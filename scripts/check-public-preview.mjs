@@ -12,11 +12,12 @@ assert.deepEqual(await readPublic(id,async(url,options)=>{assert.equal(new URL(u
 assert.equal(await readPublic(id,async()=>({ok:true,json:async()=>[]})),null);
 assert(!html({...fixture,title:'<script>"bad"</script>'}).includes('<script>'));
 const chosen={...fixture,profiles:{handle:'chosen-builder',github_handle:null,display_name:'Chosen Builder'}};
-assert(JSON.stringify(card(chosen)).includes('@chosen-builder'),'chosen-only identity appears on the share card');
-assert(JSON.stringify(card(fixture)).includes('@fixture-builder'),'legacy identity fallback survives');
-assert(!JSON.stringify(card({...chosen,visibility:'close_friends'})).includes('@chosen-builder'),'private audiences omit identity');
+// The image names the builder the way the page's card does: the display name, else the handle.
+assert(JSON.stringify(card(chosen)).includes('Chosen Builder'),'chosen-only identity appears on the share card');
+assert(JSON.stringify(card(fixture)).includes('fixture-builder'),'legacy identity fallback survives');
+assert(!JSON.stringify(card({...chosen,visibility:'close_friends'})).includes('Chosen Builder'),'private audiences omit identity');
 const renamed=JSON.stringify(card({...chosen,profiles:{...chosen.profiles,github_handle:'old-alias'}}));
-assert(renamed.includes('@chosen-builder')&&!renamed.includes('@old-alias'),'chosen identity takes precedence');
+assert(renamed.includes('Chosen Builder')&&!renamed.includes('old-alias'),'chosen identity takes precedence');
 const meta=html(chosen);for(const tag of ['property="og:image"','property="og:title"','property="og:description"','name="twitter:card" content="summary_large_image"'])assert(meta.includes(tag),tag+' missing');
 const render=async(tree,path)=>{const image=new ImageResponse(tree,{width:1200,height:630});const bytes=Buffer.from(await image.arrayBuffer());assert.equal(bytes.subarray(1,4).toString(),'PNG');assert.equal(bytes.readUInt32BE(16),1200);assert.equal(bytes.readUInt32BE(20),630);await writeFile(path,bytes);return bytes};
 await render(card(chosen),'/tmp/strive-public-og.png');

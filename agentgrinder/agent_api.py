@@ -48,8 +48,16 @@ class AgentClient:
             raise ValueError("Agent credentials require HTTPS (HTTP is allowed only on localhost).")
         self._url=base_url.rstrip('/')+'/rest/v1/rpc/grinder_agent_action'
         self._key=api_key
+        # A product origin (https://agentic-strava.vercel.app) has no /rest/v1 path; it takes a
+        # publish at POST /api/agent/runs (docs/AGENT-UPLOAD-API.md section 2). A Supabase host,
+        # or any localhost URL (the local stack), keeps the direct RPC.
+        host=parsed.hostname or ''
+        self._product=None
+        if not local and not host.endswith('.supabase.co'):
+            self._product=base_url.rstrip('/')+'/api/agent/runs'
 
     def questions(self) -> list:
+        if self._product:raise ValueError('Questions need the Supabase URL, not the app URL.')
         request=urllib.request.Request(self._url.replace('grinder_agent_action','grinder_agent_questions'),
             data=json.dumps({'token':self._token}).encode(),method='POST',
             headers={'Content-Type':'application/json','apikey':self._key,'Content-Profile':DEFAULT_SCHEMA})
@@ -63,6 +71,9 @@ class AgentClient:
     def perform(self,action: str,payload: dict,request_id: str | None = None) -> dict:
         if action not in ("draft","publish","reply","ack"):raise ValueError("Unsupported agent action.")
         rid=str(uuid.UUID(request_id)) if request_id else str(uuid.uuid4())
+        if self._product:
+            if action!='publish':raise ValueError('A product URL takes publish only. Pass the Supabase URL for draft, reply or ack.')
+            return self._publish_via_product(payload,rid)
         raw=json.dumps(dict(token=self._token,action=action,payload=payload,request_id=rid)).encode()
         request=urllib.request.Request(self._url,data=raw,method='POST',headers={
             'Content-Type':'application/json','apikey':self._key,'Content-Profile':DEFAULT_SCHEMA})
@@ -71,7 +82,8 @@ class AgentClient:
                 result=json.load(response)
         except urllib.error.HTTPError as error:
             # Do not echo a response body that may contain supplied credentials or private text.
-            raise RuntimeError(f"Agent action rejected (HTTP {error.code}); request {rid}. Check the granted scope and expiry.") from None
+            hint=' No agent endpoint at this URL: pass --url https://agentic-strava.vercel.app or the Supabase URL.' if error.code==404 else ' Check the granted scope and expiry.'
+            raise RuntimeError(f"Agent action rejected (HTTP {error.code}); request {rid}.{hint}") from None
         except urllib.error.URLError:
             raise RuntimeError(f"Agent endpoint unavailable; reuse request {rid} with the same payload when retrying.") from None
         if not isinstance(result,dict) or 'id' not in result:
@@ -93,9 +105,33 @@ class AgentClient:
         return safe
 
 
+    def _publish_via_product(self,payload: dict,rid: str) -> dict:
+        class _NoRedirect(urllib.request.HTTPRedirectHandler):
+            # A redirect would resend the bearer token to wherever it points. Never follow one.
+            def redirect_request(self,*args,**kwargs):return None
+        request=urllib.request.Request(self._product,data=json.dumps(payload).encode(),method='POST',headers={
+            'Content-Type':'application/json','Authorization':'Bearer '+self._token,'Idempotency-Key':rid})
+        try:
+            with urllib.request.build_opener(_NoRedirect).open(request,timeout=30) as response:result=json.load(response)
+        except urllib.error.HTTPError as error:
+            try:detail=json.load(error).get('error')
+            except (ValueError,AttributeError):detail=None
+            # The server's messages are its own raise texts and never echo the token.
+            raise RuntimeError(f"Upload refused (HTTP {error.code}): {detail or 'no reason given'}; request {rid}.") from None
+        except urllib.error.URLError:
+            raise RuntimeError(f"STRIVE unavailable; rerun with --request-id {rid} and the same payload.") from None
+        if not isinstance(result,dict) or not isinstance(result.get('existing'),bool) or result.get('visibility') not in ('private','close_friends','link','public','crew','anonymous'):
+            raise RuntimeError(f'STRIVE returned no stored run; request {rid}.')
+        try:run_id=str(uuid.UUID(str(result.get('id'))))
+        except ValueError:raise RuntimeError(f'STRIVE returned an invalid run id; request {rid}.') from None
+        return dict(id=run_id,action='publish',request_id=rid,existing=result['existing'],visibility=result['visibility'])
+
+
 def add_parser(subparsers):
     parser=subparsers.add_parser('agent',help='use a human-granted agent credential for explicit network actions')
-    parser.add_argument('--url',default=DEFAULT_URL)
+    parser.add_argument('--url',default=DEFAULT_URL,
+        help='where to send: https://agentic-strava.vercel.app for the hosted app (publish only), '
+             'or a Supabase URL (default: AGENTGRINDER_SUPABASE_URL or the local stack)')
     parser.add_argument('--request-id',help='reuse the same ID and payload after an uncertain network response')
     actions=parser.add_subparsers(dest='agent_action',required=True)
     capture=actions.add_parser('capture',help='capture an explicit Claude SDK/sidechain transcript locally; no network')

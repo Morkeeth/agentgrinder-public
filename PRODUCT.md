@@ -36,8 +36,8 @@ This repository is the public product. Morkeeth/agentgrinder remains the hackath
 - Sign-in with GitHub or an email link. One profile per account, with a handle and display name you can edit.
 - Feed, post a run, My runs, profiles, follow, Following, XUDOS, reply and a Responses inbox. The public feed is new and mostly empty.
 - Local capture: `python3 -m agentgrinder grind --harness cursor` reads a real Cursor session with no keys and writes a card to `./grind.html`.
-- Private Cursor hook: `python3 -m agentgrinder hook install --harness cursor` watches completed local composers, dedupes by composer id and opens a loopback Pacecard without posting.
-- Pacecard ridge: Cursor bubble timestamps draw tool calls over wall time with worker activity behind one blue line. Captures without that clock use call order and say so.
+- Private Cursor hook: `python3 -m agentgrinder hook install --harness cursor` watches completed local composers, dedupes by composer id and opens a loopback STRIVE preview without posting.
+- STRIVE ridge: Cursor bubble timestamps draw tool calls over wall time with worker activity behind one blue line. Captures without that clock use call order and say so.
 - A Grok Bot post-run template in `templates/grokbot/`. It is source to install; no second bot has been observed using it.
 
 ## Open
@@ -49,4 +49,4 @@ This repository is the public product. Morkeeth/agentgrinder remains the hackath
 - A verified first useful test with two people who are not the owner.
 - External event calendars (Grok Bot, Claude, Devin, Codex) stay discovery sources in the journey brief only. No Luma or community directory in the app.
 
-Brand decision, 16 September: the public product is STRIVE, tagline "Post your strides". Pacecard is rejected. Keep the white cards and blue activity trace. The address remains `agentic-strava.vercel.app`. The name and tagline are held in one place, `server/brand.mjs`; internal identifiers, the package name, the CLI command and the `strava` schema are unchanged.
+Brand decision, 16 September: the public product is STRIVE, tagline "Post your strides". The earlier name Pacecard is rejected. Keep the white cards and blue activity trace. The address remains `agentic-strava.vercel.app`. The name and tagline are held in one place, `server/brand.mjs`; internal identifiers, the package name, the CLI command and the `strava` schema are unchanged.

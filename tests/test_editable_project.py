@@ -47,7 +47,8 @@ def test_the_preview_offers_the_project_as_a_field_prefilled_from_capture():
     assert '<label>Project (optional)<input id="i_project"' in INDEX
     assert 'value="${esc(capturedProject||\'\')}"' in INDEX
     assert "Shown to readers as Project touched" in INDEX
-    assert "rename it or clear it" in INDEX
+    # the hint says when capture fills it, because an unproven folder name is dropped (push.py)
+    assert "only when it could confirm the session ran in that project's git repository" in INDEX
     # It is an edit like the others: kept across a sign-in bounce, and repainted live.
     assert "'i_project'" in INDEX.split("const editFields=")[1].split("]")[0]
 

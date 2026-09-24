@@ -1,4 +1,4 @@
-# Pacecard new-user journey and build map
+# STRIVE new-user journey and build map
 
 Reviewed 15 September 2026 for the Cursor + Grok Bot path. This is the product map for the
 bounded card → post → response → return loop. It does not replace
@@ -14,9 +14,9 @@ bounded card → post → response → return loop. It does not replace
 - Live origin at review time: `https://agentic-strava.vercel.app`.
 - Live `/`: HTTP 200, 136,849 bytes, SHA-256
   `a238ddbedf2a6e1e45e4b8c8b3785ff50d43fd0682b11da33b615a03fb3796ea`,
-  title `Pacecard`.
+  title `STRIVE`.
 - Live `/api/health`: HTTP 200, 41 bytes,
-  `{"service":"pacecard","database":"ready"}`.
+  `{"service":"strive","database":"ready"}`.
 - Receipt-backed deployment: `726f8a57c4e95f6c1d62c789f8e0ddeb437e11b6`, Vercel
   `dpl_3MayWTLoGMc4VsC5wrhrPDDrLxBg`. That release includes merged PR 21 identity and PR 22
   first-minute work.
@@ -33,7 +33,7 @@ bounded card → post → response → return loop. It does not replace
   selection for Cloud Agents, durable Cloud agent/run IDs, conversation search, and prompt
   [deep links](https://cursor.com/docs/reference/deeplinks). It does not document a public deep
   link that selects an exact local Cursor sitting or sends a third-party preview into a hosted
-  Save flow. Pacecard's hosted `#import=` URL is its own human-review handoff, not a Cursor
+  Save flow. STRIVE's hosted `#import=` URL is its own human-review handoff, not a Cursor
   platform Save primitive.
 
 The live service and database are healthy. That is not the same as hosted sign-in acceptance,
@@ -51,7 +51,7 @@ No sign-in or write was attempted.
   fabricate social proof.
 - Find people allowed signed-out public-profile search and explained that sign-in is required to
   follow. There was no profile or public run reachable through the UI during this pass.
-- Post led to a clone-and-run command for the Pacecard repository, then a separate sign-in action.
+- Post led to a clone-and-run command for the STRIVE repository, then a separate sign-in action.
   That is the first material stop for the intended technical builder: the UI has switched from
   “share work from my project” to “clone this product,” and it has not asked which sitting to
   share. This review does not treat a command line as inherently out of scope; Cursor/Grok
@@ -72,7 +72,7 @@ the live discovery surfaces returned no public runs or profiles to this signed-o
 
 A builder completes useful work in their own project. On the same computer, they deliberately
 select that Cursor sitting, or on a Grok Bot computer they explicitly select an exported JSONL
-sitting. Pacecard reads only allowlisted measurements and first opens a private preview. The
+sitting. STRIVE reads only allowlisted measurements and first opens a private preview. The
 builder writes the public explanation and optional output link, checks the signed-in account,
 chooses Only me, Link or Public, and presses Save once.
 
@@ -83,16 +83,16 @@ reply, and can return to Responses. On the next day, a response is the reason to
 safe capture is the action available after the conversation.
 
 Cursor and Grok Bot are different capture origins, not different identities or destinations.
-Both hand the human to the same Pacecard account, audience control and saved-run route.
+Both hand the human to the same STRIVE account, audience control and saved-run route.
 
 ## Transition map
 
 | Transition | What exists now | Stop or risk | Required behavior |
 |---|---|---|---|
-| Discover → understand | `/` and `/?explore` show the Pacecard promise, a sample/featured card, Feed and Post. Public cards put caption and output above the trace. | A cold visitor can browse, but a mostly empty feed cannot prove the social value. Sample content must not look like adoption. | Keep the first action “Post a run”; label every sample and never seed invented people or engagement. |
+| Discover → understand | `/` and `/?explore` show the STRIVE promise, a sample/featured card, Feed and Post. Public cards put caption and output above the trace. | A cold visitor can browse, but a mostly empty feed cannot prove the social value. Sample content must not look like adoption. | Keep the first action “Post a run”; label every sample and never seed invented people or engagement. |
 | Discover → own project | The live first-run command clones this product repository, while `docs/CURSOR.md` says to open this repository to obtain its workspace MCP. | A person came to share work from **their** repository. The product/contributor repository switch is unexplained, and the default command picks the latest eligible sitting rather than asking which one. | Start from the person's own project, install/enable the capture integration there, list eligible sittings without transcript text or paths in agent payloads, and require an exact selection before preview. |
 | Cursor work → capture | `grind --harness cursor [SESSION] --pick N`, `--list`, MCP `list_sessions`, `preview_run`, and `a2a_propose_publish` exist. A safe explicit-path walk correctly labelled `my-own-project`, counted two typed turns and one tool call, and left duration/commits unknown. | `docs/CURSOR.md` documents “latest eligible” only. The MCP list identifies only each harness's latest file, so it cannot make an exact sitting choice. A cloud VM cannot read a laptop's Cursor sessions. | A local-only selector on the user's computer must identify the chosen project/session and sitting. Cloud agents must state that they see only their VM. |
-| Grok work → export | The adapter reads explicitly supplied Grok JSONL; the source kit helper returns allowlisted metrics and a private import URL without a request. Labelled samples produced 2/3 and 7/7 typed-turn/tool-call counts. | Source availability is not installation. Current skill/docs still use placeholder hosted origins even though the approved live origin exists. No second bot or real export was observed here. | Grok owner installs the complete source directory on a second bot, explicitly selects a real export on that bot's computer, uses the approved Pacecard origin, and returns the private preview URL to the human. |
+| Grok work → export | The adapter reads explicitly supplied Grok JSONL; the source kit helper returns allowlisted metrics and a private import URL without a request. Labelled samples produced 2/3 and 7/7 typed-turn/tool-call counts. | Source availability is not installation. Current skill/docs still use placeholder hosted origins even though the approved live origin exists. No second bot or real export was observed here. | Grok owner installs the complete source directory on a second bot, explicitly selects a real export on that bot's computer, uses the approved STRIVE origin, and returns the private preview URL to the human. |
 | Capture → preview | `#import=` carries allowlisted fields in the fragment. `importRun()` validates it, labels sample previews, displays all imported fields, says “not posted,” and renders the white card/blue trace. | A copied/truncated fragment cannot be recovered. Rig notes are described as profile data even for Only me and therefore need careful review. | Invalid links say nothing was posted and point back to capture. Unknown metrics remain absent/unknown. The person reviews every field before auth or save. |
 | Preview → auth | `stashImport`, `ag_import_edits`, `ag_auth_return` and profile onboarding preserve the capture and typed title/caption/link/audience in session storage. Cancellation, provider failure and expired links have explicit recovery copy. | The exact hosted Auth allowlist is not readable from this run. Email completion can occur in another tab/browser where session storage is unavailable. | Verify callbacks without changing shared Site URL. Keep the original tab open for email; if browser storage is unavailable, stop before redirect and tell the user to retain their local capture. No auth event may post a run. |
 | Auth → account/profile | One shared Supabase Auth user maps to one schema-qualified `strava.profiles` row. GitHub and email are enabled in source; X is gated. | “One identity” is a product invariant, but a user still needs to verify the account shown after returning from a provider. | Show account/handle before Save. Keep Cursor/Origin as integrations, never login providers. |
@@ -134,7 +134,7 @@ no message was sent.
 
 ### 1. Capture from the builder's own project into one private hosted preview
 
-- **User problem:** current Cursor onboarding starts in the Pacecard source repository and
+- **User problem:** current Cursor onboarding starts in the STRIVE source repository and
   “latest” can select a different sitting than the one the builder intends to share. Grok source
   exists, but a second bot installation and explicit real export remain unverified.
 - **Evidence / route:** `docs/CURSOR.md`, `.cursor/mcp.json`, CLI `--list`, explicit session and
@@ -151,7 +151,7 @@ no message was sent.
   preview implementation. Existing capture lanes remain separate.
 - **Dependency:** Cursor's documented
   [project/global MCP configuration](https://cursor.com/docs/mcp), and Grok's documented
-  [persistent cloud computer](https://cursor.com/docs/grok-bot). Neither documents a Pacecard
+  [persistent cloud computer](https://cursor.com/docs/grok-bot). Neither documents a STRIVE
   native Save or a public deep link selecting an exact local Cursor sitting.
 - **Acceptance proof:** clean machine with two Cursor sittings in different own projects selects
   the requested non-latest sitting; a second Grok Bot invokes the installed complete source kit
@@ -176,7 +176,7 @@ no message was sent.
 
 ### 3. Make the first post understandable and deliberate
 
-- **User problem:** the cold Post route switches from “share my work” to cloning Pacecard, before
+- **User problem:** the cold Post route switches from “share my work” to cloning STRIVE, before
   clearly showing own-project selection. With no public runs visible, the first builder also
   cannot rely on social proof to explain why the card is useful.
 - **Evidence / route:** live `/`, `/?post`, `/?explore`; `importRun()` preview; `runCard()`. The
@@ -257,7 +257,7 @@ not add a segment build item, touch leaderboard code or run its SQL.
 
 | Capability | Exists in source | Tested locally in this run | Hosted | Used by real consenting people |
 |---|---:|---:|---:|---:|
-| Pacecard landing/feed/Post/Profile shell | Yes | Yes, phone/desktop cold and fixture paths | `726f8a5` receipt; later bytes observed, provenance unresolved | Unverified |
+| STRIVE landing/feed/Post/Profile shell | Yes | Yes, phone/desktop cold and fixture paths | `726f8a5` receipt; later bytes observed, provenance unresolved | Unverified |
 | Cursor explicit-path + sitting capture | Yes | Yes, safe TEST DATA session | CLI is local; import destination is hosted | Unverified |
 | Cursor friendly own-project exact selector | Partial | CLI primitives only | No separate hosted component | No |
 | Grok adapter/source kit | Yes | Labelled samples only | Hosted import URL generated | Second-bot install/use unverified |

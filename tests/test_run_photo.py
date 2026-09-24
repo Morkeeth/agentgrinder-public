@@ -96,7 +96,8 @@ def test_card_puts_the_headline_on_the_photo_and_says_it_is_declared(tmp_path, r
     html = solocard.render_solo_card(run, photo_src=src)
     assert f'<figure class="photo"><img src="{src}"' in html
     assert "Photo added by you, not measured." in html
-    assert html.count("<h1>") == 1
+    assert html.count("<h1") == 1
+    assert html.index('class="photo"') < html.index('<article class="card fc">')
 
 
 def test_card_without_photo_is_unchanged(run):

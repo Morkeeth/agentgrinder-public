@@ -61,9 +61,9 @@ def test_card_without_ridge_keeps_its_recorded_trace():
         "turns_typed": 3, "tool_calls": 2, "commits": 1, "rhythm": [1, 2, 1],
     })
     html = render_card(activity)
-    assert 'class="route"' in html and "polyline" in html
-    assert ">3 prompts<" in html          # the plain card keeps prompts, grouped as cost
-    assert '<div class="n">1</div>' in html and ">commit landed<" in html
+    assert 'class="fc-spark"' in html and 'class="fc-line"' in html      # the rhythm, drawn
+    assert '<dt>Turns</dt><dd class="num">3</dd>' in html                # prompts, as a small figure
+    assert '<span class="fc-n num">1</span><span class="fc-u">commit</span>' in html
     assert "1 commit landed in sample" in html
 
 
@@ -133,10 +133,10 @@ def test_og_renderer_keeps_legacy_cards_and_draws_a_persisted_ridge():
     rendered = json.loads(result.stdout)
     assert '"type":"polyline"' in rendered["legacy"]
     assert '"type":"polygon"' not in rendered["legacy"]
-    assert "Session trace" in rendered["legacy"]
     assert '"type":"polygon"' in rendered["shaped"]
-    assert "Agent ridge" in rendered["shaped"]
-    assert "Session trace" not in rendered["shaped"]
+    # the image carries no series label: the page's card draws the line without one
+    for label in ("Session trace", "Agent ridge"):
+        assert label not in rendered["legacy"] and label not in rendered["shaped"]
 
 
 # Card truth: live public OG images on 2026-09-18 printed 0 beside a ridge drawn from 98
@@ -167,14 +167,15 @@ const nullRidge={id:'c2',title:'Pre ridge run',caption:'old row',project:'demo',
 const shaped=walk(card(withCode));
 const effortTexts=walk(card(effortOnly));
 const body=JSON.stringify(card(withCode));
-const titleHeight=(body.match(/"fontSize":38,"fontWeight":750,"marginTop":3,"height":(\d+)/)||[])[1]||null;
+const titleHeight=(body.match(/"fontSize":44,"fontWeight":700,"letterSpacing":-1,"marginTop":22,"height":(\d+)/)||[])[1]||null;
 const nullBody=JSON.stringify(card(nullRidge));
 const nullTexts=walk(card(nullRidge));
 process.stdout.write(JSON.stringify({
  toolCalls:after(shaped,'Tool calls'),
  toolCallsEffortOnly:after(effortTexts,'Tool calls'),
+ heroEffortOnly:effortTexts[effortTexts.indexOf('tool calls')-1]??null,
  codeActivity:after(effortTexts,'Code activity'),
- project:after(shaped,'Project touched'),
+ joined:shaped.join(' '),
  titleHeight:titleHeight&&Number(titleHeight),
  nullHasPolyline:nullBody.includes('"type":"polyline"'),
  nullHasPolygon:nullBody.includes('"type":"polygon"'),
@@ -194,9 +195,11 @@ def test_og_card_uses_ridge_tool_calls_when_tool_calls_is_zero():
     """A ridge drawn from 98 calls must not print 0 in the tool call slots."""
     rendered = _og_truth()
     assert rendered["toolCalls"] == "98"
-    assert rendered["toolCallsEffortOnly"] == "98"
-    assert rendered["codeActivity"] is None  # The tool count already appears in activity.
-    assert rendered["project"] == "strava night review"
+    # With no commits or files, the 98 calls are the card's one big number, not a small figure.
+    assert rendered["heroEffortOnly"] == "98"
+    assert rendered["toolCallsEffortOnly"] is None
+    assert rendered["codeActivity"] is None
+    assert "strava night review" not in rendered["joined"]   # the page's card names no project
     assert rendered["titleHeight"] is not None and rendered["titleHeight"] >= 54
 
 

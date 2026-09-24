@@ -118,6 +118,8 @@ def test_neutral_body_has_one_message_without_repeating_the_og_card():
 
 
 def test_public_page_exposes_recorded_metrics_as_readable_html():
+    # The page draws the feed card (site/feed-card.js): the strongest measured number leads, up to
+    # three small figures follow, and a figure the row does not carry is not drawn.
     row = {"id": MISSING, "visibility": "public", "title": "A real sitting",
            "caption": "Built the import.\nThen checked the save.",
            "prompts": 6, "tool_calls": 0, "ridge_tool_calls": 28,
@@ -125,15 +127,17 @@ def test_public_page_exposes_recorded_metrics_as_readable_html():
            "duration_s": 600, "files_touched": 0, "commits": 2,
            "project": "session", "profiles": {"handle": "builder"}}
     visible = body(serve(MISSING, [row])["body"])
-    assert '<dt>Session</dt><dd>15m</dd>' in visible
-    assert '<dt>Turns</dt><dd>6</dd>' in visible
-    assert '<dt>Tool calls</dt><dd>28</dd>' in visible
-    assert '<dt>Files touched</dt><dd>0</dd>' in visible
-    assert '<dt>Commits</dt><dd>2</dd>' in visible
+    assert '<article class="card fc"' in visible
+    assert '<span class="fc-n num">2</span><span class="fc-u">commits</span>' in visible
+    assert '<dt>Time</dt><dd class="num">10m</dd>' in visible
+    assert '<dt>Turns</dt><dd class="num">6</dd>' in visible
+    assert '<dt>Tool calls</dt><dd class="num">28</dd>' in visible
+    assert '<dt>Commits</dt>' not in visible  # already the big number
     assert "Built the import.\nThen checked the save." in visible
-    assert "@builder" in visible
+    assert 'href="/?u=builder"' in visible and '>builder</a>' in visible
     assert 'aria-label="STRIVE home"' in visible
-    assert '<img' not in visible  # OG artwork is metadata, not duplicated tiny body text.
+    assert 'aria-label="Discuss"' in visible and 'aria-label="Share"' in visible
+    assert '<img' not in visible  # no avatar and no GitHub account: the initial, no remote image
 
 
 def test_unrecorded_metrics_are_not_guessed_and_recorded_zero_is_preserved():
@@ -141,9 +145,10 @@ def test_unrecorded_metrics_are_not_guessed_and_recorded_zero_is_preserved():
            "prompts": 0, "tool_calls": None, "files_touched": None, "commits": -1,
            "ridge_basis": "turn-order", "ridge_wall_seconds": 120}
     visible = body(serve(MISSING, [row])["body"])
-    assert '<dt>Turns</dt><dd>0</dd>' in visible
-    for label in ("Session", "Tool calls", "Files touched", "Commits"):
+    assert '<dt>Turns</dt><dd class="num">0</dd>' in visible
+    for label in ("Time", "Tool calls", "Files", "Commits"):
         assert f'<dt>{label}</dt>' not in visible
+    assert 'class="fc-hero"' not in visible  # nothing measured to lead with
     assert "Unknown" not in visible
 
 
@@ -164,7 +169,7 @@ def test_public_html_escapes_fields_and_rejects_unsafe_output_links():
     assert 'href="https://example.com/output?a=1&amp;b=2"' in visible
 
 
-def test_public_page_keeps_og_preview_but_draws_the_map_natively():
+def test_public_page_keeps_og_preview_but_draws_the_activity_line_natively():
     row = {"id": MISSING, "visibility": "public", "title": "Measured run",
            "ridge": [0, 2, 5, 1, 0] * 10, "worker_bins": [0] * 50,
            "ridge_basis": "turn-order", "commit_bins": [12]}
@@ -172,15 +177,12 @@ def test_public_page_keeps_og_preview_but_draws_the_map_natively():
     visible = body(page)
     assert '<img' not in visible
     assert 'property="og:image"' in page and 'name="twitter:image"' in page
-    assert '<figure class="run-map">' in visible
-    assert 'viewBox="0 0 800 150"' in visible
-    assert 'aria-label="Tool calls over turn order"' in visible
-    assert '<figcaption>Tool calls over turn order' in visible
-    assert 'Commit marks show recorded locations' in visible
+    assert '<div class="fc-spark"' in visible and 'class="fc-peak"' in visible
     assert 'Open run and discussion' in visible
-    for bad in (None, [0.5] * 50):
+    for bad in (None, [0] * 50, [-1] * 50):
         row["ridge"] = bad
-        assert '<figure class="run-map">' not in body(serve(MISSING, [row])["body"])
-    row["ridge"] = [1] * 50
-    row["ridge_basis"] = None
-    assert '<figure class="run-map">' not in body(serve(MISSING, [row])["body"])
+        assert 'fc-spark' not in body(serve(MISSING, [row])["body"])
+    # The private page for the same id never draws a card, a line or a number.
+    neutral = body(serve(MISSING, [])["body"])
+    for mark in ('class="card fc"', 'fc-spark', 'fc-hero', 'fc-stats'):
+        assert mark not in neutral

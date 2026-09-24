@@ -94,7 +94,7 @@ const constant=name=>{const start=html.indexOf('const '+name+'=');const line=htm
 const helpers=constant('cnt')+'\n'+constant('VPT_SRC')+'\n'+helper('fiveRow')+helper('coachBlock');
 const nodes={},events={};let signins=0;
 function $(id){return nodes[id]??=( {value:'',checked:false,disabled:false,innerHTML:'',addEventListener(type,fn){events[id+':'+type]=fn;}} );}
-const context={$: $,GrinderContract:require(root+'/site/run-contract.js'),location:url,ME:null,
+const context={$: $,GrinderContract:require(root+'/site/run-contract.js'),GrinderFeed:require(root+'/site/feed-card.js'),location:url,ME:null,
  atob:s=>Buffer.from(s,'base64').toString('utf8'),frame:()=>{},esc:s=>String(s),
  sessionStorage:{getItem:()=>null,setItem:()=>{}},
  runAttribution:()=>({handle:'preview',name:'Preview',link:'/?u=preview'}),avatar:()=>'',safeOutputUrl:()=>null,
@@ -103,14 +103,15 @@ vm.createContext(context);vm.runInContext(helpers+cardFn+fn,context);
 (async()=>{
 await vm.runInContext('importRun()',context);
 const preview=nodes['import-card-preview'].innerHTML;
-if(!preview.includes('Preview · not saved')||preview.includes('/?run=preview')||preview.includes('class="act')) throw Error('Preview has saved-run controls');
+// The preview is the feed card in its unsaved form: nothing on it links anywhere.
+if(!preview.includes('<article class="card fc">')||preview.includes('href=')||preview.includes('<button')) throw Error('Preview has saved-run controls');
+if(preview.includes('Untitled run')||preview.includes('ACHIEVED')) throw Error('Preview shows a placeholder title');
 const saved=vm.runInContext("runCard({id:'real-run',profile_id:'real-author',created_at:'2026-09-14',title:'Real run'},false,0)",context);
 for(const text of ['XUDOS','Discuss','Share','/?run=real-run'])if(!saved.includes(text))throw Error('Saved run lost '+text);
 // The rhythm trace carries the blue token inline. A ridge carries it through design.css
 // (.ridge-line stroke:var(--blue)), so a preview with a ridge is checked against that rule.
-const css=fs.readFileSync(root+'/site/design.css','utf8');
-const ridgeBlue=/\.ridge-line\{[^}]*stroke:var\(--blue\)/.test(css);
-if(!preview.includes('color:var(--blue)')&&!(preview.includes('class="ridge"')&&ridgeBlue))throw Error('Preview trace lost blue token');
+const css=fs.readFileSync(root+'/site/feed.css','utf8');
+if(preview.includes('class="fc-line"')&&!/\.fc-line\{[^}]*stroke:var\(--blue\)/.test(css))throw Error('Preview trace lost blue token');
 const rendered=nodes.app.innerHTML;
 if(sample){
  if(!rendered.includes('Sample card preview')||!rendered.includes('not your activity')) throw Error('Sample provenance not visible');

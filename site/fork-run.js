@@ -66,5 +66,5 @@
 
   const api = { MAX_PROMPT_LENGTH, buildPrompt, harnessLink, publicFields };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-  else root.PacecardFork = api;
+  else root.StriveFork = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

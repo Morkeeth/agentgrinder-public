@@ -14,7 +14,7 @@ sentence of prose that keeps its tooltip. Four em-dashes and an `Unknown` in the
 made a real 8m19s Cursor session look like a session in which nothing happened (22 Sep 2026), and
 the cost of that is not a cosmetic one: it is the reason the author would not share the card.
 
-Every Strava-shaped number (prompts, moving time, pace, effort, cadence) is kept, grouped as COST.
+Every Strava-shaped number (prompts, moving time, effort, cadence) is kept, grouped as COST. Pace is not drawn.
 """
 from __future__ import annotations
 from .brand import BRAND, CARD_THEME
@@ -213,19 +213,6 @@ def _outcome_block(a) -> str:
             f'<p class="outcome-basis">{a.outcome_basis}</p>')
 
 
-def _identity_block(a) -> str:
-    """Handle and avatar when this machine is signed in; a neutral label when it is not."""
-    if a.handle:
-        avatar = (f'<img class="avatar" src="{a.avatar_url}" alt="" width="42" height="42" '
-                  f'loading="lazy">')
-    else:
-        avatar = '<div class="avatar none" aria-hidden="true"></div>'
-    note = f' · {a.identity_note}' if a.identity_note else ""
-    return (f'{avatar}<div class="who" title="{a.identity_source}"><b>{a.athlete}</b>'
-            f'<small>{a.date_str}{note}</small></div>')
-
-
-
 def _insight_block(a) -> str:
     """The one selected insight, at the head of the Code Route group. Absent draws nothing.
 
@@ -308,203 +295,56 @@ def _code_route_html(a) -> str:
 
 
 def render_card(a: Activity) -> str:
-    from dataclasses import replace, fields
-    a = replace(a, **{f.name: escape(getattr(a, f.name)) for f in fields(a) if isinstance(getattr(a, f.name), str)})
-    pb = '<span class="pb" title="high sustained cadence">High cadence</span>' if a.focus_pb else ""
-    has_ridge = 40 <= len(a.ridge) <= 60
-    product_name = BRAND
-    title_separator = ":" if has_ridge else chr(8212)
-    if has_ridge:
-        route = _ridge_svg(a)
-    elif a.trace:
-        from .native_trace import svg
-        route = svg(a.trace, a.trace_basis)
-    else:
-        route = _route_svg(a.rhythm) + ("<small>" + a.trace_basis + "</small>" if a.trace_basis else "")
-    five = _five_block(a.five)
-    coach = (f'<section style="padding:20px"><h2>Next session</h2><small>{a.coach_mode}</small><p>{a.coach_verdict}</p><p style="white-space:pre-wrap">{a.coach_plan}</p></section>' if a.coach_verdict else "")
-    tip = (ARTIFACTS_PER_TURN_TIP if a.headline_metric_id == "artifacts_per_turn"
-           else HEADLINE_TIP)
-    hl_title = escape(tip) + " · " + escape(a.headline_formula)
-    # A metric identity with no value is a sentence, not a number. It used to draw a 44px dash.
-    metric_block = (
-        f'<div class="hl" title="{hl_title}"><div class="n">{a.headline}</div>'
-        f'<div class="lbl">{a.headline_label}<span class="f">{escape(a.headline_formula)}</span>'
-        f'</div></div>' if _has_value(a.headline) else "")
-    metric_missing = (Cell(a.headline_label, "—", tip + " · " + a.headline_formula)
-                      if not metric_block else None)
-    wall = ""
-    if a.ridge_wall_seconds is not None:
-        seconds = int(a.ridge_wall_seconds)
-        hours, rest = divmod(seconds, 3600)
-        minutes, secs = divmod(rest, 60)
-        wall = f"{hours}h {minutes:02d}m" if hours else f"{minutes}m {secs:02d}s"
-    output_label = "Output"
-    if a.output_url:
-        if "/pull/" in a.output_url and "github.com/" in a.output_url:
-            output_label = "PR"
-        elif a.output_url.lower().split("?", 1)[0].endswith((".png", ".jpg", ".jpeg", ".webp")):
-            output_label = "Screenshot"
-    output_cell = f'<a href="{a.output_url}">{output_label}</a>' if a.output_url else ""
-    # The title line only earns its space when it says something the outcome sentence does not.
-    # The Cursor title is `repo · commit subject` and the outcome IS that subject, so on a run
-    # that shipped, the whole line is already above it — and the repository is in the line below.
-    title_line = "" if a.outcome and (a.title in a.outcome or a.outcome in a.title) else a.title
-    where = " · ".join(x for x in [
-        a.harness + (" · bot activity" if a.harness == "Grok Bot" else ""),
-        a.project if _has_value(a.project) else "",
-    ] if x)
-    if where and title_line and where in title_line:
-        where = ""      # "Cursor" under "Cursor sitting" is a line that says nothing twice
-    if has_ridge:
-        basis_label = (
-            "wall time" if a.ridge_basis == "wall-time"
-            else "turn order" if a.ridge_basis == "turn-order"
-            else "call order"
-        )
-        unavailable = ("" if a.ridge_basis == "wall-time" else
-            '<p class="grp" style="text-transform:none;letter-spacing:0">Moving time, pace and cadence are unavailable: this harness trace is turn order, not a measured elapsed clock.</p>')
-        # The hero already prints one of these counts in full size. Printing it again two rows
-        # down is padding, so the stat the hero used is left out of the row.
-        used = a.hero_label.split(" ")[-1]      # "landed", "changed", "touched", "calls"
-        body = f'''{_hero_block(a)}{_insight_block(a)}{_selected_outcome_html(a)}{_code_route_html(a)}<div class="ridgewrap">{route}<small>Tool calls over {basis_label}</small></div>
-    {_stats_block([(wall, "Wall time"), (a.distance, "Cost"),
-                   ("" if used == "landed" else a.commits, "Commits"),
-                   ("" if used in ("changed", "touched")
-                    else _just_the_number(a.segments), "Files"),
-                   (output_cell, "Output")])}
-    <details class="more"><summary>More</summary>
-      {metric_block}
-      {five}
-      {_unmeasured_note(a.five, metric_missing)}
-      {unavailable}
-      <div class="sec"><div><span>Tool calls</span><br><b>{_just_the_number(a.effort)}</b></div></div>
-      {coach}
-    </details>'''
-    else:
-        body = f'''{_hero_block(a)}{_insight_block(a)}{_selected_outcome_html(a)}{_code_route_html(a)}<div class="hl" title="{hl_title}">
-      <div class="n">{a.headline}</div>
-      <div class="lbl">{a.headline_label}<span class="f">{escape(a.headline_formula)}</span></div>
-    </div>
-    {five}
-    {_unmeasured_note(a.five)}
-    <div class="routewrap">{route}</div>
-    <div class="grp">Cost — what the run spent</div>
-    {_stats_block([(a.distance, "Typed turns"), (a.moving_time, "Moving time"), (a.pace, "Pace")])}
-    {"" if a.moving_time != "—" or not a.trace_basis else '<p class="grp" style="text-transform:none;letter-spacing:0;padding-top:0">Moving time, pace and cadence are unavailable: this harness trace is turn order, not a measured elapsed clock.</p>'}
-    <div class="sec">
-      {"".join(f"<div><span>{escape(k)}</span><br><b>{v}</b></div>" for v, k in [(a.effort, "Effort"), (a.segments, "Segments"), (a.commits, "Commits"), (a.prompts_per_hour, "Cadence")] if _has_value(v))}
-    </div>
-    {coach}'''
-    ridge_css = """
-  .ridgewrap{padding:12px 20px 4px;border-bottom:1px solid var(--line)}
-  .ridgewrap small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
-  .ridge{display:block;width:100%;height:auto;min-height:132px}
-  .ridge-fill{fill:var(--accent);opacity:.12} .ridge-line{fill:none;stroke:var(--accent);
-    stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-  .ridge-base{stroke:var(--line);stroke-width:1} .ridge-worker{fill:var(--accent)}
-  .ridge-worker.level-1{opacity:.045} .ridge-worker.level-2{opacity:.065}
-  .ridge-worker.level-3{opacity:.085} .ridge-start{fill:var(--card);stroke:var(--accent);stroke-width:2}
-  .ridge-end{fill:var(--accent);stroke:var(--card);stroke-width:2}
-  .ridge-commit{stroke:var(--accent);stroke-width:2} .ridge-chip rect{fill:var(--accent)}
-  .ridge-chip text{fill:var(--card);font:500 12px sans-serif;text-anchor:middle}
-  .more{border-top:1px solid var(--line)} .more>summary{padding:13px 20px;cursor:pointer;color:var(--muted)}
-""" if has_ridge else ""
-    return f'''<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{a.athlete} · {a.title} {title_separator} {product_name}</title>
-<style>
-  {CARD_THEME}
+    """The local card is the feed card (agentgrinder/feedcard.py, a port of site/feed-card.js).
 
-  *{{box-sizing:border-box}} body{{margin:0;background:var(--bg);color:var(--ink);
-    font:15px/1.5 "IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    display:flex;justify-content:center;padding:28px 16px}}
-  .card{{width:100%;max-width:560px;background:var(--card);border:1px solid var(--line);
-    border-radius:2px;overflow:hidden;box-shadow:none}}
-  .top{{display:flex;align-items:center;gap:12px;padding:18px 20px 12px}}
-  .avatar{{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;
-    display:grid;place-items:center;font-weight:700;font-size:18px;object-fit:cover;flex:0 0 auto}}
-  .avatar.none{{background:var(--line)}}
-  .who{{min-width:0}} .who b{{font-weight:650}}
-  .who small{{color:var(--muted);display:block;font-size:12.5px}}
-  .brand{{margin-left:auto;font-weight:800;letter-spacing:.13em;color:var(--muted);font-size:12px}}
-  /* THE HEADLINE IS A SENTENCE. It is the first thing read and the only line that says what
-     this run was for; the metric identity now lives under More, where a ratio belongs. */
-  h1.outcome{{margin:2px 20px 0;font-size:25px;line-height:1.2;letter-spacing:-.018em;
-    font-weight:800}}
-  h1.outcome.nothing{{color:var(--muted);font-weight:700}}
-  .outcome-basis{{margin:6px 20px 10px;color:var(--muted);font-size:12.5px;line-height:1.45}}
-  .hero{{display:flex;align-items:baseline;gap:12px;padding:4px 20px 14px;cursor:help}}
-  .hero .n{{font:800 46px/1 "IBM Plex Sans",system-ui,sans-serif;letter-spacing:-.04em;
-    color:var(--accent)}}
-  .hero .lbl{{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}}
-  .title{{padding:0 20px 4px;font-size:15px;font-weight:600;color:var(--muted);
-    display:flex;align-items:center;gap:10px}}
-  .pb{{font-size:11px;font-weight:700;color:var(--accent);border:1px solid var(--accent);
-    border-radius:999px;padding:2px 8px}}
-  .sub{{padding:0 20px 14px;color:var(--muted);font-size:13px}}
-  .hl{{display:flex;align-items:baseline;gap:14px;padding:6px 20px 12px}}
-  .hl .n{{font-size:44px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--accent)}}
-  .hl .lbl{{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}}
-  .hl .f{{display:block;font-size:12px;color:var(--muted);text-transform:none;letter-spacing:0}}
-{GRID_CSS}
-  .five{{background:var(--card);padding:10px 8px 9px;text-align:center;cursor:help}}
-  .five .v{{font-size:15px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}}
-  .five .k{{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;
-    margin-top:2px;line-height:1.25}}
-  .five[data-missing] .v{{color:var(--muted);font-weight:500}}
-  .five.cost .v{{color:var(--muted)}}
-  .costtag{{font-style:normal;display:inline-block;margin-left:4px;padding:0 4px;border-radius:4px;
-    background:var(--line);color:var(--muted);font-size:9px;letter-spacing:.04em}}
-  .unmeasured{{margin:0;padding:10px 20px;color:var(--faint);font-size:12px;line-height:1.5}}
-  .unmeasured span{{border-bottom:1px dotted var(--line);cursor:help}}
-  .grp{{padding:10px 20px 4px;font-size:10.5px;color:var(--muted);text-transform:uppercase;
-    letter-spacing:.08em}}
-  @media (max-width:420px){{h1.outcome{{font-size:21px}} .hero .n{{font-size:38px}}
-    .hl .n{{font-size:36px}} .stat .v{{font-size:17px}}}}
-  .stat{{background:var(--card);padding:14px 16px}}
-  .stat .v{{font-size:22px;font-weight:720;letter-spacing:-.01em}}
-  .stat .k{{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}}
-  .route{{display:block;width:100%;height:150px;background:
-    linear-gradient(var(--card),var(--card))}}
-  .routewrap{{border-bottom:1px solid var(--line)}}{ridge_css}
-  .sec{{display:flex;flex-wrap:wrap;gap:18px;padding:14px 20px;font-size:13px}}
-  .sec div b{{font-weight:650}} .sec div span{{color:var(--muted)}}
-  .foot{{display:flex;align-items:center;gap:16px;padding:12px 20px;border-top:1px solid var(--line);
-    color:var(--muted);font-size:13px}}
-
-  .outcome-hero,.code-route-block,.insight{{padding:12px 20px;border-bottom:1px solid var(--line)}}
-  .insight{{border-left:3px solid var(--accent)}}
-  .insight .grp{{padding:0 0 4px}}
-  .insight-line{{margin:0 0 6px;font-size:16px;font-weight:650;line-height:1.4}}
-  .insight-src{{margin:0;font-size:12px;color:var(--muted);line-height:1.5}}
-  .insight-src a{{color:var(--accent);font-weight:500}}
-  .outcome-line{{margin:0 0 8px;font-size:16px;font-weight:650;line-height:1.35}}
-  .outcome-links{{margin:0;font-size:13px}}
-  .outcome-links a{{color:var(--accent);font-weight:500}}
-  .code-route-stops{{margin:8px 0 0;padding-left:18px}}
-  .code-route-stops li{{margin:4px 0;font-size:13px}}
-
-  .kudo{{display:flex;align-items:center;gap:6px}} .kudo b{{color:var(--ink)}}
-</style></head>
-<body>
-  <div class="card">
-    <div class="top">
-      {_identity_block(a)}
-      <div class="brand">{product_name}</div>
-    </div>
-    {_outcome_block(a)}
-    {f'<div class="title">{title_line} {pb}</div>' if title_line or pb else ''}
-    <div class="sub">{where}</div>
-    {body}
-    <div class="foot">
-      <div class="kudo">🔥 <b>kudos</b></div>
-      <div class="kudo">💬 comment</div>
-      <div style="margin-left:auto">Push loops. Ship proof.</div>
-    </div>
-  </div>
-</body></html>'''
+    What the run says beyond the card sits under it, each part only when the run carries it: the
+    outcome it shipped, the selected insight and receipts, the Code Route, the coach's verdict.
+    What it did not measure is not drawn."""
+    from .feedcard import esc, page
+    parts = []
+    if a.outcome_shipped:
+        parts.append('<section class="below outcome"><h2>What shipped</h2>'
+                     f'<p class="lead">{esc(a.outcome)}</p><p class="note">{esc(a.outcome_basis)}</p></section>')
+    if a.insight and a.insight_receipt_url:
+        from .insight import PRIVATE_NOTE
+        parts.append('<section class="below insight"><h2>Selected insight · bound to a receipt</h2>'
+                     f'<p class="lead">{esc(a.insight)}</p><p>{esc(a.insight_provenance)} '
+                     f'<a href="{esc(a.insight_receipt_url)}">{esc(a.insight_receipt_label)}</a>. '
+                     f'{esc(PRIVATE_NOTE)}</p></section>')
+    repeated = bool(a.selected_outcome) and a.selected_outcome == a.outcome
+    if (a.selected_outcome and not repeated) or a.receipts:
+        body = []
+        if a.selected_outcome and not repeated:
+            body.append(f'<p class="lead">{esc(a.selected_outcome)}</p>')
+        links = [f'<a href="{esc(r.get("url"))}" rel="noopener noreferrer">{esc(r.get("label"))}</a>'
+                 for r in (a.receipts or [])[:5] if isinstance(r, dict) and r.get("url")]
+        if links:
+            body.append(f'<p class="outcome-links">{" · ".join(links)}</p>')
+        parts.append('<section class="below outcome-hero"><h2>Receipts · said by the uploader, not measured</h2>'
+                     + "".join(body) + '</section>')
+    route = _code_route_html(a)
+    if route:
+        parts.append(route.replace('<section class="code-route-block">', '<section class="below code-route-block">', 1)
+                     .replace('<div class="grp">Code Route · measured</div>', '<h2>Code Route · measured</h2>', 1))
+    if a.coach_verdict:
+        parts.append('<section class="below coach"><h2>Next session'
+                     + (f' · {esc(a.coach_mode)}' if a.coach_mode else '') + '</h2>'
+                     f'<p class="lead">{esc(a.coach_verdict)}</p>'
+                     + (f'<p style="white-space:pre-wrap">{esc(a.coach_plan)}</p>' if a.coach_plan else '')
+                     + '</section>')
+    notes = []
+    row = a.card_row
+    if row.get("duration_s") is None and row.get("wall_time_s") is None and (a.trace_basis or a.ridge_basis):
+        notes.append("Time is not shown: this harness trace is turn order, not a measured elapsed clock.")
+    if not a.outcome_shipped and a.outcome:
+        notes.append(f"{a.outcome}: {a.outcome_basis}.")
+    if a.identity_note:
+        notes.append(f"{a.athlete} · {a.identity_note}.")
+    notes.append(f"Private preview on this computer. Nothing is on {BRAND} until you choose to save it.")
+    notes.append("Counts describe activity, not result quality.")
+    from .feedcard import title_of
+    return page(row, title=f"{title_of(row)} · {BRAND}", below="".join(parts), notes=notes,
+                brand=BRAND, meta_extra="bot activity" if a.harness == "Grok Bot" else "")
 
 
 def render_profile(p: dict) -> str:
@@ -514,7 +354,7 @@ def render_profile(p: dict) -> str:
       <a class="runrow" href="#">
         <div class="rt">{a.title}</div>
         <div class="rm"><span class="hl" title="{escape(ARTIFACTS_PER_TURN_TIP if a.headline_metric_id=='artifacts_per_turn' else HEADLINE_TIP)} · {escape(a.headline_formula)}">{a.headline} {a.headline_label}</span>
-          <span class="cost">{a.distance} · cost</span><span>{a.moving_time}</span><span>{a.pace}</span>
+          <span class="cost">{a.distance} · cost</span><span>{a.moving_time}</span>
           <span>{a.commits} commits</span>{" <span class='pb'>★ PB</span>" if a.focus_pb else ""}</div>
         <div class="rs">{a.harness}{" · bot activity" if a.harness == "Grok Bot" else ""} · {a.project} · {a.date_str}</div>
       </a>''' for a in acts) or '<div class="empty">No runs yet — <code>agentgrinder run</code> to log one.</div>'
