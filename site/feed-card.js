@@ -299,17 +299,18 @@
   function wireStride(scope) {
     (scope || document).querySelectorAll(".fc-copy:not([data-wired])").forEach((b) => {
       b.dataset.wired = "true";
-      const text = b.dataset.copy || "";
+      // Read at the click, not at wiring: the drop-in rewrites data-copy once the link exists.
+      const text = () => b.dataset.copy || "";
       b.addEventListener("click", async () => {
         const label = b.textContent;
-        try { await navigator.clipboard.writeText(text); b.textContent = "Copied"; }
+        try { await navigator.clipboard.writeText(text()); b.textContent = "Copied"; }
         catch (_) { b.textContent = "Select and copy"; }
         setTimeout(() => (b.textContent = label), 1600);
       });
       if (typeof navigator !== "undefined" && navigator.share) {
         const share = document.createElement("button");
         share.type = "button"; share.className = "fc-copy fc-share"; share.textContent = "Share";
-        share.addEventListener("click", () => navigator.share({ text }).catch(() => {}));
+        share.addEventListener("click", () => navigator.share({ text: text() }).catch(() => {}));
         b.after(share);
       }
     });

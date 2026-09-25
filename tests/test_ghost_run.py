@@ -151,7 +151,7 @@ def test_the_landing_and_the_share_image_carry_the_line():
     assert "Strava is for people who ran. <i>__BRAND__</i> is for people who didn't." in html
     assert html.count("Strava is for people who ran. __BRAND__ is for people who didn't.") == 2   # og + twitter
     server = (ROOT / "server/public-run.mjs").read_text()
-    assert "Strava is for people who ran. STRIVE is for people who didn\\'t." in server
+    assert "Strava is for people who ran. ${BRAND} is for people who didn't." in server
     # The share image draws the ghost in orange and the map from the same geometry as the card.
     assert "badge.key==='ghost'?ORANGE:BLUE" in server and "Feed.routeGeometry(run)" in server
     # `route` is the map, and never a second line on the image.
@@ -176,3 +176,17 @@ def test_codex_desktop_rollouts_count_the_prompts_the_person_typed():
     assert "PROMPT-SENTINEL" not in json.dumps({k: v for k, v in run.items() if k not in ("title", "private_title_prompt")})
     with_events = ingest.parse_codex_session(str(ROOT / "samples/dropin/codex-edge.jsonl"))
     assert with_events["turns_typed"] >= 1                   # the event form still reads as before
+
+
+def test_copy_reads_the_stride_at_the_click_so_the_link_is_on_it():
+    # The drop-in wires Copy before a link exists and rewrites data-copy once it does. A handler
+    # that read the text at wiring time copied the line without the address.
+    out = node("""const {JSDOM}=require(process.argv[1]+'/node_modules/jsdom');
+const dom=new JSDOM('<button class="fc-copy" data-copy="A">Copy</button>');
+global.window=dom.window;global.document=dom.window.document;
+const F=require(process.argv[1]+'/site/feed-card.js');
+const got=[];global.navigator={clipboard:{writeText:async t=>{got.push(t)}},share:d=>{got.push('share:'+d.text);return Promise.resolve()}};
+F.wireStride(document);const b=document.querySelector('.fc-copy');b.dataset.copy='B';
+b.click();document.querySelector('.fc-share').click();
+setTimeout(()=>process.stdout.write(JSON.stringify(got)),20);""")
+    assert json.loads(out) == ["B", "share:B"]
