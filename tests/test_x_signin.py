@@ -54,3 +54,9 @@ def test_migration_is_additive_and_checked():
     assert "create unique index if not exists profiles_x_handle_key" in MIGRATION
     for word in ("drop ", "grant ", "policy", "trigger"):
         assert word not in MIGRATION.lower().replace("no policy, grant, function or\n-- trigger changes", "")
+
+
+def test_build_can_switch_x_on_without_a_commit():
+    build = (ROOT / "scripts" / "build-site.mjs").read_text()
+    assert "process.env.AGENTGRINDER_X_SIGNIN==='1'" in build
+    assert "'const PROVIDERS_ENABLED=[\"github\",\"x\"];'" in build

@@ -1068,6 +1068,16 @@ function projectLinkHtml(r){
   const repo=r.repo_url&&safeOutputUrl(r.repo_url);
   return `<a href="/?project=${encodeURIComponent(r.project)}">${esc(label)}</a>${repo?` · <a href="${esc(repo)}" target="_blank" rel="noopener noreferrer">repo ↗</a>`:''}`;
 }
+// THE LABEL ABOVE THE TITLE (25 Sep 2026, "REAL for shitty runs"). "Achieved" printed on every
+// card, including a run that changed nothing. Now it prints only when the run recorded an
+// outcome: a commit, a declared shipped line or receipt, or a link to what was built. A run
+// with none of those gets no label, so a failed run reads as what it was.
+function achievedLabel(r){
+  const shipped=Array.isArray(r.shipped)?r.shipped.length:r.shipped?1:0;
+  const receipts=Array.isArray(r.receipts)?r.receipts.length:r.receipts?1:0;
+  const done=(r.commits>0)||shipped>0||receipts>0||!!(r.output_url&&safeOutputUrl(r.output_url));
+  return done?'<div class="run-story-label achieved">Achieved</div>':'';
+}
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
   const projectName=()=>GrinderContract.projectLabel(r.project);
   const codeFacts=()=>{
@@ -1140,7 +1150,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
     ${cover}
-    <div class="run-story-label achieved">Achieved</div>
+    ${achievedLabel(r)}
     <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
     ${audienceNote}
