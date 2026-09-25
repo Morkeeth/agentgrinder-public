@@ -1,11 +1,12 @@
-"""The public STRIVE entry leads with the pitch and the drop zone, then a real public run."""
+"""The public STRIVE home is the social product: the pitch, one ask to sign in and build a profile,
+then the public feed. The drop zone lives on Add a run (/?post) since 25 Sep 2026 evening."""
 from pathlib import Path
 
 HTML = (Path(__file__).resolve().parents[1] / 'site/index.html').read_text()
 
 
 def landing():
-    return HTML[HTML.index('function landingHTML()'):HTML.index('\nasync function fetchLatestPublicRuns(')]
+    return HTML[HTML.index('function landingHTML()'):HTML.index('// THE DROP ZONE. One markup')]
 
 
 def view_landing():
@@ -18,31 +19,27 @@ def test_logged_out_landing_exposes_browsing_and_first_post():
     # The joke is the pitch, whole and undisclaimed (Oscar, 25 Sep 2026).
     assert "Strava is for people who ran. <i>__BRAND__</i> is for people who didn't." in body
     assert 'href="/?explore"' in body
-    assert 'Post your first run' in body
-    assert 'href="/?connect"' in body or 'href="/?post"' in body
+    assert 'data-signin>${signInLabel()} and build your profile</button>' in body
+    assert 'href="/?post">Add a run</a>' in body and 'href="/?connect"' in body
     assert 'Sign in to browse' not in body
     # Phone used to pull the feature card above the pitch via order:-1. Keep source order.
     assert '.launch-grid>.landing-feature{order:-1}' not in HTML
     assert body.index('landing-intro') < body.index('landing-feature')
 
 
-def test_landing_explains_deliberate_publication():
-    # The hero is the drop zone since 24 Sep 2026: the file is read in the tab, and the only
-    # thing that ever leaves is asked for by name.
+def test_the_drop_zone_left_the_home_for_add_a_run():
     body = landing()
-    assert 'Drop a session file' in body and 'id="drop-file"' in body
-    assert 'Read on this device. Nothing leaves it until you ask for a link.' in body
-
-
-def test_landing_names_where_each_harness_keeps_its_session_file():
-    body = landing()
+    assert '${dropZoneHtml()}' not in body and 'id="drop-file"' not in body
+    assert 'Runs stay private until you choose Public and save them.' in body
+    post = HTML[HTML.index('async function viewPost(){'):HTML.index('async function viewExplore(){')]
+    assert '${connectBodyHtml()}' in post and "location.hash==='#drop-zone'" in post
+    connect = HTML[HTML.index('function connectBodyHtml(){'):]
+    assert '${dropZoneHtml()}' in connect
     for path in ('~/.claude/projects/', '~/.cursor/projects/', '~/.codex/sessions/'):
-        assert path in body
-    assert 'Cmd+Shift+G' in body
-    assert 'checked on test files only' in body   # Codex: no typed Codex session on the author's Mac
-    # The command line stays, below the fold, for power users.
-    # The drop zone is one helper since 25 Sep 2026 (shared with Connect); its call site leads.
-    assert body.index('${dropZoneHtml()}') < body.index('landing-feature') < body.index('For power users')
+        assert path in HTML
+    route = HTML[HTML.index('async function route(){'):]
+    assert "if(location.hash==='#drop-zone') return viewPost();" in route
+    assert "if(ME) return social.following({home:true});" in route
 
 
 def test_landing_points_to_a_real_run_not_the_bundled_sample():
@@ -64,7 +61,7 @@ def test_landing_points_to_a_real_run_not_the_bundled_sample():
 def test_landing_loads_latest_public_run_only():
     view = view_landing()
     # Real run cards above the fold: the newest Public runs, drawn with the feed card.
-    assert "fetchLatestPublicRuns(3)" in view
+    assert "fetchLatestPublicRuns(20)" in view
     assert "feedCards(featured" in view
     fetch = HTML[HTML.index('async function fetchLatestPublicRuns('):HTML.index('async function viewLanding()')]
     assert ".eq('visibility','public')" in fetch

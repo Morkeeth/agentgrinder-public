@@ -18,7 +18,7 @@ def test_primary_nav_has_the_product_loop():
         re.sub(r"<[^>]+>", "", m).strip()
         for m in re.findall(r"<a\s[^>]*>(.*?)</a>", before_menus, flags=re.S)
     ]
-    assert top == ["Feed", "Post a run"]
+    assert top == ["Feed", "Add a run"]
     summaries = [re.sub(r"<[^>]+>", "", m).strip() for m in re.findall(r"<summary[^>]*>(.*?)</summary>", primary, flags=re.S)]
     assert summaries == ["You", "More"]
     for label in ("Community", "Following", "Forum", "Crews", "Challenges"):

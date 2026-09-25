@@ -295,10 +295,16 @@ window.GrinderSocial = function ({
     return `<p class="response-return"><a class="act" href="/?inbox">Back to Responses</a></p>`;
   }
 
-  async function following() {
+  // THE FOLLOWING FEED, which is also the signed-in home (25 Sep 2026 evening). Runs from the
+  // people you follow come first. With nobody followed, or nobody posting yet, the page offers
+  // builders to follow and then the latest public runs, so the home is never an empty page.
+  async function following(opts = {}) {
+    const home = !!opts.home;
     start(
-      "Following",
-      "Public runs from people you follow. Close-friends runs stay on their profile, not here. Responses keeps ACK and reply returns.",
+      home ? "Your feed" : "Following",
+      home
+        ? "Public runs from the people you follow. Add a run from the Post button."
+        : "Public runs from people you follow. Close-friends runs stay on their profile, not here.",
       "feed",
     );
     if (!signedIn()) {
@@ -307,6 +313,19 @@ window.GrinderSocial = function ({
       await suggestBuilders(slot);
       return;
     }
+    const latest = async (heading) => {
+      const runs = await result(
+        db
+          .from("runs")
+          .select("*,profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)")
+          .eq("visibility", "public")
+          .order("created_at", { ascending: false })
+          .limit(20),
+      );
+      return runs.length
+        ? `<section class="home-latest" aria-label="${esc(heading)}"><div class="land-head"><h2>${esc(heading)}</h2><a href="/?explore">See all</a></div>${await renderRuns(runs)}</section>`
+        : "";
+    };
     try {
       const follows = await result(
         db
@@ -317,10 +336,11 @@ window.GrinderSocial = function ({
       if (!follows.length) {
         byId("social-body").innerHTML =
           empty(
-            "Find one builder by handle or open a profile from a real run. Following is deliberate: nobody is imported or followed automatically.",
-            `<div class="cta"><a class="act blue" href="/?people">Find people</a><a class="act" href="/?post">Post your first run</a><a class="act" href="/?explore">Discover runs</a></div>`,
-          ) + '<div id="following-suggest"></div>';
+            "You follow nobody yet. Follow a builder from a run or a profile and their public runs land here. Following is deliberate: nobody is imported or followed automatically.",
+            `<div class="cta"><a class="act blue" href="/?people">Find people</a><a class="act" href="/?post">Add a run</a></div>`,
+          ) + '<div id="following-suggest"></div><div id="following-latest"></div>';
         await suggestBuilders(byId("following-suggest"));
+        byId("following-latest").innerHTML = await latest("Latest public runs");
         return;
       }
       const followedIds = follows.map((f) => f.followed_id);
@@ -355,15 +375,16 @@ window.GrinderSocial = function ({
       byId("social-body").innerHTML =
         empty(
           "You follow these builders, but none has a public run yet. Following only lists Public runs. Close-friends work appears on a builder profile when you are on their list.",
-          `<div class="cta"><a class="act blue" href="/?post">Post a run</a><a class="act" href="/?people">Find more people</a><a class="act" href="/?explore">Discover runs</a></div>`,
+          `<div class="cta"><a class="act blue" href="/?post">Add a run</a><a class="act" href="/?people">Find more people</a></div>`,
         ) +
         (list
           ? `<article class="card"><h3>People you follow</h3><ul class="following-people">${list}</ul></article>`
-          : "");
+          : "") + '<div id="following-latest"></div>';
+      byId("following-latest").innerHTML = await latest("Latest public runs");
     } catch (e) {
       byId("social-body").innerHTML = empty(
         "The following feed could not load. Your follows have not changed.",
-        `<div class="cta"><a class="act" href="/?people">Find people</a></div>`,
+        `<div class="cta"><a class="act" href="/?people">Find people</a><a class="act" href="/?explore">Discover runs</a></div>`,
       );
       fail(e);
     }
