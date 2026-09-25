@@ -12,9 +12,12 @@ GROK = (ROOT / "docs" / "GROK-PUSH.md").read_text()
 DRY_RUN = (ROOT / "scripts" / "check-hosted-config.mjs").read_text()
 
 
-def test_fresh_signed_in_builder_lands_on_first_post_not_a_tour():
+def test_fresh_signed_in_builder_lands_on_the_drop_zone_not_a_tour():
+    # 25 Sep 2026: home is the landing for everyone. A person who signed in to post the file they
+    # dropped used to land on a command line with the drop zone gone.
     route = INDEX[INDEX.index("async function route(){") :]
-    assert "if(ME&&(await runCount())===0) return viewPost();" in route
+    assert "if(ME&&(await runCount())===0) return viewPost();" not in route
+    assert "return viewLanding(); }" in route
     onboard = INDEX[INDEX.index("async function shouldOnboard(){") : INDEX.index("function stepBar(")]
     assert "runCount()" not in onboard
     assert "Start with a private preview" in INDEX or "Your first post defaults to Only me." in INDEX
