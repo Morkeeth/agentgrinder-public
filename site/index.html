@@ -1651,6 +1651,8 @@ async function mountCoachExperiment(run, slot){
   };
 }
 
+// Same rule as the post form and run-contract.js: https, and a raster image the card can show.
+function isRunPhotoUrl(u){return /^https:\/\/[^\s]+$/i.test(u)&&/\.(png|jpe?g|webp)([?#].*)?$/i.test(u)}
 async function viewRun(id){
   const app=$('app');
   const q=new URLSearchParams(location.search);
@@ -1689,9 +1691,9 @@ async function viewRun(id){
   const copyLink=$('run-copy-link');if(copyLink)copyLink.onclick=async()=>{try{const sharePath=r.visibility==='public'?'/r/'+r.id:'/?run='+r.id;await navigator.clipboard.writeText(location.origin+sharePath);copyLink.textContent='Link copied'}catch(_){status('Copy this page address to share your run.')}};
   if(ME?.id===r.profile_id){
     const controls=document.createElement('div');controls.className='panel reply-form';
-    controls.id='run-edit';controls.innerHTML='<h2>Edit your post</h2><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label id="run-audience-label">Who can read this run<select id="run-audience"><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
-    app.append(controls);$('run-caption').value=r.caption||r.note||'';$('run-output-url').value=r.output_url||'';$('run-audience').value=r.visibility==='anonymous'?'private':r.visibility;
-    $('run-save').onclick=async()=>{const caption=$('run-caption').value.trim(),output=$('run-output-url').value.trim(),audience=$('run-audience').value;if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}if(!(await requireCloseFriendsForSave(audience)))return;const {error}=await sb.from('runs').update({caption:caption||null,output_url:output||null,visibility:audience}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};
+    controls.id='run-edit';controls.innerHTML='<h2>Edit your post</h2><label>Title<input id="run-title" maxlength="120"></label><label>Project<input id="run-project" maxlength="120"></label><label>Photo link (optional)<input id="run-image-url" type="url" maxlength="2048" placeholder="https://…/photo.jpg"></label><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label id="run-audience-label">Who can read this run<select id="run-audience"><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
+    app.append(controls);$('run-title').value=r.title||'';$('run-project').value=r.project||'';$('run-image-url').value=r.image_url||'';$('run-caption').value=r.caption||r.note||'';$('run-output-url').value=r.output_url||'';$('run-audience').value=r.visibility==='anonymous'?'private':r.visibility;
+    $('run-save').onclick=async()=>{const title=$('run-title').value.trim(),project=$('run-project').value.trim(),imageUrl=$('run-image-url').value.trim(),caption=$('run-caption').value.trim(),output=$('run-output-url').value.trim(),audience=$('run-audience').value;if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}if(imageUrl&&!isRunPhotoUrl(imageUrl)){status('The photo link must be https and end in .png, .jpg, .jpeg or .webp.',true);return}if(!(await requireCloseFriendsForSave(audience)))return;const {error}=await sb.from('runs').update({title:title||null,project:project||null,image_url:imageUrl||null,caption:caption||null,output_url:output||null,visibility:audience}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};
     $('run-delete').onclick=async()=>{if(!confirm('Delete this run and its discussion?'))return;const {error}=await sb.from('runs').delete().eq('id',r.id);if(error){status(error.message,true);return}history.replaceState(null,'','/?mine');viewMe()};
   }
   wireKudos(); if(openAck){ const card=$('card-'+id); if(card) wireAckPicker(card,r,preselect); }
@@ -1999,11 +2001,12 @@ async function viewProfile(handle){
   const rg=prof.rig||{};
   const setup=harnesses.join(' · ');
   frame(railHtml(mine?'me':null,R), null);
-  app.innerHTML=`<div class="phero">${avatar(handle,{size:36,agent:isAgentProfile(prof)})}
+  // A person's profile shows their face: their photo link, else their GitHub picture. An agent keeps its trace tile.
+  app.innerHTML=`<div class="phero">${!isAgentProfile(prof)&&window.GrinderFeed?.face?GrinderFeed.face({profiles:prof},56):avatar(handle,{size:36,agent:isAgentProfile(prof)})}
       <div><h1>${esc(prof.display_name||prof.name||handle)}</h1><div class="h">@${esc(handle)}${setup?' · '+esc(setup):''}</div>${profileLinksHtml(prof,mine)}</div></div>
     <div id="social-follow" class="social-follow"></div>
     ${heatmapSvg(R)}
-    ${mine?`<details class="profile-settings"><summary>Edit profile</summary><div class="panel pad"><label>Handle<input id="e_handle" maxlength="40" value="${esc(handle)}"></label><label>Display name<input id="e_name" maxlength="60" value="${esc(prof.display_name||prof.name||'')}"></label><button id="savep">Save profile</button><div id="linked-accounts"><p class="meta">Sign-in methods, sign out on this device and profile deletion live in <a href="/?account">Account settings</a>.</p></div></div></details>`:''}
+    ${mine?`<details class="profile-settings"><summary>Edit profile</summary><div class="panel pad"><label>Handle<input id="e_handle" maxlength="40" value="${esc(handle)}"></label><label>Display name<input id="e_name" maxlength="60" value="${esc(prof.display_name||prof.name||'')}"></label><label>Photo link (optional)<input id="e_avatar" type="url" maxlength="2048" placeholder="https://…/me.jpg" value="${esc(prof.avatar_url||'')}"></label><button id="savep">Save profile</button><div id="linked-accounts"><p class="meta">Sign-in methods, sign out on this device and profile deletion live in <a href="/?account">Account settings</a>.</p></div></div></details>`:''}
     ${mine?'<div id="close-friends-management"></div>':''}
     ${(()=>{const seen=new Map();R.forEach(r=>{const l=GrinderContract.projectLabel(r.project);if(l&&!seen.has(r.project))seen.set(r.project,l)});return seen.size?`<p class="profile-context">Projects: ${[...seen].map(([k,l])=>`<a href="/?project=${encodeURIComponent(k)}">${esc(l)}</a>`).join(' · ')}</p>`:''})()}
     <p class="profile-context">Identity first, then recent work. XUDOS are recognition from people, not a quality score.</p>
@@ -2015,7 +2018,8 @@ async function viewProfile(handle){
   await social.followControl(prof,$('social-follow'));
   if(mine) await social.closeFriends($('close-friends-management'));
   if(mine) $('savep').addEventListener('click',async()=>{
-    try{ME=await auth.updateProfile({handle:$('e_handle').value,display_name:$('e_name').value});const h=profileHandle(ME);history.replaceState(null,'','/?u='+encodeURIComponent(h));await refreshAuth();await viewProfile(h);status('Saved.');}catch(e){status(e.detail?.message||'Your profile could not be saved.',true)} });
+    const avatarUrl=$('e_avatar').value.trim();if(avatarUrl&&!/^https:\/\/[^\s]+$/i.test(avatarUrl)){status('The photo link must start with https://.',true);return}
+    try{ME=await auth.updateProfile({handle:$('e_handle').value,display_name:$('e_name').value,avatar_url:avatarUrl});const h=profileHandle(ME);history.replaceState(null,'','/?u='+encodeURIComponent(h));await refreshAuth();await viewProfile(h);status('Saved.');}catch(e){status(e.detail?.message||'Your profile could not be saved.',true)} });
 }
 
 function signInWithGitHub(){
