@@ -53,3 +53,11 @@ def test_page_titles_follow_route_order():
 
 def test_about_does_not_claim_runs_start_private():
     assert "Every run starts private" not in (ROOT / "site/about.html").read_text()
+
+
+def test_upload_copy_makes_no_counts_only_claim():
+    # uploadPayload also sends the start hour, the activity shape and folder station indices.
+    for name in ("site/dropin.js", "site/index.html", "server/dropin-link.mjs"):
+        src = (ROOT / name).read_text()
+        for claim in ("Only the numbers on this card", "Only the counts and your title", "Counts only."):
+            assert claim not in src, (name, claim)
