@@ -11,6 +11,8 @@
   const esc = (s) =>
     String(s ?? "").replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" }[c]));
   const whole = (v) => (Number.isFinite(v) && v >= 0 ? Math.round(v) : null);
+  // Thousands with commas whatever the runtime locale, as agentgrinder/feedcard.py _thousands.
+  const thousands = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
   function durationLabel(seconds) {
     if (!Number.isFinite(seconds) || seconds <= 0) return null;
@@ -75,9 +77,9 @@
     const files = whole(r.files_touched);
     const tools = toolCalls(r);
     const time = durationLabel(r.wall_time_s ?? r.duration_s);
-    if (commits) return { n: commits.toLocaleString(), unit: commits === 1 ? "commit" : "commits", key: "commits" };
-    if (files) return { n: files.toLocaleString(), unit: files === 1 ? "file changed" : "files changed", key: "files" };
-    if (tools) return { n: tools.toLocaleString(), unit: "tool calls", key: "tools" };
+    if (commits) return { n: thousands(commits), unit: commits === 1 ? "commit" : "commits", key: "commits" };
+    if (files) return { n: thousands(files), unit: files === 1 ? "file changed" : "files changed", key: "files" };
+    if (tools) return { n: thousands(tools), unit: "tool calls", key: "tools" };
     if (time) return { n: time, unit: "session", key: "time" };
     return null;
   }
@@ -93,7 +95,7 @@
     const turns = whole(r.prompts ?? r.turns_typed);
     add("turns", "Turns", turns);
     const tools = toolCalls(r);
-    add("tools", "Tool calls", tools ? tools.toLocaleString() : null);
+    add("tools", "Tool calls", tools ? thousands(tools) : null);
     add("commits", "Commits", whole(r.commits) || null);
     add("files", "Files", whole(r.files_touched) || null);
     return out;
@@ -103,9 +105,6 @@
   // else: no history, no other runs, no guess. The first rule that holds wins, and its detail line
   // prints the number that earned it, so a reader can check the badge against the card. A run that
   // earns none carries none. agentgrinder/feedcard.py achievement() is the same list.
-  // Thousands with commas whatever the runtime locale, as agentgrinder/feedcard.py _thousands.
-  const thousands = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-
   function hourOf(r) {
     return Number.isInteger(r.started_hour) && r.started_hour >= 0 && r.started_hour <= 23 ? r.started_hour : null;
   }
@@ -141,11 +140,11 @@
     const files = whole(r.files_touched);
     const hour = hourOf(r);
     if (secs >= 10800) return { key: "marathon", label: "Marathon", detail: `${durationLabel(secs)} in one session` };
-    if (turns === 1 && tools >= 60) return { key: "one-shot", label: "One-shot", detail: `1 prompt, ${tools.toLocaleString()} tool calls` };
+    if (turns === 1 && tools >= 60) return { key: "one-shot", label: "One-shot", detail: `1 prompt, ${thousands(tools)} tool calls` };
     if (hour != null && (hour >= 23 || hour < 5)) return { key: "night-owl", label: "Night owl", detail: hour >= 23 ? "started after 23:00" : "started before 05:00" };
-    if (commits >= 5) return { key: "shipper", label: "Shipper", detail: `${commits.toLocaleString()} commits in one run` };
-    if (files >= 25) return { key: "wide-net", label: "Wide net", detail: `${files.toLocaleString()} files changed` };
-    if (turns >= 2 && tools && tools / turns >= 30) return { key: "delegator", label: "Delegator", detail: `${Math.round(tools / turns).toLocaleString()} tool calls per prompt` };
+    if (commits >= 5) return { key: "shipper", label: "Shipper", detail: `${thousands(commits)} commits in one run` };
+    if (files >= 25) return { key: "wide-net", label: "Wide net", detail: `${thousands(files)} files changed` };
+    if (turns >= 2 && tools && tools / turns >= 30) return { key: "delegator", label: "Delegator", detail: `${thousands(Math.round(tools / turns))} tool calls per prompt` };
     if (secs > 0 && secs < 900 && commits >= 1) return { key: "sprint", label: "Sprint", detail: "a commit in under 15 minutes" };
     if (secs >= 3600) return { key: "deep-focus", label: "Deep focus", detail: "over an hour in one session" };
     if (hour != null && hour >= 5 && hour < 7) return { key: "early-bird", label: "Early bird", detail: "started before 07:00" };
