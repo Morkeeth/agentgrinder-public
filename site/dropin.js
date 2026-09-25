@@ -189,6 +189,40 @@
     });
   }
 
+  // A phone: a coarse pointer, no hover, and no fine pointer anywhere (an iPad with a trackpad
+  // has one, and can read a file). The session file is on the computer the agent ran on, so a
+  // phone's first step is to send this page there.
+  function isPhone() {
+    const m = (q) => !!(root.matchMedia && root.matchMedia(q).matches);
+    return m("(pointer: coarse)") && m("(hover: none)") && !m("(any-pointer: fine)");
+  }
+
+  async function sendToLaptop(button) {
+    const url = location.origin + "/";
+    const label = button.textContent;
+    if (navigator.share) {
+      try { await navigator.share({ title: document.title, url }); return; }
+      catch (error) { if (error && error.name === "AbortError") return; }
+    }
+    try { await navigator.clipboard.writeText(url); button.textContent = "Link copied"; }
+    catch (_) { button.textContent = url.replace(/^https?:\/\//, ""); }
+    setTimeout(() => (button.textContent = label), 1600);
+  }
+
+  function phoneStage(zone) {
+    const where = document.querySelector("details.drop-where");
+    // Off a phone the fold is a plain label (site/dropin.css): no key should close it either.
+    if (!isPhone()) { const s = where && where.querySelector("summary"); if (s) s.tabIndex = -1; return; }
+    const choose = zone.querySelector(".cta .act.primary");
+    if (choose) choose.classList.remove("primary");
+    const send = document.createElement("div");
+    send.className = "drop-send";
+    send.innerHTML = '<button type="button" class="act primary" id="drop-send">Send this link to your laptop</button>';
+    zone.insertAdjacentElement("afterend", send);
+    send.querySelector("button").onclick = (e) => sendToLaptop(e.currentTarget);
+    if (where) where.open = false;
+  }
+
   function mount(options) {
     opts = options || {};
     const stage = $("drop-stage");
@@ -198,6 +232,7 @@
     if (!stage.dataset.template) stage.dataset.template = stage.innerHTML;
     const input = $("drop-file"), zone = $("drop-zone");
     if (!input || !zone) return;
+    phoneStage(zone);
     input.onchange = () => read(input.files && input.files[0]);
     const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
     zone.addEventListener("dragenter", (e) => { stop(e); zone.classList.add("over"); });

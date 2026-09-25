@@ -1507,10 +1507,10 @@ function landingHTML(){
       <span class="cta"><span class="act primary">Choose a file</span></span>
       <span class="drop-local" id="drop-progress">Read on this device. Nothing leaves it until you ask for a link.</span>
     </label><p class="drop-error" id="drop-error" role="alert" hidden></p></div>
-    <div class="drop-where"><p class="meta">Where the file is, on a Mac</p>
+    <details class="drop-where" open><summary class="meta">Where the file is, on a Mac</summary>
       ${where.map(([h,path,rest,note])=>`<div class="drop-path"><span class="drop-h">${h}${note?`<small>${note}</small>`:''}</span><code>${esc(path)}</code><button type="button" class="act" data-copy="${esc(path)}" aria-label="Copy the ${h} folder">Copy</button><small class="drop-rest">${esc(rest)}</small></div>`).join('')}
       <p class="hint">In Finder or the file picker, press Cmd+Shift+G, paste the folder, press Return.</p>
-    </div>
+    </details>
     </section>
     <section class="landing-feature" aria-label="A public run" id="landing-feature">
       <div class="land-head"><h2>Latest runs</h2><a href="/?explore">See all</a></div>
