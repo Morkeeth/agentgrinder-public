@@ -1332,9 +1332,6 @@ async function shouldOnboard(){
   return false;
 }
 
-function stepBar(n,done){ return `<div class="steps">${[1,2,3,4].map(i=>
-  `<span class="${i<done?'done':i===n?'on':''}"></span>`).join('')}</div>`; }
-
 // THE ONE CONNECT PAGE (25 Sep 2026). Before this, the same act had three pages and three
 // commands: /?post (git clone ... grind --harness auto), /?onboard (the same inside a four-step
 // wizard) and, once signed in, a uvx line. Now: one page, fastest path first, one command per
@@ -1345,7 +1342,7 @@ function connectBodyHtml(){
       ${file?`<div class="drop-path"><span class="drop-h">Drop the file${note?`<small>${note}</small>`:''}</span><code>${esc(file)}</code><button type="button" class="act" data-copy="${esc(file)}" aria-label="Copy the ${name} folder">Copy</button><small class="drop-rest">${esc(rest)}</small></div>`:''}
       <div class="cmd"><span class="c">${ONE_LINE(harness)}</span><button type="button" class="act" data-copy="${esc(ONE_LINE(harness))}">Copy</button></div></article>`;
   return `<p class="connect-lead">Every agent keeps a session file on the computer it ran on. Drop that file here: the card is made in this tab and nothing leaves it until you ask. Or run one command on that computer and it opens the preview for you. No account for the card or the link. Sign in with GitHub${PROVIDERS_ENABLED.includes('x')?' or X':''} only to post it to the feed.</p>
-    <div class="ob-phone-handoff" data-phone-handoff="1"><p class="hint"><b style="color:var(--ink);font-weight:500">Capture runs on the computer where your agent runs</b> (Claude Code, Cursor, Codex or a Grok Bot export). This phone cannot record a sitting. Send this page there and drop the file, or copy a command below.</p></div>
+    <div class="ob-phone-handoff" data-phone-handoff="1"><p class="hint"><b style="color:var(--ink);font-weight:500">Capture runs on the computer where your agent runs</b> (Claude Code, Cursor, Codex or a Grok Bot export). This phone cannot record a sitting.</p></div>
     ${dropZoneHtml()}
     <section class="connect-agents" aria-label="One path per agent">
       ${agent('Claude Code','claude',AGENT_FILES[0][1],AGENT_FILES[0][2],'')}
@@ -1472,16 +1469,6 @@ const INSTALL_CMD="git clone https://github.com/Morkeeth/agentgrinder-public && 
 // The first-run door: one line that installs nothing globally and needs no clone. Its --push
 // defaults to the hosted app (agentgrinder/push.py), so the printed link opens a real page.
 const COACH_CMD='python3.12 -m venv .venv && .venv/bin/pip install -e ".[coach]" && .venv/bin/agentgrinder grind --coach';
-function uploadBlock(){
-  return `<div class="up">
-    <div class="up-top"><span class="t">Capture from Cursor, Claude Code, Codex or Grok Bot</span><span class="meta">private by default</span></div>
-    <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
-    <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness auto --push</span><span class="d">reads the freshest Cursor, Claude Code, Codex or imported Grok Bot session</span></div>
-    <div class="cmd"><span class="c"><span class="card-harness">Grok Bot</span> · select an export on the bot's machine</span><a class="d" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Preview steps →</a></div>
-    <div class="up-foot">Capture stays on the machine where the session happened. Review the caption, output link and recorded fields, then choose an audience. A dash means the metric was not measured.</div>
-  </div>`;
-}
-
 // The coach reading the sitting, one tool at a time. Every line is a column of the run row that
 // is on screen below it. No line is invented: a part the row does not carry says so in words,
 // and the per-tool durations of the mock are not rendered because no column holds them.
@@ -1509,16 +1496,6 @@ function playStrip(){
   steps.forEach((x,i)=>setTimeout(()=>{ x.classList.add('done');
     if(st) st.textContent = i===steps.length-1 ? x.querySelector('.o').textContent : x.querySelector('.n').textContent; },320+i*520));
 }
-function wireCopy(){
-  for(const id of ['cp1','cp1-desk']){
-    const b=document.getElementById(id); if(!b) continue;
-    const label=b.textContent||'Copy';
-    b.addEventListener('click',()=>{ navigator.clipboard&&navigator.clipboard.writeText(INSTALL_CMD);
-      b.textContent='Copied'; setTimeout(()=>b.textContent=label,1600); });
-  }
-}
-
-
 function landingHTML(){
   // THE HERO IS THE DROP ZONE (Oscar, 24 Sep 2026: no install, no login until the feed). The file
   // is read in this tab by site/dropin-parse.js.

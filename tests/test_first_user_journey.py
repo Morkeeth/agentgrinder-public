@@ -18,7 +18,7 @@ def test_fresh_signed_in_builder_lands_on_the_drop_zone_not_a_tour():
     route = INDEX[INDEX.index("async function route(){") :]
     assert "if(ME&&(await runCount())===0) return viewPost();" not in route
     assert "return viewLanding(); }" in route
-    onboard = INDEX[INDEX.index("async function shouldOnboard(){") : INDEX.index("function stepBar(")]
+    onboard = INDEX[INDEX.index("async function shouldOnboard(){") : INDEX.index("// THE ONE CONNECT PAGE")]
     assert "runCount()" not in onboard
     # 25 Sep 2026: one Connect page, one command per agent, the drop zone first.
     assert "function connectBodyHtml()" in INDEX
