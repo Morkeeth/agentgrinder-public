@@ -61,3 +61,11 @@ def test_upload_copy_makes_no_counts_only_claim():
         src = (ROOT / name).read_text()
         for claim in ("Only the numbers on this card", "Only the counts and your title", "Counts only."):
             assert claim not in src, (name, claim)
+
+
+def test_post_is_step_by_step_with_no_preselected_audience():
+    src = (ROOT / "site/dropin.js").read_text()
+    assert 'const STEPS = ["Capture", "Preview", "Who sees it", "Share"]' in src
+    assert 'id="drop-continue" disabled' in src
+    assert 'type="radio" name="drop-aud"' in src and "checked" not in src.split("AUDIENCES.map")[1].split("</fieldset>")[0]
+    assert 'i_vis: "public"' not in src and "i_vis: audience" in src

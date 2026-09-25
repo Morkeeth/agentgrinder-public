@@ -29,7 +29,7 @@ def test_signed_in_builder_lands_on_the_feed_not_a_tour():
 
 def test_zero_run_surfaces_connect_and_deliberate_save():
     assert "Preview stays private on this device" not in INDEX
-    assert "Get a link needs no account: anyone with the address can open that card." in INDEX
+    assert "Anyone with the link needs no account: whoever has the address can open that card." in INDEX
     assert "Your first run starts private" in PROGRESS
     assert 'href="/?connect">Connect an agent</a>' in PROGRESS
     assert "Private uploads appear here" in PROGRESS
