@@ -129,7 +129,8 @@ def test_the_stride_line_is_the_card_in_two_lines_and_pastes_the_same_from_both_
     py = [feedcard.stride_text(r, url) for r in rows]
     assert js == py
     first, second = py[0].split("\n")
-    assert first == "STRIVE · Claude Code · 270 tool calls · 12h 19m · 1 turn · 👻 Ghost run"
+    assert first == "STRIVE · Claude Code · 12h 19m while you slept · 270 tool calls · 1 turn · 👻 Ghost run"
+    assert py[1].startswith("STRIVE · Cursor · 2h 3m, you typed twice · 112 tool calls · 👻 Ghost run\n")
     assert second.endswith("  agentic-strava.vercel.app/l/k7f2") and re.fullmatch(r"[▁▂▃▄▅▆▇█]{2,12}", second.split("  ")[0])
     assert py[2].startswith("STRIVE · Cursor · 98 tool calls · 18m · 1 turn · One-shot\n")
     # No prompt, no path, no code: the line is figures and a badge, nothing the run typed.
@@ -147,7 +148,9 @@ def test_orange_is_spent_on_three_marks_only():
     css = (ROOT / "site/feed.css").read_text()
     rules = [line for line in css.splitlines() if "--strive-orange" in line and not line.startswith(":root")]
     selectors = sorted(rule.split("{")[0].strip() for rule in rules)
-    assert selectors == [".fc-act.kudo.on,.fc-act.kudo.on svg", ".fc-badge.fc-ghost svg,.fc-badge.fc-ghost b", ".fc-peak"]
+    # The peak is one mark drawn twice: the dot on the activity line and the tallest bar of the
+    # stride line. One rule colours both, so it stays one of the three.
+    assert selectors == [".fc-act.kudo.on,.fc-act.kudo.on svg", ".fc-badge.fc-ghost svg,.fc-badge.fc-ghost b", ".fc-peak,.fc-bars b"]
     assert "#fc4c02" not in css.lower().replace(":root{--strive-orange:#fc4c02}", "")
     # The map is blue: none of its classes name the orange.
     for cls in (".fc-rail", ".fc-hop", ".fc-stn"):
@@ -199,3 +202,49 @@ F.wireStride(document);const b=document.querySelector('.fc-copy');b.dataset.copy
 b.click();document.querySelector('.fc-share').click();
 setTimeout(()=>process.stdout.write(JSON.stringify(got)),20);""")
     assert json.loads(out) == ["B", "share:B"]
+
+
+def test_a_ghost_run_leads_with_the_time_it_ran_alone():
+    lead = feedcard.headline(GHOST)
+    assert (lead["n"], lead["unit"]) == ("12h 19m", "while you slept")
+    assert feedcard.headline(DAY_ALONE)["unit"] == "you typed twice"
+    # Tool calls come second; the time is never repeated as a small figure.
+    assert [k for k, _ in feedcard.stats(GHOST, lead)] == ["Tool calls", "Turns"]
+    # A ghost with commits still leads with its time.
+    assert feedcard.headline({**DAY_RATIO, "commits": 3, "files_touched": 9})["n"] == "3h 28m"
+    # The badge names the run and stops: the hero already says how long and how alone.
+    text = visible(feedcard.card(GHOST).split('<div class="fc-stride">')[0])
+    assert text.count("12h 19m") == 1 and "while you slept" in text and "Ghost run" in text
+    # A run that is not a ghost keeps its old headline.
+    assert feedcard.headline({"commits": 2, "files_touched": 5, "tool_calls": 40, "duration_s": 5400, "prompts": 12})["unit"] == "commits"
+    js = json.loads(node("const F=require(process.argv[1]+'/site/feed-card.js');process.stdout.write(JSON.stringify(JSON.parse(process.argv[2]).map(r=>{const l=F.headline(r);return [l,F.stats(r,l)]})))",
+                         json.dumps([GHOST, DAY_ALONE, DAY_RATIO, *NOT_GHOST])))
+    py = [[feedcard.headline(r), [list(f) for f in feedcard.stats(r, feedcard.headline(r))]] for r in [GHOST, DAY_ALONE, DAY_RATIO, *NOT_GHOST]]
+    assert js == py
+
+
+def test_the_stride_bars_are_monospace_with_the_peak_marked_and_copy_plain():
+    row = {**GHOST, "rhythm": [2, 7, 1, 3, 2, 1, 2, 1, 3, 2, 1, 2]}
+    html = feedcard.stride_html(row, "https://agentic-strava.vercel.app/l/k7f2")
+    bars = re.search(r'<span class="fc-bars">(.*?)</span>', html).group(1)
+    assert bars.count("<b>") == 1 and re.sub(r"</?b>", "", bars) == feedcard.stride_bars(row)
+    assert re.search(r"<b>(.)</b>", bars).group(1) == "█"
+    # What is copied is the plain text; the markup is only on the card.
+    web = node("const F=require(process.argv[1]+'/site/feed-card.js');process.stdout.write(F.card(JSON.parse(process.argv[2]),{preview:true,copy:true,url:process.argv[3]}))",
+               json.dumps(row), "https://agentic-strava.vercel.app/l/k7f2")
+    copied = re.search(r'data-copy="([^"]*)"', web).group(1)
+    assert "<" not in copied and "&lt;" not in copied and feedcard.stride_bars(row) in copied
+    js = node("const F=require(process.argv[1]+'/site/feed-card.js');process.stdout.write(F.strideHtml(JSON.parse(process.argv[2]),process.argv[3]))",
+              json.dumps(row), "https://agentic-strava.vercel.app/l/k7f2")
+    assert js == html
+    css = (ROOT / "site/feed.css").read_text()
+    assert "monospace" in next(line for line in css.splitlines() if line.startswith(".fc-bars{"))
+
+
+def test_a_two_folder_map_is_a_short_strip():
+    small = feedcard.route_geometry({"route": [0, 1, 0]})
+    full = feedcard.route_geometry({"route": [0, 1, 2]})
+    assert small["h"] < full["h"] and 'viewBox="0 0 300 26"' in feedcard.route_map({"route": [0, 1, 0]})
+    for route in ([0, 1, 0, 1, 0], [0, 1, 2, 0]):
+        js = node("const F=require(process.argv[1]+'/site/feed-card.js');process.stdout.write(F.routeMap(JSON.parse(process.argv[2])))", json.dumps({"route": route}))
+        assert js == feedcard.route_map({"route": route})

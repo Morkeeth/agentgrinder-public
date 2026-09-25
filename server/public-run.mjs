@@ -261,13 +261,13 @@ export function card(run,opts={}){
  // The card's 300 by 44 drawing, scaled to the image: x by the width, y by a flatter 2.2 so the
  // map stays a strip, and every station still a circle.
  const geo=Feed.routeGeometry(run);
- const SX=W/300,SY=2.2,MAP_H=Math.round(44*SY);
+ const SX=W/300,SY=2.2,MAP_H=Math.round((geo?geo.h:44)*SY),RAIL_Y=(geo?geo.rail:30)*SY;
  const hop=d=>{const n=d.match(/-?[\d.]+/g).map(Number);return `M${(n[0]*SX).toFixed(1)},${(n[1]*SY).toFixed(1)} Q${(n[2]*SX).toFixed(1)},${(n[3]*SY).toFixed(1)} ${(n[4]*SX).toFixed(1)},${(n[5]*SY).toFixed(1)}`;};
  const map=geo?el('div',{style:{display:'flex',flexDirection:'column',marginTop:6}},
   el('svg',{width:W,height:MAP_H,viewBox:`0 0 ${W} ${MAP_H}`},
-   el('line',{x1:12*SX,y1:30*SY,x2:288*SX,y2:30*SY,stroke:BLUE_SOFT,strokeWidth:2}),
+   el('line',{x1:12*SX,y1:RAIL_Y,x2:288*SX,y2:RAIL_Y,stroke:BLUE_SOFT,strokeWidth:2}),
    ...geo.hops.map(d=>el('path',{d:hop(d),fill:'none',stroke:BLUE,strokeWidth:2.4,strokeOpacity:0.4,strokeLinecap:'round'})),
-   ...geo.stations.map(([cx,r])=>el('circle',{cx:cx*SX,cy:30*SY,r:r*2,fill:'#fff',stroke:BLUE,strokeWidth:3}))),
+   ...geo.stations.map(([cx,r])=>el('circle',{cx:cx*SX,cy:RAIL_Y,r:r*2,fill:'#fff',stroke:BLUE,strokeWidth:3}))),
   el('div',{style:{display:'flex',fontSize:17,color:SOFT,marginTop:0}},geo.label)):null;
  let drawing=null;
  if(plotted){
@@ -320,7 +320,7 @@ export function card(run,opts={}){
      ?el('svg',{width:20,height:20,viewBox:'0 0 16 16',style:{marginRight:10}},el('path',{d:'M3 14.5V7.5a5 5 0 0 1 10 0v7l-2-1.6-2 1.6-1-1.6-1 1.6-2-1.6Z',fill:ORANGE}),el('circle',{cx:6,cy:7.5,r:1.1,fill:'#fff'}),el('circle',{cx:10,cy:7.5,r:1.1,fill:'#fff'}))
      :el('div',{style:{display:'flex',width:14,height:14,borderRadius:7,border:`3px solid ${BLUE}`,marginRight:10}}),
     el('div',{style:{display:'flex',color:badge.key==='ghost'?ORANGE:BLUE,fontWeight:700,marginRight:10}},badge.label),
-    el('div',{style:{display:'flex',color:SOFT}},badge.detail)):null,
+    el('div',{style:{display:'flex',color:SOFT}},badge.key==='ghost'?'':badge.detail)):null,
    map,
    drawing,
    el('div',{style:{display:'flex',fontSize:15,color:SOFT,marginTop:'auto'}},'Counts describe activity, not result quality.')));

@@ -89,11 +89,12 @@ export function linkHtml(link,{origin}){
  const row=linkRow(link),title=esc(Feed.titleOf(row)),id=encodeURIComponent(link.id);
  const a=Feed.achievement(row);
  const lead=Feed.headline(row);
- const description=esc([lead?`${lead.n} ${lead.unit}`:'',a?`${a.label}: ${a.detail}`:'',`${row.harness} session`].filter(Boolean).join(' · '));
+ // A ghost lead is its own sentence ("12h 19m while you slept"); the badge then adds only its name.
+ const description=esc([lead?`${lead.n} ${lead.unit}`:'',a?(lead&&lead.ghost?a.label:`${a.label}: ${a.detail}`):'',`${row.harness} session`].filter(Boolean).join(' · '));
  const url=origin+'/l/'+id,image=origin+'/api/link?id='+id+'&image=1';
  const shared=Feed.card(row,{preview:true,heading:'h1',foot:false,url,copy:true});
  // The maker's number is the ask: a reader who sees 98 tool calls is invited to drop their own.
- const ask=lead?`They logged ${esc(lead.n)} ${esc(lead.unit)}. Drop yours.`:'Make a card from your session';
+ const ask=lead?`${lead.ghost?`Their agent ran ${esc(lead.n)} alone`:`They logged ${esc(lead.n)} ${esc(lead.unit)}`}. Drop yours.`:'Make a card from your session';
  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · ${BRAND}</title><meta name="robots" content="noindex,nofollow"><meta property="og:type" content="article"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}">${HEAD}</head><body><main><a class="home" href="/" aria-label="${BRAND} home">${BRAND}</a>${shared}<p class="cta"><a class="open" href="/">${ask}</a></p><p class="note">Counts only. The session file never left the device that read it.</p><p class="note">Counts describe activity, not result quality.</p></main>${STRIDE_SCRIPT}</body></html>`;
 }
 

@@ -39,7 +39,8 @@
     const r = row(($("drop-title") || {}).value || "");
     const text = GrinderFeed.strideText(r, linkUrl);
     const pre = $("drop-card") && $("drop-card").querySelector(".fc-stride pre");
-    if (pre) pre.textContent = text;
+    // strideHtml escapes every value it prints; the markup is only the bars' monospace run.
+    if (pre) pre.innerHTML = GrinderFeed.strideHtml(r, linkUrl);
     $("drop-card") && $("drop-card").querySelectorAll(".fc-copy").forEach((b) => { b.dataset.copy = text; });
   }
 

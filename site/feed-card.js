@@ -71,8 +71,14 @@
     return whole(C && C.toolCallCount ? C.toolCallCount(r) : r.tool_calls);
   }
 
-  // The one number, Strava's distance slot. The first measured, non-zero value wins.
+  // The one number, Strava's distance slot. A ghost run leads with the time it ran alone, labelled
+  // with how it was alone; otherwise the first measured, non-zero value wins.
   function headline(r) {
+    const g = ghostParts(r);
+    // By day the label already says how often the person typed, so Turns is not repeated beside it.
+    if (g) return g.night
+      ? { n: g.d, unit: "while you slept", key: "time", ghost: true }
+      : { n: g.d, unit: `you typed ${g.typed}`, key: "time", ghost: true, also: "turns" };
     const commits = whole(r.commits);
     const files = whole(r.files_touched);
     const tools = toolCalls(r);
@@ -88,13 +94,15 @@
   function stats(r, lead) {
     const out = [];
     const add = (key, label, value) => {
-      if (out.length >= 3 || value == null || value === "" || (lead && lead.key === key)) return;
+      if (out.length >= 3 || value == null || value === "" || (lead && (lead.key === key || lead.also === key)) || out.some((f) => f[0] === label)) return;
       out.push([label, value]);
     };
     add("time", "Time", durationLabel(r.wall_time_s ?? r.duration_s));
     const turns = whole(r.prompts ?? r.turns_typed);
-    add("turns", "Turns", turns);
     const tools = toolCalls(r);
+    // A ghost lead: the work done alone comes second, then how often the person was there.
+    if (lead && lead.ghost) add("tools", "Tool calls", tools ? thousands(tools) : null);
+    add("turns", "Turns", turns);
     add("tools", "Tool calls", tools ? thousands(tools) : null);
     add("commits", "Commits", whole(r.commits) || null);
     add("files", "Files", whole(r.files_touched) || null);
@@ -116,7 +124,7 @@
   // at night, 22:00 to 04:59). The line prints the measured time and, for a night start,
   // "while you slept"; by day, how often the person typed. Nothing on it is a guess and
   // nothing on it is a disclaimer.
-  function ghost(r) {
+  function ghostParts(r) {
     const secs = whole(r.wall_time_s ?? r.duration_s);
     const turns = whole(r.prompts ?? r.turns_typed);
     const tools = toolCalls(r);
@@ -127,7 +135,12 @@
     if (!alone) return null;
     const d = durationLabel(secs);
     const typed = turns == null ? "" : turns === 1 ? "once" : turns === 2 ? "twice" : `${thousands(turns)} times`;
-    return { key: "ghost", label: "Ghost run", detail: night ? `${d} while you slept` : `${d}, you typed ${typed}` };
+    return { d, night, typed };
+  }
+  function ghost(r) {
+    const g = ghostParts(r);
+    if (!g) return null;
+    return { key: "ghost", label: "Ghost run", detail: g.night ? `${g.d} while you slept` : `${g.d}, you typed ${g.typed}` };
   }
 
   function achievement(r) {
@@ -160,7 +173,9 @@
     const a = achievement(r);
     if (!a) return "";
     const g = a.key === "ghost";
-    return `<p class="fc-badge${g ? " fc-ghost" : ""}" data-badge="${esc(a.key)}">${g ? GHOST_ICON : BADGE_ICON}<b>${esc(a.label)}</b><span>${esc(a.detail)}</span></p>`;
+    // A ghost card already leads with its time and how it was alone; the badge names it and stops.
+    const detail = g ? "" : `<span>${esc(a.detail)}</span>`;
+    return `<p class="fc-badge${g ? " fc-ghost" : ""}" data-badge="${esc(a.key)}">${g ? GHOST_ICON : BADGE_ICON}<b>${esc(a.label)}</b>${detail}</p>`;
   }
 
   function profileOf(r) {
@@ -228,8 +243,12 @@
   // them, sized by how often it was there; every move is one arc, forward over the rail and back
   // under it, so a run that kept returning to one folder draws a dense knot and a run that
   // walked the tree once draws a clean sweep. No folder is named: the map is the shape of the
-  // work. Blue only; orange is spent on the peak, the ghost and a sent XUDOS.
+  // work. Blue only; orange is spent on the peak, the ghost and a sent XUDOS. A run that touched
+  // two folders draws a short strip (h, rail and the arcs halved): the full box around one arc
+  // reads as an empty map.
   const MAP_W = 300, MAP_H = 44, RAIL = 30, MAP_X0 = 12, MAP_X1 = 288;
+  const MAP_SMALL = { h: 26, rail: 17, up: 13, down: 6 };
+  const MAP_FULL = { h: MAP_H, rail: RAIL, up: 26, down: 12 };
   function routeGeometry(r) {
     const raw = Array.isArray(r.route) ? r.route : null;
     if (!raw || raw.some((v) => !Number.isInteger(v) || v < 0 || v > 15)) return null;
@@ -244,6 +263,7 @@
     }
     if (seq.length < 2) return null;
     const n = order.size;
+    const box = n <= 2 ? MAP_SMALL : MAP_FULL;
     const visits = new Array(n).fill(0);
     seq.forEach((v) => { visits[v] += 1; });
     const most = Math.max(...visits);
@@ -254,20 +274,20 @@
       const a = seq[k - 1], b = seq[k];
       if (a === b) continue;
       const xa = x(a), xb = x(b), span = Math.abs(xb - xa) / (MAP_X1 - MAP_X0);
-      const cy = b > a ? RAIL - 26 * span : RAIL + 12 * span;
-      hops.push(`M${xa.toFixed(1)},${RAIL} Q${((xa + xb) / 2).toFixed(1)},${cy.toFixed(1)} ${xb.toFixed(1)},${RAIL}`);
+      const cy = b > a ? box.rail - box.up * span : box.rail + box.down * span;
+      hops.push(`M${xa.toFixed(1)},${box.rail} Q${((xa + xb) / 2).toFixed(1)},${cy.toFixed(1)} ${xb.toFixed(1)},${box.rail}`);
     }
     const moves = hops.length, returns = seq.length - n;
     const w = (k, one, many) => `${thousands(k)} ${k === 1 ? one : many}`;
-    return { n, moves, returns, stations, hops, label: `${w(n, "folder", "folders")} · ${w(moves, "move", "moves")} · ${w(returns, "return", "returns")}` };
+    return { n, moves, returns, stations, hops, h: box.h, rail: box.rail, label: `${w(n, "folder", "folders")} · ${w(moves, "move", "moves")} · ${w(returns, "return", "returns")}` };
   }
   function routeMap(r) {
     const g = routeGeometry(r);
     if (!g) return "";
-    const rail = `<line class="fc-rail" x1="${MAP_X0}" y1="${RAIL}" x2="${MAP_X1}" y2="${RAIL}"/>`;
+    const rail = `<line class="fc-rail" x1="${MAP_X0}" y1="${g.rail}" x2="${MAP_X1}" y2="${g.rail}"/>`;
     const hops = g.hops.map((d) => `<path class="fc-hop" d="${d}"/>`).join("");
-    const stations = g.stations.map(([cx, cr]) => `<circle class="fc-stn" cx="${cx.toFixed(1)}" cy="${RAIL}" r="${cr.toFixed(1)}"/>`).join("");
-    return `<div class="fc-map"><svg viewBox="0 0 ${MAP_W} ${MAP_H}" role="img" aria-label="Route: ${esc(g.label)}">${rail}${hops}${stations}</svg><p class="fc-map-k">${esc(g.label)}</p></div>`;
+    const stations = g.stations.map(([cx, cr]) => `<circle class="fc-stn" cx="${cx.toFixed(1)}" cy="${g.rail}" r="${cr.toFixed(1)}"/>`).join("");
+    return `<div class="fc-map"><svg viewBox="0 0 ${MAP_W} ${g.h}" role="img" aria-label="Route: ${esc(g.label)}">${rail}${hops}${stations}</svg><p class="fc-map-k">${esc(g.label)}</p></div>`;
   }
 
   // THE STRIDE LINE. Wordle's grid for a run: two lines of plain text a person pastes into a
@@ -275,34 +295,54 @@
   // line is the card's own figures in the card's own order; the second is the activity line as
   // twelve bars and, when the card has an address, the address.
   const BARS = "▁▂▃▄▅▆▇█";
-  function strideBars(r) {
+  function strideBins(r) {
     const raw = Array.isArray(r.ridge) && r.ridge.length > 1 ? r.ridge : Array.isArray(r.rhythm) && r.rhythm.length > 1 ? r.rhythm : null;
-    if (!raw || raw.some((v) => !Number.isFinite(v) || v < 0)) return "";
+    if (!raw || raw.some((v) => !Number.isFinite(v) || v < 0)) return null;
     const src = settle(raw);
     const n = Math.min(12, src.length);
     const bins = new Array(n).fill(0);
     src.forEach((v, i) => { bins[Math.floor((i * n) / src.length)] += v; });
     const max = Math.max(...bins);
-    if (!max) return "";
+    if (!max) return null;
     // Square-root steps: a burst at the start must not flatten the rest of the night to ▁.
-    return bins.map((v) => BARS[Math.round(Math.sqrt(v / max) * 7)]).join("");
+    return { bars: bins.map((v) => BARS[Math.round(Math.sqrt(v / max) * 7)]), peak: bins.indexOf(max) };
   }
-  function strideText(r, url) {
+  function strideBars(r) {
+    const b = strideBins(r);
+    return b ? b.bars.join("") : "";
+  }
+  function strideFirst(r) {
     const lead = headline(r);
     const a = achievement(r);
     const figures = stats(r, lead).map(([k, v]) =>
       k === "Time" ? String(v) : k === "Turns" ? `${v} ${v === 1 ? "turn" : "turns"}` : `${v} ${k.toLowerCase()}`);
-    const first = ["STRIVE", harnessName(r), lead ? `${lead.n} ${lead.unit}` : "", ...figures, a ? `${a.key === "ghost" ? "👻 " : ""}${a.label}` : ""]
+    // A ghost lead pastes as the badge reads: "12h 19m while you slept", "2h 3m, you typed twice".
+    const leadText = !lead ? "" : lead.ghost && a ? a.detail : `${lead.n} ${lead.unit}`;
+    return ["STRIVE", harnessName(r), leadText, ...figures, a ? `${a.key === "ghost" ? "👻 " : ""}${a.label}` : ""]
       .filter(Boolean).join(" · ");
-    const bars = strideBars(r);
-    const where = url ? String(url).replace(/^https?:\/\//, "") : "";
-    const second = [bars, where].filter(Boolean).join("  ");
+  }
+  const where = (url) => (url ? String(url).replace(/^https?:\/\//, "") : "");
+  function strideText(r, url) {
+    const first = strideFirst(r);
+    const second = [strideBars(r), where(url)].filter(Boolean).join("  ");
+    return second ? `${first}\n${second}` : first;
+  }
+  // The same two lines as markup: the bars in a monospace run, the tallest one the card's peak
+  // mark. What is copied stays strideText, plain characters.
+  function strideHtml(r, url) {
+    const b = strideBins(r);
+    const bars = b
+      ? `<span class="fc-bars">${b.bars.map((c, i) => (i === b.peak ? `<b>${c}</b>` : c)).join("")}</span>`
+      : "";
+    const at = where(url) ? `<span class="fc-where">${esc(where(url))}</span>` : "";
+    const second = [bars, at].filter(Boolean).join("  ");
+    const first = esc(strideFirst(r));
     return second ? `${first}\n${second}` : first;
   }
   function stride(r, opts) {
     const text = strideText(r, opts && opts.url);
     const copy = opts && opts.copy ? `<button type="button" class="fc-copy" data-copy="${esc(text)}">Copy</button>` : "";
-    return `<div class="fc-stride"><pre>${esc(text)}</pre>${copy}</div>`;
+    return `<div class="fc-stride"><pre>${strideHtml(r, opts && opts.url)}</pre>${copy}</div>`;
   }
   // Copy, and Share where the device offers a share sheet. Per surface: the local card the
   // command line writes carries no script at all, so it draws no button.
@@ -397,7 +437,7 @@
     return `<div class="fc-builder">${face(r, 44)}<div class="fc-who"><a class="fc-name" href="/?u=${encodeURIComponent(p.handle)}">${esc(p.name)}</a><small>Latest: <a href="/?run=${esc(r.id)}">${esc(titleOf(r))}</a></small></div><span class="card-follow" data-profile="${esc(r.profile_id)}" data-handle="${esc(p.handle)}" data-label="Follow"></span></div>`;
   }
 
-  const api = { card, face, headline, stats, achievement, ghost, harnessName, badge, spark, settle, routeGeometry, routeMap, strideBars, strideText, stride, wireStride, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };
+  const api = { card, face, headline, stats, achievement, ghost, harnessName, badge, spark, settle, routeGeometry, routeMap, strideBars, strideText, strideHtml, stride, wireStride, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };
   root.GrinderFeed = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);
