@@ -78,3 +78,19 @@ def test_public_row_reaches_the_proof_handler():
     assert out["status"] == 200
     assert "Fixture public proof" in out["body"]
     assert "1/1 checkpoints are recorded as measured" in out["body"]
+
+
+def test_public_row_without_a_route_is_truthful_not_503():
+    public = {
+        "id": RUN_ID,
+        "visibility": "public",
+        "title": "Public run without a route",
+        "code_route": None,
+    }
+    out = serve(RUN_ID, [public])
+    assert out["status"] == 200
+    assert out["type"].startswith("text/html")
+    assert "Public run without a route" in out["body"]
+    assert "no recorded Code Route" in out["body"]
+    assert f'/r/{RUN_ID}' in out["body"]
+    assert "Public proof temporarily unavailable" not in out["body"]
