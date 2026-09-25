@@ -1866,7 +1866,8 @@ function profileLinksHtml(prof,mine){
 // disagree about how long a run took.
 const runSeconds=r=>{const v=r.wall_time_s??r.duration_s;return Number.isFinite(v)&&v>0?v:0};
 const runStart=r=>Date.parse(r.started_at||r.created_at||'')||0;
-const runTools=r=>Number.isFinite(r.tool_calls)?r.tool_calls:Number.isFinite(r.ridge_tool_calls)?r.ridge_tool_calls:0;
+// The card's own count (tool_calls, else the ridge count), so a lane never zeroes a run the card counts.
+const runTools=r=>{const n=GrinderContract.toolCallCount(r);return Number.isFinite(n)&&n>0?n:0};
 function fmtSecs(secs){const m=Math.round(secs/60);return m>=60?`${Math.floor(m/60)}h ${m%60}m`:`${m}m`}
 // Monday 00:00 in the reader's time zone: the week a board counts.
 function weekStart(now=new Date()){const d=new Date(now);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
@@ -1883,7 +1884,7 @@ async function viewBoards(){
   const since=weekStart();
   const [{data:recent,error},{data:longRuns}]=await Promise.all([
     sb.from('runs').select(PROJECT_SELECT).eq('visibility','public').order('created_at',{ascending:false}).limit(300),
-    sb.from('runs').select(PROJECT_SELECT).eq('visibility','public').or(`wall_time_s.gte.${MARATHON_SECS},duration_s.gte.${MARATHON_SECS}`).limit(100)]);
+    sb.from('runs').select(PROJECT_SELECT).eq('visibility','public').or(`wall_time_s.gte.${MARATHON_SECS},duration_s.gte.${MARATHON_SECS}`).order('wall_time_s',{ascending:false,nullsFirst:false}).order('duration_s',{ascending:false,nullsFirst:false}).limit(100)]);
   if(error){status(error.message,true);app.innerHTML='<div class="card"><div class="empty">Boards could not load.</div></div>';return;}
   const all=recent||[]; noteTraces(all);
   const week=all.filter(r=>runStart(r)>=since.getTime());
@@ -1892,17 +1893,18 @@ async function viewBoards(){
   const tools=top(week,runTools,v=>`${v.toLocaleString()} calls`);
   // The honest failure: the run recorded zero files changed (or, with files unknown, zero
   // commits) and the most tool calls. Both numbers come from the run row.
-  const failures=top(week.filter(r=>(r.files_touched===0)||(r.files_touched==null&&r.commits===0)),runTools,v=>`${v.toLocaleString()} calls, 0 changed`);
+  const failures=week.filter(r=>(r.files_touched===0)||(r.files_touched==null&&r.commits===0)).map(r=>[r,runTools(r)]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,5)
+    .map(([r,v])=>[r,`${v.toLocaleString()} calls, ${r.files_touched===0?'0 files changed':'0 commits'}`]);
   const marathon=top([...new Map((longRuns||[]).map(r=>[r.id,r])).values()].filter(r=>runSeconds(r)>=MARATHON_SECS),runSeconds,fmtSecs,10);
   const weekLabel=`${since.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][since.getMonth()]}`;
   app.innerHTML=`<div class="head"><h1>Marathon and boards</h1><span class="meta">public runs only</span></div>
     <p class="hint">Every row is a public run anyone can open. This week starts Monday ${esc(weekLabel)} in your time zone. Time on a run is the measured wall time, else the session length.</p>
     <div class="boards-grid">
-      ${boardHtml('Longest ghost run this week','ran an hour or more, 30+ tool calls, typed to at most twice or at night',ghosts,'No ghost run this week yet. Leave the agent running while you sleep.')}
-      ${boardHtml('Most tool calls this week','one run, one count',tools,'No public run this week yet.')}
+      ${boardHtml('Longest ghost run this week','an hour or more and 30+ tool calls, typed to at most twice or 40+ calls per typed turn; with typed turns unknown, a night start',ghosts,'No ghost run this week yet. Leave the agent running while you sleep.')}
+      ${boardHtml('Most tool calls this week','one run, one count',tools,'No public run with tool calls this week yet.')}
       ${boardHtml('Honest failure of the week','most tool calls with zero files changed. The run that tried hardest and shipped nothing, on the record',failures,'No run with zero files changed this week. Post the ugly one.')}
     </div>
-    ${boardHtml('Marathon, all time','public runs over 3 hours',marathon,'No public run over 3 hours yet. The first one goes here.')}
+    ${boardHtml('Marathon, all time','public runs of 3 hours or more',marathon,'No public run of 3 hours or more yet. The first one goes here.')}
     <p class="hint"><a href="/?post">Post a run</a> · <a href="/?projects">Projects</a> · <a href="/methodology">How the numbers are made</a></p>`;
 }
 
