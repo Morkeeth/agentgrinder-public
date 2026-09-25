@@ -93,3 +93,4 @@
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.post-steps li::before,.ps-dot,.aud-opt,.aud-check::after{transition:none}.aud-opt:active{transform:none}.spin{animation-duration:2s}}
 .aud legend:focus,#drop-out:focus{outline:none}
+#drop-card:focus{outline:none}

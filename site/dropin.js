@@ -166,7 +166,7 @@
     step = 1;
     stage.innerHTML = `<div class="drop-result">
       ${stepsHtml()}
-      <div id="drop-card">${cardHtml()}</div>
+      <div id="drop-card" tabindex="-1" aria-label="Your run card">${cardHtml()}</div>
       <section class="post-pane" data-pane="1" aria-label="Preview">
         <label class="drop-name">Title<input id="drop-title" data-autofocus maxlength="80" autocomplete="off" placeholder="What did you get done?"></label>
         <div class="drop-actions"><button type="button" class="act primary" id="drop-next">Choose who sees it</button></div>
@@ -185,6 +185,9 @@
     </div>`;
     linkUrl = null;
     paintSteps();
+    // The file input that had focus is gone. Focus the card, not the title, so a phone keyboard
+    // does not cover the reveal; Tab moves on to the title.
+    $("drop-card").focus({ preventScroll: true });
     reveal($("drop-card"));
     GrinderFeed.wireStride($("drop-card"));
     const title = $("drop-title");
