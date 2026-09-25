@@ -372,7 +372,7 @@
       started_hour: started && Number.isFinite(started.getTime()) ? started.getHours() : null,
       rhythm: (Array.isArray(run.line) && run.line.length ? run.line : Array.isArray(run.rhythm) ? run.rhythm : []).slice(0, 24).map((v) => whole(v) ?? 0),
       // Station indices only (folderRoute); a run that touched no file has no map.
-      route: Array.isArray(run.route) && run.route.length ? run.route.slice(0, MAX_MOVES).map((v) => Math.min(MAX_STATIONS - 1, whole(v) ?? 0)) : null,
+      route: Array.isArray(run.route) && run.route.length && run.route.length <= MAX_MOVES && run.route.every((v) => Number.isInteger(v) && v >= 0 && v < MAX_STATIONS) ? run.route : null,
     };
   }
 

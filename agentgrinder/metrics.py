@@ -394,7 +394,9 @@ def build_activity(run: dict) -> Activity:
             "files_touched": files,
             "commits": commits,
             "ridge": run.get("ridge") or None,
-            "rhythm": rhythm or None,
+            # The card's line: tool calls over moving time when the reader measured it (Claude
+            # Code, ingest.parse_session), as the drop-in draws; else the typed-turn rhythm.
+            "rhythm": run.get("line") or rhythm or None,
             "route": run.get("route") or None,      # station indices only (ingest.folder_route)
             "output_url": run.get("output_url") or None,
             "visibility": "private",

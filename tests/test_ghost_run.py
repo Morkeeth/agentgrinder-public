@@ -32,7 +32,9 @@ NOT_GHOST = [
     {"title": "idle", "prompts": 1, "tool_calls": 29, "duration_s": 7200, "started_hour": 23},     # too few calls
     {"title": "present", "prompts": 12, "tool_calls": 300, "duration_s": 7200, "started_hour": 14},  # 25 per turn by day
     {"title": "no time", "prompts": 1, "tool_calls": 300, "started_hour": 23},                     # no measured time
+    {"title": "awake", "prompts": 12, "tool_calls": 30, "duration_s": 3600, "started_hour": 23},   # typed 12 times at night
 ]
+UNKNOWN_TURNS_NIGHT = {"title": "hosted", "tool_calls": 90, "duration_s": 5400, "started_hour": 1}
 
 
 def node(expr: str, *args) -> str:
@@ -44,14 +46,15 @@ def visible(markup: str) -> str:
 
 
 def test_the_ghost_rule_is_honest_and_the_same_in_both_readers():
-    rows = [GHOST, DAY_ALONE, DAY_RATIO, *NOT_GHOST]
+    rows = [GHOST, DAY_ALONE, DAY_RATIO, *NOT_GHOST, UNKNOWN_TURNS_NIGHT]
     js = json.loads(node("const F=require(process.argv[1]+'/site/feed-card.js');process.stdout.write(JSON.stringify(JSON.parse(process.argv[2]).map(F.ghost)))", json.dumps(rows)))
     py = [feedcard.ghost(r) for r in rows]
     assert js == py
     assert py[0] == {"key": "ghost", "label": "Ghost run", "detail": "12h 19m while you slept"}
     assert py[1]["detail"] == "2h 3m, you typed twice"
     assert py[2]["detail"] == "3h 28m, you typed 4 times"
-    assert py[3:] == [None] * len(NOT_GHOST)
+    assert py[3:3 + len(NOT_GHOST)] == [None] * len(NOT_GHOST)
+    assert py[-1]["detail"] == "1h 30m while you slept"           # turns unknown, night start
     # The ghost outranks every other badge, and a ghost card says so in its class and its icon.
     assert feedcard.achievement(GHOST)["key"] == "ghost"
     card = feedcard.card(GHOST)
@@ -71,6 +74,8 @@ def test_the_map_is_drawn_from_indices_and_hidden_without_them():
     assert "4 folders · 5 moves · 2 returns" in visible(with_map)
     # A row saved before the readers collapsed stays reads the same: [0, 0, 1] is one move, no return.
     assert "2 folders · 1 move · 0 returns" in visible(feedcard.card({**GHOST, "route": [0, 0, 1]}))
+    # A gap in the numbering names no phantom station: [0, 5, 0] is two folders and one return.
+    assert "2 folders · 2 moves · 1 return" in visible(feedcard.card({**GHOST, "route": [0, 5, 0]}))
     for route in (None, [], [0], [0, 0, 0], [0, "site"], [0, 16], [-1, 0]):
         assert 'class="fc-map"' not in feedcard.card({**GHOST, "route": route}), route
     # The browser draws the same map, character for character.
@@ -110,6 +115,10 @@ def test_the_route_caps_stations_and_moves():
     assert max(route) == 15 and len(route) <= 400 and len(names) == 16
     js = json.loads(node("const D=require(process.argv[1]+'/site/dropin-parse.js');process.stdout.write(JSON.stringify(D.folderRoute(JSON.parse(process.argv[2]))))", json.dumps(paths)))
     assert js == route
+    # The payload sends the route as read or not at all: nothing is clamped into range.
+    for bad in ([0, 16], [0, "site"], [1.5], list(range(401))):
+        sent = json.loads(node("const D=require(process.argv[1]+'/site/dropin-parse.js');process.stdout.write(JSON.stringify(D.uploadPayload({harness:'Codex',rhythm:[1],route:JSON.parse(process.argv[2])},'t').route))", json.dumps(bad)))
+        assert sent is None, bad
 
 
 def test_the_stride_line_is_the_card_in_two_lines_and_pastes_the_same_from_both_readers():

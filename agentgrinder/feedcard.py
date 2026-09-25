@@ -241,8 +241,8 @@ def _hour_of(r: dict):
 
 def ghost(r: dict):
     """site/feed-card.js ghost(): an hour or more and 30 or more tool calls while the person was
-    not there, shown by the run's own numbers: started at night (22:00 to 04:59), typed to at
-    most twice, or 40 or more tool calls per typed turn."""
+    not there, shown by the run's own numbers: typed to at most twice, or 40 or more tool calls
+    per typed turn; with the typed turns unknown, a night start (22:00 to 04:59) counts."""
     secs = whole(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s"))
     turns = whole(r.get("prompts") if r.get("prompts") is not None else r.get("turns_typed"))
     tools = _tools(r)
@@ -250,8 +250,8 @@ def ghost(r: dict):
     if secs is None or secs < 3600 or tools is None or tools < 30:
         return None
     night = hour is not None and (hour >= 22 or hour < 5)
-    alone = turns is not None and (turns <= 2 or tools / turns >= 40)
-    if not night and not alone:
+    alone = night if turns is None else (turns <= 2 or tools / turns >= 40)
+    if not alone:
         return None
     d = duration_label(secs)
     typed = "" if turns is None else "once" if turns == 1 else "twice" if turns == 2 else f"{_thousands(turns)} times"
@@ -397,10 +397,15 @@ def route_geometry(r: dict):
     raw = r.get("route") if isinstance(r.get("route"), list) else None
     if not raw or any(not isinstance(v, int) or isinstance(v, bool) or v < 0 or v > 15 for v in raw):
         return None
-    seq = [v for i, v in enumerate(raw) if i == 0 or v != raw[i - 1]]   # a stay is one visit
+    order: dict = {}
+    seq: list = []
+    for v in raw:                      # a stay is one visit; stations numbered by first appearance
+        i = order.setdefault(v, len(order))
+        if not seq or seq[-1] != i:
+            seq.append(i)
     if len(seq) < 2:
         return None
-    n = max(seq) + 1
+    n = len(order)
     visits = [0] * n
     for v in seq:
         visits[v] += 1

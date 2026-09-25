@@ -203,7 +203,7 @@ def card_row(run: dict, title: str | None = None) -> dict:
         # the card's "files changed" is files this grind wrote, not files it only opened
         "files_touched": changed if changed is not None else run.get("files_touched"),
         "commits": run.get("commits"),
-        "rhythm": run.get("rhythm") or run.get("series") or None,
+        "rhythm": run.get("line") or run.get("rhythm") or run.get("series") or None,
         "ridge": run.get("ridge") or None,
         "route": run.get("route") or None,
         "visibility": "private",

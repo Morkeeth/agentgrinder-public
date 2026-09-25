@@ -103,16 +103,20 @@
   // else: no history, no other runs, no guess. The first rule that holds wins, and its detail line
   // prints the number that earned it, so a reader can check the badge against the card. A run that
   // earns none carries none. agentgrinder/feedcard.py achievement() is the same list.
+  // Thousands with commas whatever the runtime locale, as agentgrinder/feedcard.py _thousands.
+  const thousands = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
   function hourOf(r) {
     return Number.isInteger(r.started_hour) && r.started_hour >= 0 && r.started_hour <= 23 ? r.started_hour : null;
   }
 
   // THE GHOST RUN. Strava is for people who ran. STRIVE is for people who didn't: the agent ran
   // for an hour or more and did real work (30 tool calls or more) while the person was not
-  // there, which the run's own numbers show one of three ways: it started at night (22:00 to
-  // 04:59), it was typed to at most twice, or it did 40 or more tool calls per typed turn. The
-  // line prints the measured time and, by night, "while you slept"; by day, how often the
-  // person typed. Nothing on it is a guess and nothing on it is a disclaimer.
+  // there, which the run's own numbers show: it was typed to at most twice, or it did 40 or
+  // more tool calls per typed turn (a run whose typed turns are unknown counts when it started
+  // at night, 22:00 to 04:59). The line prints the measured time and, for a night start,
+  // "while you slept"; by day, how often the person typed. Nothing on it is a guess and
+  // nothing on it is a disclaimer.
   function ghost(r) {
     const secs = whole(r.wall_time_s ?? r.duration_s);
     const turns = whole(r.prompts ?? r.turns_typed);
@@ -120,10 +124,10 @@
     const hour = hourOf(r);
     if (!(secs >= 3600) || !(tools >= 30)) return null;
     const night = hour != null && (hour >= 22 || hour < 5);
-    const alone = turns != null && (turns <= 2 || tools / turns >= 40);
-    if (!night && !alone) return null;
+    const alone = turns == null ? night : turns <= 2 || tools / turns >= 40;
+    if (!alone) return null;
     const d = durationLabel(secs);
-    const typed = turns == null ? "" : turns === 1 ? "once" : turns === 2 ? "twice" : `${turns.toLocaleString()} times`;
+    const typed = turns == null ? "" : turns === 1 ? "once" : turns === 2 ? "twice" : `${thousands(turns)} times`;
     return { key: "ghost", label: "Ghost run", detail: night ? `${d} while you slept` : `${d}, you typed ${typed}` };
   }
 
@@ -230,10 +234,17 @@
   function routeGeometry(r) {
     const raw = Array.isArray(r.route) ? r.route : null;
     if (!raw || raw.some((v) => !Number.isInteger(v) || v < 0 || v > 15)) return null;
-    // A stay is one visit: rows saved before the readers collapsed repeats are read the same way.
-    const seq = raw.filter((v, i) => i === 0 || v !== raw[i - 1]);
+    // A stay is one visit, and stations are numbered by first appearance: rows saved before the
+    // readers collapsed repeats, or with a gap in their numbering, draw the same map.
+    const order = new Map();
+    const seq = [];
+    for (const v of raw) {
+      if (!order.has(v)) order.set(v, order.size);
+      const i = order.get(v);
+      if (!seq.length || seq[seq.length - 1] !== i) seq.push(i);
+    }
     if (seq.length < 2) return null;
-    const n = Math.max(...seq) + 1;
+    const n = order.size;
     const visits = new Array(n).fill(0);
     seq.forEach((v) => { visits[v] += 1; });
     const most = Math.max(...visits);
@@ -248,7 +259,7 @@
       hops.push(`M${xa.toFixed(1)},${RAIL} Q${((xa + xb) / 2).toFixed(1)},${cy.toFixed(1)} ${xb.toFixed(1)},${RAIL}`);
     }
     const moves = hops.length, returns = seq.length - n;
-    const w = (k, one, many) => `${k.toLocaleString()} ${k === 1 ? one : many}`;
+    const w = (k, one, many) => `${thousands(k)} ${k === 1 ? one : many}`;
     return { n, moves, returns, stations, hops, label: `${w(n, "folder", "folders")} · ${w(moves, "move", "moves")} · ${w(returns, "return", "returns")}` };
   }
   function routeMap(r) {

@@ -110,6 +110,7 @@ def parse_session(path: str, athlete: str = "you") -> dict:
     tool_calls = 0
     files: set[str] = set()
     touched: list[str] = []  # every file a tool named, in order: the route
+    tools_at: list = []      # one timestamp per tool call, for the line the card draws
     commits = 0
     project = None
     first_prompt = None
@@ -157,6 +158,8 @@ def parse_session(path: str, athlete: str = "you") -> dict:
                     tracker.assistant_text(c)
                 for name, inp in _tool_uses(msg):
                     tool_calls += 1
+                    if ts:
+                        tools_at.append(ts)
                     at = inp.get("file_path") if isinstance(inp.get("file_path"), str) and inp.get("file_path") else (
                         inp.get("notebook_path") if isinstance(inp.get("notebook_path"), str) and inp.get("notebook_path") else None)
                     if at:
@@ -192,6 +195,20 @@ def parse_session(path: str, athlete: str = "you") -> dict:
             rhythm[idx] += 1
     else:
         rhythm = [len(typed_ts)]
+    # THE LINE THE CARD DRAWS: tool calls per bin of the same moving time, a gap over twenty
+    # minutes counted as twenty. site/dropin-parse.js claudeReader builds the same series and
+    # scripts/test-dropin-parity.mjs compares them; a one-prompt night is no longer one spike.
+    line = None
+    if span > 0 and tools_at:
+        pos, at = {}, 0.0
+        for i, t in enumerate(ev):
+            if i:
+                at += min((t - ev[i - 1]).total_seconds(), IDLE_CAP)
+            pos.setdefault(t, at)
+        line = [0] * 24
+        for t in tools_at:
+            if t in pos:
+                line[min(23, int(pos[t] / span * 24))] += 1
 
     cwd = project.rstrip("/") if project else ""
     proj_name = os.path.basename(cwd) if cwd else "session"
@@ -229,6 +246,7 @@ def parse_session(path: str, athlete: str = "you") -> dict:
         "files_touched": len(files),
         "commits": commits,
         "rhythm": rhythm,
+        "line": line,                            # tool calls per bin of moving time, or None
         # the five numbers (METRICS-AGENTIC-ENGINEERING-2026-09-02, an internal spec not in this repo); None = not this repo's to compute
         "claims": tracker.claims,
         "claims_verified": tracker.verified,     # v0 rule, claims.py

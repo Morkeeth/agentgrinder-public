@@ -45,6 +45,9 @@ function compare(harness, file, py, js) {
   assert.equal(js.harness, harness, `${where}: detected ${js.harness}`);
   for (const k of ['turns_typed', 'tool_calls', 'files_touched', 'commits', 'rhythm', 'route'])
     assert.deepEqual(js[k], py[k], `${where}: ${k} browser ${JSON.stringify(js[k])} python ${JSON.stringify(py[k])}`);
+  // The line the card draws. Claude Code: tool calls per bin of moving time, from both readers,
+  // so the drop-in card and the local card show one shape for one file.
+  if (harness === 'Claude Code') assert.deepEqual(js.line ?? null, py.line ?? null, `${where}: line browser ${JSON.stringify(js.line)} python ${JSON.stringify(py.line)}`);
   if (py.duration_source === 'file' || py.duration_source === 'call-index') assert.equal(js.duration_s, py.duration_s, `${where}: duration_s`);
   else assert.equal(js.duration_s, null, `${where}: browser must not invent the wall time the chat store gave Python`);
   const started = js.started == null ? null : Date.parse(js.started) / 1000;
