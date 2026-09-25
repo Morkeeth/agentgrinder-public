@@ -85,8 +85,8 @@ declare me uuid := grinder_profile_id(); club uuid;
 begin
   if me is null then raise exception 'Sign in to join an event'; end if;
   select e.crew_id into club from grinder_events e join grinder_crews c on c.id = e.crew_id
-   where e.id = event and (c.visibility = 'public' or grinder_is_member(c.id));
-  if club is null then raise exception 'This event is private or unavailable'; end if;
+   where e.id = event and (c.visibility = 'public' or grinder_is_member(c.id)) and e.starts_at > now();
+  if club is null then raise exception 'This event is private, over or unavailable'; end if;
   insert into grinder_event_people(event_id, profile_id) values (event, me) on conflict do nothing;
 end $$;
 

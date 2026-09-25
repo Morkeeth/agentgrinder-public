@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 const H=createRequire(import.meta.url)('../site/home.js');
-const DAY=86400000, now=new Date(2026,8,25,12).getTime();
+const now=new Date(2026,8,25,12).getTime();
 const at=(d,h=10)=>new Date(new Date(2026,8,25+d,h).getTime()).toISOString();
 // Week: 14 days, runs only behind (and today), events only ahead (and today).
 const runs=[{id:'a',profile_id:'p1',visibility:'public',created_at:at(0)},{id:'b',profile_id:'p1',visibility:'public',created_at:at(-3)},{id:'c',profile_id:'p2',visibility:'public',created_at:at(-3)},{id:'old',profile_id:'p3',visibility:'public',created_at:at(-20)}];
@@ -11,6 +11,12 @@ const w=H.week(runs,events,now);
 assert.equal(w.days.length,14);
 assert.equal(w.days.find(d=>d.t===w.today).runs,1);
 assert.equal(w.days.reduce((a,d)=>a+d.runs,0),3,'the 20-day-old run is off the strip');
+assert.equal(w.days.filter(d=>d.t<=w.today).length,7,'seven days of runs including today');
+assert.equal(w.days.filter(d=>d.t>w.today).length,7,'seven days ahead');
+// A run 7 days back is outside 'the last 7 days' (today counts as one of them).
+assert.equal(H.week([{id:'x',created_at:at(-7)}],[],now).days.reduce((a,d)=>a+d.runs,0),0);
+// Across the end of daylight saving (Paris, 25 Oct 2026) every date appears once.
+{const t=new Date(2026,9,22,12).getTime();const keys=H.week([],[],t).days.map(d=>new Date(d.t).getDate());assert.equal(new Set(keys).size,14);}
 assert.equal(w.days.reduce((a,d)=>a+d.events.length,0),1,'a past event is not shown ahead');
 const html=H.weekHtml(runs,events,now);
 assert.match(html,/3 public runs in the last 7 days · 1 event in the next 7/);

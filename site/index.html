@@ -1540,13 +1540,12 @@ function landingHTML(){
   // then builders to find, then the most popular runs, then sign in. site/home.js draws the rows;
   // every one is real, and an empty section says so in one line.
   return `<div class="home">
-    <section class="home-hero"><h1>Strava is for people who ran. <i>__BRAND__</i> is for people who didn't.</h1>
-      <p class="drop-sub">Builders post what their agents did. Follow them and see their week.</p></section>
+    <section class="home-hero"><h1>Strava is for people who ran. <i>__BRAND__</i> is for people who didn't.</h1></section>
     <section class="home-sec" aria-labelledby="h-week"><div class="land-head"><h2 id="h-week">This week</h2></div><div id="home-week">${'<div class="wk-skel"></div>'}</div><div id="home-events"></div></section>
     <section class="home-sec" aria-labelledby="h-clubs"><div class="land-head"><h2 id="h-clubs">Clubs</h2></div><div id="home-clubs"></div></section>
     <section class="home-sec" aria-labelledby="h-builders"><div class="land-head"><h2 id="h-builders">Builders to follow</h2><a href="/?people">Find people</a></div><div id="home-builders"></div></section>
     <section class="home-sec landing-feature" aria-labelledby="h-popular" id="landing-feature"><div class="land-head"><h2 id="h-popular">Popular runs</h2><a href="/?explore">See all</a></div><div id="landing-feature-body">${skeletonCard()}</div><p id="public-run-count" class="public-run-count" role="status"></p></section>
-    <section class="home-join"><h2>Post your own runs</h2><p>Sign in and add your runs. You choose who sees each one.</p><button type="button" class="act primary" data-signin>${signInLabel()} and build your profile</button></section>
+    <section class="home-join"><h2>Post your own runs</h2><button type="button" class="act primary" data-signin>${signInLabel()} and build your profile</button></section>
   </div>
   <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/?boards">Marathon and boards</a><a href="/methodology">How the numbers are made</a><a href="/?post">Add a run from a file</a><a href="${REAL_RUN}">A real run</a></div>`;
 }

@@ -10,18 +10,20 @@
 (function (root) {
   "use strict";
   const esc = (s) => String(s ?? "").replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" }[c]));
-  const DAY = 86400000;
   const dayKey = (t) => { const d = new Date(t); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); };
   const startOfDay = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  // Calendar days, not 24-hour steps, so a daylight-saving change never repeats or skips a date.
+  const addDays = (t, n) => { const d = new Date(startOfDay(t)); d.setDate(d.getDate() + n); return d.getTime(); };
 
-  // 14 days: seven back (runs), today, six ahead (events).
+  // 14 days: the last seven including today (runs), then the next seven (events). Events later
+  // today are drawn on today and counted with the next seven.
   function week(runs, events, now) {
     const today = startOfDay(now);
     const days = [];
-    for (let i = -7; i <= 6; i++) days.push({ t: today + i * DAY, runs: 0, events: [] });
+    for (let i = -6; i <= 7; i++) days.push({ t: addDays(now, i), runs: 0, events: [] });
     const byKey = new Map(days.map((d) => [dayKey(d.t), d]));
     (runs || []).forEach((r) => { const d = byKey.get(dayKey(r.created_at)); if (d && d.t <= today) d.runs++; });
-    (events || []).forEach((e) => { const d = byKey.get(dayKey(e.starts_at)); if (d && d.t >= today) d.events.push(e); });
+    (events || []).forEach((e) => { const d = byKey.get(dayKey(e.starts_at)); if (d && d.t >= today && Date.parse(e.starts_at) >= now) d.events.push(e); });
     return { days, today };
   }
 
@@ -71,13 +73,13 @@
   }
 
   async function read(sb, now) {
-    const since = new Date(startOfDay(now) - 30 * DAY).toISOString();
-    const until = new Date(startOfDay(now) + 7 * DAY).toISOString();
+    const since = new Date(addDays(now, -30)).toISOString();
+    const until = new Date(addDays(now, 8)).toISOString(); // the end of the seventh day ahead
     const runsQ = sb.from("runs").select("*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)")
       .eq("visibility", "public").gte("created_at", since).order("created_at", { ascending: false }).limit(100);
     const clubsQ = sb.from("grinder_crews").select("id,name,visibility,created_at,grinder_memberships(count)").eq("visibility", "public").order("created_at", { ascending: false }).limit(12);
     const eventsQ = sb.from("grinder_events").select("id,title,place,starts_at,crew_id,grinder_crews(name),grinder_event_people(count)")
-      .gte("starts_at", new Date(now).toISOString()).lte("starts_at", until).order("starts_at", { ascending: true }).limit(20);
+      .gte("starts_at", new Date(now).toISOString()).lt("starts_at", until).order("starts_at", { ascending: true }).limit(20);
     const [runs, clubs, events] = await Promise.all([runsQ, clubsQ, eventsQ].map((q) => q.then((r) => (r.error ? null : r.data), () => null)));
     return {
       runs: runs || [],

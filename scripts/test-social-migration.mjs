@@ -68,7 +68,7 @@ await as(C);
 await db.query(`select grinder_join_event($1)`, [ev]);
 await db.query(`select grinder_join_event($1)`, [ev]);
 assert.equal((await one(`select count(*)::int n from grinder_event_people where event_id=$1`, [ev])).n, 2);
-await assert.rejects(db.query(`select grinder_join_event($1)`, [privEv]), /private or unavailable/);
+await assert.rejects(db.query(`select grinder_join_event($1)`, [privEv]), /private, over or unavailable/);
 await assert.rejects(db.query(`insert into grinder_events(crew_id,owner_id,title,starts_at) values($1,$2,'fake',now())`, [pub, C]), /permission denied/);
 await assert.rejects(db.query(`insert into grinder_event_people(event_id,profile_id) values($1,$2)`, [ev, A]), /permission denied/);
 assert.equal((await db.query(`select id from grinder_events where id=$1`, [privEv])).rows.length, 0, 'a private Club event is hidden from non-members');
@@ -78,6 +78,11 @@ await assert.rejects(db.query(`select grinder_delete_event($1)`, [ev]), /Only th
 await as(null);
 assert.equal((await db.query(`select id from grinder_events where id=$1`, [ev])).rows.length, 1, 'a public Club event is readable signed out');
 await assert.rejects(db.query(`select grinder_join_event($1)`, [ev]), /permission denied|Sign in/);
+// An event that has started cannot be joined, even by a direct call.
+await as(null); await db.exec('reset role');
+await db.query(`update grinder_events set starts_at = now() - interval '1 minute' where id = $1`, [ev]);
+await as(C);
+await assert.rejects(db.query(`select grinder_join_event($1)`, [ev]), /private, over or unavailable/);
 await as(A);
 await db.query(`select grinder_delete_event($1)`, [ev]);
 assert.equal((await db.query(`select id from grinder_events where id=$1`, [ev])).rows.length, 0);
