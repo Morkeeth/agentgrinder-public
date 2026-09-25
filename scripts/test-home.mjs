@@ -43,4 +43,6 @@ const bad=await H.read(sbBad,now);
 assert.equal(bad.clubs,null);assert.deepEqual(bad.runs,[]);
 const thrown=await H.read({from:()=>{throw new Error('x')}},now);
 assert.deepEqual([thrown.runs,thrown.clubs,thrown.events],[null,null,null]);
+assert.match(H.weekHtml([],null,now),/No public runs in the last 7 days · events could not load/);
+assert.match(H.weekHtml(null,[],now),/Runs could not load · no events in the next 7/);
 console.log('Home checks passed.');

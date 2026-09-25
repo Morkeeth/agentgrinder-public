@@ -27,8 +27,9 @@
     return { days, today };
   }
 
+  // runs or events may be null: that read failed, and the line says so instead of "none".
   function weekHtml(runs, events, now) {
-    const { days, today } = week(runs, events, now);
+    const { days, today } = week(runs || [], events || [], now);
     const max = Math.max(1, ...days.map((d) => d.runs));
     const cols = days.map((d) => {
       const wd = new Date(d.t).toLocaleDateString("en-GB", { weekday: "narrow" });
@@ -40,7 +41,9 @@
     }).join("");
     const ran = days.reduce((a, d) => a + d.runs, 0);
     const coming = days.reduce((a, d) => a + d.events.length, 0);
-    const line = `${ran ? ran + " public run" + (ran === 1 ? "" : "s") + " in the last 7 days" : "No public runs in the last 7 days"} · ${coming ? coming + " event" + (coming === 1 ? "" : "s") + " in the next 7" : "no events in the next 7"}`;
+    const runPart = runs === null ? "Runs could not load" : ran ? ran + " public run" + (ran === 1 ? "" : "s") + " in the last 7 days" : "No public runs in the last 7 days";
+    const eventPart = events === null ? "events could not load" : coming ? coming + " event" + (coming === 1 ? "" : "s") + " in the next 7" : "no events in the next 7";
+    const line = `${runPart} · ${eventPart}`;
     return `<ol class="wk" aria-label="This week on __BRAND__">${cols}</ol><p class="wk-line">${esc(line)}</p>`;
   }
 
