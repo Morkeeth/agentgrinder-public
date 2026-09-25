@@ -85,7 +85,7 @@ def render_share_card(
         show_stats = False
     elif mode == "profile":
         stamp = "CLAIMED"
-        lead = f"@{_esc(handle)} · Scrapbook"
+        lead = f"@{_esc(handle)}"
         sub = headline or "Where I post my real runs."
         hero_n = str(runs if runs is not None else "—")
         hero_k = "runs posted"
@@ -99,7 +99,7 @@ def render_share_card(
         hero_k = "prompts typed"
         show_stats = True
 
-    claim_url = f"{base}/?claim=1"
+    claim_url = f"{base}/"
     onboard_url = f"{base}/?onboard"
 
     # stats row for grind/profile

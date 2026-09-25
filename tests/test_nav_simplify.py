@@ -25,8 +25,15 @@ def test_primary_nav_has_the_product_loop():
         assert f">{label}</a>" not in before_menus
     more = INDEX[INDEX.index("const MORE_LINKS="):]
     more = more[: more.index("\n")]
-    for label in ("Find people", "Following", "Community", "Forum", "Crews", "Challenges"):
+    for label in ("Find people", "Following", "A real run", "Privacy"):
         assert label in more
+    # 25 Sep 2026: the programme pages left the menu. Their addresses land on the feed.
+    for label in ("Community", "Forum", "Crews", "Challenges", "Practices"):
+        assert label not in more
+    retired = INDEX[INDEX.index("const RETIRED="):]
+    retired = retired[: retired.index("\n")]
+    for key in ("community", "forum", "challenges", "practices", "experiments", "rigs", "progress", "claim", "pitch"):
+        assert f"'{key}'" in retired
 
 
 def test_mobile_nav_is_four_or_fewer_destinations():

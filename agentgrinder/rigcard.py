@@ -106,7 +106,7 @@ def render_rig_card(
     </div>
   </div>
   <div class="stub"><div>Steal this rig · <span>claim your handle</span></div>
-    <div class="url">{_esc(base.replace('https://', '') + '/?claim=1')}</div></div>
+    <div class="url">{_esc(base.replace('https://', '') + '/')}</div></div>
 </div>
 </body></html>"""
 

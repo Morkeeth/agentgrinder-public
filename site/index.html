@@ -543,7 +543,13 @@ function setPrimarySection(section){
 // A real public run, posted from a real session, for anyone who wants to see a card before making
 // one. It replaced the bundled sample on 25 Sep 2026: a stranger should meet a real run first.
 const REAL_RUN='/r/3afa89e7-aff5-488d-bec3-da36196b8c5e';
-const MORE_LINKS=[['/?people','Find people'],['/?following','Following'],['/?community','Community'],['/?forum','Forum'],['/?crews','Crews'],['/?challenges','Challenges'],['/?practices','Practices'],[REAL_RUN,'A real run'],['/methodology','How the measurements work'],['/privacy','Privacy']];
+// 25 Sep 2026, fresh eyes before the Sunday meetup: Community, Forum, Crews, Challenges and
+// Practices left the menu. PRODUCT.md already said none of them belong in the main app; the menu
+// had not caught up. The product is: post your run, see others, cheer.
+const MORE_LINKS=[['/?people','Find people'],['/?following','Following'],[REAL_RUN,'A real run'],['/methodology','How the numbers are made'],['/privacy','Privacy']];
+// Sections that are gone. Their addresses land on the feed with one line, so an old link is
+// not a dead end and a stranger never meets an empty programme page.
+const RETIRED=['community','forum','challenges','challenge','practices','practice','experiments','experiment','rigs','rigversion','progress','comparison','pitch','claim'];
 function menuLinks(kind){
   if(kind==='more') return MORE_LINKS.map(([href,label])=>`<a href="${href}" role="menuitem">${esc(label)}</a>`).join('');
   if(!ME) return `<a href="/?onboard" role="menuitem">Get started</a><div class="menu-sep"></div><button type="button" class="menu-signin" data-signin role="menuitem">Sign in with GitHub</button>`;
@@ -1219,7 +1225,7 @@ function shareCardHtml(opts){
   const stamp=opts.stamp||(ghost?'Ghost grind':'Claimed');
   const heroN=opts.heroN??'-';
   const heroK=opts.heroK||'verified per turn';
-  const claimUrl=location.host+'/?claim=1';
+  const claimUrl=location.host+'/';
   const stats=opts.stats||'';
   const curve=opts.rhythm?`<div class="share-curve">${shareCurveSvg(opts.rhythm)}</div>`:'';
   const roast=opts.roast&&opts.roast.length?`<div class="share-roast"><b style="color:var(--ink);font-weight:500">Roast shape</b><ul>${opts.roast.map(l=>`<li>${esc(l)}</li>`).join('')}</ul></div>`:'';
@@ -1233,12 +1239,12 @@ function shareCardHtml(opts){
       <section class="share-right"><div class="share-hero" title="${esc(opts.heroTip||'')}"><div class="n num">${esc(String(heroN))}</div><div class="k">${esc(heroK)}</div></div>
         ${hl}${roast}${curve}${stats?`<div class="share-stats">${stats}</div>`:''}</section>
     </div>
-    <div class="share-foot"><div class="cta">Your turn · <span>claim your handle</span></div>
+    <div class="share-foot"><div class="cta">Your turn · <span>drop your session file</span></div>
       <div class="url num">${esc(claimUrl)}</div></div>
   </div></div>
   <div class="share-actions">
     <button id="share-copy">Copy link</button>
-    <button class="ghost" onclick="location.href='/?onboard'">Claim yours</button>
+    <button class="ghost" onclick="location.href='/'">Post yours</button>
     <button class="ghost" onclick="history.back()">Back</button>
   </div>
   <p class="hint" style="margin-top:12px">Screenshot the card above · metrics only · a real session</p></div>`;
@@ -1251,7 +1257,7 @@ function fitShareCard(){
 }
 function shareStatsGrind(r){
   const dm=r.duration_s?Math.round(r.duration_s/60):0;
-  return `<div class="stat"><div class="k">prompts · cost</div><div class="v num">${r.prompts??'-'}</div></div>
+  return `<div class="stat"><div class="k">typed turns</div><div class="v num">${r.prompts??'-'}</div></div>
     <div class="stat"><div class="k">moving</div><div class="v num">${fmtDur(dm)}</div></div>
     <div class="stat"><div class="k">commits</div><div class="v num">${r.commits??'-'}</div></div>
     <div class="stat"><div class="k">tool calls</div><div class="v num">${r.tool_calls??'-'}</div></div>`;
@@ -1265,7 +1271,7 @@ function vptTotals(R){
     vptFormula:x==null?`needs verified claims + artifacts produced on at least one run (${R.length} runs, none stored with them yet)`:`(${num} verified + artifacts) ÷ ${den} typed turns over ${full.length} of ${R.length} runs`};
 }
 function shareStatsProfile(R,T,harnesses){
-  return `<div class="stat"><div class="k">prompts · cost</div><div class="v num">${T.prompts}</div></div>
+  return `<div class="stat"><div class="k">typed turns</div><div class="v num">${T.prompts}</div></div>
     <div class="stat"><div class="k">hours</div><div class="v num">${T.hours}</div></div>
     <div class="stat"><div class="k">commits</div><div class="v num">${T.commits}</div></div>
     <div class="stat"><div class="k">rig</div><div class="v num">${esc((harnesses[0]||'-').split(' ')[0])}</div></div>`;
@@ -1518,7 +1524,7 @@ function landingHTML(){
       <p id="public-run-count" class="public-run-count" role="status"></p>
     </section></div>
     <section class="power-path"><h2>For power users</h2><p class="hint">The command line reads your latest session for you and can post on every run.</p><a class="act" href="/?onboard">Post your first run from the command line</a></section>
-    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/methodology">How the measurements work</a><a href="/privacy">Privacy</a><a href="${REAL_RUN}">A real run</a></div>`;
+    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/methodology">How the numbers are made</a><a href="/privacy">Privacy</a><a href="${REAL_RUN}">A real run</a></div>`;
 }
 
 // The newest public runs, only Public ones: a Link run never reaches this door.
@@ -1752,8 +1758,10 @@ async function viewExplore(){
   const R=runs||[];
   const first=ME&&(await runCount())===0;
   frame(railHtml('feed',R), null);
-  app.innerHTML=feedTabs('discover')+(first?firstRunPrompt():'')
-    +(R.length?feedCards(R,ad)+(R.length<4?GrinderFeed.nextSlot():'')
+  // The feed is the feed. A first-time poster gets the "Your run goes here" slot under the
+  // cards, never a command line above them (25 Sep 2026).
+  app.innerHTML=feedTabs('discover')
+    +(R.length?feedCards(R,ad)+(R.length<4||first?GrinderFeed.nextSlot():'')
       :'<div class="card"><div class="empty"><h3>Latest runs</h3><p>Public runs from builders show up here.</p><div class="cta"><a class="act blue" href="/?post">Post a run</a><a class="act" href="/?people">Find people</a></div></div></div>');
   wireFirstRunPrompt();
   wireKudos(); countUp();
@@ -1857,7 +1865,7 @@ async function viewProfile(handle){
     <p class="profile-context">Identity first, then recent work. XUDOS are recognition from people, not a quality score.</p>
     <div class="head"><h2>${mine?'Your recent runs':(ME?'Recent runs you can see':'Recent public runs')}</h2><span class="meta">${R.length||'none yet'}${mine?` · <a href="/?share=1&u=${encodeURIComponent(handle)}">share your profile</a>`:''}</span></div>
     ${!mine&&!ME?'<p class="hint profile-public-note">Only Public runs appear here. Link runs stay off this profile.</p>':''}
-    ${R.length?(await (async()=>{const ad=await ackData(R);return R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('');})()):(mine?firstRunPrompt():`<div class="card"><div class="empty"><h3>${ME?'No runs you can see yet':'No public runs yet'}</h3><p>${ME?'Public runs and Close friends runs (if you are on their list) show here. Following only lists Public runs.':'You can follow this builder now; their public runs will appear in Following when they post.'}</p></div></div>`)}
+    ${R.length?(await (async()=>{const ad=await ackData(R);return R.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('');})()):(mine?GrinderFeed.nextSlot():`<div class="card"><div class="empty"><h3>${ME?'No runs you can see yet':'No public runs yet'}</h3><p>${ME?'Public runs and Close friends runs (if you are on their list) show here. Following only lists Public runs.':'You can follow this builder now; their public runs will appear in Following when they post.'}</p></div></div>`)}
     <details class="profile-summary"><summary>Profile totals</summary><div class="ptotals num"><div><div class="k">Public runs</div><div class="v" data-count="${publicCount}">0</div></div>${visibleExtra?`<div><div class="k">Visible to you</div><div class="v" data-count="${R.length}">0</div></div>`:''}<div><div class="k">XUDOS received</div><div class="v" data-count="${acksR||0}">0</div></div></div></details>`;
   wireFirstRunPrompt();
   wireKudos(); countUp();
@@ -2162,8 +2170,8 @@ async function viewShareRig(handle){
       <div class="p-row"><span>Skills</span><span class="v"><b>${rg.skills||0}</b></span></div>
       <div class="p-row"><span>MCP names</span><span class="v">${names||'not shared'}</span></div>
       ${rg.notes?`<div class="g-row meta">${esc(rg.notes)}</div>`:''}</div>
-    <div class="cta"><button onclick="location.href='/?u=${encodeURIComponent(handle)}'">Scrapbook</button>
-      <button class="ghost" onclick="location.href='/?claim=1'">Claim your handle</button></div>`;
+    <div class="cta"><button onclick="location.href='/?u=${encodeURIComponent(handle)}'">Open profile</button>
+      <button class="ghost" onclick="location.href='/'">Post yours</button></div>`;
 }
 
 async function viewShareProfile(handle){
@@ -2181,7 +2189,7 @@ async function viewShareProfile(handle){
     commits:R.reduce((a,r)=>a+(r.commits||0),0)};
   const harnesses=[...new Set(R.map(r=>r.harness).filter(Boolean))];
   app.innerHTML=shareCardHtml({
-    handle, stamp:'Claimed', lead:`@${handle} · Scrapbook`, sub:'Where I post my real runs.',
+    handle, stamp:'Claimed', lead:`@${handle}`, sub:'Where I post my real runs.',
     heroN:T.runs, heroK:'runs posted', stats:shareStatsProfile(R,T,harnesses),
   });
   fitShareCard(); window.addEventListener('resize',fitShareCard);
@@ -2221,33 +2229,21 @@ async function route(){ account.recover();
     if(q.get('example')==='tree') return GrinderExample.viewTree();
     return GrinderExample.view();
   }
-  if(q.has('community'))return viewCommunity();
-  if(q.has('forum')){setPrimarySection('community');return forum.index();}
+  if(RETIRED.some(k=>q.has(k))){history.replaceState(null,'','/?explore');status('That section is gone. What is left: runs, people and cheers.');return viewExplore();}
   if(q.has('segment'))return GrinderSegments.mount({client:sb,id:q.get('segment'),slot:$('app'),frame,status});
   if(q.has('post'))return viewPost();
   if(q.has('mine')){setPrimarySection('mine');return progress.history();}
-  if(q.has('progress')){setPrimarySection('mine');return progress.index();}
-  if(q.has('comparison')){setPrimarySection('mine');return progress.detail(q.get('comparison'));}
   if(q.has('people')){setPrimarySection('feed');return people.discover(q.get('q')||'');}
   if(q.has('account')){return account.view();}
   if(q.has('connect')){if(connect)return connect.view();return account.view();}
   if(q.has('following')){setPrimarySection('feed');return social.following();}
   if(q.has('inbox')){setPrimarySection('inbox');return social.inbox();}
+  // Crews stay reachable by address for the one two-person crew PRODUCT.md names; not in any menu.
   if(q.has('crews')){setPrimarySection('community');return social.crews();}
-  if(q.has('experiments')){setPrimarySection('mine');return practices.experiments(q.get('experiments'));}
-  if(q.has('experiment')){setPrimarySection('mine');return practices.experiment(q.get('experiment'));}
   if(q.has('crew')){setPrimarySection('community');return social.crew(q.get('crew'));}
   if(q.has('join')){setPrimarySection('community');return social.join(q.get('join'));}
   if(q.has('agents')){setPrimarySection('mine');return social.agents();}
   if(q.has('agent')){setPrimarySection('mine');return social.agentProfile(q.get('agent'));}
-  if(q.has('practices')){setPrimarySection('mine');return practices.index();}
-  if(q.has('practice')){setPrimarySection('mine');return practices.detail(q.get('practice'));}
-  if(q.has('challenges')){setPrimarySection('community');return challenges.index();}
-  if(q.has('challenge')){setPrimarySection('community');return challenges.show(q.get('challenge'));}
-  if(q.has('rigs')){setPrimarySection('mine');return challenges.rigs();}
-  if(q.has('rigversion')){setPrimarySection('mine');return challenges.rig(q.get('rigversion'));}
-  if(q.get('claim')) return viewClaim();
-  if(q.get('pitch')!==null) return viewPitch();
   if(q.get('event')) return viewEvent();
   if(q.get('share')!==null){
     if(q.get('rig')) return viewShareRig(q.get('rig'));
@@ -2259,8 +2255,10 @@ async function route(){ account.recover();
   // The /l/ ask ("Drop yours") lands on the drop zone, signed in or not.
   if(location.hash==='#drop-zone') return viewLanding();
   if(await shouldOnboard()) return viewOnboard();
-  if(ME&&(await runCount())===0) return viewPost();
-  return ME?viewMe():viewLanding(); }
+  // Home is the same page signed in or out: the drop zone, then the latest runs. Until 25 Sep
+  // 2026 a person who had just signed in to post the file they dropped landed on a command line
+  // instead, and the drop zone was gone. My runs is one tap away under You.
+  return viewLanding(); }
 
 document.addEventListener('DOMContentLoaded',()=>{
   $('app').innerHTML=skeletonCard();
