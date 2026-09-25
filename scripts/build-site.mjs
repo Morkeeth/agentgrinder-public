@@ -11,6 +11,14 @@ for(const name of ['SB_URL','SB_KEY']) {
  if(!pattern.test(html)) throw new Error(`Missing ${name} deployment marker`);
  html=html.replace(pattern,()=>`const ${name}=${JSON.stringify(config[name])};`);
 }
+// X sign-in can be switched on at build time (Vercel env AGENTGRINDER_X_SIGNIN=1) as well as by
+// the runtime settings probe, so the button never waits on a guess about which key Supabase
+// reports the X / Twitter (OAuth 2.0) provider under.
+if(process.env.AGENTGRINDER_X_SIGNIN==='1') {
+ const marker='const PROVIDERS_ENABLED=["github"];';
+ if(!html.includes(marker)) throw new Error('Missing PROVIDERS_ENABLED marker');
+ html=html.replace(marker,'const PROVIDERS_ENABLED=["github","x"];');
+}
 const gitSha=deploymentGitSha();
 if(gitSha) {
  const title='<title>__BRAND__ · __TAGLINE__</title>';
