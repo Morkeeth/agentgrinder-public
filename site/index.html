@@ -434,6 +434,14 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .connect-then{margin-top:18px;padding-top:12px;border-top:1px solid var(--rule)}
 .connect-then h2{font-size:16px;margin:0 0 6px}
 .project-row a b{color:var(--ink)}
+.boards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:14px 0}
+@media(max-width:900px){.boards-grid{grid-template-columns:1fr}}
+.board{padding:14px 16px}
+.board-head h3{margin:0;font-size:15px}.board-head small{display:block;color:var(--soft);font-size:12px;margin:2px 0 8px}
+.board-row{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--rule)}
+.board-rank{color:var(--soft);font-size:13px}.board-what a{color:var(--ink)}.board-what small{display:block;color:var(--soft);font-size:12px}
+.board-value{font-weight:600;white-space:nowrap}.board-empty{color:var(--soft);font-size:13px;margin:8px 0 0}
+.heatmap{margin:0 0 14px}.heatmap svg{width:100%;height:auto;display:block;margin-top:6px}
 .p-links{font-size:13px;color:var(--soft);margin-top:4px}
 .p-links a{color:var(--ink)}
 .experiment-card h2{font-size:18px;line-height:1.3;margin:6px 0 10px}
@@ -555,7 +563,7 @@ const REAL_RUN='/r/3afa89e7-aff5-488d-bec3-da36196b8c5e';
 // 25 Sep 2026, fresh eyes before the Sunday meetup: Community, Forum, Crews, Challenges and
 // Practices left the menu. PRODUCT.md already said none of them belong in the main app; the menu
 // had not caught up. The product is: post your run, see others, cheer.
-const MORE_LINKS=[['/?people','Find people'],['/?following','Following'],['/?projects','Projects'],[REAL_RUN,'A real run'],['/methodology','How the numbers are made'],['/privacy','Privacy']];
+const MORE_LINKS=[['/?people','Find people'],['/?following','Following'],['/?projects','Projects'],['/?boards','Marathon and boards'],[REAL_RUN,'A real run'],['/methodology','How the numbers are made'],['/privacy','Privacy']];
 // Sections that are gone. Their addresses land on the feed with one line, so an old link is
 // not a dead end and a stranger never meets an empty programme page.
 const RETIRED=['community','forum','challenges','challenge','practices','practice','experiments','experiment','rigs','rigversion','progress','comparison','pitch','claim'];
@@ -1528,7 +1536,7 @@ function landingHTML(){
       <p id="public-run-count" class="public-run-count" role="status"></p>
     </section></div>
     <section class="power-path"><h2>For power users</h2><p class="hint">One command per agent reads your latest session and opens the preview. Grok Bot and other bots too.</p><a class="act" href="/?connect">Post your first run from the command line</a></section>
-    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/methodology">How the numbers are made</a><a href="/privacy">Privacy</a><a href="${REAL_RUN}">A real run</a></div>`;
+    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/?boards">Marathon and boards</a><a href="/methodology">How the numbers are made</a><a href="/privacy">Privacy</a><a href="${REAL_RUN}">A real run</a></div>`;
 }
 
 // THE DROP ZONE. One markup, mounted by site/dropin.js, on the landing and on Connect.
@@ -1853,6 +1861,70 @@ function profileLinksHtml(prof,mine){
   }
   return parts.length?`<div class="p-links">${parts.join(' · ')}</div>`:'';
 }
+// TIME ON A RUN, one rule (25 Sep 2026): wall_time_s when the capture measured it, else
+// duration_s. The same precedence feed-card.js uses for the card, so a board and a card never
+// disagree about how long a run took.
+const runSeconds=r=>{const v=r.wall_time_s??r.duration_s;return Number.isFinite(v)&&v>0?v:0};
+const runStart=r=>Date.parse(r.started_at||r.created_at||'')||0;
+// The card's own count (tool_calls, else the ridge count), so a lane never zeroes a run the card counts.
+const runTools=r=>{const n=GrinderContract.toolCallCount(r);return Number.isFinite(n)&&n>0?n:0};
+function fmtSecs(secs){const m=Math.round(secs/60);return m>=60?`${Math.floor(m/60)}h ${m%60}m`:`${m}m`}
+// Monday 00:00 in the reader's time zone: the week a board counts.
+function weekStart(now=new Date()){const d=new Date(now);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
+
+// BOARDS (25 Sep 2026). Computed in the browser from public runs only, so every row is a run
+// anyone can open. Three lanes for this week and one for all time. An empty lane says so; it is
+// never filled with a sample. The "honest failure" lane is not a joke at anyone: it is the run
+// where the agent worked hardest and changed nothing, named as a fact the run itself recorded.
+const MARATHON_SECS=3*3600;
+function boardRow(r,i,value){const h=profileHandle(r.profiles||{});return `<div class="board-row"><span class="board-rank num">${i+1}</span><span class="board-what"><a href="/?run=${r.id}">${esc(GrinderFeed.titleOf(r))}</a><small>${h?`<a href="/?u=${encodeURIComponent(h)}">@${esc(h)}</a>`:'metrics only'} · ${esc(r.harness||'agent')}</small></span><span class="board-value num">${esc(value)}</span></div>`}
+function boardHtml(title,note,rows,empty){return `<section class="card board"><div class="board-head"><h3>${esc(title)}</h3><small>${esc(note)}</small></div>${rows.length?rows.map(([r,v],i)=>boardRow(r,i,v)).join(''):`<p class="board-empty">${esc(empty)}</p>`}</section>`}
+async function viewBoards(){
+  const app=$('app'); frame(railHtml('feed'),null); setPrimarySection('feed'); app.innerHTML=skeletonCard()+skeletonCard();
+  const since=weekStart();
+  const [{data:recent,error},{data:longRuns}]=await Promise.all([
+    sb.from('runs').select(PROJECT_SELECT).eq('visibility','public').order('created_at',{ascending:false}).limit(300),
+    sb.from('runs').select(PROJECT_SELECT).eq('visibility','public').or(`wall_time_s.gte.${MARATHON_SECS},duration_s.gte.${MARATHON_SECS}`).order('wall_time_s',{ascending:false,nullsFirst:false}).order('duration_s',{ascending:false,nullsFirst:false}).limit(100)]);
+  if(error){status(error.message,true);app.innerHTML='<div class="card"><div class="empty">Boards could not load.</div></div>';return;}
+  const all=recent||[]; noteTraces(all);
+  const week=all.filter(r=>runStart(r)>=since.getTime());
+  const top=(list,score,fmt,n=5)=>list.map(r=>[r,score(r)]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,n).map(([r,v])=>[r,fmt(v)]);
+  const ghosts=top(week.filter(r=>GrinderFeed.ghost(r)),runSeconds,fmtSecs);
+  const tools=top(week,runTools,v=>`${v.toLocaleString()} calls`);
+  // The honest failure: the run recorded zero files changed (or, with files unknown, zero
+  // commits) and the most tool calls. Both numbers come from the run row.
+  const failures=week.filter(r=>(r.files_touched===0)||(r.files_touched==null&&r.commits===0)).map(r=>[r,runTools(r)]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,5)
+    .map(([r,v])=>[r,`${v.toLocaleString()} calls, ${r.files_touched===0?'0 files changed':'0 commits'}`]);
+  const marathon=top([...new Map((longRuns||[]).map(r=>[r.id,r])).values()].filter(r=>runSeconds(r)>=MARATHON_SECS),runSeconds,fmtSecs,10);
+  const weekLabel=`${since.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][since.getMonth()]}`;
+  app.innerHTML=`<div class="head"><h1>Marathon and boards</h1><span class="meta">public runs only</span></div>
+    <p class="hint">Every row is a public run anyone can open. This week starts Monday ${esc(weekLabel)} in your time zone. Time on a run is the measured wall time, else the session length.</p>
+    <div class="boards-grid">
+      ${boardHtml('Longest ghost run this week','an hour or more and 30+ tool calls; typed to at most twice, or 40+ tool calls per typed turn; when typed turns are unknown, a start between 22:00 and 04:59',ghosts,'No ghost run this week yet. Leave the agent running while you sleep.')}
+      ${boardHtml('Most tool calls this week','one run, one count',tools,'No public run with tool calls this week yet.')}
+      ${boardHtml('Honest failure of the week','most tool calls with zero files changed. The run that tried hardest and shipped nothing, on the record',failures,'No run with zero files changed this week. Post the ugly one.')}
+    </div>
+    ${boardHtml('Marathon, all time','public runs of 3 hours or more',marathon,'No public run of 3 hours or more yet. The first one goes here.')}
+    <p class="hint"><a href="/?post">Post a run</a> · <a href="/?projects">Projects</a> · <a href="/methodology">How the numbers are made</a></p>`;
+}
+
+// THE HEATMAP. A GitHub contribution graph of the runs a viewer can see on a profile: one square
+// a day for the last 52 weeks, darker for more runs that day. Days come from started_at, else
+// created_at, in the reader's time zone. A square with no run is the page's rule colour.
+function heatmapSvg(runs,now=new Date()){
+  const counts=new Map();
+  for(const r of runs){const t=runStart(r);if(!t)continue;const d=new Date(t);d.setHours(0,0,0,0);counts.set(d.getTime(),(counts.get(d.getTime())||0)+1)}
+  const end=new Date(now);end.setHours(0,0,0,0);
+  const start=new Date(end);start.setDate(end.getDate()-((end.getDay()+6)%7)-7*51);
+  const cell=11,gap=2,cols=52,rows=7;
+  const fill=n=>n>=3?'var(--blue)':n===2?'#6b96ff':n===1?'var(--blue-soft)':'var(--rule)';
+  let out='';let total=0;
+  for(let c=0;c<cols;c++)for(let r=0;r<rows;r++){const d=new Date(start);d.setDate(start.getDate()+c*7+r);if(d>end)continue;const n=counts.get(d.getTime())||0;total+=n;
+    out+=`<rect x="${c*(cell+gap)}" y="${r*(cell+gap)}" width="${cell}" height="${cell}" rx="2" fill="${fill(n)}"><title>${d.toDateString()}: ${n} run${n===1?'':'s'}</title></rect>`}
+  const w=cols*(cell+gap)-gap,h=rows*(cell+gap)-gap;
+  return `<figure class="heatmap"><figcaption class="meta">${total} run${total===1?'':'s'} in the last 52 weeks</figcaption><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${total} runs in the last 52 weeks, one square per day">${out}</svg></figure>`;
+}
+
 // PROJECTS (25 Sep 2026). A run can belong to a project: the name capture found or the author
 // typed, plus an optional repository link. A project page is every public run on it, newest
 // first; the owner also sees their own private runs there. The list is every project with at
@@ -1919,6 +1991,7 @@ async function viewProfile(handle){
   app.innerHTML=`<div class="phero">${avatar(handle,{size:36,agent:isAgentProfile(prof)})}
       <div><h1>${esc(prof.display_name||prof.name||handle)}</h1><div class="h">@${esc(handle)}${setup?' · '+esc(setup):''}</div>${profileLinksHtml(prof,mine)}</div></div>
     <div id="social-follow" class="social-follow"></div>
+    ${heatmapSvg(R)}
     ${mine?`<details class="profile-settings"><summary>Edit profile</summary><div class="panel pad"><label>Handle<input id="e_handle" maxlength="40" value="${esc(handle)}"></label><label>Display name<input id="e_name" maxlength="60" value="${esc(prof.display_name||prof.name||'')}"></label><button id="savep">Save profile</button><div id="linked-accounts"><p class="meta">Sign-in methods, sign out on this device and profile deletion live in <a href="/?account">Account settings</a>.</p></div></div></details>`:''}
     ${mine?'<div id="close-friends-management"></div>':''}
     ${(()=>{const seen=new Map();R.forEach(r=>{const l=GrinderContract.projectLabel(r.project);if(l&&!seen.has(r.project))seen.set(r.project,l)});return seen.size?`<p class="profile-context">Projects: ${[...seen].map(([k,l])=>`<a href="/?project=${encodeURIComponent(k)}">${esc(l)}</a>`).join(' · ')}</p>`:''})()}
@@ -2293,6 +2366,7 @@ async function route(){ account.recover();
     return GrinderExample.view();
   }
   if(RETIRED.some(k=>q.has(k))){history.replaceState(null,'','/?explore');status('That section is gone. What is left: runs, people and cheers.');return viewExplore();}
+  if(q.has('boards'))return viewBoards();
   if(q.has('projects'))return viewProjects();
   if(q.has('project'))return viewProject(q.get('project'));
   if(q.has('segment'))return GrinderSegments.mount({client:sb,id:q.get('segment'),slot:$('app'),frame,status});
