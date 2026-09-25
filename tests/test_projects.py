@@ -8,7 +8,9 @@ def test_preview_and_composer_take_a_repository_link():
     assert 'id="i_repo"' in INDEX and 'id="f_repo"' in INDEX
     assert "'i_repo'" in INDEX.split("const editFields=")[1].split("]")[0]
     assert "'f_repo'" in INDEX.split("const fields=['f_title'")[1].split("]")[0]
-    assert "repo_url:safeRepoUrl($('i_repo')?.value)||run.repo_url||null" in INDEX
+    assert "repo_url:safeRepoUrl($('i_repo')?.value)||null" in INDEX
+    # The saved row: the typed field wins over the capture, and a non-link clears it.
+    assert "if(repo) coach.repo_url=repo; else delete coach.repo_url;" in INDEX
     assert "repo_url:safeRepoUrl($('f_repo')?.value)" in INDEX
     # https only, or nothing: a repository link is clicked, never printed as text.
     assert "function safeRepoUrl(value)" in INDEX and "/^https:/.test(url)" in INDEX
