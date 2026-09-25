@@ -244,6 +244,8 @@
     }
     $("drop-title").disabled = true;
     linkUrl = body.url;
+    // A visitor Free Lunch sent here: confirm the card they just made (site/fair.js).
+    if (root.StriveFair && body.id) root.StriveFair.confirm("link", body.id);
     refreshStride();
     state.textContent = "Link ready. Anyone with it can see this card, and nothing else.";
     $("drop-out").innerHTML = `<div class="drop-link">
