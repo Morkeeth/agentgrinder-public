@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from agentgrinder import ingest  # noqa: E402
 
-KEYS = ("turns_typed", "tool_calls", "files_touched", "commits", "duration_s", "rhythm")
+KEYS = ("turns_typed", "tool_calls", "files_touched", "commits", "duration_s", "rhythm", "route", "line")
 
 
 def counts(harness, path):

@@ -15,7 +15,8 @@ def view_landing():
 def test_logged_out_landing_exposes_browsing_and_first_post():
     body = landing()
     assert "<title>__BRAND__ · __TAGLINE__</title>" in HTML
-    assert "Every run your agent made, on a card you can share." in body
+    # The joke is the pitch, whole and undisclaimed (Oscar, 25 Sep 2026).
+    assert "Strava is for people who ran. <i>__BRAND__</i> is for people who didn't." in body
     assert 'href="/?explore"' in body
     assert 'Post your first run' in body
     assert 'href="/?onboard"' in body or 'href="/?post"' in body

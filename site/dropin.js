@@ -3,8 +3,9 @@
 
    1. The file is read here with GrinderDropin.parseFile (site/dropin-parse.js). No request is made
       while it is read or while the card is drawn.
-   2. The card is the feed's card (site/feed-card.js), revealed once: the line draws in, the number
-      counts up, the badge settles. This is a first-time moment, so it gets the delight budget,
+   2. The card is the feed's card (site/feed-card.js), revealed once: the map draws in, then the
+      line, the number counts up, the badge settles. The stride line on it gains the address once
+      a link exists. This is a first-time moment, so it gets the delight budget,
       about 800 ms in all; with reduced motion it is a 200 ms fade and the final numbers.
    3. "Get a link" sends GrinderDropin.uploadPayload(run, title) and nothing else. "Post to the
       feed" hands the same counts to the existing import preview, which asks for sign-in. */
@@ -23,14 +24,23 @@
     return {
       id: "dropin", title: title || "", harness: run.harness, prompts: run.turns_typed, turns_typed: run.turns_typed,
       tool_calls: run.tool_calls, files_touched: run.files_touched, commits: run.commits, duration_s: run.duration_s,
-      rhythm: run.line || run.rhythm, started_hour: GrinderDropin.uploadPayload(run, "").started_hour,
+      rhythm: run.line || run.rhythm, route: run.route || null, started_hour: GrinderDropin.uploadPayload(run, "").started_hour,
       // created_at is when the card is made, as on the shared page, so both say the same thing.
       started_at: run.started, created_at: new Date().toISOString(), visibility: "anonymous",
     };
   }
 
+  let linkUrl = null;
   function cardHtml() {
-    return GrinderFeed.card(row(($("drop-title") || {}).value || ""), { preview: true, foot: false });
+    return GrinderFeed.card(row(($("drop-title") || {}).value || ""), { preview: true, foot: false, copy: true, url: linkUrl });
+  }
+  // The stride line follows the title and, once made, the link, without redrawing the card.
+  function refreshStride() {
+    const r = row(($("drop-title") || {}).value || "");
+    const text = GrinderFeed.strideText(r, linkUrl);
+    const pre = $("drop-card") && $("drop-card").querySelector(".fc-stride pre");
+    if (pre) pre.textContent = text;
+    $("drop-card") && $("drop-card").querySelectorAll(".fc-copy").forEach((b) => { b.dataset.copy = text; });
   }
 
   // The reveal. WAAPI, transform/opacity/clip-path only, so it stays smooth while the page works.
@@ -39,10 +49,15 @@
     if (!card || !card.animate) return;
     if (reduced()) { card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: "ease" }); return; }
     card.animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 320, easing: EASE_OUT });
+    // The map first, left to right, then the line under it: the route, then the effort.
+    const map = host.querySelector(".fc-map svg");
+    if (map) map.animate([{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }], { duration: 600, delay: 60, easing: EASE_IN_OUT, fill: "backwards" });
     const svg = host.querySelector(".fc-spark svg");
-    if (svg) svg.animate([{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }], { duration: 700, delay: 80, easing: EASE_IN_OUT, fill: "backwards" });
+    if (svg) svg.animate([{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }], { duration: 700, delay: map ? 240 : 80, easing: EASE_IN_OUT, fill: "backwards" });
+    const strideBlock = host.querySelector(".fc-stride");
+    if (strideBlock) strideBlock.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 700, easing: EASE_OUT, fill: "backwards" });
     const peak = host.querySelector(".fc-peak");
-    if (peak) peak.animate([{ opacity: 0, transform: "scale(.6)" }, { opacity: 1, transform: "none" }], { duration: 220, delay: 640, easing: EASE_OUT, fill: "backwards" });
+    if (peak) peak.animate([{ opacity: 0, transform: "scale(.6)" }, { opacity: 1, transform: "none" }], { duration: 220, delay: map ? 800 : 640, easing: EASE_OUT, fill: "backwards" });
     const badge = host.querySelector(".fc-badge");
     if (badge) badge.animate([{ opacity: 0, transform: "translateY(4px)" }, { opacity: 1, transform: "none" }], { duration: 260, delay: 520, easing: EASE_OUT, fill: "backwards" });
     const n = host.querySelector(".fc-n");
@@ -99,7 +114,9 @@
       <div id="drop-out"></div>
       <button type="button" class="drop-again" id="drop-again">Read another file</button>
     </div>`;
+    linkUrl = null;
     reveal($("drop-card"));
+    GrinderFeed.wireStride($("drop-card"));
     const title = $("drop-title");
     title.addEventListener("input", () => {
       const t = $("drop-card").querySelector(".fc-title");
@@ -136,6 +153,8 @@
     }
     button.hidden = true;
     $("drop-title").disabled = true;
+    linkUrl = body.url;
+    refreshStride();
     state.textContent = "Link ready. Anyone with it can see this card, and nothing else.";
     $("drop-out").innerHTML = `<div class="drop-link">
       <div class="drop-row"><a id="drop-url" href="${esc(body.url)}" target="_blank" rel="noopener">${esc(body.url.replace(/^https?:\/\//, ""))}</a><button type="button" class="act" data-copy="${esc(body.url)}">Copy</button></div>

@@ -69,6 +69,8 @@ def test_the_share_image_is_the_run_image_pipeline_not_a_committed_png():
 
 def test_the_unfurl_describes_the_product_and_names_the_tools_it_reads():
     description = re.search(r'<meta property="og:description" content="([^"]+)">', INDEX).group(1)
-    for tool in ("Cursor", "Claude Code", "Codex", "Grok Bot"):
+    # The drop-in reads these three; Grok Bot is a command-line capture, not a dropped file.
+    for tool in ("Cursor", "Claude Code", "Codex"):
         assert tool in description, tool
-    assert "private until you choose to share" in description.lower()
+    assert "private until you ask for a link" in description.lower()
+    assert description.startswith("Strava is for people who ran. __BRAND__ is for people who didn't.")

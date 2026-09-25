@@ -76,11 +76,14 @@ export async function deleteLink({method,body},config,fetchImpl=fetch){
 export function linkRow(link){
  return {id:link.id,title:link.title,harness:link.harness,prompts:link.turns_typed,turns_typed:link.turns_typed,
   tool_calls:link.tool_calls,files_touched:link.files_touched,commits:link.commits,duration_s:link.duration_s,
-  started_hour:link.started_hour,rhythm:link.rhythm,created_at:link.created_at,visibility:'anonymous'};
+  started_hour:link.started_hour,rhythm:link.rhythm,route:Array.isArray(link.route)?link.route:null,created_at:link.created_at,visibility:'anonymous'};
 }
 
 const STYLE=`*{box-sizing:border-box}html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}body{background:var(--paper);color:var(--ink);font:15px/1.5 'IBM Plex Sans',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;padding:0 16px 40px}a{color:inherit;text-decoration:none}main{max-width:560px;margin:0 auto}a.home{display:inline-flex;align-items:center;min-height:48px;margin:8px 0;font-weight:600;letter-spacing:.08em;color:var(--blue)}.fc{margin:0 0 16px}.fc h1.fc-title{font-size:24px}.cta{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:0 0 16px}a.open,button.open{display:inline-flex;align-items:center;min-height:48px;background:var(--blue);color:#fff;padding:0 20px;font-weight:500;border:0;cursor:pointer;font-size:15px}button.open:disabled{opacity:.6}a:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offset:3px}.note{color:var(--soft);font-size:13px;margin:0 0 8px}.box{background:var(--box);border:1px solid var(--rule);padding:24px 16px;margin:0 0 16px}.box h1{font-size:22px;line-height:1.25;font-weight:600;margin:0 0 8px}.box p{color:var(--soft);margin:0 0 16px}.fc>.fc-body:last-child{padding-bottom:16px}`;
 const HEAD=`<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght%40400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/design.css"><link rel="stylesheet" href="/feed.css"><style>${STYLE}</style>`;
+// The one script on the link page: the card's own module, so Copy and Share on the stride line
+// work. It reads nothing and sends nothing.
+const STRIDE_SCRIPT=`<script src="/run-contract.js"></script><script src="/feed-card.js"></script><script>GrinderFeed.wireStride(document)</script>`;
 
 export function linkHtml(link,{origin}){
  const row=linkRow(link),title=esc(Feed.titleOf(row)),id=encodeURIComponent(link.id);
@@ -88,8 +91,10 @@ export function linkHtml(link,{origin}){
  const lead=Feed.headline(row);
  const description=esc([lead?`${lead.n} ${lead.unit}`:'',a?`${a.label}: ${a.detail}`:'',`${row.harness} session`].filter(Boolean).join(' · '));
  const url=origin+'/l/'+id,image=origin+'/api/link?id='+id+'&image=1';
- const shared=Feed.card(row,{preview:true,heading:'h1',foot:false});
- return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · ${BRAND}</title><meta name="robots" content="noindex,nofollow"><meta property="og:type" content="article"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}">${HEAD}</head><body><main><a class="home" href="/" aria-label="${BRAND} home">${BRAND}</a>${shared}<p class="cta"><a class="open" href="/">Make a card from your session</a></p><p class="note">Counts only. The session file never left the device that read it.</p><p class="note">Counts describe activity, not result quality.</p></main></body></html>`;
+ const shared=Feed.card(row,{preview:true,heading:'h1',foot:false,url,copy:true});
+ // The maker's number is the ask: a reader who sees 98 tool calls is invited to drop their own.
+ const ask=lead?`They logged ${esc(lead.n)} ${esc(lead.unit)}. Drop yours.`:'Make a card from your session';
+ return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · ${BRAND}</title><meta name="robots" content="noindex,nofollow"><meta property="og:type" content="article"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}">${HEAD}</head><body><main><a class="home" href="/" aria-label="${BRAND} home">${BRAND}</a>${shared}<p class="cta"><a class="open" href="/">${ask}</a></p><p class="note">Counts only. The session file never left the device that read it.</p><p class="note">Counts describe activity, not result quality.</p></main>${STRIDE_SCRIPT}</body></html>`;
 }
 
 export function missingHtml(){

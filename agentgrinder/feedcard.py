@@ -62,6 +62,20 @@ CARD_CSS = """/* the card */
 .fc-badge svg{flex:none;color:var(--blue)}
 .fc-badge b{font-weight:600;color:var(--blue)}
 .fc-badge span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-badge.fc-ghost svg,.fc-badge.fc-ghost b{color:var(--strive-orange)}
+.fc.ghost .fc-line{stroke-dasharray:3 4}
+.fc.ghost .fc-area{fill:none}
+.fc-map{margin:14px 0 0}
+.fc-map svg{display:block;width:100%;height:auto}
+.fc-rail{stroke:var(--blue-soft);stroke-width:1}
+.fc-hop{fill:none;stroke:var(--blue);stroke-width:1.3;opacity:.4;stroke-linecap:round}
+.fc-stn{fill:var(--box);stroke:var(--blue);stroke-width:1.6}
+.fc-map-k{margin:4px 0 0;font-size:12px;color:var(--soft)}
+.fc-stride{display:flex;align-items:flex-start;gap:10px;margin:14px 0 0;min-width:0}
+.fc-stride pre{flex:1 1 auto;min-width:0;margin:0;padding:10px 12px;font:inherit;font-size:13px;line-height:1.5;background:var(--paper);border:1px solid var(--rule-2);color:var(--soft);white-space:pre-wrap;overflow-wrap:anywhere}
+.fc-copy{flex:none;min-height:36px;padding:0 12px;font:500 13px/1 'IBM Plex Sans',system-ui,sans-serif;color:var(--blue);background:var(--blue-wash);border:1px solid var(--blue-soft);border-radius:2px;cursor:pointer;transition:transform .16s cubic-bezier(.23,1,.32,1)}
+.fc-copy:active{transform:scale(.97)}
+.fc-copy+.fc-copy{margin-left:-4px}
 .fc .fc-foot{display:flex;border-top:1px solid var(--rule-2);margin:14px 0 0;padding:0;max-width:none;color:inherit;font-size:inherit}
 .fc .fc-top{max-width:none;margin:0}
 .landing-feature .fc{margin:0 0 12px}
@@ -134,6 +148,13 @@ def when(iso, now: float | None = None) -> str:
     return f"{local.day} {MONTHS[local.month - 1]}"
 
 
+def local_hour(iso):
+    """The hour the run started, on this machine's clock: what the browser's uploadPayload sends
+    as started_hour, so a local card and a drop-in card judge the night the same way."""
+    t = _parse(iso)
+    return t.astimezone().hour if t else None
+
+
 def _day_of(iso) -> str:
     t = _parse(iso)
     if t is None:
@@ -155,7 +176,13 @@ def title_of(r: dict) -> str:
     if not generic:
         return t
     day = _day_of(r.get("started_at") or r.get("started") or r.get("created_at"))
-    return f"{r.get('harness') or 'Agent'} session" + (f", {day}" if day else "")
+    return f"{harness_name(r) or 'Agent'} session" + (f", {day}" if day else "")
+
+
+def harness_name(r: dict) -> str:
+    """site/feed-card.js harnessName: a subagent capture's "claude-agent" reads Claude Code."""
+    h = str(r["harness"]) if r.get("harness") else ""
+    return "Claude Code" if h == "claude-agent" else h
 
 
 def tool_call_count(r: dict):
@@ -207,14 +234,40 @@ def stats(r: dict, lead) -> list:
     return out
 
 
+def _hour_of(r: dict):
+    h = r.get("started_hour")
+    return h if isinstance(h, int) and not isinstance(h, bool) and 0 <= h <= 23 else None
+
+
+def ghost(r: dict):
+    """site/feed-card.js ghost(): an hour or more and 30 or more tool calls while the person was
+    not there, shown by the run's own numbers: typed to at most twice, or 40 or more tool calls
+    per typed turn; with the typed turns unknown, a night start (22:00 to 04:59) counts."""
+    secs = whole(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s"))
+    turns = whole(r.get("prompts") if r.get("prompts") is not None else r.get("turns_typed"))
+    tools = _tools(r)
+    hour = _hour_of(r)
+    if secs is None or secs < 3600 or tools is None or tools < 30:
+        return None
+    night = hour is not None and (hour >= 22 or hour < 5)
+    alone = night if turns is None else (turns <= 2 or tools / turns >= 40)
+    if not alone:
+        return None
+    d = duration_label(secs)
+    typed = "" if turns is None else "once" if turns == 1 else "twice" if turns == 2 else f"{_thousands(turns)} times"
+    return {"key": "ghost", "label": "Ghost run", "detail": f"{d} while you slept" if night else f"{d}, you typed {typed}"}
+
+
 def achievement(r: dict):
     """site/feed-card.js achievement(): one badge from the run's own numbers, first rule wins."""
+    g = ghost(r)
+    if g:
+        return g
     secs = whole(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s"))
     turns = whole(r.get("prompts") if r.get("prompts") is not None else r.get("turns_typed"))
     tools = _tools(r)
     commits, files = whole(r.get("commits")), whole(r.get("files_touched"))
-    h = r.get("started_hour")
-    hour = h if isinstance(h, int) and not isinstance(h, bool) and 0 <= h <= 23 else None
+    hour = _hour_of(r)
     if secs is not None and secs >= 10800:
         return {"key": "marathon", "label": "Marathon", "detail": f"{duration_label(secs)} in one session"}
     if turns == 1 and tools is not None and tools >= 60:
@@ -239,10 +292,16 @@ def achievement(r: dict):
 BADGE_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 1.5h6l-1.6 4.2M5 1.5l1.6 4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="10" r="4.2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>'
 
 
+GHOST_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 14.5V7.5a5 5 0 0 1 10 0v7l-2-1.6-2 1.6-1-1.6-1 1.6-2-1.6Z" fill="currentColor"/><circle cx="6" cy="7.5" r="1.1" fill="#fff"/><circle cx="10" cy="7.5" r="1.1" fill="#fff"/></svg>'
+
+
 def badge(r: dict) -> str:
     a = achievement(r)
-    return (f'<p class="fc-badge" data-badge="{esc(a["key"])}">{BADGE_ICON}<b>{esc(a["label"])}</b><span>{esc(a["detail"])}</span></p>'
-            if a else "")
+    if not a:
+        return ""
+    g = a["key"] == "ghost"
+    return (f'<p class="fc-badge{" fc-ghost" if g else ""}" data-badge="{esc(a["key"])}">{GHOST_ICON if g else BADGE_ICON}'
+            f'<b>{esc(a["label"])}</b><span>{esc(a["detail"])}</span></p>')
 
 
 def profile_of(r: dict) -> dict:
@@ -326,12 +385,113 @@ def spark(r: dict) -> str:
             f'<span class="fc-peak" style="left:{px}%;top:{py}%"></span></div>')
 
 
+# THE RUN MAP. site/feed-card.js routeGeometry and routeMap, the same numbers and the same rounding.
+MAP_W, MAP_H, RAIL, MAP_X0, MAP_X1 = 300, 44, 30, 12, 288
+
+
+def _plural(k: int, one: str, many: str) -> str:
+    return f"{_thousands(k)} {one if k == 1 else many}"
+
+
+def route_geometry(r: dict):
+    raw = r.get("route") if isinstance(r.get("route"), list) else None
+    if not raw or any(not isinstance(v, int) or isinstance(v, bool) or v < 0 or v > 15 for v in raw):
+        return None
+    order: dict = {}
+    seq: list = []
+    for v in raw:                      # a stay is one visit; stations numbered by first appearance
+        i = order.setdefault(v, len(order))
+        if not seq or seq[-1] != i:
+            seq.append(i)
+    if len(seq) < 2:
+        return None
+    n = len(order)
+    visits = [0] * n
+    for v in seq:
+        visits[v] += 1
+    most = max(visits)
+    x = lambda i: MAP_X0 + ((MAP_X1 - MAP_X0) * i) / (n - 1) if n > 1 else MAP_W / 2
+    stations = [(x(i), 2.5 + 4.5 * math.sqrt(v / most) if v else 2) for i, v in enumerate(visits)]
+    hops = []
+    for k in range(1, len(seq)):
+        a, b = seq[k - 1], seq[k]
+        if a == b:
+            continue
+        xa, xb = x(a), x(b)
+        span = abs(xb - xa) / (MAP_X1 - MAP_X0)
+        cy = RAIL - 26 * span if b > a else RAIL + 12 * span
+        hops.append(f"M{_fx(xa)},{RAIL} Q{_fx((xa + xb) / 2)},{_fx(cy)} {_fx(xb)},{RAIL}")
+    moves, returns = len(hops), len(seq) - n
+    label = f"{_plural(n, 'folder', 'folders')} · {_plural(moves, 'move', 'moves')} · {_plural(returns, 'return', 'returns')}"
+    return {"n": n, "moves": moves, "returns": returns, "stations": stations, "hops": hops, "label": label}
+
+
+def route_map(r: dict) -> str:
+    g = route_geometry(r)
+    if not g:
+        return ""
+    rail = f'<line class="fc-rail" x1="{MAP_X0}" y1="{RAIL}" x2="{MAP_X1}" y2="{RAIL}"/>'
+    hops = "".join(f'<path class="fc-hop" d="{d}"/>' for d in g["hops"])
+    stations = "".join(f'<circle class="fc-stn" cx="{_fx(cx)}" cy="{RAIL}" r="{_fx(cr)}"/>' for cx, cr in g["stations"])
+    return (f'<div class="fc-map"><svg viewBox="0 0 {MAP_W} {MAP_H}" role="img" aria-label="Route: {esc(g["label"])}">'
+            f'{rail}{hops}{stations}</svg><p class="fc-map-k">{esc(g["label"])}</p></div>')
+
+
+# THE STRIDE LINE. site/feed-card.js strideBars, strideText and stride: two lines of plain text.
+BARS = "▁▂▃▄▅▆▇█"
+
+
+def stride_bars(r: dict) -> str:
+    raw = None
+    for key in ("ridge", "rhythm"):
+        v = r.get(key)
+        if isinstance(v, list) and len(v) > 1:
+            raw = v
+            break
+    if not raw or any(not _num(v) or v < 0 for v in raw):
+        return ""
+    src = settle(raw)
+    n = min(12, len(src))
+    bins = [0] * n
+    for i, v in enumerate(src):
+        bins[(i * n) // len(src)] += v
+    mx = max(bins)
+    if not mx:
+        return ""
+    return "".join(BARS[int(math.floor(math.sqrt(v / mx) * 7 + 0.5))] for v in bins)
+
+
+def stride_text(r: dict, url: str | None = None) -> str:
+    lead = headline(r)
+    a = achievement(r)
+    figures = []
+    for k, v in stats(r, lead):
+        if k == "Time":
+            figures.append(str(v))
+        elif k == "Turns":
+            figures.append(f"{v} {'turn' if v == 1 else 'turns'}")
+        else:
+            figures.append(f"{v} {k.lower()}")
+    first = " · ".join(x for x in ["STRIVE", harness_name(r),
+                                    f"{lead['n']} {lead['unit']}" if lead else "", *figures,
+                                    (("👻 " if a["key"] == "ghost" else "") + a["label"]) if a else ""] if x)
+    bars = stride_bars(r)
+    where = re.sub(r"^https?://", "", str(url)) if url else ""
+    second = "  ".join(x for x in [bars, where] if x)
+    return f"{first}\n{second}" if second else first
+
+
+def stride(r: dict, url: str | None = None) -> str:
+    """The block on the card. The local card carries no script, so it draws no Copy button."""
+    return f'<div class="fc-stride"><pre>{esc(stride_text(r, url))}</pre></div>'
+
+
 KUDOS_ICON = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 17.2 3.3 10.6A4.1 4.1 0 0 1 9.1 4.8l.9.9.9-.9a4.1 4.1 0 0 1 5.8 5.8L10 17.2Z" fill="currentColor"/></svg>'
 TALK_ICON = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M3.5 4.5h13v9h-8l-3.5 3v-3H3.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
 SHARE_ICON = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 3v10M6 7l4-4 4 4M4 11v5.5h12V11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 
 
-def card(r: dict, meta_extra: str = "", avatars: bool = False) -> str:
+def card(r: dict, meta_extra: str = "", avatars: bool = False, url: str | None = None) -> str:
     """The feed card in its preview form (site/feed-card.js card(r, {preview: true, heading:
     "h1"})): a run that is only on this computer. Nothing on it links anywhere, because there is
     no saved run to open, react to or share, and the heart carries no count because none exists.
@@ -343,7 +503,7 @@ def card(r: dict, meta_extra: str = "", avatars: bool = False) -> str:
     lead = headline(r)
     facts = stats(r, lead)
     who = '<span class="fc-name">Anonymous builder</span>' if anon else f'<span class="fc-name">{esc(p["name"])}</span>'
-    meta = " · ".join(x for x in [esc(r["harness"]) if r.get("harness") else "",
+    meta = " · ".join(x for x in [esc(harness_name(r)),
                                   esc(when(r.get("created_at"))), esc(meta_extra) if meta_extra else ""] if x)
     shipped = ('<span class="fc-chip">Shipped</span>'
                if r.get("output_url") and re.match(r"^https://", str(r["output_url"]), re.I) else "")
@@ -357,9 +517,9 @@ def card(r: dict, meta_extra: str = "", avatars: bool = False) -> str:
     <h1 class="fc-title">{esc(title_of(r))}</h1>
     {cap_html}
     <div class="fc-numbers">{hero}{dl}</div>
-    {badge(r)}{spark(r)}
+    {badge(r)}{route_map(r)}{spark(r)}{stride(r, url)}
   """
-    return f"""<article class="card fc">
+    return f"""<article class="card fc{" ghost" if ghost(r) else ""}">
   <header class="fc-top">{face(r, avatars=avatars)}<div class="fc-who">{who}<small>{meta}</small></div>{shipped}</header>
   <div class="fc-body">{body}</div>
   <footer class="fc-foot"><span class="fc-act" aria-label="Send XUDOS">{KUDOS_ICON}</span><span class="fc-act" aria-label="Discuss">{TALK_ICON}<span>Discuss</span></span><span class="fc-act" aria-label="Share">{SHARE_ICON}<span>Share</span></span></footer>
@@ -374,10 +534,16 @@ def terminal_lines(r: dict) -> list:
     facts = stats(r, lead)
     day = _day_of(r.get("started") or r.get("created_at"))
     out = [f"\n  {p['name']} · {title_of(r)}",
-           "  " + " · ".join(x for x in [r.get("harness") or "", day] if x)]
+           "  " + " · ".join(x for x in [harness_name(r), day] if x)]
     figures = ([f"{lead['n']} {lead['unit']}"] if lead else []) + [f"{k} {v}" for k, v in facts]
     if figures:
         out.append("\n  " + " · ".join(figures))
+    a = achievement(r)
+    if a:
+        out.append(f"  {'👻 ' if a['key'] == 'ghost' else ''}{a['label']} · {a['detail']}")
+    # The stride line, to paste anywhere: the same two lines the card shows.
+    out.append("")
+    out.extend("  " + line for line in stride_text(r).split("\n"))
     return out
 
 

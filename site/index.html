@@ -11,7 +11,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="__BRAND__">
 <meta property="og:title" content="__BRAND__ · __TAGLINE__">
-<meta property="og:description" content="Every run your agent made, on a card you can share. Capture a Cursor, Claude Code, Codex or Grok Bot session; private until you choose to share.">
+<meta property="og:description" content="Strava is for people who ran. __BRAND__ is for people who didn't. Drop a Cursor, Claude Code or Codex session; get the card, the map and a line to paste. Private until you ask for a link.">
 <meta property="og:url" content="__ORIGIN__/">
 <meta property="og:image" content="__ORIGIN__/api/og">
 <meta property="og:image:type" content="image/png">
@@ -20,7 +20,7 @@
 <meta property="og:image:alt" content="__BRAND__ · __TAGLINE__">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="__BRAND__ · __TAGLINE__">
-<meta name="twitter:description" content="Every run your agent made, on a card you can share. Capture a Cursor, Claude Code, Codex or Grok Bot session; private until you choose to share.">
+<meta name="twitter:description" content="Strava is for people who ran. __BRAND__ is for people who didn't. Drop a Cursor, Claude Code or Codex session; get the card, the map and a line to paste. Private until you ask for a link.">
 <meta name="twitter:image" content="__ORIGIN__/api/og">
 <meta name="twitter:image:alt" content="__BRAND__ · __TAGLINE__">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1100,6 +1100,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
 
 function wireKudos(){
   if(typeof GrinderContract==='object'&&GrinderContract.mountRunMaps) GrinderContract.mountRunMaps(document);
+  if(typeof GrinderFeed==='object'&&GrinderFeed.wireStride) GrinderFeed.wireStride(document);
   document.querySelectorAll('.copy-run-prompt:not([data-wired])').forEach(b=>{b.dataset.wired='true';b.addEventListener('click',async()=>{
     try{await navigator.clipboard.writeText(b.dataset.prompt);b.textContent='Prompt copied'}catch(_){status('Select and copy the public run details instead.',true)}
   })});
@@ -1492,7 +1493,8 @@ function landingHTML(){
     ['Cursor','~/.cursor/projects/','then <project>/agent-transcripts/<id>/<id>.jsonl',''],
     ['Codex','~/.codex/sessions/','then YYYY/MM/DD/rollout-….jsonl','checked on test files only']];
   return `<div class="land"><section class="landing-intro drop-hero">
-    <h1>Every run your agent made, on a card you can share.</h1>
+    <h1>Strava is for people who ran. <i>__BRAND__</i> is for people who didn't.</h1>
+    <p class="drop-sub">Drop the session your agent ran. Get the card, the map, and a line to paste anywhere.</p>
     <div id="drop-stage"><label class="drop-zone" id="drop-zone">
       <input type="file" id="drop-file" class="visually-hidden" accept=".jsonl,.json,.txt,application/x-ndjson,application/jsonl,text/plain">
       <svg class="drop-ghost" viewBox="0 0 300 56" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,50 30,44 60,46 90,30 120,36 150,14 180,28 210,22 240,38 270,34 300,40"/></svg>
@@ -1529,7 +1531,7 @@ async function fetchLatestPublicRuns(limit){
 }
 
 function feedCards(runs,ad){
-  return runs.map(r=>GrinderFeed.card(r,{acked:ad.mine.has(r.id),count:ad.counts[r.id]||0,mine:!!(ME&&ME.id===r.profile_id)})).join('');
+  return runs.map(r=>GrinderFeed.card(r,{acked:ad.mine.has(r.id),count:ad.counts[r.id]||0,mine:!!(ME&&ME.id===r.profile_id),url:location.origin+'/r/'+r.id})).join('');
 }
 
 // A stranger lands on real run cards, with one action above them. No sample stands in for a run.

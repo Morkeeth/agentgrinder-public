@@ -83,7 +83,7 @@ def test_cursor_reads_the_files_it_wrote(tmp_path):
     assert run["files_touched"] == 2          # Read is not a write
     assert run["artifacts_produced"] == 1     # only the one that exists on disk
     assert run["route_legend"] == ["src"]
-    assert len(run["route"]) == 2
+    assert run["route"] == [0]                # three touches in one folder are one stay
 
 
 def test_cursor_counts_shell_calls_and_commit_markers(tmp_path):

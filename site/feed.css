@@ -1,6 +1,6 @@
 /* FEED CARD, TAB BAR, SHEETS. Same ground as the app: IBM Plex Sans, paper, hairlines, STRIVE blue.
-   Orange is one variable and is spent on two marks only: the peak of a card's drawing and a sent
-   XUDOS. Nothing here pulses or bounces. */
+   Orange is one variable and is spent on three marks only: the peak of a card's drawing, the ghost
+   badge, and a sent XUDOS. The run map is blue. Nothing here pulses or bounces. */
 :root{--strive-orange:#fc4c02}
 
 /* the card */
@@ -36,6 +36,20 @@
 .fc-badge svg{flex:none;color:var(--blue)}
 .fc-badge b{font-weight:600;color:var(--blue)}
 .fc-badge span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-badge.fc-ghost svg,.fc-badge.fc-ghost b{color:var(--strive-orange)}
+.fc.ghost .fc-line{stroke-dasharray:3 4}
+.fc.ghost .fc-area{fill:none}
+.fc-map{margin:14px 0 0}
+.fc-map svg{display:block;width:100%;height:auto}
+.fc-rail{stroke:var(--blue-soft);stroke-width:1}
+.fc-hop{fill:none;stroke:var(--blue);stroke-width:1.3;opacity:.4;stroke-linecap:round}
+.fc-stn{fill:var(--box);stroke:var(--blue);stroke-width:1.6}
+.fc-map-k{margin:4px 0 0;font-size:12px;color:var(--soft)}
+.fc-stride{display:flex;align-items:flex-start;gap:10px;margin:14px 0 0;min-width:0}
+.fc-stride pre{flex:1 1 auto;min-width:0;margin:0;padding:10px 12px;font:inherit;font-size:13px;line-height:1.5;background:var(--paper);border:1px solid var(--rule-2);color:var(--soft);white-space:pre-wrap;overflow-wrap:anywhere}
+.fc-copy{flex:none;min-height:36px;padding:0 12px;font:500 13px/1 'IBM Plex Sans',system-ui,sans-serif;color:var(--blue);background:var(--blue-wash);border:1px solid var(--blue-soft);border-radius:2px;cursor:pointer;transition:transform .16s cubic-bezier(.23,1,.32,1)}
+.fc-copy:active{transform:scale(.97)}
+.fc-copy+.fc-copy{margin-left:-4px}
 .fc .fc-foot{display:flex;border-top:1px solid var(--rule-2);margin:14px 0 0;padding:0;max-width:none;color:inherit;font-size:inherit}
 .fc .fc-top{max-width:none;margin:0}
 .landing-feature .fc{margin:0 0 12px}
@@ -70,7 +84,7 @@ button.fc-act:hover,a.fc-act:hover{background:var(--blue-wash);color:var(--blue)
 /* the landing: headline, one action, then real cards */
 .land{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,520px);gap:56px;align-items:start;padding:40px 0 24px}
 .land .landing-intro{padding:40px 0 0;position:sticky;top:94px}
-.land .landing-intro h1{font-size:clamp(40px,4.6vw,60px);font-weight:600;letter-spacing:-2px;line-height:1.02;max-width:11ch;margin:0 0 24px}
+.land .landing-intro h1{font-size:clamp(34px,3.4vw,46px);font-weight:600;letter-spacing:-1.5px;line-height:1.06;max-width:17ch;margin:0 0 18px}
 .land .cta{display:flex;gap:10px;margin:0 0 12px}
 .land .cta .primary{background:var(--blue);border-color:var(--blue);color:#fff;padding:14px 20px;font-size:15px}
 .land .cta .primary:hover{background:#0038cc;color:#fff}

@@ -3,6 +3,10 @@ import json
 from collections import Counter
 from datetime import datetime
 
+# Records with the user role that no person typed. The last one is the desktop app's attachment
+# record; its own prompt, when there was one, is a separate record.
+CODEX_INJECTED = ('<recommended_plugins>', '<environment_context>', '<turn_aborted>', '# Files mentioned by the user:')
+
 
 def codex_activity(path, records=None):
     if records is None:
@@ -12,15 +16,29 @@ def codex_activity(path, records=None):
                     for r in records if r.get('type') == 'session_meta')
     counts = Counter(human=0, injected=0, delegated=0)
     events, calls = [], set()
+    # TWO SHAPES OF A TYPED TURN. The CLI writes `event_msg` / `user_message`. The Codex desktop
+    # app (rollouts of 29 Jul 2026 on the author's machine) writes none of those: the person's
+    # words are `response_item` / `message` / role `user`, beside injected user-role records
+    # (plugin lists, "Files mentioned by the user" attachments). A file that carries the event
+    # form is read by it alone; otherwise the message form counts, so a session the person did
+    # type in is not a session of zero prompts. site/dropin-parse.js codexReader is the same rule.
+    has_events = any(row.get('type') == 'event_msg' and isinstance(row.get('payload'), dict)
+                     and row['payload'].get('type') == 'user_message' for row in records)
     for index, row in enumerate(records):
         p = row.get('payload')
         if not isinstance(p, dict): continue
         kind = None
+        text = None
         if row.get('type') == 'event_msg' and p.get('type') == 'user_message':
             text = p.get('message') or ''
+        elif (not has_events and row.get('type') == 'response_item' and p.get('type') == 'message'
+              and p.get('role') == 'user'):
+            content = p.get('content')
+            text = ''.join(c.get('text') or '' for c in content if isinstance(c, dict)) if isinstance(content, list) else str(content or '')
+        if text is not None:
             if delegated:
                 counts['delegated'] += 1
-            elif text.lstrip().startswith(('<recommended_plugins>', '<environment_context>', '<turn_aborted>')):
+            elif text.lstrip().startswith(CODEX_INJECTED):
                 counts['injected'] += 1
             else:
                 counts['human'] += 1

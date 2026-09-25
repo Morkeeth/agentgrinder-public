@@ -19,6 +19,7 @@ const FIXTURES = [
   ['Claude Code', 'samples/dropin/claude-edge.jsonl'],
   ['Codex', 'samples/dropin/codex-edge.jsonl'],
   ['Codex', 'samples/dropin/codex-delegated.jsonl'],
+  ['Codex', 'samples/dropin/codex-desktop.jsonl'],
   ['Cursor', 'samples/dropin/cursor-edge.jsonl'],
 ].map(([h, p]) => [h, path.join(ROOT, p)]);
 
@@ -42,8 +43,11 @@ function compare(harness, file, py, js) {
   if (py.error) { assert.ok(js.error, `${where}: Python refused (${py.error}) but the browser read ${JSON.stringify(js)}`); return 'refused'; }
   assert.ok(!js.error, `${where}: browser refused (${js.error}) but Python read it`);
   assert.equal(js.harness, harness, `${where}: detected ${js.harness}`);
-  for (const k of ['turns_typed', 'tool_calls', 'files_touched', 'commits', 'rhythm'])
+  for (const k of ['turns_typed', 'tool_calls', 'files_touched', 'commits', 'rhythm', 'route'])
     assert.deepEqual(js[k], py[k], `${where}: ${k} browser ${JSON.stringify(js[k])} python ${JSON.stringify(py[k])}`);
+  // The line the card draws. Claude Code: tool calls per bin of moving time, from both readers,
+  // so the drop-in card and the local card show one shape for one file.
+  if (harness === 'Claude Code') assert.deepEqual(js.line ?? null, py.line ?? null, `${where}: line browser ${JSON.stringify(js.line)} python ${JSON.stringify(py.line)}`);
   if (py.duration_source === 'file' || py.duration_source === 'call-index') assert.equal(js.duration_s, py.duration_s, `${where}: duration_s`);
   else assert.equal(js.duration_s, null, `${where}: browser must not invent the wall time the chat store gave Python`);
   const started = js.started == null ? null : Date.parse(js.started) / 1000;
@@ -60,9 +64,16 @@ for (let i = 0; i < FIXTURES.length; i++) {
 }
 // Every fixture must exercise something: prove the edge files are not trivially empty.
 const edge = await browser(path.join(ROOT, 'samples/dropin/claude-edge.jsonl'));
-assert.deepEqual([edge.turns_typed, edge.tool_calls, edge.files_touched, edge.commits], [3, 6, 2, 2]);
+assert.deepEqual([edge.turns_typed, edge.tool_calls, edge.files_touched, edge.commits], [3, 8, 2, 2]);
+// The route is station indices: the fixture visits a nested folder and comes back, and no
+// folder name survives the read.
+assert.deepEqual(edge.route, [0, 1, 0]);
+assert.ok(!JSON.stringify(edge).includes('SECRET-FOLDER'), 'a folder name must not survive the read');
 assert.equal((await browser(path.join(ROOT, 'samples/dropin/not-a-session.jsonl'))).error, 'unknown');
 assert.equal((await browser(path.join(ROOT, 'samples/dropin/codex-delegated.jsonl'))).error, 'delegated');
+// A Codex desktop rollout keeps the typed turns as user-role messages, beside two injected ones.
+const desktop = await browser(path.join(ROOT, 'samples/dropin/codex-desktop.jsonl'));
+assert.deepEqual([desktop.turns_typed, desktop.tool_calls, desktop.route], [2, 2, [0, 1]]);
 
 const realAt = process.argv.indexOf('--real');
 if (realAt !== -1) {
