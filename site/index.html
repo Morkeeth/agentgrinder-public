@@ -1393,8 +1393,8 @@ function connectBodyHtml(){
         <p class="hint">No reader for it yet? Sign in and type the counts by hand under <a href="/?post#manualbox">Post a run</a>. A bot can post on its own through the upload API with one token: <a href="/?connect=auto">Automatic upload</a>. <a href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/AGENT-UPLOAD-API.md">API notes</a>.</p></article>
     </section>
     <section class="connect-then"><h2>Then</h2>
-      <p><b>Get a link.</b> The card at its own address, no account, expires in 90 days.</p>
-      <p><b>Post to the feed.</b> Sign in with GitHub${PROVIDERS_ENABLED.includes('x')?' or X':''}, name the project, choose Public. It appears on Latest runs and your profile. No prompts, code or file paths from the session file leave your computer.</p>
+      <p><b>Anyone with the link.</b> The card at its own address, no account, not in the feed, expires in 90 days.</p>
+      <p><b>Only me, Followers or Everyone.</b> Sign in with GitHub${PROVIDERS_ENABLED.includes('x')?' or X':''}, name the project, save. Everyone puts it on Latest runs and your profile. No prompts, code or file paths from the session file leave your computer.</p>
     </section>
     <p class="hint">In Finder or the file picker, press Cmd+Shift+G, paste the folder, press Return.</p>`;
 }
@@ -1755,7 +1755,7 @@ async function viewPost(){
   frame(railHtml('post'),null);
   $('app').innerHTML=`<div class="head"><h1>Add a run</h1><span class="meta">capture → preview → share</span></div>
     ${connectBodyHtml()}
-    ${ME?postComposerHtml({first:true}):'<div class="panel pad auth-empty"><h3>Sign in to save</h3><p>Saving a run to your profile needs sign-in. Get a link needs no account: anyone with the address can open that card.</p><button id="post-signin" class="act blue">'+signInLabel()+'</button></div>'}`;
+    ${ME?postComposerHtml({first:true}):'<div class="panel pad auth-empty"><h3>Sign in to save</h3><p>Saving a run to your profile needs sign-in. Anyone with the link needs no account: whoever has the address can open that card.</p><button id="post-signin" class="act blue">'+signInLabel()+'</button></div>'}`;
   if(window.GrinderDropinUI) GrinderDropinUI.mount({post:token=>{history.pushState(null,'','/#import='+token);route();}});
   wireConnectCopies($('app'));
   // A /l/ page's ask links to /#drop-zone. The page is drawn by script after load, so the

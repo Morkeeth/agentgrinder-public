@@ -355,7 +355,7 @@
     return r.finish();
   }
 
-  // THE ONLY THING THAT MAY LEAVE THE DEVICE. "Get a link" sends exactly this object, and the
+  // THE ONLY THING THAT MAY LEAVE THE DEVICE. "Anyone with the link" sends exactly this object, and the
   // database refuses any key that is not on the same list (supabase/strava/011_dropin_links.sql).
   const UPLOAD_KEYS = ["title", "harness", "turns_typed", "tool_calls", "files_touched", "commits", "duration_s", "started_hour", "rhythm", "route"];
   function uploadPayload(run, title) {

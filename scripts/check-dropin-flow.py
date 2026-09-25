@@ -3,7 +3,8 @@
 Runs headless Chromium (Playwright) at 390 px against a running site, by default the local
 drop-in server (node scripts/dropin-dev-server.mjs 8791). Measures time from landing to card and
 to link, and fails if:
-  - any request is made between choosing the file and pressing "Get a link",
+  - any request is made between choosing the file and pressing Continue on "Anyone with the link",
+  - an audience is preselected, or Continue is enabled before one is chosen,
   - the link request carries a key off the allowlist, prompt text, or a home-directory path,
   - the link page does not show the card, or the delete link does not delete it.
 
@@ -51,9 +52,18 @@ def main() -> None:
         during = [r for r in requests[mark:]]
         page.fill("#drop-title", "Shipped the drop-in path")
         page.wait_for_timeout(150)
+        # The post is step by step: Preview, Who sees it, Share. No audience is preselected and
+        # Continue stays off until one is chosen; nothing is sent before Share.
+        page.click("#drop-next")
+        page.wait_for_selector('.post-pane[data-pane="2"]:not([hidden])', state="visible")
+        preselected = page.evaluate("document.querySelectorAll('input[name=drop-aud]:checked').length")
+        continue_off = page.is_disabled("#drop-continue")
+        page.screenshot(path=str(OUT / "2b-audience-390.png"))
+        page.click('label.aud-opt:has(input[value="unlisted"])')
+        before_share = [r for r in requests[mark:] if r["method"] != "GET" or r["body"]]
         before_link = len(requests)
         t_click = time.monotonic()
-        page.click("#drop-link")
+        page.click("#drop-continue")
         page.wait_for_selector("#drop-url", state="visible")
         t_link = time.monotonic()
         page.screenshot(path=str(OUT / "3-link-390.png"), full_page=True)
@@ -74,13 +84,19 @@ def main() -> None:
         browser.close()
 
     failures = []
-    # The claim on the page is that nothing from the file leaves the device before "Get a link".
+    # The claim on the page is that nothing from the file leaves the device before Share.
     # The page may still finish its own feed read (a GET with no body); that carries nothing from
     # the file. Any request that sends a body, is not a GET, or names file content fails.
     leaking = [r for r in during if r["method"] != "GET" or r["body"] or "/api/link" in r["url"]
                or any(probe in r["url"] for probe in probes + ["/Users/", "/home/"])]
     if leaking:
         failures.append(f"{len(leaking)} request(s) carried data while reading and drawing the card: " + ", ".join(r["url"][:120] for r in leaking[:5]))
+    if preselected:
+        failures.append(f"{preselected} audience(s) were preselected; the person must choose")
+    if not continue_off:
+        failures.append("Continue was enabled before an audience was chosen")
+    if before_share:
+        failures.append(f"{len(before_share)} request(s) carried data before Share")
     if len(posts) != 1 or not posts[0]["url"].endswith("/api/link"):
         failures.append(f"expected exactly one POST to /api/link, saw {[r['url'] for r in posts]}")
     else:

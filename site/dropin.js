@@ -7,8 +7,10 @@
       line, the number counts up, the badge settles. The stride line on it gains the address once
       a link exists. This is a first-time moment, so it gets the delight budget,
       about 800 ms in all; with reduced motion it is a 200 ms fade and the final numbers.
-   3. "Get a link" sends GrinderDropin.uploadPayload(run, title) and nothing else. "Post to the
-      feed" hands the same counts to the existing import preview, which asks for sign-in. */
+   3. Then the post, step by step: Preview, Who sees it, Share. No audience is preselected, and
+      nothing is sent before Share. "Anyone with the link" sends GrinderDropin.uploadPayload(run,
+      title) and nothing else. Every other audience hands the same counts, and the chosen audience,
+      to the existing import preview, which asks for sign-in. */
 (function (root) {
   "use strict";
   const $ = (id) => document.getElementById(id);
@@ -105,17 +107,84 @@
     showResult();
   }
 
+  // THE POST, step by step (Oscar, 25 Sep: "a fun way to post, step by step, with micro animations
+  // and loading state"). Capture is the drop. Then Preview, Who sees it, Share. Nothing leaves this
+  // page before Share, and Share only runs after a choice: no audience is preselected.
+  const STEPS = ["Capture", "Preview", "Who sees it", "Share"];
+  const AUDIENCES = [
+    { v: "private", t: "Only me", d: "Saved to your runs. Sign in to save." },
+    { v: "link", t: "Followers", d: "People who follow you. Sign in to post." },
+    { v: "public", t: "Everyone", d: "The feed and your profile. Sign in to post." },
+    { v: "unlisted", t: "Anyone with the link", d: "No account. Not in the feed. Expires in 90 days." },
+  ];
+  let step = 1;
+
+  function stepsHtml() {
+    return `<ol class="post-steps" id="post-steps" aria-label="Post steps">${STEPS.map((n, i) =>
+      `<li data-step="${i}"><span class="ps-dot" aria-hidden="true"></span><span class="ps-n">${esc(n)}</span></li>`).join("")}</ol>`;
+  }
+  function paintSteps() {
+    document.querySelectorAll("#post-steps li").forEach((li) => {
+      const i = Number(li.dataset.step);
+      li.classList.toggle("done", i < step);
+      li.classList.toggle("on", i === step);
+      if (i === step) li.setAttribute("aria-current", "step"); else li.removeAttribute("aria-current");
+    });
+  }
+  // One pane in, one pane out. Transform and opacity only; a plain swap with reduced motion.
+  function go(next) {
+    const back = next < step;
+    step = next;
+    paintSteps();
+    document.querySelectorAll(".post-pane").forEach((pane) => {
+      const on = Number(pane.dataset.pane) === step;
+      pane.hidden = !on;
+      if (on && pane.animate && !reduced())
+        pane.animate([{ opacity: 0, transform: `translateX(${back ? -12 : 12}px)` }, { opacity: 1, transform: "none" }], { duration: 240, easing: EASE_OUT });
+    });
+    const focus = document.querySelector(`.post-pane[data-pane="${step}"] [data-autofocus]`);
+    if (focus) focus.focus({ preventScroll: true });
+  }
+  function busy(button, text) {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.dataset.label = button.textContent;
+    button.innerHTML = `<span class="spin" aria-hidden="true"></span>${esc(text)}`;
+  }
+  function idle(button) {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+    if (button.dataset.label) button.textContent = button.dataset.label;
+  }
+  function chosen() {
+    const c = document.querySelector('input[name="drop-aud"]:checked');
+    return c ? c.value : null;
+  }
+
   function showResult() {
     const stage = $("drop-stage");
+    step = 1;
     stage.innerHTML = `<div class="drop-result">
+      ${stepsHtml()}
       <div id="drop-card">${cardHtml()}</div>
-      <label class="drop-name">Title<input id="drop-title" maxlength="80" autocomplete="off" placeholder="What did you get done?"></label>
-      <div class="drop-actions"><button type="button" class="act primary" id="drop-link">Get a link</button><button type="button" class="act" id="drop-post">Post to the feed</button></div>
+      <section class="post-pane" data-pane="1" aria-label="Preview">
+        <label class="drop-name">Title<input id="drop-title" maxlength="80" autocomplete="off" placeholder="What did you get done?"></label>
+        <div class="drop-actions"><button type="button" class="act primary" id="drop-next">Choose who sees it</button></div>
+      </section>
+      <section class="post-pane" data-pane="2" aria-label="Who sees it" hidden>
+        <fieldset class="aud"><legend>Who sees this run?</legend>
+          ${AUDIENCES.map((a) => `<label class="aud-opt"><input type="radio" name="drop-aud" value="${a.v}"><span class="aud-check" aria-hidden="true"></span><span class="aud-t">${esc(a.t)}</span><span class="aud-d">${esc(a.d)}</span></label>`).join("")}
+        </fieldset>
+        <div class="drop-actions"><button type="button" class="act" id="drop-back">Back</button><button type="button" class="act primary" id="drop-continue" disabled>Continue</button></div>
+      </section>
+      <section class="post-pane" data-pane="3" aria-label="Share" hidden>
+        <div id="drop-out"></div>
+      </section>
       <p class="hint" id="drop-state" role="status">No prompts, code or file paths from the session file leave this device.</p>
-      <div id="drop-out"></div>
       <button type="button" class="drop-again" id="drop-again">Read another file</button>
     </div>`;
     linkUrl = null;
+    paintSteps();
     reveal($("drop-card"));
     GrinderFeed.wireStride($("drop-card"));
     const title = $("drop-title");
@@ -123,8 +192,16 @@
       const t = $("drop-card").querySelector(".fc-title");
       if (t) t.textContent = GrinderFeed.titleOf(row(title.value));
     });
-    $("drop-link").onclick = getLink;
-    $("drop-post").onclick = post;
+    $("drop-next").onclick = () => go(2);
+    $("drop-back").onclick = () => go(1);
+    stage.querySelectorAll('input[name="drop-aud"]').forEach((input) => {
+      input.onchange = () => {
+        $("drop-continue").disabled = !chosen();
+        const mark = input.parentNode.querySelector(".aud-check");
+        if (mark && mark.animate && !reduced()) mark.animate([{ transform: "scale(.4)" }, { transform: "scale(1)" }], { duration: 180, easing: EASE_OUT });
+      };
+    });
+    $("drop-continue").onclick = share;
     $("drop-again").onclick = () => { run = null; mount(opts); };
   }
 
@@ -133,9 +210,19 @@
     return typed || GrinderFeed.titleOf(row(""));
   }
 
+  // Share runs only with a chosen audience. "Anyone with the link" makes the unlisted card here;
+  // every other audience goes to the post form with that audience, where sign-in and Save follow.
+  async function share() {
+    const audience = chosen();
+    if (!audience) return;
+    if (audience === "unlisted") return getLink();
+    busy($("drop-continue"), "Opening the post form…");
+    post(audience);
+  }
+
   async function getLink() {
-    const button = $("drop-link"), state = $("drop-state");
-    button.disabled = true;
+    const button = $("drop-continue"), state = $("drop-state");
+    busy(button, "Making the link…");
     state.textContent = "Making the link…";
     const payload = GrinderDropin.uploadPayload(run, titleText());
     let res, body;
@@ -143,16 +230,15 @@
       res = await fetch("/api/link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       body = await res.json().catch(() => ({}));
     } catch (_) {
-      button.disabled = false;
+      idle(button);
       state.textContent = "The link could not be made. Check the connection and try again. Nothing was saved.";
       return;
     }
     if (!res.ok || !body.url) {
-      button.disabled = false;
+      idle(button);
       state.textContent = (body && body.error) || "The link could not be made. Nothing was saved.";
       return;
     }
-    button.hidden = true;
     $("drop-title").disabled = true;
     linkUrl = body.url;
     refreshStride();
@@ -164,17 +250,18 @@
       <div class="drop-row"><code id="drop-delete">${esc(body.delete_url)}</code><button type="button" class="act" data-copy="${esc(body.delete_url)}">Copy</button></div>
     </div>`;
     wireCopy($("drop-out"));
+    go(3);
     if (root.__dropinTimings) root.__dropinTimings.linkReady = performance.now();
   }
 
   // The existing import preview (index.html importRun) takes a base64 run in the URL fragment and
-  // already carries it through GitHub sign-in. The typed title and the Public audience go with it.
-  function post() {
+  // already carries it through sign-in. The typed title and the audience the person chose go with it.
+  function post(audience) {
     const token = encodeURIComponent(btoa(JSON.stringify({
       schema_version: 0, harness: run.harness, turns_typed: run.turns_typed, tool_calls: run.tool_calls,
       files_touched: run.files_touched, commits: run.commits, duration_s: run.duration_s, started: run.started, rhythm: run.line || run.rhythm,
     })));
-    try { sessionStorage.setItem("ag_import_edits", JSON.stringify({ token, i_title: ($("drop-title").value || "").trim(), i_vis: "public" })); } catch (_) {}
+    try { sessionStorage.setItem("ag_import_edits", JSON.stringify({ token, i_title: ($("drop-title").value || "").trim(), i_vis: audience })); } catch (_) {}
     if (opts.post) opts.post(token); else location.href = "/#import=" + token;
   }
 
