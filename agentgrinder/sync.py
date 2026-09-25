@@ -7,10 +7,12 @@ private run. Only the counts leave the machine: the payload is agent_api.run_pay
 allowlist as `agentgrinder agent draft`, with no title, no prompt text and no paths. Nothing is
 public until the person publishes it on the site.
 
-A session is "finished" when its file has not changed for IDLE_SECONDS. Each finished file is
-sent once: the Idempotency-Key is derived from the file identity, so a retry or a second
-machine run of the same file returns the existing run instead of a duplicate, and the local
-state file remembers what was sent.
+A session is "finished" when its file has not changed for IDLE_SECONDS and is still the same
+size and mtime at the next sync. The first sync that sees an idle file only records it; a later
+sync sends it if nothing moved. Each session file is sent once: its identity is the harness and
+the file, not its size, so a session resumed after it was sent is not sent again. The
+Idempotency-Key is derived from that identity, so a retry returns the existing run instead of
+a duplicate. A send counts only when the server answers with a run id and visibility private.
 """
 from __future__ import annotations
 
@@ -23,6 +25,7 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from pathlib import Path
@@ -38,6 +41,9 @@ MAX_PER_SYNC = 20   # the database rate-limits uploads; the rest go on the next 
 LABEL = "app.strive.sync"
 NAMESPACE = uuid.UUID("7d3f0a52-6d3c-4b7e-9a4f-2f0c6a1e5b11")
 UVX_SOURCE = "git+https://github.com/Morkeeth/agentgrinder-public"
+# The upload token only ever goes to these hosts, over HTTPS, with redirects refused.
+TRUSTED_HOSTS = {"agentic-strava.vercel.app"} | {
+    h.strip().lower() for h in os.environ.get("STRIVE_TRUSTED_HOSTS", "").split(",") if h.strip()}
 
 
 def _paths():
@@ -64,8 +70,14 @@ def discover(now: float | None = None, since_days: int = SINCE_DAYS, idle: int =
 
 
 def file_key(harness: str, path: str) -> str:
+    """The session's identity. Size and mtime are left out on purpose: a resumed session is the same session."""
+    os.stat(path)
+    return f"{harness}|{os.path.realpath(path)}"
+
+
+def snapshot(path: str) -> list[int]:
     st = os.stat(path)
-    return f"{harness}|{os.path.realpath(path)}|{st.st_size}|{st.st_mtime_ns}"
+    return [st.st_size, st.st_mtime_ns]
 
 
 def idempotency_key(key: str) -> str:
@@ -125,37 +137,82 @@ def save_state(state: dict) -> None:
     tmp.replace(_paths()["state"])
 
 
-def upload(payload: dict, token: str, key: str, site: str = DEFAULT_SITE, opener=urllib.request.urlopen) -> dict:
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None   # a redirect would carry the Bearer token somewhere else; stop instead
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect).open
+
+
+def check_site(site: str) -> str:
+    parts = urllib.parse.urlsplit(site)
+    if parts.scheme != "https" or (parts.hostname or "").lower() not in TRUSTED_HOSTS:
+        raise ValueError(f"Refusing to send the token to {site!r}: use https://{sorted(TRUSTED_HOSTS)[0]}")
+    return f"https://{parts.netloc}"
+
+
+# Local words for each failure. The server's own text is never printed or logged.
+def _failure(code: int) -> str:
+    if code in (401, 403):
+        return f"HTTP {code}: the token is expired or revoked. Make a new one on the Connect page."
+    if code == 429:
+        return "HTTP 429: too many uploads. The next sync retries."
+    if 300 <= code < 400:
+        return f"HTTP {code}: STRIVE answered with a redirect. Nothing was sent."
+    if code >= 500:
+        return f"HTTP {code}: STRIVE had an error. The next sync retries."
+    return f"HTTP {code}: STRIVE refused this run."
+
+
+def upload(payload: dict, token: str, key: str, site: str = DEFAULT_SITE, opener=None) -> dict:
+    opener = opener or _OPENER
+    try:
+        site = check_site(site)
+    except ValueError as error:
+        raise RuntimeError(str(error)) from None
     body = json.dumps(payload).encode()
     request = urllib.request.Request(site.rstrip("/") + "/api/agent/runs", data=body, method="POST", headers={
         "Content-Type": "application/json", "Authorization": "Bearer " + token, "Idempotency-Key": key})
     try:
         with opener(request, timeout=30) as response:
-            return json.load(response)
+            if getattr(response, "status", 200) != 200:
+                raise RuntimeError(_failure(response.status))
+            result = json.load(response)
     except urllib.error.HTTPError as error:
-        try:
-            message = json.load(error).get("error") or ""
-        except (ValueError, AttributeError):
-            message = ""
-        raise RuntimeError(f"HTTP {error.code}: {message}".strip()) from None
+        raise RuntimeError(_failure(error.code)) from None
     except urllib.error.URLError:
         raise RuntimeError("STRIVE is unreachable. The next sync retries.") from None
+    except ValueError:
+        raise RuntimeError("STRIVE sent an answer that is not a run. Nothing is marked sent.") from None
+    # Only a confirmed private run counts as sent.
+    if not isinstance(result, dict) or not isinstance(result.get("id"), str) or not result["id"] \
+            or result.get("visibility") != "private":
+        raise RuntimeError("STRIVE did not confirm a private run. Nothing is marked sent.")
+    return result
 
 
 def sync_once(token: str, site: str = DEFAULT_SITE, dry_run: bool = False, since_days: int = SINCE_DAYS,
-              now: float | None = None, opener=urllib.request.urlopen, out=print) -> dict:
+              now: float | None = None, opener=None, out=print) -> dict:
     state = load_state()
-    counts = {"sent": 0, "skipped": 0, "failed": 0, "already": 0}
+    counts = {"sent": 0, "skipped": 0, "failed": 0, "already": 0, "waiting": 0}
     for harness, path in discover(now=now, since_days=since_days):
         if counts["sent"] >= MAX_PER_SYNC:
             break
         try:
             key = file_key(harness, path)
+            snap = snapshot(path)
         except OSError:
             continue
         digest = hashlib.sha256(key.encode()).hexdigest()   # the state file holds no paths
-        if digest in state:
+        seen = state.get(digest) or {}
+        if seen.get("status") in ("sent", "skipped"):
             counts["already"] += 1
+            continue
+        if not dry_run and seen.get("snapshot") != snap:
+            # First sight, or it moved since the last sync: wait one more sync before sending.
+            state[digest] = {"status": "waiting", "snapshot": snap, "at": int(time.time())}
+            counts["waiting"] += 1
             continue
         try:
             payload = payload_for(harness, path)
@@ -174,8 +231,8 @@ def sync_once(token: str, site: str = DEFAULT_SITE, dry_run: bool = False, since
         except RuntimeError as error:
             out(f"  not sent ({harness}): {error}")
             counts["failed"] += 1
-            if "HTTP 401" in str(error) or "HTTP 403" in str(error):
-                break   # a revoked or expired token fails every file; stop and say so once
+            if "HTTP 401" in str(error) or "HTTP 403" in str(error) or "Refusing" in str(error):
+                break   # a revoked token or an untrusted site fails every file; stop and say so once
             continue
         state[digest] = {"status": "sent", "id": result.get("id"), "at": int(time.time())}
         counts["sent"] += 1
@@ -243,6 +300,14 @@ def run_cli(args) -> int:
     if args.uninstall:
         print(uninstall())
         return 0
+    if args.dry_run and args.install:
+        print("--dry-run sends nothing, so it cannot install a background uploader. Run --install without --dry-run.")
+        return 1
+    try:
+        check_site(args.site)
+    except ValueError as error:
+        print(error)
+        return 1
     token = read_token(args.token)
     if args.token:
         print(f"Token saved to {save_token(args.token)} (only you can read it).")
@@ -252,7 +317,8 @@ def run_cli(args) -> int:
     counts = sync_once(token or "", site=args.site, dry_run=args.dry_run, since_days=args.since_days)
     verb = "would send" if args.dry_run else "sent"
     print(f"STRIVE sync: {verb} {counts['sent']} private run(s), {counts['already']} already sent, "
-          f"{counts['skipped']} skipped, {counts['failed']} not sent. Private until you publish them.")
+          f"{counts['waiting']} waiting for the next sync, {counts['skipped']} skipped, {counts['failed']} not sent. "
+          "Private until you publish them.")
     if args.install:
         print(install())
     return 0 if not counts["failed"] else 2
