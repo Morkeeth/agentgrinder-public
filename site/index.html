@@ -1567,7 +1567,7 @@ const AGENT_FILES=[
     ['Codex','~/.codex/sessions/','then YYYY/MM/DD/rollout-….jsonl','checked on test files only']];
 // The newest public runs, only Public ones: a Link run never reaches this door.
 async function fetchLatestPublicRuns(limit){
-  if(!sb) return [];
+  if(!sb) return null;
   try{
     const {data,error}=await sb.from('runs')
       .select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)')
@@ -1576,7 +1576,7 @@ async function fetchLatestPublicRuns(limit){
       .limit(limit||3);
     if(error) throw error;
     return data||[];
-  }catch(_){ return []; }
+  }catch(_){ return null; } // null: the read failed, which is not the same as no runs
 }
 
 function feedCards(runs,ad){
@@ -1600,15 +1600,15 @@ async function viewLanding(){
   const who=data.runs?H.builders(data.runs,6):[];
   put('home-builders',data.runs===null?failed:who.length?who.map(b=>GrinderFeed.builderRow(b.run)).join(''):'<p class="home-none">No builder has posted a public run in the last 30 days.</p>');
   const body=$('landing-feature-body');
-  let runs=data.runs||[];
-  if(!runs.length) runs=await fetchLatestPublicRuns(5);
+  let runs=data.runs||[], runsFailed=data.runs===null;
+  if(!runs.length){const older=await fetchLatestPublicRuns(5);if(older===null)runsFailed=true;else{runs=older;runsFailed=false}}
   if(runs.length){
     noteTraces(runs);
     const ad=await ackData(runs);
     const top=H?H.popular(runs,ad.counts,5):runs.slice(0,5);
     if(body) body.innerHTML=feedCards(top,ad);
   }else if(body){
-    body.innerHTML=data.runs===null?failed:'<p class="home-none">No public run yet.</p>';
+    body.innerHTML=runsFailed?failed:'<p class="home-none">No public run yet.</p>';
   }
   wireKudos();
   if(ME||location.search||location.hash) return;
