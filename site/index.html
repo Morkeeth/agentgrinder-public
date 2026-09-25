@@ -1753,9 +1753,9 @@ function postComposerHtml({first=false}={}){
 async function viewPost(){
   setPrimarySection('post');
   frame(railHtml('post'),null);
-  $('app').innerHTML=`<div class="head"><h1>Add a run</h1><span class="meta">capture → preview → choose audience</span></div>
+  $('app').innerHTML=`<div class="head"><h1>Add a run</h1><span class="meta">capture → preview → share</span></div>
     ${connectBodyHtml()}
-    ${ME?postComposerHtml({first:true}):'<div class="panel pad auth-empty"><h3>Sign in to save</h3><p>Preview stays private on this device until you choose an audience. Sign-in keeps your handle; nothing posts until Save.</p><button id="post-signin" class="act blue">'+signInLabel()+'</button></div>'}`;
+    ${ME?postComposerHtml({first:true}):'<div class="panel pad auth-empty"><h3>Sign in to save</h3><p>Saving a run to your profile needs sign-in. Get a link needs no account: anyone with the address can open that card.</p><button id="post-signin" class="act blue">'+signInLabel()+'</button></div>'}`;
   if(window.GrinderDropinUI) GrinderDropinUI.mount({post:token=>{history.pushState(null,'','/#import='+token);route();}});
   wireConnectCopies($('app'));
   // A /l/ page's ask links to /#drop-zone. The page is drawn by script after load, so the
