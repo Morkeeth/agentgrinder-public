@@ -30,7 +30,7 @@ def test_logged_out_landing_exposes_browsing_and_first_post():
 def test_the_drop_zone_left_the_home_for_add_a_run():
     body = landing()
     assert '${dropZoneHtml()}' not in body and 'id="drop-file"' not in body
-    assert 'Runs stay private until you choose Public and save them.' in body
+    assert 'stay private until' not in body and 'Nothing is shared until' not in body
     post = HTML[HTML.index('async function viewPost(){'):HTML.index('async function viewExplore(){')]
     assert '${connectBodyHtml()}' in post and "location.hash==='#drop-zone'" in post
     connect = HTML[HTML.index('function connectBodyHtml(){'):]
@@ -83,7 +83,7 @@ def test_sign_in_explains_github_and_private_runs():
     assert 'id="signin-explanation"' in HTML
     assert "return to this preview or social action" in HTML
     assert "Closing or cancelling sign-in posts nothing" in HTML
-    assert "Runs stay private until you choose Public and save them" in HTML
+    assert "Runs stay private until" not in HTML and "Nothing is shared until" not in HTML
     assert '<button id="auth" class="ghost">Sign in</button>' in HTML
     panel = HTML[HTML.index('id="signin-explanation"') : HTML.index('id="signin-explanation"') + 800]
     assert "Continue with X" not in panel
