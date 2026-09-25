@@ -111,7 +111,7 @@
       <div id="drop-card">${cardHtml()}</div>
       <label class="drop-name">Title<input id="drop-title" maxlength="80" autocomplete="off" placeholder="What did you get done?"></label>
       <div class="drop-actions"><button type="button" class="act primary" id="drop-link">Get a link</button><button type="button" class="act" id="drop-post">Post to the feed</button></div>
-      <p class="hint" id="drop-state" role="status">Your prompts, code and file paths stay on this device.</p>
+      <p class="hint" id="drop-state" role="status">No prompts, code or file paths from the session file leave this device.</p>
       <div id="drop-out"></div>
       <button type="button" class="drop-again" id="drop-again">Read another file</button>
     </div>`;
