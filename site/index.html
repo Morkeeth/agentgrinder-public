@@ -614,20 +614,22 @@ const status=(m,e)=>{const s=$('status');s.textContent=m||'';s.className=e?'err'
 if(!window.supabase) status("Couldn't load, refresh.",true);
 // Link and other non-public rows are relationship-gated. Only a signed-in session may
 // carry the run-id bearer header; strangers must not learn the row from the URL alone.
-let authClient=null;
-async function grinderFetch(input, options={}){
+// This hook is also the fetch the auth client uses for its own token refresh, which runs while
+// the auth lock is held. It must never call back into auth (getSession waits on that same lock,
+// so an expired session on /?run= hung the page on the skeleton). supabase-js has already put
+// the caller's bearer on the request: a signed-in request carries the user's access token, a
+// stranger's carries the public key.
+function grinderFetch(input, options={}){
   const headers=new Headers(options.headers || (input instanceof Request ? input.headers : undefined));
   const runId=new URLSearchParams(location.search).get('run');
-  if(runId && /^[a-f0-9-]{36}$/i.test(runId) && authClient){
-    try{
-      const {data:{session}}=await authClient.auth.getSession();
-      if(session) headers.set('x-grinder-run-id',runId);
-    }catch(_){}
+  const url=typeof input==='string'?input:(input&&input.url)||String(input);
+  const bearer=(headers.get('Authorization')||'').replace(/^Bearer\s+/i,'');
+  if(runId && /^[a-f0-9-]{36}$/i.test(runId) && !/\/auth\/v1\//.test(url) && bearer && bearer!==SB_KEY){
+    headers.set('x-grinder-run-id',runId);
   }
   return fetch(input,{...options,headers});
 }
 const sb=window.supabase&&window.supabase.createClient(SB_URL,SB_KEY,{db:{schema:SB_SCHEMA},auth:{storageKey:"agentic-strava-auth"},global:{fetch:grinderFetch}});
-authClient=sb;
 const auth=sb?GrinderAuth.create({client:sb,redirectTo:location.origin+'/'}):null;
 // Email sign-in is off until Supabase has a custom SMTP sender: the built-in sender allows only a few mails an hour.
 // To turn it back on, add "email" here. The sign-in dialog and the onboarding copy follow this list.

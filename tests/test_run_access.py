@@ -15,8 +15,17 @@ def test_run_access_module_wires_into_index():
     assert "grinder_is_close_friend_of" in ACCESS
     assert 'src="/run-access.js"' in INDEX
     assert "GrinderRunAccess.viewerMayOpenRun" in INDEX
-    assert "authClient.auth.getSession()" in INDEX
     assert "headers.set('x-grinder-run-id',runId)" in INDEX
+
+
+def test_fetch_hook_never_calls_back_into_auth():
+    # The auth client refreshes its token through this hook while holding its lock. A call back
+    # into auth from here deadlocks an expired session on /?run= (the 2026-09-25 grey skeleton).
+    hook = INDEX[INDEX.index("function grinderFetch(") : INDEX.index("const sb=window.supabase")]
+    assert "getSession" not in hook
+    assert ".auth." not in hook
+    assert "/auth\\/v1\\//" in hook
+    assert "bearer!==SB_KEY" in hook
 
 
 def test_share_page_stays_public_only_and_handoff_to_spa():
