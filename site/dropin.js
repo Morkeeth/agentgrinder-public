@@ -186,7 +186,7 @@
     linkUrl = null;
     paintSteps();
     // The file input that had focus is gone. Focus the card, not the title, so a phone keyboard
-    // does not cover the reveal; Tab moves on to the title.
+    // does not cover the reveal; Tab then follows the page order: the card's Copy, then the title.
     $("drop-card").focus({ preventScroll: true });
     reveal($("drop-card"));
     GrinderFeed.wireStride($("drop-card"));
