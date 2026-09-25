@@ -98,3 +98,27 @@ console.log('PASS decision story uses the supplied route and preserves context i
  assert.equal(hasDecisionStory(declared),false,'a route with no measured stop is not a decision story');
  console.log('PASS edges: no bare insight, no invented finish, no unearned "measured"');
 }
+
+// Second cold pass (Grok, 26 Sep): five more places a sentence could claim what the route does not carry.
+{
+ const {decisionHtml:render}=await import('../../server/decision-story.mjs');
+ const id='dddddddd-eeee-4fff-8000-111111111111';
+ const R=(route)=>render({id,title:'T',code_route:{v:1,...route}},{origin:'https://strive.test'});
+ const text=h=>h.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+ const draft=h=>decodeURIComponent((h.match(/issues\/new\?[^"]*body=([^"&]*)/)||[])[1]||'').replace(/\+/g,' ');
+ // 1. An empty lane is not a project the route crossed.
+ let h=R({projects:[{id:'a',label:'alpha'},{id:'g',label:'gamma'}],stops:[{id:'1',project:'a',kind:'edit',label:'One',basis:'measured'},{id:'2',project:'a',kind:'edit',label:'Two',basis:'measured'}],connectors:[]});
+ assert.ok(!/across 2 projects/.test(text(h)),'counted an empty lane as a project');
+ // 2. A stop without a label never prints "undefined" or an empty finish name.
+ h=R({projects:[{id:'a',label:'alpha'}],stops:[{id:'1',project:'a',kind:'edit',label:'One',basis:'measured'},{id:'2',project:'a',kind:'edit',basis:'measured'}],connectors:[],finish:{stop:'2'}});
+ assert.ok(!text(h).includes('undefined')&&!/Finish · \s*(<|$)/.test(h.replace(/<strong>\s*<\/strong>/,'<strong></strong>'))&&!h.includes('Finish · <strong></strong>'),'undefined or empty finish label');
+ // 3. "beyond A to B" only when B comes after A's stretch.
+ h=R({projects:[{id:'a',label:'alpha'},{id:'b',label:'beta'}],stops:[{id:'f',project:'b',kind:'edit',label:'Fin',basis:'measured'},{id:'1',project:'a',kind:'edit',label:'One',basis:'measured'},{id:'2',project:'a',kind:'edit',label:'Two',basis:'measured'}],connectors:[],finish:{stop:'f'}});
+ assert.ok(!text(h).includes('beyond alpha to beta'),'decision reverses the route order');
+ // 4. "Last measured stop" only for a finish that is measured and is the last measured stop.
+ h=R({projects:[{id:'a',label:'alpha'},{id:'b',label:'beta'}],stops:[{id:'1',project:'a',kind:'edit',label:'One',basis:'measured'},{id:'2',project:'a',kind:'edit',label:'Two',basis:'measured'},{id:'f',project:'b',kind:'edit',label:'Fin',basis:'declared'}],connectors:[],finish:{stop:'f'}});
+ assert.ok(!draft(h).includes('Last measured stop: Fin'),'declared finish called the last measured stop');
+ // 5. "Challenge the X handoff" only when a handoff reaches that project.
+ assert.ok(!text(h).includes('Challenge the beta handoff'),'handoff named without a handoff connector');
+ console.log('PASS second edges: lanes, labels, order, last measured stop, handoff');
+}

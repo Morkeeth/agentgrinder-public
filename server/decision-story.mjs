@@ -8,7 +8,8 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({
 const routeFacts=route=>{
  if(!route||route.v!==1||route.unavailable||!Array.isArray(route.projects)||!Array.isArray(route.stops))return null;
  const projects=route.projects.filter(project=>project&&typeof project.id==='string'&&typeof project.label==='string');
- const stops=route.stops.filter(stop=>stop&&typeof stop.id==='string'&&typeof stop.project==='string');
+ // A stop the page can name: an id, a project and a non-empty label. Anything else is not printed.
+ const stops=route.stops.filter(stop=>stop&&typeof stop.id==='string'&&typeof stop.project==='string'&&typeof stop.label==='string'&&stop.label.trim());
  if(!projects.length||!stops.length)return null;
  const counts=Object.create(null);
  for(const stop of stops)counts[stop.project]=(counts[stop.project]||0)+1;
@@ -23,7 +24,16 @@ const routeFacts=route=>{
  const finishProject=finish&&projects.find(project=>project.id===finish.project);
  const handoffs=(Array.isArray(route.connectors)?route.connectors:[]).filter(connector=>connector&&connector.kind==='handoff');
  const measured=stops.filter(stop=>stop.basis==='measured');
- return {projects,stops,dense,denseCount,finish,finishProject,handoffs,measured};
+ // Only what the stops actually carry: the projects they enter (1), whether the finish comes after
+ // the busiest stretch (3), whether the finish is the last measured stop (4), and whether a
+ // handoff reaches the finish project (5).
+ const crossed=projects.filter(project=>counts[project.id]);
+ const lastDense=dense?stops.map(stop=>stop.project).lastIndexOf(dense.id):-1;
+ const finishAfterDense=Boolean(finish&&dense&&finishProject&&finishProject.id!==dense.id&&stops.indexOf(finish)>lastDense);
+ const finishIsLastMeasured=Boolean(finish&&measured.length&&measured[measured.length-1]===finish);
+ const byId=Object.fromEntries(stops.map(stop=>[stop.id,stop]));
+ const handoffToFinish=Boolean(finishProject&&handoffs.some(connector=>byId[connector.to]?.project===finishProject.id));
+ return {projects,stops,dense,denseCount,finish,finishProject,handoffs,measured,crossed,finishAfterDense,finishIsLastMeasured,handoffToFinish};
 };
 
 const stopEvidence=stop=>{
@@ -37,13 +47,14 @@ const stopEvidence=stop=>{
 export const hasDecisionStory=run=>{const facts=run&&validId(run.id)?routeFacts(run.code_route):null;return Boolean(facts&&facts.measured.length)};
 
 // Everything in the challenge comes from this run's own route, never from one run's names.
-const actionUrl=(runId,canonical,finish,decision)=>{
+const actionUrl=(runId,canonical,facts,decision)=>{
+ const finish=facts.finish;
  const title=('Challenge: '+decision).slice(0,120);
  const body=[
   'Decision story: '+canonical,
   '',
   'Decision to challenge: '+decision,
-  finish?.label?'Last measured stop: '+finish.label+'.':'',
+  finish?(facts.finishIsLastMeasured?'Last measured stop: ':'Finish: ')+finish.label+'.':'',
   '',
   'Challenge or next verified stop:',
  ].filter(Boolean).join('\n');
@@ -82,11 +93,11 @@ export function decisionHtml(run,options={}){
  const finishProject=facts.finishProject;
  // Every clause below is only said when the route carries it: no finish is named without a finish
  // stop, "measured" is only said of measured stops, and an insight with nothing in it is left out.
- const decision=dense&&finishProject&&dense.id!==finishProject.id
+ const decision=facts.finishAfterDense
   ?`Carry the work beyond ${dense.label} to ${finishProject.label}.`
   :facts.finish
    ?`Carry the route through to ${facts.finish.label}.`
-   :`Carry the route across ${facts.projects.length} project${facts.projects.length===1?'':'s'}.`;
+   :`Carry the route across ${facts.crossed.length} project${facts.crossed.length===1?'':'s'}.`;
  const parts=[
   dense?`${dense.label} held ${facts.denseCount} of ${facts.stops.length} stops`:null,
   facts.handoffs.length?`${facts.handoffs.length} handoff${facts.handoffs.length===1?'':'s'} carried it onward`:null,
@@ -105,9 +116,9 @@ export function decisionHtml(run,options={}){
  // The public runs query already carries the title. Keep preview and cold public render identical
  // instead of relying on the fixture-only note.
  const goal=run.title;
- const action=actionUrl(run.id,canonical,facts.finish,decision);
+ const action=actionUrl(run.id,canonical,facts,decision);
  const description=insight?`${decision} ${insight}`:decision;
- return `<!doctype html><html lang="en"><head>${head(run.title,description,canonical)}</head><body><main><a class="brand" href="/" aria-label="${BRAND} home">${BRAND} · decision story</a><article class="story">${options.preview?`<p class="preview"><strong>Local preview, not live</strong> of ${esc(run.id.slice(0,8))} · not a public run</p>`:''}<h1>${esc(run.title)}</h1><p class="goal"><span class="label">Human goal</span>${esc(goal)}</p><div class="route-wrap">${routePlot(facts)}<div class="lanes">${lanes}</div></div><section class="decision"><span class="label">Agent decision that changed the route</span><h2>${esc(decision)}</h2>${insight?`<p class="because">${esc(insight)}</p>`:''}</section><section class="evidence"><div class="evidence-head"><h2>Evidence on this route</h2><span class="measured">${facts.measured.length}/${facts.stops.length} measured stops</span></div><ul class="receipts">${receipts}</ul>${facts.finish?`<p class="finish">Finish · <strong>${esc(facts.finish.label)}</strong></p>`:''}</section><a class="action" href="${esc(action)}" rel="noopener noreferrer">${esc(finishProject&&dense&&finishProject.id!==dense.id?`Challenge the ${finishProject.label} handoff`:'Challenge this decision')}</a><p class="boundary">Opens a prefilled ${BRAND} issue draft on GitHub. GitHub sign-in is required to post; opening it posts nothing.</p></article></main></body></html>`;
+ return `<!doctype html><html lang="en"><head>${head(run.title,description,canonical)}</head><body><main><a class="brand" href="/" aria-label="${BRAND} home">${BRAND} · decision story</a><article class="story">${options.preview?`<p class="preview"><strong>Local preview, not live</strong> of ${esc(run.id.slice(0,8))} · not a public run</p>`:''}<h1>${esc(run.title)}</h1><p class="goal"><span class="label">Human goal</span>${esc(goal)}</p><div class="route-wrap">${routePlot(facts)}<div class="lanes">${lanes}</div></div><section class="decision"><span class="label">Agent decision that changed the route</span><h2>${esc(decision)}</h2>${insight?`<p class="because">${esc(insight)}</p>`:''}</section><section class="evidence"><div class="evidence-head"><h2>Evidence on this route</h2><span class="measured">${facts.measured.length}/${facts.stops.length} measured stops</span></div><ul class="receipts">${receipts}</ul>${facts.finish?`<p class="finish">Finish · <strong>${esc(facts.finish.label)}</strong></p>`:''}</section><a class="action" href="${esc(action)}" rel="noopener noreferrer">${esc(facts.finishAfterDense&&facts.handoffToFinish?`Challenge the ${finishProject.label} handoff`:'Challenge this decision')}</a><p class="boundary">Opens a prefilled ${BRAND} issue draft on GitHub. GitHub sign-in is required to post; opening it posts nothing.</p></article></main></body></html>`;
 }
 
 export function neutralDecisionHtml(id,options={}){
