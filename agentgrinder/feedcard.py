@@ -57,7 +57,8 @@ CARD_CSS = """/* the card */
 .fc-spark svg{display:block;width:100%;height:100%}
 .fc-area{fill:var(--blue-wash)}
 .fc-line{fill:none;stroke:var(--blue);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
-.fc-peak{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--strive-orange);box-shadow:0 0 0 2px var(--box)}
+.fc-peak{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:currentColor;box-shadow:0 0 0 2px var(--box)}
+.fc-peak,.fc-bars b{color:var(--strive-orange)}
 .fc-badge{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:13px;line-height:1.3;color:var(--soft);min-width:0}
 .fc-badge svg{flex:none;color:var(--blue)}
 .fc-badge b{font-weight:600;color:var(--blue)}
@@ -73,6 +74,9 @@ CARD_CSS = """/* the card */
 .fc-map-k{margin:4px 0 0;font-size:12px;color:var(--soft)}
 .fc-stride{display:flex;align-items:flex-start;gap:10px;margin:14px 0 0;min-width:0}
 .fc-stride pre{flex:1 1 auto;min-width:0;margin:0;padding:10px 12px;font:inherit;font-size:13px;line-height:1.5;background:var(--paper);border:1px solid var(--rule-2);color:var(--soft);white-space:pre-wrap;overflow-wrap:anywhere}
+.fc-bars{font:15px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:1px;color:var(--blue)}
+.fc-where{white-space:nowrap}
+.fc-bars b{font-weight:inherit}
 .fc-copy{flex:none;min-height:36px;padding:0 12px;font:500 13px/1 'IBM Plex Sans',system-ui,sans-serif;color:var(--blue);background:var(--blue-wash);border:1px solid var(--blue-soft);border-radius:2px;cursor:pointer;transition:transform .16s cubic-bezier(.23,1,.32,1)}
 .fc-copy:active{transform:scale(.97)}
 .fc-copy+.fc-copy{margin-left:-4px}
@@ -203,7 +207,13 @@ def _tools(r):
 
 
 def headline(r: dict):
-    """The one number: the first measured, non-zero value of commits, files, tool calls, time."""
+    """The one number. A ghost run leads with the time it ran alone, labelled with how it was alone;
+    otherwise the first measured, non-zero value of commits, files, tool calls, time."""
+    g = _ghost_parts(r)
+    if g:
+        if g["night"]:
+            return {"n": g["d"], "unit": "while you slept", "key": "time", "ghost": True}
+        return {"n": g["d"], "unit": f"you typed {g['typed']}", "key": "time", "ghost": True, "also": "turns"}
     commits, files, tools = whole(r.get("commits")), whole(r.get("files_touched")), _tools(r)
     t = duration_label(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s"))
     if commits:
@@ -221,13 +231,16 @@ def stats(r: dict, lead) -> list:
     out = []
 
     def add(key, label, value):
-        if len(out) >= 3 or value is None or value == "" or (lead and lead["key"] == key):
+        if (len(out) >= 3 or value is None or value == "" or (lead and key in (lead["key"], lead.get("also")))
+                or any(f[0] == label for f in out)):
             return
         out.append((label, value))
 
     add("time", "Time", duration_label(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s")))
-    add("turns", "Turns", whole(r.get("prompts") if r.get("prompts") is not None else r.get("turns_typed")))
     tools = _tools(r)
+    if lead and lead.get("ghost"):     # a ghost lead: the work done alone comes second
+        add("tools", "Tool calls", _thousands(tools) if tools else None)
+    add("turns", "Turns", whole(r.get("prompts") if r.get("prompts") is not None else r.get("turns_typed")))
     add("tools", "Tool calls", _thousands(tools) if tools else None)
     add("commits", "Commits", whole(r.get("commits")) or None)
     add("files", "Files", whole(r.get("files_touched")) or None)
@@ -239,8 +252,8 @@ def _hour_of(r: dict):
     return h if isinstance(h, int) and not isinstance(h, bool) and 0 <= h <= 23 else None
 
 
-def ghost(r: dict):
-    """site/feed-card.js ghost(): an hour or more and 30 or more tool calls while the person was
+def _ghost_parts(r: dict):
+    """site/feed-card.js ghostParts(): an hour or more and 30 or more tool calls while the person was
     not there, shown by the run's own numbers: typed to at most twice, or 40 or more tool calls
     per typed turn; with the typed turns unknown, a night start (22:00 to 04:59) counts."""
     secs = whole(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s"))
@@ -255,7 +268,15 @@ def ghost(r: dict):
         return None
     d = duration_label(secs)
     typed = "" if turns is None else "once" if turns == 1 else "twice" if turns == 2 else f"{_thousands(turns)} times"
-    return {"key": "ghost", "label": "Ghost run", "detail": f"{d} while you slept" if night else f"{d}, you typed {typed}"}
+    return {"d": d, "night": night, "typed": typed}
+
+
+def ghost(r: dict):
+    g = _ghost_parts(r)
+    if not g:
+        return None
+    return {"key": "ghost", "label": "Ghost run",
+            "detail": f"{g['d']} while you slept" if g["night"] else f"{g['d']}, you typed {g['typed']}"}
 
 
 def achievement(r: dict):
@@ -300,8 +321,9 @@ def badge(r: dict) -> str:
     if not a:
         return ""
     g = a["key"] == "ghost"
+    detail = "" if g else f'<span>{esc(a["detail"])}</span>'   # a ghost card already leads with its time
     return (f'<p class="fc-badge{" fc-ghost" if g else ""}" data-badge="{esc(a["key"])}">{GHOST_ICON if g else BADGE_ICON}'
-            f'<b>{esc(a["label"])}</b><span>{esc(a["detail"])}</span></p>')
+            f'<b>{esc(a["label"])}</b>{detail}</p>')
 
 
 def profile_of(r: dict) -> dict:
@@ -387,6 +409,8 @@ def spark(r: dict) -> str:
 
 # THE RUN MAP. site/feed-card.js routeGeometry and routeMap, the same numbers and the same rounding.
 MAP_W, MAP_H, RAIL, MAP_X0, MAP_X1 = 300, 44, 30, 12, 288
+MAP_SMALL = {"h": 26, "rail": 17, "up": 13, "down": 6}      # two folders: a short strip
+MAP_FULL = {"h": MAP_H, "rail": RAIL, "up": 26, "down": 12}
 
 
 def _plural(k: int, one: str, many: str) -> str:
@@ -406,6 +430,7 @@ def route_geometry(r: dict):
     if len(seq) < 2:
         return None
     n = len(order)
+    box = MAP_SMALL if n <= 2 else MAP_FULL
     visits = [0] * n
     for v in seq:
         visits[v] += 1
@@ -419,21 +444,22 @@ def route_geometry(r: dict):
             continue
         xa, xb = x(a), x(b)
         span = abs(xb - xa) / (MAP_X1 - MAP_X0)
-        cy = RAIL - 26 * span if b > a else RAIL + 12 * span
-        hops.append(f"M{_fx(xa)},{RAIL} Q{_fx((xa + xb) / 2)},{_fx(cy)} {_fx(xb)},{RAIL}")
+        cy = box["rail"] - box["up"] * span if b > a else box["rail"] + box["down"] * span
+        hops.append(f"M{_fx(xa)},{box['rail']} Q{_fx((xa + xb) / 2)},{_fx(cy)} {_fx(xb)},{box['rail']}")
     moves, returns = len(hops), len(seq) - n
     label = f"{_plural(n, 'folder', 'folders')} · {_plural(moves, 'move', 'moves')} · {_plural(returns, 'return', 'returns')}"
-    return {"n": n, "moves": moves, "returns": returns, "stations": stations, "hops": hops, "label": label}
+    return {"n": n, "moves": moves, "returns": returns, "stations": stations, "hops": hops,
+            "h": box["h"], "rail": box["rail"], "label": label}
 
 
 def route_map(r: dict) -> str:
     g = route_geometry(r)
     if not g:
         return ""
-    rail = f'<line class="fc-rail" x1="{MAP_X0}" y1="{RAIL}" x2="{MAP_X1}" y2="{RAIL}"/>'
+    rail = f'<line class="fc-rail" x1="{MAP_X0}" y1="{g["rail"]}" x2="{MAP_X1}" y2="{g["rail"]}"/>'
     hops = "".join(f'<path class="fc-hop" d="{d}"/>' for d in g["hops"])
-    stations = "".join(f'<circle class="fc-stn" cx="{_fx(cx)}" cy="{RAIL}" r="{_fx(cr)}"/>' for cx, cr in g["stations"])
-    return (f'<div class="fc-map"><svg viewBox="0 0 {MAP_W} {MAP_H}" role="img" aria-label="Route: {esc(g["label"])}">'
+    stations = "".join(f'<circle class="fc-stn" cx="{_fx(cx)}" cy="{g["rail"]}" r="{_fx(cr)}"/>' for cx, cr in g["stations"])
+    return (f'<div class="fc-map"><svg viewBox="0 0 {MAP_W} {g["h"]}" role="img" aria-label="Route: {esc(g["label"])}">'
             f'{rail}{hops}{stations}</svg><p class="fc-map-k">{esc(g["label"])}</p></div>')
 
 
@@ -441,7 +467,7 @@ def route_map(r: dict) -> str:
 BARS = "▁▂▃▄▅▆▇█"
 
 
-def stride_bars(r: dict) -> str:
+def _stride_bins(r: dict):
     raw = None
     for key in ("ridge", "rhythm"):
         v = r.get(key)
@@ -449,7 +475,7 @@ def stride_bars(r: dict) -> str:
             raw = v
             break
     if not raw or any(not _num(v) or v < 0 for v in raw):
-        return ""
+        return None
     src = settle(raw)
     n = min(12, len(src))
     bins = [0] * n
@@ -457,11 +483,16 @@ def stride_bars(r: dict) -> str:
         bins[(i * n) // len(src)] += v
     mx = max(bins)
     if not mx:
-        return ""
-    return "".join(BARS[int(math.floor(math.sqrt(v / mx) * 7 + 0.5))] for v in bins)
+        return None
+    return {"bars": [BARS[int(math.floor(math.sqrt(v / mx) * 7 + 0.5))] for v in bins], "peak": bins.index(mx)}
 
 
-def stride_text(r: dict, url: str | None = None) -> str:
+def stride_bars(r: dict) -> str:
+    b = _stride_bins(r)
+    return "".join(b["bars"]) if b else ""
+
+
+def _stride_first(r: dict) -> str:
     lead = headline(r)
     a = achievement(r)
     figures = []
@@ -472,18 +503,35 @@ def stride_text(r: dict, url: str | None = None) -> str:
             figures.append(f"{v} {'turn' if v == 1 else 'turns'}")
         else:
             figures.append(f"{v} {k.lower()}")
-    first = " · ".join(x for x in ["STRIVE", harness_name(r),
-                                    f"{lead['n']} {lead['unit']}" if lead else "", *figures,
-                                    (("👻 " if a["key"] == "ghost" else "") + a["label"]) if a else ""] if x)
-    bars = stride_bars(r)
-    where = re.sub(r"^https?://", "", str(url)) if url else ""
-    second = "  ".join(x for x in [bars, where] if x)
+    lead_text = "" if not lead else a["detail"] if lead.get("ghost") and a else f"{lead['n']} {lead['unit']}"
+    return " · ".join(x for x in ["STRIVE", harness_name(r), lead_text, *figures,
+                                  (("👻 " if a["key"] == "ghost" else "") + a["label"]) if a else ""] if x)
+
+
+def _where(url) -> str:
+    return re.sub(r"^https?://", "", str(url)) if url else ""
+
+
+def stride_text(r: dict, url: str | None = None) -> str:
+    first = _stride_first(r)
+    second = "  ".join(x for x in [stride_bars(r), _where(url)] if x)
+    return f"{first}\n{second}" if second else first
+
+
+def stride_html(r: dict, url: str | None = None) -> str:
+    """site/feed-card.js strideHtml: the bars in a monospace run, the tallest one the peak mark."""
+    b = _stride_bins(r)
+    bars = ('<span class="fc-bars">' + "".join(f"<b>{c}</b>" if i == b["peak"] else c for i, c in enumerate(b["bars"]))
+            + "</span>") if b else ""
+    at = f'<span class="fc-where">{esc(_where(url))}</span>' if _where(url) else ""
+    second = "  ".join(x for x in [bars, at] if x)
+    first = esc(_stride_first(r))
     return f"{first}\n{second}" if second else first
 
 
 def stride(r: dict, url: str | None = None) -> str:
     """The block on the card. The local card carries no script, so it draws no Copy button."""
-    return f'<div class="fc-stride"><pre>{esc(stride_text(r, url))}</pre></div>'
+    return f'<div class="fc-stride"><pre>{stride_html(r, url)}</pre></div>'
 
 
 KUDOS_ICON = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 17.2 3.3 10.6A4.1 4.1 0 0 1 9.1 4.8l.9.9.9-.9a4.1 4.1 0 0 1 5.8 5.8L10 17.2Z" fill="currentColor"/></svg>'
@@ -547,7 +595,8 @@ def terminal_lines(r: dict) -> list:
     return out
 
 
-PAGE_CSS = """*{box-sizing:border-box}html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}
+PAGE_CSS = """:root{--strive-orange:#fc4c02}
+*{box-sizing:border-box}html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}
 body{background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;padding:0 16px 40px}
 a{color:inherit;text-decoration:none}.num{font-variant-numeric:tabular-nums}
 main{max-width:560px;margin:0 auto}
