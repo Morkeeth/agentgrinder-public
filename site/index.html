@@ -1651,8 +1651,13 @@ async function mountCoachExperiment(run, slot){
   };
 }
 
-// Same rule as the post form and run-contract.js: https, and a raster image the card can show.
-function isRunPhotoUrl(u){return /^https:\/\/[^\s]+$/i.test(u)&&/\.(png|jpe?g|webp)([?#].*)?$/i.test(u)}
+// run-contract.js safeUrl (12 to 300 characters, https, no spaces, quotes, brackets or backslashes),
+// plus the raster ending the card needs to show it.
+function isRunPhotoUrl(u){
+  if(typeof u!=='string'||u.length<12||u.length>300||/[\s<>"'\\]/.test(u)||/javascript:/i.test(u)) return false;
+  try{if(new URL(u).protocol!=='https:') return false}catch(_){return false}
+  return /\.(png|jpe?g|webp)([?#].*)?$/i.test(u);
+}
 async function viewRun(id){
   const app=$('app');
   const q=new URLSearchParams(location.search);
