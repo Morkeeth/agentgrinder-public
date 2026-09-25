@@ -158,8 +158,10 @@ window.GrinderAccount = function ({
     if (settled(recovered, current.user, ids)) { dropRecovered(); recovered = null; }
     if (!current.profile) { root.innerHTML = onboardingHtml(recovered, pend, current.user); wireCommon(); return; }
     let profile = current.profile;
-    if (ids.some((i) => i.provider === "github") && !profile.github_handle) {
-      try { profile = (await auth.syncGithubHandle()) || profile; if (typeof onProfileChange === "function") onProfileChange(profile); } catch (_) {}
+    // A GitHub or X identity on the Auth user fills the matching profile column once, if empty.
+    const wantsSync = ids.some((i) => (i.provider === "github" && !profile.github_handle) || ((i.provider === "x" || i.provider === "twitter") && !profile.x_handle));
+    if (wantsSync) {
+      try { profile = (await (auth.syncProviderHandles || auth.syncGithubHandle)()) || profile; if (typeof onProfileChange === "function") onProfileChange(profile); } catch (_) {}
     }
     root.innerHTML = panelHtml(profile, ids, recovered, pend, current.user);
     wireCommon();

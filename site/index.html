@@ -427,6 +427,8 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .mode-banner.demo{border-left:3px solid var(--ink)}
 .mode-banner.live{border-left:3px solid var(--blue);background:var(--blue-wash)}
 .experiment-card{padding:16px;border-top:1px solid var(--rule)}
+.p-links{font-size:13px;color:var(--soft);margin-top:4px}
+.p-links a{color:var(--ink)}
 .experiment-card h2{font-size:18px;line-height:1.3;margin:6px 0 10px}
 @media(max-width:700px){.landing-intro h1{max-width:none}}
 </style><link rel="stylesheet" href="/social.css"><link rel="stylesheet" href="/people.css"><link rel="stylesheet" href="/account.css"><link rel="stylesheet" href="/feed.css"><link rel="stylesheet" href="/dropin.css">
@@ -552,7 +554,7 @@ const MORE_LINKS=[['/?people','Find people'],['/?following','Following'],[REAL_R
 const RETIRED=['community','forum','challenges','challenge','practices','practice','experiments','experiment','rigs','rigversion','progress','comparison','pitch','claim'];
 function menuLinks(kind){
   if(kind==='more') return MORE_LINKS.map(([href,label])=>`<a href="${href}" role="menuitem">${esc(label)}</a>`).join('');
-  if(!ME) return `<a href="/?onboard" role="menuitem">Get started</a><div class="menu-sep"></div><button type="button" class="menu-signin" data-signin role="menuitem">Sign in with GitHub</button>`;
+  if(!ME) return `<a href="/?onboard" role="menuitem">Get started</a><div class="menu-sep"></div><button type="button" class="menu-signin" data-signin role="menuitem">${signInLabel()}</button>`;
   return `<a href="/?mine" role="menuitem" data-section="mine">My runs</a><a href="/?inbox" role="menuitem" data-section="inbox">Responses</a><a id="account-scrapbook" href="/?u=${encodeURIComponent(profileHandle(ME))}" role="menuitem">My profile</a><a href="/?connect" role="menuitem">Connect agent</a><a href="/?account" role="menuitem">Account settings</a>`;
 }
 function syncAuthNav(){
@@ -642,7 +644,25 @@ const sb=window.supabase&&window.supabase.createClient(SB_URL,SB_KEY,{db:{schema
 const auth=sb?GrinderAuth.create({client:sb,redirectTo:location.origin+'/'}):null;
 // Email sign-in is off until Supabase has a custom SMTP sender: the built-in sender allows only a few mails an hour.
 // To turn it back on, add "email" here. The sign-in dialog and the onboarding copy follow this list.
+// X joins the list at load when Supabase Auth reports the X provider enabled (25 Sep 2026), so
+// the button appears the moment the provider is switched on, with no redeploy. GitHub is always
+// offered; the settings call failing or timing out changes nothing.
 const PROVIDERS_ENABLED=["github"];
+async function loadProviders(){
+  if(!SB_URL||!SB_KEY||/127\.0\.0\.1|localhost/.test(SB_URL)) return PROVIDERS_ENABLED;
+  try{
+    const r=await fetch(SB_URL+'/auth/v1/settings',{headers:{apikey:SB_KEY},signal:AbortSignal.timeout(2500)});
+    const s=r.ok?await r.json():null;
+    // GoTrue reports the X / Twitter provider under the key "twitter" (probed 25 Sep 2026: the
+    // settings body has no "x" key). Either spelling switches the button on. The array is
+    // mutated in place because GrinderAccount holds a reference to it.
+    const ext=s&&s.external||{};
+    if((ext.x===true||ext.twitter===true)&&!PROVIDERS_ENABLED.includes('x')) PROVIDERS_ENABLED.push('x');
+  }catch(_){}
+  return PROVIDERS_ENABLED;
+}
+const providerLabel=p=>p==='x'?'X':p==='github'?'GitHub':p;
+const signInLabel=()=>PROVIDERS_ENABLED.includes('x')?'Sign in with GitHub or X':'Sign in with GitHub';
 const profileHandle=p=>GrinderAuth.present(p)?.handle||'';
 // A person who arrived from Responses keeps a way back even when the run is gone or private.
 function responseReturnLink(){try{return sessionStorage.getItem('ag_response_return')==='?inbox'?'<p class="response-return"><a class="act" href="/?inbox">Back to Responses</a></p>':''}catch(_){return ''}}
@@ -1317,7 +1337,7 @@ async function viewOnboard(){
   const cmd=t=>`<div class="cmd"><span class="c">${t}</span></div>`;
   // Email OTP is for sign-in only. No path emails INSTALL_CMD; do not invent one.
   const step1=`<div class="ob-step"><h3>Create your profile${ME?' · done':''}</h3>
-    <p class="hint">Your profile keeps your run history. ${PROVIDERS_ENABLED.includes('email')?'Choose GitHub or email. ':''}GitHub sign-in does not request access to your repositories.</p>
+    <p class="hint">Your profile keeps your run history. ${PROVIDERS_ENABLED.includes('x')?'Sign in with GitHub or X; link the other later in Account settings. ':''}${PROVIDERS_ENABLED.includes('email')?'Choose GitHub or email. ':''}GitHub sign-in does not request access to your repositories.</p>
     ${ME?`<p class="meta">Connected as <b style="color:var(--ink);font-weight:500">@${esc(profileHandle(ME))}</b></p>`:
     `<button id="ob-auth">Sign in</button>`}</div>`;
   const phoneHandoff=`<div class="ob-phone-handoff" data-phone-handoff="1">
@@ -1838,6 +1858,20 @@ function wireComposer(){
   });
 }
 
+// THE PROVED LINKS. GitHub and X handles on a profile come from a provider identity on the
+// signed-in user (site/auth.js linksOf), never from a typed field, so a reader can trust them.
+// The owner sees a way to add the missing one when that provider is switched on.
+function profileLinksHtml(prof,mine){
+  const L=GrinderAuth.linksOf(prof);
+  const parts=[];
+  if(L.github) parts.push(`<a href="${esc(L.github.url)}" target="_blank" rel="noopener noreferrer">GitHub @${esc(L.github.handle)}</a>`);
+  if(L.x) parts.push(`<a href="${esc(L.x.url)}" target="_blank" rel="noopener noreferrer">X @${esc(L.x.handle)}</a>`);
+  if(mine){
+    if(!L.github) parts.push('<a href="/?account">Link GitHub</a>');
+    if(!L.x&&PROVIDERS_ENABLED.includes('x')) parts.push('<a href="/?account">Link X</a>');
+  }
+  return parts.length?`<div class="p-links">${parts.join(' · ')}</div>`:'';
+}
 async function viewProfile(handle){
   const app=$('app');
   frame(null,null); app.innerHTML=skeletonCard();
@@ -1858,7 +1892,7 @@ async function viewProfile(handle){
   const setup=harnesses.join(' · ');
   frame(railHtml(mine?'me':null,R), null);
   app.innerHTML=`<div class="phero">${avatar(handle,{size:36,agent:isAgentProfile(prof)})}
-      <div><h1>${esc(prof.display_name||prof.name||handle)}</h1><div class="h">@${esc(handle)}${setup?' · '+esc(setup):''}</div></div></div>
+      <div><h1>${esc(prof.display_name||prof.name||handle)}</h1><div class="h">@${esc(handle)}${setup?' · '+esc(setup):''}</div>${profileLinksHtml(prof,mine)}</div></div>
     <div id="social-follow" class="social-follow"></div>
     ${mine?`<details class="profile-settings"><summary>Edit profile</summary><div class="panel pad"><label>Handle<input id="e_handle" maxlength="40" value="${esc(handle)}"></label><label>Display name<input id="e_name" maxlength="60" value="${esc(prof.display_name||prof.name||'')}"></label><button id="savep">Save profile</button><div id="linked-accounts"><p class="meta">Sign-in methods, sign out on this device and profile deletion live in <a href="/?account">Account settings</a>.</p></div></div></details>`:''}
     ${mine?'<div id="close-friends-management"></div>':''}
@@ -1892,7 +1926,7 @@ function showSignIn(opts={}){
   const explanation=stranger
     ?'Sign in to cheer this run or follow the builder. You will return here after signing in. Nothing posts until you choose.'
     :'Sign in to keep your profile and responses connected. You will return to this preview or social action. Runs stay private until you choose Public and save them.';
-  dialog.innerHTML='<h2 id="signin-title">'+title+'</h2><p id="signin-explanation">'+explanation+'</p><p class="hint">Closing or cancelling sign-in posts nothing and changes no audience.</p>'+PROVIDERS_ENABLED.filter(p=>p==='github').map(p=>'<button data-provider="'+p+'">Continue with GitHub</button>').join('')+(PROVIDERS_ENABLED.includes('email')?'<form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public profile.</p><button>Send a sign-in link</button></form>':'')+'<p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
+  dialog.innerHTML='<h2 id="signin-title">'+title+'</h2><p id="signin-explanation">'+explanation+'</p><p class="hint">Closing or cancelling sign-in posts nothing and changes no audience.</p>'+PROVIDERS_ENABLED.filter(p=>p==='github'||p==='x').map(p=>'<button data-provider="'+p+'">Continue with '+providerLabel(p)+'</button>').join('')+(PROVIDERS_ENABLED.includes('email')?'<form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public profile.</p><button>Send a sign-in link</button></form>':'')+'<p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
   document.body.append(dialog);dialog.showModal();$('signin-close').onclick=()=>dialog.close();
   dialog.querySelectorAll('[data-provider]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{await auth.signIn(button.dataset.provider,{returnTo:location.search})}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not start. Try again.';button.disabled=false}});
   if($('signin-email'))$('signin-email').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,button=f.querySelector('button');button.disabled=true;try{await auth.signIn('email',{email:f.elements.email.value,returnTo:location.search});$('signin-state').textContent='Check your email for the sign-in link. Keep this tab open to return to your draft.'}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not connect. Try again.'}finally{button.disabled=false}};
@@ -2292,7 +2326,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     // before another auth refresh can append controls to the same page.
     let authRefresh=Promise.resolve();
     const refreshAndRoute=()=>{authRefresh=authRefresh.catch(()=>{}).then(async()=>{await refreshAuth();await route()});return authRefresh;};
-    refreshAndRoute();
+    loadProviders().then(refreshAndRoute,refreshAndRoute);
     sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'||event==='USER_UPDATED'||(event==='SIGNED_IN'&&session?.user?.id!==ME?.auth_uid))setTimeout(refreshAndRoute,0)});
   } else route();
 });

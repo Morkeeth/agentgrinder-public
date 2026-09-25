@@ -42,7 +42,7 @@ This repository is the public product. Morkeeth/agentgrinder remains the hackath
 
 ## Open
 
-- X sign-in. The account panel says it is not available; no provider is configured.
+- X sign-in. Built 25 September: the site reads the enabled providers from Supabase Auth at load, offers Continue with X when the provider is on, and writes x_handle from the X identity. Not live until the X developer app and the provider toggle are set in the Supabase dashboard, and manual identity linking is enabled there so a GitHub account can add X.
 - Origin (Cursor’s code forge) repository linking. No app is registered and no button is enabled.
 - Close friends: privately mark people and post to a Close friends audience. Needs server-enforced access and revocation tests, not a client-side filter. No contact upload or automatic following is implied.
 - Grok Bot verification: a second bot installing the kit and previewing its own export.
