@@ -88,6 +88,21 @@
     const h = gh ? gh.handle : "";
     return /^[a-z0-9_-]{1,60}$/i.test(h) ? h : null;
   }
+  // The x_handle column is written only from an X identity (Supabase provider "x"; "twitter" is
+  // the legacy OAuth 1.0a provider). X handles are 1 to 15 characters: letters, digits, underscore.
+  function xHandleOf(user) {
+    const x = identitiesOf(user).find((i) => i.provider === "x" || i.provider === "twitter");
+    const h = x ? x.handle.replace(/^@+/, "") : "";
+    return /^[a-z0-9_]{1,15}$/i.test(h) ? h : null;
+  }
+  // The public links a profile row proves: each one comes from a provider identity, never typed.
+  function linksOf(p) {
+    const gh = str(p?.github_handle), x = str(p?.x_handle);
+    return {
+      github: gh ? { handle: gh, url: "https://github.com/" + encodeURIComponent(gh) } : null,
+      x: x ? { handle: x, url: "https://x.com/" + encodeURIComponent(x) } : null,
+    };
+  }
   // Suggested onboarding values. The owner confirms or edits them; nothing is saved here.
   function suggest(user) {
     const ids = identitiesOf(user);
@@ -331,7 +346,9 @@
       return { removed: identityId };
     }
     // After a GitHub link, the legacy column may be filled; it is never set from a chosen handle.
-    async function syncGithubHandle() {
+    // Copy the provider-owned handles (GitHub, X) onto the profile row when a matching identity
+    // exists on the Auth user and the column is still empty. Never overwrites, never invents.
+    async function syncProviderHandles() {
       const u = await user();
       const p = await profile();
       if (!u || !p) return p;
@@ -339,9 +356,14 @@
       // Ask Auth for its current server-owned identities before claiming the compatibility alias.
       const { data: identityData, error: identityError } = await client.auth.getUserIdentities();
       if (identityError) throw fail(identityError);
-      const gh = githubHandleOf({ identities: identityData?.identities || [] });
-      if (!gh || p.github_handle) return p;
-      const { data, error } = await client.from("profiles").update({ github_handle: gh }).eq("id", p.id).eq("auth_uid", u.id).select("*").single();
+      const ids = { identities: identityData?.identities || [] };
+      const patch = {};
+      const gh = githubHandleOf(ids);
+      if (gh && !p.github_handle) patch.github_handle = gh;
+      const x = xHandleOf(ids);
+      if (x && !p.x_handle) patch.x_handle = x;
+      if (!Object.keys(patch).length) return p;
+      const { data, error } = await client.from("profiles").update(patch).eq("id", p.id).eq("auth_uid", u.id).select("*").single();
       if (error) {
         if (explain(error).code === "handle_taken") return p; // someone else's label; leave legacy column empty
         throw fail(error);
@@ -396,11 +418,11 @@
     }
 
     return { providers: PROVIDERS, session, user, signIn, profile, current, onboard, updateProfile, byHandle,
-      identities, link, unlink, syncGithubHandle, signOutLocal, deleteProfile, returnTo, onChange,
+      identities, link, unlink, syncProviderHandles, syncGithubHandle: syncProviderHandles, signOutLocal, deleteProfile, returnTo, onChange,
       pending, clearPending, recoverFromUrl, parseAuthError,
       present, explain, suggest, normalizeHandle, normalizeDisplayName, normalizeAvatarUrl, validateHandle };
   }
 
-  return { create, providers: PROVIDERS, present, explain, suggest, identitiesOf, githubHandleOf, parseAuthError,
+  return { create, providers: PROVIDERS, present, explain, suggest, identitiesOf, githubHandleOf, xHandleOf, linksOf, parseAuthError,
     normalizeHandle, normalizeDisplayName, normalizeAvatarUrl, validateHandle };
 });
