@@ -198,7 +198,8 @@
   }
 
   async function sendToLaptop(button) {
-    const url = location.origin + "/";
+    // The page the person is on, so Connect sends Connect and the landing sends the landing.
+    const url = location.href;
     const label = button.textContent;
     if (navigator.share) {
       try { await navigator.share({ title: document.title, url }); return; }
@@ -239,7 +240,10 @@
     zone.addEventListener("dragover", (e) => { stop(e); zone.classList.add("over"); });
     zone.addEventListener("dragleave", (e) => { stop(e); if (!zone.contains(e.relatedTarget)) zone.classList.remove("over"); });
     zone.addEventListener("drop", (e) => { stop(e); zone.classList.remove("over"); read(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]); });
-    wireCopy(document.querySelector(".drop-where") || document);
+    // The landing folds the file locations under .drop-where and their Copy buttons are wired
+    // here. Connect draws its own rows and wires them itself, so nothing is bound twice.
+    const where = document.querySelector(".drop-where");
+    if (where) wireCopy(where);
     // A file dropped beside the zone would make the browser open it and leave the page. On the
     // landing page a drop anywhere is read as a drop on the zone.
     if (!root.__dropinGuard) {

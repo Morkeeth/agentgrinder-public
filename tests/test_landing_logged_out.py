@@ -19,7 +19,7 @@ def test_logged_out_landing_exposes_browsing_and_first_post():
     assert "Strava is for people who ran. <i>__BRAND__</i> is for people who didn't." in body
     assert 'href="/?explore"' in body
     assert 'Post your first run' in body
-    assert 'href="/?onboard"' in body or 'href="/?post"' in body
+    assert 'href="/?connect"' in body or 'href="/?post"' in body
     assert 'Sign in to browse' not in body
     # Phone used to pull the feature card above the pitch via order:-1. Keep source order.
     assert '.launch-grid>.landing-feature{order:-1}' not in HTML
@@ -41,7 +41,8 @@ def test_landing_names_where_each_harness_keeps_its_session_file():
     assert 'Cmd+Shift+G' in body
     assert 'checked on test files only' in body   # Codex: no typed Codex session on the author's Mac
     # The command line stays, below the fold, for power users.
-    assert body.index('drop-zone') < body.index('landing-feature') < body.index('For power users')
+    # The drop zone is one helper since 25 Sep 2026 (shared with Connect); its call site leads.
+    assert body.index('${dropZoneHtml()}') < body.index('landing-feature') < body.index('For power users')
 
 
 def test_landing_points_to_a_real_run_not_the_bundled_sample():

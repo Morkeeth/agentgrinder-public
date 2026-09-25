@@ -1,17 +1,19 @@
-"""Phone path for Post your first run must be honest about desktop capture."""
+"""The Connect page tells a phone the truth: the session file is on the computer the agent ran on.
+
+Until 25 Sep 2026 this lived in a four-step onboarding wizard at /?onboard. That wizard is gone;
+/?onboard, /?connect and the top of /?post are one page. The phone honesty moved with it.
+"""
 from pathlib import Path
 
-HTML = (Path(__file__).resolve().parents[1] / "site" / "index.html").read_text()
+HTML = (Path(__file__).resolve().parents[1] / 'site/index.html').read_text()
 
 
-def onboard():
-    start = HTML.index("async function viewOnboard(){")
-    end = HTML.index("async function viewOnboardAgent(){")
-    return HTML[start:end]
+def connect_body():
+    return HTML[HTML.index('function connectBodyHtml()'):HTML.index('function wireConnectCopies(')]
 
 
 def test_phone_handoff_says_capture_needs_the_computer():
-    body = onboard()
+    body = connect_body()
     assert 'data-phone-handoff="1"' in body
     assert "Capture runs on the computer where your agent runs" in body
     assert "This phone cannot record a sitting" in body
@@ -20,30 +22,26 @@ def test_phone_handoff_says_capture_needs_the_computer():
     assert ".ob-phone-handoff{display:block}" in HTML
 
 
-def test_phone_offers_copy_and_a_real_run_not_email_command():
-    body = onboard()
-    assert "Copy the command" in body
-    assert 'href="${REAL_RUN}">See a real run</a>' in body
-    assert "/?example" not in body
-    # Sign-in email OTP exists elsewhere; it must not become "email me the command".
-    assert "Email me the command" not in body
-    assert "signInWithOtp" not in body
-    assert "mailto:" not in body
+def test_one_page_one_command_per_agent_and_the_drop_zone():
+    body = connect_body()
+    assert "${dropZoneHtml()}" in body
+    for name, harness in (("Claude Code", "claude"), ("Cursor", "cursor"), ("Codex", "codex")):
+        assert f"agent('{name}','{harness}'" in body
+    assert "ONE_LINE('grokbot')" in body
+    assert "uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind" in HTML
+    for path in ("~/.claude/projects/", "~/.cursor/projects/", "~/.codex/sessions/"):
+        assert path in HTML
+    # No account for the card or the link; sign-in only to post. No email, no mailto.
+    assert "No account for the card or the link" in body
+    assert "mailto:" not in body and "signInWithOtp" not in body
+    # Bots and unsupported agents have a path too, and the token flow keeps its address.
+    assert 'href="/?connect=auto"' in body
+    assert "docs/AGENT-UPLOAD-API.md" in body and "docs/GROK-PUSH.md" in body
 
 
-def test_desktop_copy_stays_on_the_command_line():
-    body = onboard()
-    assert 'id="cp1-desk"' in body
-    assert "ob-cmd-copy" in body
-    assert "${INSTALL_CMD}" in body
-
-
-def test_removing_phone_honesty_fails_this_guard():
-    """Document the red mutation: honesty string gone => primary test fails."""
-    mutated = onboard().replace(
-        "Capture runs on the computer where your agent runs",
-        "Run this command anywhere",
-        1,
-    )
-    assert "Capture runs on the computer where your agent runs" not in mutated
-    assert "Run this command anywhere" in mutated
+def test_onboard_and_connect_and_post_are_the_same_page():
+    assert "async function viewOnboard(){ return viewConnect(); }" in HTML
+    assert "if(q.get('connect')==='auto')" in HTML
+    post = HTML[HTML.index("async function viewPost(){"):HTML.index("async function viewExplore(){")]
+    assert "${connectBodyHtml()}" in post
+    assert "firstRunPrompt" not in HTML and "FIRST_RUN_CMD" not in HTML

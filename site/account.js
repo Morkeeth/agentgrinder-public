@@ -115,7 +115,7 @@ window.GrinderAccount = function ({
       ${origin ? origin.html({ signedIn: true }) : ""}
       <section class="card pad account-section" aria-labelledby="account-connect-title"><h2 id="account-connect-title">Connect an agent</h2>
         <p>One private upload credential for automatic runs. Advanced scopes stay on Agents.</p>
-        <div class="account-actions"><a class="act blue" href="/?connect">Open Connect</a><a class="act" href="/?agents">Advanced Agents</a></div></section>
+        <div class="account-actions"><a class="act blue" href="/?connect=auto">Open Connect</a><a class="act" href="/?agents">Advanced Agents</a></div></section>
       <section class="card pad account-section" aria-labelledby="account-signout-title"><h2 id="account-signout-title">Sign out on this device</h2>
         <p>Signs you out of __BRAND__ in this browser only. Other devices, and Agent Grinder if you use it with the same sign-in, stay signed in.</p>
         <div class="account-actions"><button type="button" class="act" id="account-signout">Sign out here</button></div></section>
