@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def home(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("STRIVE_HOME", str(tmp_path / ".strive"))
+    monkeypatch.setenv("STRIVE_TRUSTED_HOSTS", "strive.test")
     import importlib
     from agentgrinder import sync
     importlib.reload(sync)
@@ -41,6 +42,10 @@ def test_a_finished_session_is_sent_once_as_a_private_run_with_counts_only(home)
     tmp, sync, target = home
     found = sync.discover()
     assert ("codex", str(target)) in found
+    # The first sync only records the idle file; the next one sends it if it did not move.
+    first = Opener()
+    counts = sync.sync_once("ag_test", site="https://strive.test", opener=first, out=lambda *_: None)
+    assert counts["waiting"] == 1 and counts["sent"] == 0 and not first.requests
     opener = Opener()
     counts = sync.sync_once("ag_test", site="https://strive.test", opener=opener, out=lambda *_: None)
     assert counts["sent"] == 1 and counts["failed"] == 0
@@ -61,15 +66,32 @@ def test_a_finished_session_is_sent_once_as_a_private_run_with_counts_only(home)
     assert str(target) not in state and "codex" not in state
 
 
-def test_the_idempotency_key_is_stable_for_one_file_and_changes_when_it_grows(home):
+def test_a_resumed_session_keeps_its_key_and_is_not_sent_twice(home):
     _, sync, target = home
     k1 = sync.idempotency_key(sync.file_key("codex", str(target)))
-    assert k1 == sync.idempotency_key(sync.file_key("codex", str(target)))
+    for _ in range(2):
+        sync.sync_once("ag_test", site="https://strive.test", opener=Opener(), out=lambda *_: None)
     with open(target, "a") as f:
         f.write("\n")
-    old = time.time() - 3600
+    old = time.time() - 3000
     os.utime(target, (old, old))
-    assert k1 != sync.idempotency_key(sync.file_key("codex", str(target)))
+    assert k1 == sync.idempotency_key(sync.file_key("codex", str(target)))
+    for _ in range(2):
+        again = Opener()
+        counts = sync.sync_once("ag_test", site="https://strive.test", opener=again, out=lambda *_: None)
+        assert not again.requests and counts["already"] == 1
+
+
+def test_a_file_that_moved_between_syncs_waits_again(home):
+    _, sync, target = home
+    sync.sync_once("ag_test", site="https://strive.test", opener=Opener(), out=lambda *_: None)
+    with open(target, "a") as f:
+        f.write("\n")
+    old = time.time() - 3000
+    os.utime(target, (old, old))
+    opener = Opener()
+    counts = sync.sync_once("ag_test", site="https://strive.test", opener=opener, out=lambda *_: None)
+    assert counts["waiting"] == 1 and not opener.requests
 
 
 def test_a_session_still_being_written_waits(home):
@@ -95,3 +117,52 @@ def test_the_cli_knows_sync():
     with pytest.raises(SystemExit) as out:
         main(["sync", "--help"])
     assert out.value.code == 0
+
+
+def _twice(sync, opener, lines):
+    sync.sync_once("ag_test", site="https://strive.test", opener=Opener(), out=lambda *_: None)
+    return sync.sync_once("ag_test", site="https://strive.test", opener=opener, out=lines.append)
+
+
+def test_only_a_confirmed_private_run_counts_as_sent(home):
+    tmp, sync, _ = home
+    for body in ({"id": "x", "visibility": "public"}, {"visibility": "private"}, ["nope"]):
+        def opener(request, timeout=30, body=body):
+            return io.BytesIO(json.dumps(body).encode())
+        (tmp / ".strive" / "synced.json").unlink(missing_ok=True)
+        lines = []
+        counts = _twice(sync, opener, lines)
+        assert counts["sent"] == 0 and counts["failed"] == 1
+        assert '"sent"' not in (tmp / ".strive" / "synced.json").read_text()
+
+
+def test_server_error_text_is_never_printed(home):
+    import urllib.error
+    _, sync, _ = home
+    def opener(request, timeout=30):
+        raise urllib.error.HTTPError(request.full_url, 400, "bad", {}, io.BytesIO(b'{"error":"SERVER-SENTINEL"}'))
+    lines = []
+    counts = _twice(sync, opener, lines)
+    assert counts["failed"] == 1 and lines and not any("SERVER-SENTINEL" in line for line in lines)
+
+
+def test_the_token_only_goes_to_a_trusted_https_host(home):
+    _, sync, _ = home
+    for site in ("http://strive.test", "https://evil.test", "https://strive.test.evil.test"):
+        opener = Opener()
+        lines = []
+        sync.sync_once("ag_test", site=site, opener=Opener(), out=lambda *_: None)
+        counts = sync.sync_once("ag_test", site=site, opener=opener, out=lines.append)
+        assert not opener.requests and counts["failed"] == 1, site
+    assert sync.check_site("https://agentic-strava.vercel.app/") == "https://agentic-strava.vercel.app"
+
+
+def test_redirects_are_refused(home):
+    _, sync, _ = home
+    assert sync._NoRedirect().redirect_request(None, None, 302, "Found", {}, "https://evil.test") is None
+
+
+def test_a_dry_run_cannot_install(home, capsys):
+    from agentgrinder.cli import main
+    code = main(["sync", "--dry-run", "--install"])
+    assert code == 1 and "cannot install" in capsys.readouterr().out
