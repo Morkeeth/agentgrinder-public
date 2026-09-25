@@ -30,7 +30,7 @@ for(const text of [
  'Code Route deployed and used',
  'Legacy ruling crash reproduced',
  'State renderer repaired',
- 'Challenge the fleet handoff',
+ 'Challenge the fleet-ops handoff',
  'GitHub sign-in is required to post',
  canonical,
 ])assert.ok(page.includes(text),`missing ${text}`);
@@ -46,7 +46,7 @@ const continuation=new URL(href);
 assert.equal(continuation.hostname,'github.com');
 assert.equal(continuation.pathname,'/Morkeeth/agentgrinder-public/issues/new');
 assert.ok(continuation.searchParams.get('body').includes(canonical));
-assert.ok(continuation.searchParams.get('body').includes('carry the measured route'));
+assert.ok(continuation.searchParams.get('body').includes('Decision to challenge: Carry the work beyond agentgrinder-public to fleet-ops.'));
 assert.ok(continuation.searchParams.get('body').includes('State renderer repaired'));
 
 const neutral=neutralDecisionHtml(run.id,{origin});
@@ -56,3 +56,21 @@ for(const privateText of [run.title,'agentgrinder-public','fleet-ops','State ren
 }
 
 console.log('PASS decision story uses the supplied route and preserves context in its one continuation');
+
+// Any run's own route, not one run's names: a two-project route says its own projects.
+{
+ const {decisionHtml:render,hasDecisionStory}=await import('../../server/decision-story.mjs');
+ const other={id:'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',title:'Other night',code_route:{v:1,
+  projects:[{id:'api',label:'api'},{id:'web',label:'web'}],
+  stops:[{id:'s1',project:'api',kind:'edit',label:'Schema',basis:'measured',evidence:['migration ran']},{id:'s2',project:'api',kind:'check',label:'Tests',basis:'measured'},{id:'s3',project:'web',kind:'deploy',label:'Shipped',basis:'measured',evidence:['deploy ok']}],
+  connectors:[{from:'s2',to:'s3',kind:'handoff'}],finish:{stop:'s3'}}};
+ assert.ok(hasDecisionStory(other));
+ const html=render(other,{origin:'https://strive.test'});
+ // The challenge is filed in STRIVE's own repository; nothing else may name another run's projects.
+ const story=html.replaceAll('github.com/Morkeeth/agentgrinder-public/issues/new','');
+ for(const leak of ['fleet-ops','agentgrinder-public','strive-live','fleet-fail'])assert.ok(!story.includes(leak),'hard-coded '+leak);
+ assert.ok(html.includes('Carry the work beyond api to web.')&&html.includes('Challenge the web handoff'));
+ // A public run with no Code Route has no decision story (api/decision.js sends it to /r/<id>).
+ assert.equal(hasDecisionStory({id:other.id,title:'x',code_route:null}),false);
+ console.log('PASS decision story is derived from any run\'s own route; a run without one goes to /r/');
+}

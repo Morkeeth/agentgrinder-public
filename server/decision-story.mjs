@@ -31,12 +31,17 @@ const stopEvidence=stop=>{
  return evidence?evidence.trim():'';
 };
 
-const actionUrl=(runId,canonical,finish)=>{
- const title='Challenge the fleet-ops handoff';
+// Whether a run can carry a decision story: it needs a measured Code Route. A public run without
+// one is still a real public story, at /r/<id> (api/decision.js sends the reader there).
+export const hasDecisionStory=run=>Boolean(run&&validId(run.id)&&routeFacts(run.code_route));
+
+// Everything in the challenge comes from this run's own route, never from one run's names.
+const actionUrl=(runId,canonical,finish,decision)=>{
+ const title=('Challenge: '+decision).slice(0,120);
  const body=[
   'Decision story: '+canonical,
   '',
-  'Decision to challenge: carry the measured route beyond its densest stretch to fleet-ops.',
+  'Decision to challenge: '+decision,
   finish?.label?'Last measured stop: '+finish.label+'.':'',
   '',
   'Challenge or next verified stop:',
@@ -82,16 +87,21 @@ export function decisionHtml(run,options={}){
   facts.handoffs.length?`${facts.handoffs.length} handoffs carried it onward`:null,
   facts.measured.length===facts.stops.length?'every stop was measured':null,
  ].filter(Boolean).join(' · ')+'.';
- const chosen=['strive-live','fleet-fail',facts.finish?.id].filter((id,index,all)=>id&&all.indexOf(id)===index)
-  .map(id=>facts.stops.find(stop=>stop.id===id)).filter(Boolean);
+ // Receipts: the decision point itself. The last stop in the busiest project (where the work
+ // could have stopped), the first stop in the finish project (where it went instead), then the
+ // recorded finish. Without a busiest project or a move, the first stop with evidence stands in.
+ const lastInDense=dense?[...facts.stops].reverse().find(stop=>stop.project===dense.id):null;
+ const firstInFinish=finishProject?facts.stops.find(stop=>stop.project===finishProject.id):null;
+ const fallback=facts.stops.find(stop=>stopEvidence(stop));
+ const chosen=[lastInDense||fallback,firstInFinish,facts.finish].filter((stop,index,all)=>stop&&all.indexOf(stop)===index);
  const receipts=chosen.map(stop=>`<li><span class="receipt-mark">${esc(stop.kind)}</span><span class="receipt-copy"><strong>${esc(stop.label)}</strong>${stopEvidence(stop)?`<span>${esc(stopEvidence(stop))}</span>`:''}</span></li>`).join('');
  const lanes=facts.projects.map((project,index)=>`<span><b>${index+1}</b>${esc(project.label)}</span>`).join('');
  // The public runs query already carries the title. Keep preview and cold public render identical
  // instead of relying on the fixture-only note.
  const goal=run.title;
- const action=actionUrl(run.id,canonical,facts.finish);
+ const action=actionUrl(run.id,canonical,facts.finish,decision);
  const description=`${decision} ${insight}`;
- return `<!doctype html><html lang="en"><head>${head(run.title,description,canonical)}</head><body><main><a class="brand" href="/" aria-label="${BRAND} home">${BRAND} · decision story</a><article class="story">${options.preview?`<p class="preview"><strong>Local preview</strong> of ${esc(run.id.slice(0,8))} · not a public run</p>`:''}<h1>${esc(run.title)}</h1><p class="goal"><span class="label">Human goal</span>${esc(goal)}</p><div class="route-wrap">${routePlot(facts)}<div class="lanes">${lanes}</div></div><section class="decision"><span class="label">Agent decision that changed the route</span><h2>${esc(decision)}</h2><p class="because">${esc(insight)}</p></section><section class="evidence"><div class="evidence-head"><h2>Evidence on this route</h2><span class="measured">${facts.measured.length}/${facts.stops.length} measured stops</span></div><ul class="receipts">${receipts}</ul><p class="finish">Finish · <strong>${esc(facts.finish?.label||'Recorded finish')}</strong></p></section><a class="action" href="${esc(action)}" rel="noopener noreferrer">Challenge the fleet handoff</a><p class="boundary">Opens a prefilled agentgrinder-public issue draft. GitHub sign-in is required to post; opening it posts nothing.</p></article></main></body></html>`;
+ return `<!doctype html><html lang="en"><head>${head(run.title,description,canonical)}</head><body><main><a class="brand" href="/" aria-label="${BRAND} home">${BRAND} · decision story</a><article class="story">${options.preview?`<p class="preview"><strong>Local preview, not live</strong> of ${esc(run.id.slice(0,8))} · not a public run</p>`:''}<h1>${esc(run.title)}</h1><p class="goal"><span class="label">Human goal</span>${esc(goal)}</p><div class="route-wrap">${routePlot(facts)}<div class="lanes">${lanes}</div></div><section class="decision"><span class="label">Agent decision that changed the route</span><h2>${esc(decision)}</h2><p class="because">${esc(insight)}</p></section><section class="evidence"><div class="evidence-head"><h2>Evidence on this route</h2><span class="measured">${facts.measured.length}/${facts.stops.length} measured stops</span></div><ul class="receipts">${receipts}</ul><p class="finish">Finish · <strong>${esc(facts.finish?.label||'Recorded finish')}</strong></p></section><a class="action" href="${esc(action)}" rel="noopener noreferrer">${esc(finishProject&&dense&&finishProject.id!==dense.id?`Challenge the ${finishProject.label} handoff`:'Challenge this decision')}</a><p class="boundary">Opens a prefilled ${BRAND} issue draft on GitHub. GitHub sign-in is required to post; opening it posts nothing.</p></article></main></body></html>`;
 }
 
 export function neutralDecisionHtml(id,options={}){
