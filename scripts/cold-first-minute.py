@@ -248,7 +248,9 @@ def main() -> None:
     assert "1 public run is live." in phone
     assert "Post your first run" in phone
     assert "Drop a session file" in phone
-    assert 'href="/?example"' in phone
+    # 25 Sep 2026: the landing links a real public run, never the bundled example.
+    assert 'href="/r/3afa89e7-aff5-488d-bec3-da36196b8c5e"' in phone
+    assert 'href="/?example"' not in phone
     assert 'data-cold-signin-rendered="true"' in modal
     assert EXPLANATION in modal
     assert "Continue with X" not in modal
