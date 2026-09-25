@@ -448,7 +448,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .experiment-card h2{font-size:18px;line-height:1.3;margin:6px 0 10px}
 @media(max-width:700px){.landing-intro h1{max-width:none}}
 /* 390 px: every tap target at least 44px tall (fresh-eyes review, 25 Sep 2026). */
-@media(max-width:700px){.bar .mark,.feed-tabs a,.section-tabs a,.land-head a,.launch-more a{display:inline-flex;align-items:center;min-height:44px}input[type=checkbox]{width:22px;height:22px}label:has(input[type=checkbox]){min-height:44px}}
+@media(max-width:700px){.bar .mark,.feed-tabs a,.section-tabs a,.land-head a,.launch-more a{display:inline-flex;align-items:center;min-height:44px}input[type=checkbox]{width:22px;height:22px}label:has(input[type=checkbox]){min-height:44px}button,.act{min-height:44px}}
 </style><link rel="stylesheet" href="/social.css"><link rel="stylesheet" href="/people.css"><link rel="stylesheet" href="/account.css"><link rel="stylesheet" href="/feed.css"><link rel="stylesheet" href="/dropin.css">
 <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};</script>
 <script defer src="/_vercel/insights/script.js"></script>
@@ -2091,6 +2091,7 @@ async function decodeImportPayload(payload){
 
 async function importRun(){
   const m=location.hash.match(/import=([^&]+)/); if(!m) return false;
+  try{document.title='Preview a run · __BRAND__'}catch(_){}
   let run; try{ run=await decodeImportPayload(m[1]); }catch(error){ frame(null,null); $('app').innerHTML='<div class="card"><h2>This import link could not be read</h2><p>'+esc(error.importCompatibility?error.message:'The capture data on this link could not be read, usually because the address was cut when it was copied. Nothing was posted. Run the capture command again to open a fresh preview.')+'</p><p><a href="/?post">How to capture a run</a></p></div>'; return true; }
   if(Array.isArray(run?.ridge)&&run.worker_bins==null) run.worker_bins=Array(run.ridge.length).fill(0);
   const importedWholeNumber=id=>{const raw=$(id)?.value;if(raw==null||String(raw).trim()==='')return null;const value=Number(raw);return Number.isInteger(value)&&value>=0?value:Number.NaN};
@@ -2379,6 +2380,7 @@ function pageTitle(q){
   if(q.get('run')) return t('Run');
   if(q.get('u')) return t('@'+q.get('u'));
   if(q.get('explore')!==null) return t('Discover');
+  if(q.has('onboard')) return t('Connect your agent');
   return '__BRAND__ · __TAGLINE__';
 }
 async function route(){ account.recover(); try{document.title=pageTitle(new URLSearchParams(location.search))}catch(_){}
