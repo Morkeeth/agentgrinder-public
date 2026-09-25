@@ -1541,7 +1541,7 @@ function landingHTML(){
     <h1>Strava is for people who ran. <i>__BRAND__</i> is for people who didn't.</h1>
     <p class="drop-sub">Follow the builders you know and see what their agents did. Every number on a card comes from a real session.</p>
     <div class="cta"><button type="button" class="act primary" data-signin>${signInLabel()} and build your profile</button><a class="act" href="/?people">Find people</a></div>
-    <p class="hint">Runs stay private until you choose Public and save them.</p>
+    <p class="hint">Nothing is shared until you choose who can see it.</p>
     </section>
     <section class="landing-feature" aria-label="A public run" id="landing-feature">
       <div class="land-head"><h2>Latest runs</h2><a href="/?explore">See all</a></div>
@@ -2035,7 +2035,7 @@ function showSignIn(opts={}){
   const title=stranger?'Continue on __BRAND__':'Keep your place';
   const explanation=stranger
     ?'Sign in to cheer this run or follow the builder. You will return here after signing in. Nothing posts until you choose.'
-    :'Sign in to keep your profile and responses connected. You will return to this preview or social action. Runs stay private until you choose Public and save them.';
+    :'Sign in to keep your profile and responses connected. You will return to this preview or social action. Nothing is shared until you choose who can see it.';
   dialog.innerHTML='<h2 id="signin-title">'+title+'</h2><p id="signin-explanation">'+explanation+'</p><p class="hint">Closing or cancelling sign-in posts nothing and changes no audience.</p>'+PROVIDERS_ENABLED.filter(p=>p==='github'||p==='x').map(p=>'<button data-provider="'+p+'">Continue with '+providerLabel(p)+'</button>').join('')+(PROVIDERS_ENABLED.includes('email')?'<form id="signin-email" class="reply-form"><label>Email<input name="email" type="email" autocomplete="email" required></label><p>Your email stays out of your public profile.</p><button>Send a sign-in link</button></form>':'')+'<p id="signin-state" role="status"></p><button class="ghost" id="signin-close">Close</button>';
   document.body.append(dialog);dialog.showModal();$('signin-close').onclick=()=>dialog.close();
   dialog.querySelectorAll('[data-provider]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{await auth.signIn(button.dataset.provider,{returnTo:location.search})}catch(e){$('signin-state').textContent=e.detail?.message||'Sign-in could not start. Try again.';button.disabled=false}});
