@@ -1340,7 +1340,7 @@ window.GrinderSocial = function ({
   }
 
   async function crew(id) {
-    start("Crew", "Shared runs from people in this Crew.", "crews");
+    start("Club", "Runs shared by the people in this club.", "crews");
     if (!uuid(id)) {
       byId("social-body").innerHTML = empty("This Crew link is invalid.");
       return;
@@ -1397,6 +1397,19 @@ window.GrinderSocial = function ({
                 ? "Invite one friend, then each of you post a real run here."
                 : "No grinds shared with this Crew yet. Each member posts one real run to start the return loop.",
             ));
+      // A public club can be joined by anyone signed in, for themselves only (migration 014).
+      if (!mine && c.visibility === "public") {
+        const join = document.createElement("button");
+        join.type = "button"; join.className = "act primary"; join.id = "club-join";
+        join.textContent = me() ? "Join this club" : "Sign in to join";
+        byId("social-body").prepend(join);
+        join.onclick = async () => {
+          if (!me()) { if (typeof showSignIn === "function") showSignIn({ reason: "social" }); return; }
+          join.disabled = true; join.setAttribute("aria-busy", "true");
+          try { await result(db.rpc("grinder_join_public_crew", { crew: id })); await crew(id); }
+          catch (e) { join.disabled = false; join.removeAttribute("aria-busy"); fail(e); }
+        };
+      }
       if (owner)
         byId("invite-crew").onclick = async () => {
           try {

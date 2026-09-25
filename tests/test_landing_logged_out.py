@@ -2,7 +2,8 @@
 then the public feed. The drop zone lives on Add a run (/?post) since 25 Sep 2026 evening."""
 from pathlib import Path
 
-HTML = (Path(__file__).resolve().parents[1] / 'site/index.html').read_text()
+ROOT = Path(__file__).resolve().parents[1]
+HTML = (ROOT / 'site/index.html').read_text()
 
 
 def landing():
@@ -20,11 +21,12 @@ def test_logged_out_landing_exposes_browsing_and_first_post():
     assert "Strava is for people who ran. <i>__BRAND__</i> is for people who didn't." in body
     assert 'href="/?explore"' in body
     assert 'data-signin>${signInLabel()} and build your profile</button>' in body
-    assert 'href="/?post">Add a run</a>' in body and 'href="/?connect"' in body
+    # The file drop is a fallback since 25 Sep 23:1x (fetch, not upload), one link at the foot.
+    assert 'href="/?post">Add a run from a file</a>' in body
     assert 'Sign in to browse' not in body
     # Phone used to pull the feature card above the pitch via order:-1. Keep source order.
     assert '.launch-grid>.landing-feature{order:-1}' not in HTML
-    assert body.index('landing-intro') < body.index('landing-feature')
+    assert body.index('home-hero') < body.index('h-week') < body.index('h-clubs') < body.index('h-builders') < body.index('h-popular') < body.index('home-join')
 
 
 def test_the_drop_zone_left_the_home_for_add_a_run():
@@ -52,7 +54,7 @@ def test_landing_points_to_a_real_run_not_the_bundled_sample():
     assert 'WHAT A RUN LOOKS LIKE' not in body
     assert 'HOME_SAMPLE' not in body
     assert 'data-home-sample="1"' not in body
-    assert 'aria-label="A public run"' in body
+    assert 'aria-labelledby="h-popular"' in body
     assert 'id="landing-feature"' in body
     for retired in ('howItWorks()', 'verified per turn', 'coach verdict', 'DEGRADED'):
         assert retired not in body
@@ -61,14 +63,14 @@ def test_landing_points_to_a_real_run_not_the_bundled_sample():
 def test_landing_loads_latest_public_run_only():
     view = view_landing()
     # Real run cards above the fold: the newest Public runs, drawn with the feed card.
-    assert "fetchLatestPublicRuns(20)" in view
-    assert "feedCards(featured" in view
+    # Popular runs: the public runs of the last 30 days (site/home.js read), most XUDOS first.
+    assert "H.read(sb,now)" in view and "H.popular(runs,ad.counts,5)" in view and "feedCards(top,ad)" in view
+    assert '.eq("visibility", "public")' in (ROOT / "site/home.js").read_text()
     fetch = HTML[HTML.index('async function fetchLatestPublicRuns('):HTML.index('async function viewLanding()')]
     assert ".eq('visibility','public')" in fetch
     assert "visibility','link'" not in fetch
     assert "HOME_SAMPLE" not in view
     assert "No public run yet" in view
-    assert "Link runs stay off this door" in view
 
 
 def test_landing_reads_the_public_count_without_using_it_as_sample_content():

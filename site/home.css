@@ -1,0 +1,56 @@
+/* THE SIGNED-OUT HOME (site/home.js). Brand as ruled 23 Sep: light, sentence case, blue with the
+   card's small orange marks, no helper copy. The one device is the week strip: bars for public
+   runs behind you, blue marks for events ahead, today ringed. */
+.home{max-width:640px}
+.home-hero h1{margin:0 0 10px}
+.home-hero h1 i{font-style:normal;color:var(--blue)}
+.home-hero .drop-sub{margin:0 0 8px}
+.home-sec{margin:28px 0 0}
+.home-none{margin:0;padding:14px 0;color:var(--soft);font-size:14px;border-top:1px solid var(--rule-2)}
+.wk{list-style:none;margin:0;padding:12px 0 0;display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:4px;border-top:1px solid var(--rule-2)}
+.wk-day{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.wk-plot{position:relative;width:100%;height:56px;display:flex;align-items:flex-end;justify-content:center;background:linear-gradient(to top,var(--rule-2) 1px,transparent 1px)}
+.wk-bar{display:block;width:60%;max-width:14px;height:var(--h);min-height:4px;background:var(--blue);border-radius:2px 2px 0 0;transform-origin:bottom;animation:wk-rise .5s cubic-bezier(.23,1,.32,1) backwards}
+.wk-ev{position:absolute;left:50%;bottom:6px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--box);border:2.5px solid var(--blue)}
+.wk-ev:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.wk-d{font-size:11px;color:var(--soft);line-height:1}
+.wk-n{font-size:13px;font-variant-numeric:tabular-nums;line-height:1.3;color:var(--ink)}
+.wk-day.past .wk-n{color:var(--soft)}
+.wk-day.today .wk-n{color:#fff;background:var(--blue);border-radius:999px;padding:0 6px}
+.wk-line{margin:8px 0 0;font-size:13px;color:var(--soft)}
+.wk-skel{height:92px;border-top:1px solid var(--rule-2)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.evs{display:grid;gap:8px;margin:14px 0 0}
+.ev{display:grid;grid-template-columns:52px minmax(0,1fr);gap:12px;align-items:center;padding:10px 12px;background:var(--box);border:1px solid var(--rule);color:var(--ink);text-decoration:none;min-height:44px;transition:border-color .16s ease}
+.ev-date{display:flex;flex-direction:column;align-items:center;justify-content:center;height:52px;border-right:1px solid var(--rule-2)}
+.ev-date b{font-size:24px;line-height:1;color:var(--blue);font-variant-numeric:tabular-nums}
+.ev-date small{font-size:11px;color:var(--soft);text-transform:lowercase}
+.ev-body{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ev-t{font-weight:600;font-size:15px;overflow-wrap:anywhere}
+.ev-meta{font-size:13px;color:var(--soft)}
+.clubs{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.club{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-rows:auto auto;column-gap:10px;align-items:center;padding:10px 12px;background:var(--box);border:1px solid var(--rule);color:var(--ink);text-decoration:none;min-height:44px;transition:border-color .16s ease}
+.club-mark{grid-row:1/3;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--blue-wash);color:var(--blue);font-weight:600}
+.club-t{font-weight:600;font-size:14px;overflow-wrap:anywhere}
+.club-n{font-size:12px;color:var(--soft)}
+@media (hover:hover) and (pointer:fine){.ev:hover,.club:hover{border-color:var(--blue-soft)}}
+#home-builders .fc-builder{border-top:1px solid var(--rule-2);padding:10px 0}
+.home-join{margin:32px 0 0;padding:20px;background:var(--box);border:1px solid var(--rule)}
+.home-join h2{margin:0 0 6px;font-size:18px}
+.home-join p{margin:0 0 14px;color:var(--soft)}
+.home-join .act.primary{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;font-size:15px;background:var(--blue);border-color:var(--blue);color:#fff}
+@keyframes wk-rise{from{transform:scaleY(0)}}
+@media(max-width:420px){.wk{gap:2px}.wk-d{font-size:10px}.wk-n{font-size:12px}.wk-day.today .wk-n{padding:0 4px}}
+@media (prefers-reduced-motion:reduce){.wk-bar{animation:none}.ev,.club{transition:none}}
+/* The page column may shrink below its content's widest word; the run address wraps here. */
+.home{min-width:0;width:100%}
+.home .fc-where{white-space:normal;overflow-wrap:anywhere}
+.home .public-run-count{max-width:none;margin:10px 0 0;padding:0;background:none;border:0;color:var(--soft);font-size:13px}
+.event-page{max-width:640px}
+.ev-head{border:0;padding:0;background:none;grid-template-columns:64px minmax(0,1fr)}
+.ev-head .ev-date{height:64px}
+.ev-head .ev-date b{font-size:32px}
+.ev-head .ev-t{font-size:24px;margin:0 0 4px;line-height:1.2}
+.ev-about{margin:18px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.ev-going{margin:18px 0 12px;font-size:15px;font-weight:600}
+.event-page .act.primary{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;font-size:15px;background:var(--blue);border-color:var(--blue);color:#fff}

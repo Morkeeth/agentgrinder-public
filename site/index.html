@@ -449,7 +449,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 @media(max-width:700px){.landing-intro h1{max-width:none}}
 /* 390 px: every tap target at least 44px tall (fresh-eyes review, 25 Sep 2026). */
 @media(max-width:700px){.bar .mark,.feed-tabs a,.section-tabs a,.land-head a,.launch-more a{display:inline-flex;align-items:center;min-height:44px}input[type=checkbox]{width:22px;height:22px}label:has(input[type=checkbox]){min-height:44px}button,.act{min-height:44px}}
-</style><link rel="stylesheet" href="/social.css"><link rel="stylesheet" href="/people.css"><link rel="stylesheet" href="/account.css"><link rel="stylesheet" href="/feed.css"><link rel="stylesheet" href="/dropin.css">
+</style><link rel="stylesheet" href="/social.css"><link rel="stylesheet" href="/people.css"><link rel="stylesheet" href="/account.css"><link rel="stylesheet" href="/feed.css"><link rel="stylesheet" href="/dropin.css"><link rel="stylesheet" href="/home.css">
 <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};</script>
 <script defer src="/_vercel/insights/script.js"></script>
 </head>
@@ -494,6 +494,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 <script src="/feed-card.js"></script>
 <script src="/dropin-parse.js"></script>
 <script src="/fair.js"></script>
+<script src="/home.js"></script>
 <script src="/dropin.js"></script>
 <script src="/run-access.js"></script>
 <script src="/fork-run.js"></script>
@@ -1535,21 +1536,19 @@ function playStrip(){
     if(st) st.textContent = i===steps.length-1 ? x.querySelector('.o').textContent : x.querySelector('.n').textContent; },320+i*520));
 }
 function landingHTML(){
-  // THE HOME IS THE SOCIAL PRODUCT (Oscar, 25 Sep 2026 evening): follow friends, build a profile,
-  // see the feed, the clubs and the events. Signed out, it is the public feed with one ask: sign
-  // in and build your profile. The drop zone moved to Add a run (/?post), one tap away.
-  return `<div class="land"><section class="landing-intro social-hero">
-    <h1>Strava is for people who ran. <i>__BRAND__</i> is for people who didn't.</h1>
-    <p class="drop-sub">Follow the builders you know and see what their agents did. Every number on a card comes from a real session.</p>
-    <div class="cta"><button type="button" class="act primary" data-signin>${signInLabel()} and build your profile</button><a class="act" href="/?people">Find people</a></div>
-    </section>
-    <section class="landing-feature" aria-label="A public run" id="landing-feature">
-      <div class="land-head"><h2>Latest runs</h2><a href="/?explore">See all</a></div>
-      <div id="landing-feature-body">${skeletonCard()}</div>
-      <p id="public-run-count" class="public-run-count" role="status"></p>
-    </section></div>
-    <section class="power-path"><h2>Add a run</h2><p class="hint">Drop a session file from Claude Code, Cursor or Codex, or run one command on the computer your agent ran on. Grok Bot and other bots too.</p><a class="act" href="/?post">Add a run</a> <a class="act" href="/?connect">Connect your agent</a></section>
-    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/?boards">Marathon and boards</a><a href="/methodology">How the numbers are made</a><a href="/privacy">Privacy</a><a href="${REAL_RUN}">A real run</a></div>`;
+  // THE SIGNED-OUT HOME (Oscar, 25 Sep 23:1x): what is going on first (this week, clubs, events),
+  // then builders to find, then the most popular runs, then sign in. site/home.js draws the rows;
+  // every one is real, and an empty section says so in one line.
+  return `<div class="home">
+    <section class="home-hero"><h1>Strava is for people who ran. <i>__BRAND__</i> is for people who didn't.</h1>
+      <p class="drop-sub">Builders post what their agents did. Follow them and see their week.</p></section>
+    <section class="home-sec" aria-labelledby="h-week"><div class="land-head"><h2 id="h-week">This week</h2></div><div id="home-week">${'<div class="wk-skel"></div>'}</div><div id="home-events"></div></section>
+    <section class="home-sec" aria-labelledby="h-clubs"><div class="land-head"><h2 id="h-clubs">Clubs</h2></div><div id="home-clubs"></div></section>
+    <section class="home-sec" aria-labelledby="h-builders"><div class="land-head"><h2 id="h-builders">Builders to follow</h2><a href="/?people">Find people</a></div><div id="home-builders"></div></section>
+    <section class="home-sec landing-feature" aria-labelledby="h-popular" id="landing-feature"><div class="land-head"><h2 id="h-popular">Popular runs</h2><a href="/?explore">See all</a></div><div id="landing-feature-body">${skeletonCard()}</div><p id="public-run-count" class="public-run-count" role="status"></p></section>
+    <section class="home-join"><h2>Post your own runs</h2><p>Sign in and add your runs. You choose who sees each one.</p><button type="button" class="act primary" data-signin>${signInLabel()} and build your profile</button></section>
+  </div>
+  <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/?boards">Marathon and boards</a><a href="/methodology">How the numbers are made</a><a href="/?post">Add a run from a file</a><a href="${REAL_RUN}">A real run</a></div>`;
 }
 
 // THE DROP ZONE. One markup, mounted by site/dropin.js, on the landing and on Connect.
@@ -1585,24 +1584,34 @@ function feedCards(runs,ad){
   return runs.map(r=>GrinderFeed.card(r,{acked:ad.mine.has(r.id),count:ad.counts[r.id]||0,mine:!!(ME&&ME.id===r.profile_id),url:location.origin+'/r/'+r.id})).join('');
 }
 
-// A stranger lands on real run cards, with one action above them. No sample stands in for a run.
+// A stranger lands on what is going on, then people, then runs. Real rows only (site/home.js).
 async function viewLanding(){
   const app=$('app');
   frame('','',true);
   setPrimarySection('feed');
   app.innerHTML=landingHTML();
+  const H=window.GrinderHome, now=Date.now();
+  const data=H&&sb?await H.read(sb,now):{runs:[],clubs:[],events:null,ok:false};
+  const put=(id,html)=>{const el=$(id);if(el)el.innerHTML=html};
+  put('home-week',H?H.weekHtml(data.runs,data.events||[],now):'');
+  put('home-events',data.events&&data.events.length?`<div class="evs">${data.events.slice(0,3).map(H.eventRow).join('')}</div>`:'<p class="home-none">No events planned yet.</p>');
+  put('home-clubs',data.clubs.length?`<div class="clubs">${data.clubs.slice(0,6).map(H.clubRow).join('')}</div>`:'<p class="home-none">No clubs yet.</p>');
+  const who=H?H.builders(data.runs,6):[];
+  put('home-builders',who.length?who.map(b=>GrinderFeed.builderRow(b.run)).join(''):'<p class="home-none">No builder has posted a public run in the last 30 days.</p>');
   const body=$('landing-feature-body');
-  const line=$('public-run-count');
-  const featured=await fetchLatestPublicRuns(20);
-  if(featured.length){
-    noteTraces(featured);
-    const ad=await ackData(featured);
-    if(body) body.innerHTML=feedCards(featured,ad)+(featured.length<4?GrinderFeed.nextSlot():'');
-    wireKudos();
+  let runs=data.runs;
+  if(!runs.length) runs=await fetchLatestPublicRuns(5);
+  if(runs.length){
+    noteTraces(runs);
+    const ad=await ackData(runs);
+    const top=H?H.popular(runs,ad.counts,5):runs.slice(0,5);
+    if(body) body.innerHTML=feedCards(top,ad);
   }else if(body){
-    body.innerHTML=`<div class="card"><div class="empty"><h3>No public run yet</h3><p>When a builder posts a Public run, it shows here first. Link runs stay off this door.</p></div></div>`+GrinderFeed.nextSlot();
+    body.innerHTML='<p class="home-none">No public run yet.</p>';
   }
+  wireKudos();
   if(ME||location.search||location.hash) return;
+  const line=$('public-run-count');
   if(!line) return;
   const count=await fetchPublicRunCount();
   line.textContent=count===0?'No public runs yet. Yours would be the first.'
@@ -2372,10 +2381,36 @@ function viewClaim(){
   fitShareCard(); window.addEventListener('resize',fitShareCard);
 }
 
+// An event (migration 014): when, where, which club, who is going, and Join for a signed-in reader.
 async function viewEvent(){
-  // Legacy ?event= URLs are not an event directory. Send people to Discover.
-  history.replaceState(null,'','/?explore');
-  return viewExplore();
+  const id=new URLSearchParams(location.search).get('event')||'';
+  const app=$('app'); frame(railHtml(null),null);
+  const none='<div class="card"><div class="empty"><h3>This event is not on __BRAND__</h3><p><a href="/">Go to the home page</a></p></div></div>';
+  if(!/^[0-9a-f-]{36}$/i.test(id)){app.innerHTML=none;return}
+  app.innerHTML=skeletonCard();
+  const {data:e,error}=await sb.from('grinder_events').select('id,title,about,place,starts_at,crew_id,grinder_crews(id,name)').eq('id',id).maybeSingle();
+  if(error||!e){app.innerHTML=none;return}
+  const {data:people}=await sb.from('grinder_event_people').select('profile_id').eq('event_id',id);
+  const going=(people||[]).length, mine=!!(ME&&(people||[]).some(x=>x.profile_id===ME.id));
+  const d=new Date(e.starts_at), past=d.getTime()<Date.now();
+  document.title=e.title+' · __BRAND__';
+  app.innerHTML=`<article class="event-page">
+    <div class="ev ev-head"><span class="ev-date"><b>${d.getDate()}</b><small>${esc(d.toLocaleDateString('en-GB',{month:'short'}))}</small></span>
+      <span class="ev-body"><h1 class="ev-t">${esc(e.title)}</h1><span class="ev-meta">${esc(d.toLocaleString('en-GB',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}))}</span>
+      ${e.place?`<span class="ev-meta">${esc(e.place)}</span>`:''}${e.grinder_crews?`<span class="ev-meta"><a href="/?crew=${esc(e.grinder_crews.id)}">${esc(e.grinder_crews.name)}</a></span>`:''}</span></div>
+    ${e.about?`<p class="ev-about">${esc(e.about)}</p>`:''}
+    <p class="ev-going" id="ev-going">${going} going</p>
+    ${past?'<p class="home-none">This event has passed.</p>':`<button type="button" class="act primary" id="ev-join">${!ME?signInLabel()+' to join':mine?'Leave':'Join'}</button>`}
+  </article>`;
+  const btn=$('ev-join'); if(!btn) return;
+  btn.onclick=async()=>{
+    if(!ME){showSignIn({reason:'social'});return}
+    btn.disabled=true;btn.setAttribute('aria-busy','true');
+    const {error:err}=await sb.rpc(mine?'grinder_leave_event':'grinder_join_event',{event:id});
+    btn.removeAttribute('aria-busy');
+    if(err){btn.disabled=false;status(err.message,true);return}
+    await viewEvent();
+  };
 }
 
 
@@ -2389,7 +2424,7 @@ function pageTitle(q){
   if(RETIRED.some(k=>q.has(k))) return t('Discover');
   const hit=PAGE_TITLES.find(([k])=>q.has(k));
   if(hit) return t(hit[1]);
-  if(q.get('event')) return t('Discover');
+  if(q.get('event')) return t('Event');
   if(q.get('share')!==null&&(q.get('rig')||q.get('u')||q.get('run'))) return t('Share');
   if(q.get('run')) return t('Run');
   if(q.get('u')) return t('@'+q.get('u'));
