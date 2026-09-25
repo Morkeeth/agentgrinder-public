@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT = Path("/tmp/agentgrinder-cold-first-minute")
 EXPLANATION = (
     "Sign in to keep your profile and responses connected. You will return to "
-    "this preview or social action. Nothing is shared until you choose who can see it."
+    "this preview or social action."
 )
 
 SUPABASE_FIXTURE = """

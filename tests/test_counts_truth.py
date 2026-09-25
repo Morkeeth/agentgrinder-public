@@ -17,7 +17,7 @@ def test_cross_surface_counts_agree_and_slice_is_labelled():
 def test_stranger_social_sign_in_copy_is_wired():
     assert "reason==='social'" in INDEX or 'reason==="social"' in INDEX
     assert "cheer this run or follow the builder" in INDEX
-    assert "Nothing is shared until you choose who can see it." in INDEX and "Runs stay private until" not in INDEX
+    assert "Runs stay private until" not in INDEX and "Nothing is shared until" not in INDEX
     assert 'showSignIn({reason:\'social\'})' in INDEX or 'showSignIn({ reason: "social" })' in SOCIAL
     assert "toolCallCount" in CONTRACT
     assert "in this slice" in CONTRACT
