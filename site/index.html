@@ -467,6 +467,10 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .proof-route{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:18px 16px;gap:0}.proof-route>div{position:relative;padding:20px 12px 8px;border-top:2px solid var(--blue)}.proof-route>div:before{content:"";position:absolute;left:10px;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--blue)}.proof-route dt{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);font-weight:600}.proof-route dd{margin:6px 0 0;font-size:13px;line-height:1.35;color:var(--ink)}
 .result-hero{padding:20px}.result-hero .result-number{font-size:44px;line-height:1;color:var(--blue);font-weight:600}.result-hero p{margin:8px 0 0;max-width:50ch}.run-photo-hero img{display:block;width:100%;max-height:360px;object-fit:cover}
 .visual-choice{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0 16px}.visual-choice label{border:1px solid var(--rule);padding:10px 12px;margin:0;cursor:pointer}.visual-choice input{margin-right:6px}
+.auto-sync{background:var(--box);border:1px solid var(--blue-soft);padding:18px 18px 12px;margin:0 0 22px}
+.auto-sync h2{font-size:18px;margin:0 0 6px}.auto-sync p{max-width:640px}
+.auto-sync .cmd{border:1px solid var(--rule);margin:10px 0;overflow-wrap:anywhere}.auto-sync .cmd .c{font-family:ui-monospace,Menlo,monospace;font-size:12px;min-width:0}
+.connect-or{font-size:16px;margin:8px 0 6px}
 .connect-agents{margin-top:18px}
 .connect-agent{padding:14px 0 6px;border-top:1px solid var(--rule)}
 .connect-agent h3{margin:0 0 8px;font-size:16px}
@@ -1439,19 +1443,47 @@ async function shouldOnboard(){
 // wizard) and, once signed in, a uvx line. Now: one page, fastest path first, one command per
 // agent, and the same drop zone as the landing. /?onboard and /?connect both land here.
 const ONE_LINE=h=>`uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind${h?' --harness '+h:''} --push`;
+// AUTOMATIC SYNC (Oscar, 25 Sep 2026 evening: "the uploads is awful ... automatic fetch").
+// Signed in, one button issues a private Connect token (migration 007) and shows one line to run
+// once on the computer the agent runs on. From then on `agentgrinder sync` uploads every finished
+// Claude Code, Cursor and Codex session as a private run (agentgrinder/sync.py). No file picking.
+const SYNC_LINE=t=>`uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder sync --install --token ${t}`;
+function autoSyncHtml(){
+  return `<section class="auto-sync" id="auto-sync" aria-labelledby="auto-sync-title">
+    <h2 id="auto-sync-title">Automatic: your sessions arrive on their own</h2>
+    <p>Turn it on once, on the computer your agent runs on. Every finished Claude Code, Cursor and Codex session then arrives in <a href="/?mine">My runs</a> as a private run, every 15 minutes. Only the counts leave the computer. Nothing is public until you publish it.</p>
+    <div id="auto-sync-body">${ME?`<button type="button" class="act primary" id="auto-sync-go">Turn on automatic sync</button>`:`<button type="button" class="act primary" data-signin>${signInLabel()} to turn it on</button>`}</div>
+    <p class="hint" id="auto-sync-state" role="status" aria-live="polite"></p>
+  </section>`;
+}
+function wireAutoSync(root){
+  const go=(root||document).querySelector('#auto-sync-go'); if(!go||go.dataset.wired) return; go.dataset.wired='1';
+  go.addEventListener('click',async()=>{
+    go.disabled=true; const state=$('auto-sync-state'); if(state) state.textContent='Making your private token…';
+    try{
+      const {data,error}=await sb.rpc('agent_token_create',{p_label:'Automatic sync'});
+      if(error) throw error;
+      const token=data&&typeof data.token==='string'?data.token:'';
+      if(!token) throw new Error('No token came back. Try again.');
+      const line=SYNC_LINE(token);
+      $('auto-sync-body').innerHTML=`<p><b>Run this once in a terminal on that computer.</b> It is shown once. It uploads the last 7 days of sessions as private runs, then checks every 15 minutes.</p>
+        <div class="cmd"><span class="c">${esc(line)}</span><button type="button" class="act" data-copy="${esc(line)}">Copy</button></div>
+        <p class="hint">Needs <a href="https://docs.astral.sh/uv/">uv</a>. Stop it any time with <code>agentgrinder sync --uninstall</code>. The token works for 30 days and uploads private runs only; revoke it under <a href="/?connect=auto">Connections</a>.</p>`;
+      if(state) state.textContent='';
+      wireConnectCopies($('auto-sync-body'));
+    }catch(e){ go.disabled=false; if(state) state.textContent=(e&&e.message)||'The token could not be made. Try again.'; }
+  });
+}
 function connectBodyHtml(){
   const capture=ONE_LINE('auto');
-  const hook='python3 -m agentgrinder hook install --harness cursor --open';
   const mcp='python3 -m agentgrinder connect cursor --project /your/project --install';
-  return `<section class="ob-step"><p class="meta">1 · CONNECT ONCE</p><h2>Your agent makes the card</h2>
+  return `${autoSyncHtml()}<h2 class="connect-or">Or add one run now</h2>
+    <section class="ob-step"><p class="meta">1 · CAPTURE</p><h2>Your agent makes the card</h2>
       <p class="connect-lead">Run this on the computer where you build. __BRAND__ finds the latest supported session and opens a private preview. You decide if it is posted.</p>
       <div class="cmd"><span class="c">${esc(capture)}</span><button type="button" class="act blue" data-copy="${esc(capture)}">Copy command</button></div>
       <p class="hint">Works with Cursor, Claude Code and Codex. It sends measurements for the preview, never prompt text, code or file paths.</p></section>
     <section class="ob-step"><p class="meta">2 · REVIEW</p><h2>Your latest card</h2><div id="latest-card-preview">${skeletonCard()}</div>
       <p class="hint">Change the title, project and audience only if needed. Nothing posts without your action.</p></section>
-    <section class="ob-step"><p class="meta">3 · MAKE IT AUTOMATIC</p><h2>Capture when a Cursor run ends</h2>
-      <div class="cmd"><span class="c">${esc(hook)}</span><button type="button" class="act" data-copy="${esc(hook)}">Copy hook</button></div>
-      <p class="hint">The hook opens a local preview. It does not publish. Agent-native workflows can use MCP instead.</p></section>
     <details class="panel manual-post advanced-connect"><summary>Advanced options</summary><div class="pad">
       <h3>Connect through MCP</h3><div class="cmd"><span class="c">${esc(mcp)}</span><button type="button" class="act" data-copy="${esc(mcp)}">Copy MCP setup</button></div>
       <p class="hint">Replace /your/project with the project folder. Replace cursor with claude when needed.</p>
@@ -1471,7 +1503,7 @@ async function viewConnect(){
   frame(railHtml('post'),null);
   app.innerHTML=`<div class="head"><h1>Connect your agent</h1><span class="meta">capture → preview → post</span></div>${connectBodyHtml()}`;
   if(window.GrinderDropinUI) GrinderDropinUI.mount({post:token=>{history.pushState(null,'','/#import='+token);route();}});
-  wireConnectCopies(app);
+  wireConnectCopies(app); wireAutoSync(app);
   await loadLatestCardPreview();
 }
 async function viewOnboard(){ return viewConnect(); }
@@ -1851,7 +1883,7 @@ async function viewPost(){
     ${connectBodyHtml()}
     ${ME?postComposerHtml({first:true}):'<div class="panel pad auth-empty"><h3>Sign in to save</h3><p>Saving a run to your profile needs sign-in. Anyone with the link needs no account: whoever has the address can open that card.</p><button id="post-signin" class="act blue">'+signInLabel()+'</button></div>'}`;
   if(window.GrinderDropinUI) GrinderDropinUI.mount({post:token=>{history.pushState(null,'','/#import='+token);route();}});
-  wireConnectCopies($('app'));
+  wireConnectCopies($('app')); wireAutoSync($('app'));
   await loadLatestCardPreview();
   // A /l/ page's ask links to /#drop-zone. The page is drawn by script after load, so the
   // browser's own jump to the anchor has already missed it: scroll here, then drop the hash.
