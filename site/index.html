@@ -2391,7 +2391,7 @@ async function viewEvent(){
   if(error||!e){app.innerHTML=none;return}
   const {data:people}=await sb.from('grinder_event_people').select('profile_id').eq('event_id',id);
   const going=(people||[]).length, mine=!!(ME&&(people||[]).some(x=>x.profile_id===ME.id));
-  const d=new Date(e.starts_at), past=d.getTime()<Date.now();
+  const d=new Date(e.starts_at), past=d.getTime()<=Date.now();
   document.title=e.title+' · __BRAND__';
   app.innerHTML=`<article class="event-page">
     <div class="ev ev-head"><span class="ev-date"><b>${d.getDate()}</b><small>${esc(d.toLocaleDateString('en-GB',{month:'short'}))}</small></span>
@@ -2399,7 +2399,7 @@ async function viewEvent(){
       ${e.place?`<span class="ev-meta">${esc(e.place)}</span>`:''}${e.grinder_crews?`<span class="ev-meta"><a href="/?crew=${esc(e.grinder_crews.id)}">${esc(e.grinder_crews.name)}</a></span>`:''}</span></div>
     ${e.about?`<p class="ev-about">${esc(e.about)}</p>`:''}
     <p class="ev-going" id="ev-going">${going} going</p>
-    ${past?'<p class="home-none">This event has passed.</p>':`<button type="button" class="act primary" id="ev-join">${!ME?signInLabel()+' to join':mine?'Leave':'Join'}</button>`}
+    ${past?'<p class="home-none">This event has started or passed.</p>':`<button type="button" class="act primary" id="ev-join">${!ME?signInLabel()+' to join':mine?'Leave':'Join'}</button>`}
   </article>`;
   const btn=$('ev-join'); if(!btn) return;
   btn.onclick=async()=>{
