@@ -20,10 +20,11 @@ def test_phone_handoff_says_capture_needs_the_computer():
     assert ".ob-phone-handoff{display:block}" in HTML
 
 
-def test_phone_offers_copy_and_labelled_example_not_email_command():
+def test_phone_offers_copy_and_a_real_run_not_email_command():
     body = onboard()
     assert "Copy the command" in body
-    assert 'href="/?example">Try the labelled example</a>' in body
+    assert 'href="${REAL_RUN}">See a real run</a>' in body
+    assert "/?example" not in body
     # Sign-in email OTP exists elsewhere; it must not become "email me the command".
     assert "Email me the command" not in body
     assert "signInWithOtp" not in body

@@ -540,7 +540,10 @@ function setPrimarySection(section){
 // THREE PLACES AND A DRAWER. Feed, Post and You are the product loop; everything else the app can
 // do sits behind More, one tap away and out of the way. One list feeds the desktop dropdown and the
 // phone sheet, so the two can never disagree.
-const MORE_LINKS=[['/?people','Find people'],['/?following','Following'],['/?community','Community'],['/?forum','Forum'],['/?crews','Crews'],['/?challenges','Challenges'],['/?practices','Practices'],['/?example','Labelled example'],['/methodology','How the measurements work'],['/privacy','Privacy']];
+// A real public run, posted from a real session, for anyone who wants to see a card before making
+// one. It replaced the bundled sample on 25 Sep 2026: a stranger should meet a real run first.
+const REAL_RUN='/r/3afa89e7-aff5-488d-bec3-da36196b8c5e';
+const MORE_LINKS=[['/?people','Find people'],['/?following','Following'],['/?community','Community'],['/?forum','Forum'],['/?crews','Crews'],['/?challenges','Challenges'],['/?practices','Practices'],[REAL_RUN,'A real run'],['/methodology','How the measurements work'],['/privacy','Privacy']];
 function menuLinks(kind){
   if(kind==='more') return MORE_LINKS.map(([href,label])=>`<a href="${href}" role="menuitem">${esc(label)}</a>`).join('');
   if(!ME) return `<a href="/?onboard" role="menuitem">Get started</a><div class="menu-sep"></div><button type="button" class="menu-signin" data-signin role="menuitem">Sign in with GitHub</button>`;
@@ -580,7 +583,7 @@ async function viewCommunity(){
     if(!slot) return;
     slot.innerHTML=list.length
       ? `<div class="head"><h2>Techniques to try</h2><span class="meta">${list.length} public</span></div>`+list.map(p=>`<article class="card"><small>${esc(p.harness||'Any harness')}</small><h3><a href="/?practice=${p.id}">${esc(p.title)}</a></h3><p>${esc(p.instruction)}</p><p class="hint">Expected: ${esc(p.expected)}</p><a class="act" href="/?practice=${p.id}">Try this on your own baseline</a></article>`).join('')
-      : `<p class="hint">No public techniques on this deployment yet. The <a href="/?example">bundled example</a> shows the path without inventing users.</p>`;
+      : `<p class="hint">No public techniques on this deployment yet. A <a href="${REAL_RUN}">real public run</a> shows what a card holds.</p>`;
   }catch(_){
     const slot=$('community-techniques');
     if(slot) slot.innerHTML='<p class="hint">Public techniques are unavailable on this deployment. Forum, Crews and Challenges below still work.</p>';
@@ -1315,9 +1318,9 @@ async function viewOnboard(){
       <p class="hint"><b style="color:var(--ink);font-weight:500">Capture runs on the computer where your agent runs</b> (Cursor, Claude Code or Codex). This phone cannot record a sitting.</p>
       <div class="ob-actions">
         <button class="act" id="cp1" type="button">Copy the command</button>
-        <a class="act primary" href="/?example">Try the labelled example</a>
+        <a class="act primary" href="${REAL_RUN}">See a real run</a>
       </div>
-      <p class="hint">Paste the command on that computer when you are ready. Or open the labelled example now to see a real card with no account.</p>
+      <p class="hint">Paste the command on that computer when you are ready. Or open a real run now to see a card with no account.</p>
     </div>`;
   const step2=`<div class="ob-step ob-desk-capture"><h3>Record a run</h3>
     <p class="hint">Reads Claude Code, Cursor or Codex on your machine. Capture stays on your machine. Sharing opens a preview of the counts and any coach notes before you publish.</p>
@@ -1337,7 +1340,7 @@ async function viewOnboard(){
       <button class="ghost" id="ob-skip">Skip, browse the feed</button>
     </div></div>`;
   app.innerHTML=`<div class="head"><h2>Welcome to __BRAND__</h2><span class="meta">I tried this. Show me what changed.</span></div>
-      <p class="hint">Want the path with no account first? <a href="/?example">Try the labelled example</a>. Sign-in is only to keep your own runs.</p>
+      <p class="hint">Want to see a card with no account first? <a href="${REAL_RUN}">See a real run</a>. Sign-in is only to keep your own runs.</p>
       ${stepBar(n,done)}${step1}${step2}${step3}${step4}`;
   wireCopy();
   const oa=$('ob-auth'); if(oa) oa.addEventListener('click',()=>$('auth').click());
@@ -1515,7 +1518,7 @@ function landingHTML(){
       <p id="public-run-count" class="public-run-count" role="status"></p>
     </section></div>
     <section class="power-path"><h2>For power users</h2><p class="hint">The command line reads your latest session for you and can post on every run.</p><a class="act" href="/?onboard">Post your first run from the command line</a></section>
-    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/methodology">How the measurements work</a><a href="/privacy">Privacy</a><a href="/?example">Labelled example</a></div>`;
+    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/methodology">How the measurements work</a><a href="/privacy">Privacy</a><a href="${REAL_RUN}">A real run</a></div>`;
 }
 
 // The newest public runs, only Public ones: a Link run never reaches this door.
