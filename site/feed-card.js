@@ -1,6 +1,6 @@
 /* THE FEED CARD. What a stranger scrolls past: a face, a name, one big number, the run map, the
    activity line, and a reaction. The full run card (runCard in index.html) stays the detail view
-   behind a tap. A ghost run (ghost below) is the same card with the ghost badge and a dashed line.
+   behind a tap.
 
    Every value here is a column of the run row the page fetched. A number the row does not carry is
    not drawn; nothing is estimated and nothing is invented to fill a gap. Variety between cards comes
@@ -71,14 +71,8 @@
     return whole(C && C.toolCallCount ? C.toolCallCount(r) : r.tool_calls);
   }
 
-  // The one number, Strava's distance slot. A ghost run leads with the time it ran alone, labelled
-  // with how it was alone; otherwise the first measured, non-zero value wins.
+  // The one number, Strava's distance slot: the first measured, non-zero value wins.
   function headline(r) {
-    const g = ghostParts(r);
-    // By day the label already says how often the person typed, so Turns is not repeated beside it.
-    if (g) return g.night
-      ? { n: g.d, unit: "while you slept", key: "time", ghost: true }
-      : { n: g.d, unit: `you typed ${g.typed}`, key: "time", ghost: true, also: "turns" };
     const commits = whole(r.commits);
     const files = whole(r.files_touched);
     const tools = toolCalls(r);
@@ -100,8 +94,6 @@
     add("time", "Time", durationLabel(r.wall_time_s ?? r.duration_s));
     const turns = whole(r.prompts ?? r.turns_typed);
     const tools = toolCalls(r);
-    // A ghost lead: the work done alone comes second, then how often the person was there.
-    if (lead && lead.ghost) add("tools", "Tool calls", tools ? thousands(tools) : null);
     add("turns", "Turns", turns);
     add("tools", "Tool calls", tools ? thousands(tools) : null);
     add("commits", "Commits", whole(r.commits) || null);
@@ -117,35 +109,7 @@
     return Number.isInteger(r.started_hour) && r.started_hour >= 0 && r.started_hour <= 23 ? r.started_hour : null;
   }
 
-  // THE GHOST RUN. Strava is for people who ran. STRIVE is for people who didn't: the agent ran
-  // for an hour or more and did real work (30 tool calls or more) while the person was not
-  // there, which the run's own numbers show: it was typed to at most twice, or it did 40 or
-  // more tool calls per typed turn (a run whose typed turns are unknown counts when it started
-  // at night, 22:00 to 04:59). The line prints the measured time and, for a night start,
-  // "while you slept"; by day, how often the person typed. Nothing on it is a guess and
-  // nothing on it is a disclaimer.
-  function ghostParts(r) {
-    const secs = whole(r.wall_time_s ?? r.duration_s);
-    const turns = whole(r.prompts ?? r.turns_typed);
-    const tools = toolCalls(r);
-    const hour = hourOf(r);
-    if (!(secs >= 3600) || !(tools >= 30)) return null;
-    const night = hour != null && (hour >= 22 || hour < 5);
-    const alone = turns == null ? night : turns <= 2 || tools / turns >= 40;
-    if (!alone) return null;
-    const d = durationLabel(secs);
-    const typed = turns == null ? "" : turns === 1 ? "once" : turns === 2 ? "twice" : `${thousands(turns)} times`;
-    return { d, night, typed };
-  }
-  function ghost(r) {
-    const g = ghostParts(r);
-    if (!g) return null;
-    return { key: "ghost", label: "Ghost run", detail: g.night ? `${g.d} while you slept` : `${g.d}, you typed ${g.typed}` };
-  }
-
   function achievement(r) {
-    const g = ghost(r);
-    if (g) return g;
     const secs = whole(r.wall_time_s ?? r.duration_s);
     const turns = whole(r.prompts ?? r.turns_typed);
     const tools = toolCalls(r);
@@ -166,16 +130,10 @@
 
   const BADGE_ICON =
     '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 1.5h6l-1.6 4.2M5 1.5l1.6 4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="10" r="4.2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
-  // The ghost: orange, the card's one warm mark beside the peak dot and a sent XUDOS.
-  const GHOST_ICON =
-    '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 14.5V7.5a5 5 0 0 1 10 0v7l-2-1.6-2 1.6-1-1.6-1 1.6-2-1.6Z" fill="currentColor"/><circle cx="6" cy="7.5" r="1.1" fill="#fff"/><circle cx="10" cy="7.5" r="1.1" fill="#fff"/></svg>';
   function badge(r) {
     const a = achievement(r);
     if (!a) return "";
-    const g = a.key === "ghost";
-    // A ghost card already leads with its time and how it was alone; the badge names it and stops.
-    const detail = g ? "" : `<span>${esc(a.detail)}</span>`;
-    return `<p class="fc-badge${g ? " fc-ghost" : ""}" data-badge="${esc(a.key)}">${g ? GHOST_ICON : BADGE_ICON}<b>${esc(a.label)}</b>${detail}</p>`;
+    return `<p class="fc-badge" data-badge="${esc(a.key)}">${BADGE_ICON}<b>${esc(a.label)}</b><span>${esc(a.detail)}</span></p>`;
   }
 
   function profileOf(r) {
@@ -243,7 +201,7 @@
   // them, sized by how often it was there; every move is one arc, forward over the rail and back
   // under it, so a run that kept returning to one folder draws a dense knot and a run that
   // walked the tree once draws a clean sweep. No folder is named: the map is the shape of the
-  // work. Blue only; orange is spent on the peak, the ghost and a sent XUDOS. A run that touched
+  // work. Blue only; orange is spent on the peak and a sent XUDOS. A run that touched
   // two folders draws a short strip (h, rail and the arcs halved): the full box around one arc
   // reads as an empty map.
   const MAP_W = 300, MAP_H = 44, RAIL = 30, MAP_X0 = 12, MAP_X1 = 288;
@@ -316,9 +274,8 @@
     const a = achievement(r);
     const figures = stats(r, lead).map(([k, v]) =>
       k === "Time" ? String(v) : k === "Turns" ? `${v} ${v === 1 ? "turn" : "turns"}` : `${v} ${k.toLowerCase()}`);
-    // A ghost lead pastes as the badge reads: "12h 19m while you slept", "2h 3m, you typed twice".
-    const leadText = !lead ? "" : lead.ghost && a ? a.detail : `${lead.n} ${lead.unit}`;
-    return ["STRIVE", harnessName(r), leadText, ...figures, a ? `${a.key === "ghost" ? "👻 " : ""}${a.label}` : ""]
+    const leadText = lead ? `${lead.n} ${lead.unit}` : "";
+    return ["STRIVE", harnessName(r), leadText, ...figures, a ? a.label : ""]
       .filter(Boolean).join(" · ");
   }
   const where = (url) => (url ? String(url).replace(/^https?:\/\//, "") : "");
@@ -417,7 +374,7 @@
     <div class="fc-numbers">${lead ? `<div class="fc-hero"><span class="fc-n num">${esc(lead.n)}</span><span class="fc-u">${esc(lead.unit)}</span></div>` : ""}${facts.length ? `<dl class="fc-stats">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd class="num">${esc(v)}</dd></div>`).join("")}</dl>` : ""}</div>
     ${badge(r)}${routeMap(r)}${spark(r)}${strideHtml}
   `;
-    return `<article class="card fc${ghost(r) ? " ghost" : ""}"${preview ? "" : ` id="card-${id}" data-run-id="${id}"`}>
+    return `<article class="card fc"${preview ? "" : ` id="card-${id}" data-run-id="${id}"`}>
   <header class="fc-top">${faceHtml}<div class="fc-who">${who}<small>${meta}</small></div>${shipped}</header>
   ${preview ? `<div class="fc-body">${body}</div>` : `<a class="fc-body" href="/?run=${id}">${body}</a>`}
   ${opts.foot === false ? "" : `<footer class="fc-foot">${kudos}${talk}</footer>`}
@@ -437,7 +394,7 @@
     return `<div class="fc-builder">${face(r, 44)}<div class="fc-who"><a class="fc-name" href="/?u=${encodeURIComponent(p.handle)}">${esc(p.name)}</a><small>Latest: <a href="/?run=${esc(r.id)}">${esc(titleOf(r))}</a></small></div><span class="card-follow" data-profile="${esc(r.profile_id)}" data-handle="${esc(p.handle)}" data-label="Follow"></span></div>`;
   }
 
-  const api = { card, face, headline, stats, achievement, ghost, harnessName, badge, spark, settle, routeGeometry, routeMap, strideBars, strideText, strideHtml, stride, wireStride, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };
+  const api = { card, face, headline, stats, achievement, harnessName, badge, spark, settle, routeGeometry, routeMap, strideBars, strideText, strideHtml, stride, wireStride, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };
   root.GrinderFeed = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

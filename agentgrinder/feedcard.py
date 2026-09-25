@@ -63,9 +63,6 @@ CARD_CSS = """/* the card */
 .fc-badge svg{flex:none;color:var(--blue)}
 .fc-badge b{font-weight:600;color:var(--blue)}
 .fc-badge span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fc-badge.fc-ghost svg,.fc-badge.fc-ghost b{color:var(--strive-orange)}
-.fc.ghost .fc-line{stroke-dasharray:3 4}
-.fc.ghost .fc-area{fill:none}
 .fc-map{margin:14px 0 0}
 .fc-map svg{display:block;width:100%;height:auto}
 .fc-rail{stroke:var(--blue-soft);stroke-width:1}
@@ -207,13 +204,7 @@ def _tools(r):
 
 
 def headline(r: dict):
-    """The one number. A ghost run leads with the time it ran alone, labelled with how it was alone;
-    otherwise the first measured, non-zero value of commits, files, tool calls, time."""
-    g = _ghost_parts(r)
-    if g:
-        if g["night"]:
-            return {"n": g["d"], "unit": "while you slept", "key": "time", "ghost": True}
-        return {"n": g["d"], "unit": f"you typed {g['typed']}", "key": "time", "ghost": True, "also": "turns"}
+    """The one number: the first measured, non-zero value of commits, files, tool calls, time."""
     commits, files, tools = whole(r.get("commits")), whole(r.get("files_touched")), _tools(r)
     t = duration_label(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s"))
     if commits:
@@ -238,8 +229,6 @@ def stats(r: dict, lead) -> list:
 
     add("time", "Time", duration_label(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s")))
     tools = _tools(r)
-    if lead and lead.get("ghost"):     # a ghost lead: the work done alone comes second
-        add("tools", "Tool calls", _thousands(tools) if tools else None)
     add("turns", "Turns", whole(r.get("prompts") if r.get("prompts") is not None else r.get("turns_typed")))
     add("tools", "Tool calls", _thousands(tools) if tools else None)
     add("commits", "Commits", whole(r.get("commits")) or None)
@@ -252,38 +241,8 @@ def _hour_of(r: dict):
     return h if isinstance(h, int) and not isinstance(h, bool) and 0 <= h <= 23 else None
 
 
-def _ghost_parts(r: dict):
-    """site/feed-card.js ghostParts(): an hour or more and 30 or more tool calls while the person was
-    not there, shown by the run's own numbers: typed to at most twice, or 40 or more tool calls
-    per typed turn; with the typed turns unknown, a night start (22:00 to 04:59) counts."""
-    secs = whole(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s"))
-    turns = whole(r.get("prompts") if r.get("prompts") is not None else r.get("turns_typed"))
-    tools = _tools(r)
-    hour = _hour_of(r)
-    if secs is None or secs < 3600 or tools is None or tools < 30:
-        return None
-    night = hour is not None and (hour >= 22 or hour < 5)
-    alone = night if turns is None else (turns <= 2 or tools / turns >= 40)
-    if not alone:
-        return None
-    d = duration_label(secs)
-    typed = "" if turns is None else "once" if turns == 1 else "twice" if turns == 2 else f"{_thousands(turns)} times"
-    return {"d": d, "night": night, "typed": typed}
-
-
-def ghost(r: dict):
-    g = _ghost_parts(r)
-    if not g:
-        return None
-    return {"key": "ghost", "label": "Ghost run",
-            "detail": f"{g['d']} while you slept" if g["night"] else f"{g['d']}, you typed {g['typed']}"}
-
-
 def achievement(r: dict):
     """site/feed-card.js achievement(): one badge from the run's own numbers, first rule wins."""
-    g = ghost(r)
-    if g:
-        return g
     secs = whole(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s"))
     turns = whole(r.get("prompts") if r.get("prompts") is not None else r.get("turns_typed"))
     tools = _tools(r)
@@ -313,17 +272,12 @@ def achievement(r: dict):
 BADGE_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 1.5h6l-1.6 4.2M5 1.5l1.6 4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="10" r="4.2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>'
 
 
-GHOST_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 14.5V7.5a5 5 0 0 1 10 0v7l-2-1.6-2 1.6-1-1.6-1 1.6-2-1.6Z" fill="currentColor"/><circle cx="6" cy="7.5" r="1.1" fill="#fff"/><circle cx="10" cy="7.5" r="1.1" fill="#fff"/></svg>'
-
-
 def badge(r: dict) -> str:
     a = achievement(r)
     if not a:
         return ""
-    g = a["key"] == "ghost"
-    detail = "" if g else f'<span>{esc(a["detail"])}</span>'   # a ghost card already leads with its time
-    return (f'<p class="fc-badge{" fc-ghost" if g else ""}" data-badge="{esc(a["key"])}">{GHOST_ICON if g else BADGE_ICON}'
-            f'<b>{esc(a["label"])}</b>{detail}</p>')
+    return (f'<p class="fc-badge" data-badge="{esc(a["key"])}">{BADGE_ICON}'
+            f'<b>{esc(a["label"])}</b><span>{esc(a["detail"])}</span></p>')
 
 
 def profile_of(r: dict) -> dict:
@@ -503,9 +457,8 @@ def _stride_first(r: dict) -> str:
             figures.append(f"{v} {'turn' if v == 1 else 'turns'}")
         else:
             figures.append(f"{v} {k.lower()}")
-    lead_text = "" if not lead else a["detail"] if lead.get("ghost") and a else f"{lead['n']} {lead['unit']}"
-    return " · ".join(x for x in ["STRIVE", harness_name(r), lead_text, *figures,
-                                  (("👻 " if a["key"] == "ghost" else "") + a["label"]) if a else ""] if x)
+    lead_text = f"{lead['n']} {lead['unit']}" if lead else ""
+    return " · ".join(x for x in ["STRIVE", harness_name(r), lead_text, *figures, a["label"] if a else ""] if x)
 
 
 def _where(url) -> str:
@@ -567,7 +520,7 @@ def card(r: dict, meta_extra: str = "", avatars: bool = False, url: str | None =
     <div class="fc-numbers">{hero}{dl}</div>
     {badge(r)}{route_map(r)}{spark(r)}{stride(r, url)}
   """
-    return f"""<article class="card fc{" ghost" if ghost(r) else ""}">
+    return f"""<article class="card fc">
   <header class="fc-top">{face(r, avatars=avatars)}<div class="fc-who">{who}<small>{meta}</small></div>{shipped}</header>
   <div class="fc-body">{body}</div>
   <footer class="fc-foot"><span class="fc-act" aria-label="Send XUDOS">{KUDOS_ICON}</span><span class="fc-act" aria-label="Discuss">{TALK_ICON}<span>Discuss</span></span><span class="fc-act" aria-label="Share">{SHARE_ICON}<span>Share</span></span></footer>
@@ -588,7 +541,7 @@ def terminal_lines(r: dict) -> list:
         out.append("\n  " + " · ".join(figures))
     a = achievement(r)
     if a:
-        out.append(f"  {'👻 ' if a['key'] == 'ghost' else ''}{a['label']} · {a['detail']}")
+        out.append(f"  {a['label']} · {a['detail']}")
     # The stride line, to paste anywhere: the same two lines the card shows.
     out.append("")
     out.extend("  " + line for line in stride_text(r).split("\n"))
