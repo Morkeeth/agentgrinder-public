@@ -2,6 +2,7 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>__BRAND__ · __TAGLINE__</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="description" content="Turn a Cursor, Grok Bot, Claude Code or Codex session into a run card. Post your runs and see what other builders are making. Private until you choose to share.">
 <!-- The unfurl. A run page has carried these since it shipped; the home page had none, so the
      address people actually post showed as a bare link. The image is the same @vercel/og
@@ -446,6 +447,8 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .p-links a{color:var(--ink)}
 .experiment-card h2{font-size:18px;line-height:1.3;margin:6px 0 10px}
 @media(max-width:700px){.landing-intro h1{max-width:none}}
+/* 390 px: every tap target at least 44px tall (fresh-eyes review, 25 Sep 2026). */
+@media(max-width:700px){.bar .mark,.feed-tabs a,.section-tabs a,.land-head a,.launch-more a{display:inline-flex;align-items:center;min-height:44px}input[type=checkbox]{width:22px;height:22px}label:has(input[type=checkbox]){min-height:44px}button,.act{min-height:44px}}
 </style><link rel="stylesheet" href="/social.css"><link rel="stylesheet" href="/people.css"><link rel="stylesheet" href="/account.css"><link rel="stylesheet" href="/feed.css"><link rel="stylesheet" href="/dropin.css">
 <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};</script>
 <script defer src="/_vercel/insights/script.js"></script>
@@ -484,7 +487,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   <main class="main" id="app"></main>
   <aside class="side" id="side"></aside>
 </div>
-<footer>Your agent runs, shared on your terms. &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a><span id="deletewrap" hidden> &middot; <a href="/?account#danger" id="delete">Delete my __BRAND__ profile</a></span></footer>
+<footer class="site-foot"><span class="site-foot-line">Your agent runs, shared on your terms.</span><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/Morkeeth/agentgrinder-public/issues">Contact</a><a href="/privacy#deletion" id="delete-info">Delete your data</a><span id="deletewrap" hidden><a href="/?account#danger" id="delete">Delete my __BRAND__ profile</a></span></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
@@ -2051,7 +2054,7 @@ async function refreshAuth(){
   try{
     const current=await auth.current();ME=current.profile;IDENTITY_SETUP=current.needsOnboarding?current:null;
     $('me').innerHTML=ME?'<a href="'+GrinderAuth.present(ME).url+'">@'+esc(profileHandle(ME))+'</a>':'';
-    $('auth').textContent=current.user?'Sign out':'Sign in';$('deletewrap').hidden=!ME;
+    $('auth').textContent=current.user?'Sign out':'Sign in';$('deletewrap').hidden=!ME;if($('delete-info'))$('delete-info').hidden=!!ME;
     $('mobile-product-nav').hidden=false;syncAuthNav();status('');
     if(social.refreshUnread) social.refreshUnread();
   }catch(e){ME=null;IDENTITY_SETUP=null;status(e.detail?.message||'Sign-in could not be restored. Try again.',true);}
@@ -2087,6 +2090,7 @@ async function decodeImportPayload(payload){
 
 async function importRun(){
   const m=location.hash.match(/import=([^&]+)/); if(!m) return false;
+  try{document.title='Preview a run · __BRAND__'}catch(_){}
   let run; try{ run=await decodeImportPayload(m[1]); }catch(error){ frame(null,null); $('app').innerHTML='<div class="card"><h2>This import link could not be read</h2><p>'+esc(error.importCompatibility?error.message:'The capture data on this link could not be read, usually because the address was cut when it was copied. Nothing was posted. Run the capture command again to open a fresh preview.')+'</p><p><a href="/?post">How to capture a run</a></p></div>'; return true; }
   if(Array.isArray(run?.ridge)&&run.worker_bins==null) run.worker_bins=Array(run.ridge.length).fill(0);
   const importedWholeNumber=id=>{const raw=$(id)?.value;if(raw==null||String(raw).trim()==='')return null;const value=Number(raw);return Number.isInteger(value)&&value>=0?value:Number.NaN};
@@ -2362,7 +2366,23 @@ async function viewEvent(){
 
 const forum=GrinderForum({client:sb,app:()=>document.getElementById('app'),frame,status});
 
-async function route(){ account.recover();
+// One title per page, in the same order route() checks the query, so the title names the page that opens.
+const PAGE_TITLES=[['example','Example'],['boards','Marathon and boards'],['projects','Projects'],['project','Project'],['segment','Segment'],['post','Add a run'],['mine','My runs'],['people','Find people'],['account','Account settings'],['connect','Connect your agent'],['following','Following'],['inbox','Responses'],['crews','Clubs'],['crew','Club'],['join','Join a club'],['agents','Agents'],['agent','Agent']];
+function pageTitle(q){
+  const t=x=>x+' · __BRAND__';
+  // Retired sections and legacy ?event= links are sent to Discover.
+  if(RETIRED.some(k=>q.has(k))) return t('Discover');
+  const hit=PAGE_TITLES.find(([k])=>q.has(k));
+  if(hit) return t(hit[1]);
+  if(q.get('event')) return t('Discover');
+  if(q.get('share')!==null&&(q.get('rig')||q.get('u')||q.get('run'))) return t('Share');
+  if(q.get('run')) return t('Run');
+  if(q.get('u')) return t('@'+q.get('u'));
+  if(q.get('explore')!==null) return t('Discover');
+  if(q.has('onboard')) return t('Connect your agent');
+  return '__BRAND__ · __TAGLINE__';
+}
+async function route(){ account.recover(); try{document.title=pageTitle(new URLSearchParams(location.search))}catch(_){}
   if(ME && social.refreshUnread) social.refreshUnread();
   if(IDENTITY_SETUP)return viewIdentitySetup();
   restoreImport();

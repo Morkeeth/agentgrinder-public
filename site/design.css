@@ -11,8 +11,8 @@ button,input,textarea,select{font:inherit}
 button,summary{touch-action:manipulation}
 .reading-page{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 .reading-page *{box-sizing:border-box}
-.reading-page header{border-bottom:1px solid var(--rule);padding:18px 24px;display:flex;justify-content:space-between;gap:20px}
-.reading-page header a{color:var(--ink);text-decoration:none;font-size:14px;font-weight:500}
+.reading-page header{border-bottom:1px solid var(--rule);padding:6px 24px;display:flex;justify-content:space-between;gap:20px}
+.reading-page header a{color:var(--ink);text-decoration:none;font-size:14px;font-weight:500;display:inline-flex;align-items:center;min-height:44px}
 .reading-page main{max-width:740px;margin:auto;padding:44px 24px 80px;overflow-wrap:anywhere}
 .reading-page h1{font-size:28px;line-height:1.15;letter-spacing:-.04em;font-weight:600}
 .reading-page h2{font-size:20px;line-height:1.3;letter-spacing:-.02em;font-weight:500;margin-top:36px}
@@ -24,7 +24,7 @@ button,summary{touch-action:manipulation}
 .reading-page code{background:var(--blue-wash);padding:2px 4px}
 .reading-page details{border:1px solid var(--rule);padding:16px;margin:24px 0;background:var(--box)}
 .reading-page summary{cursor:pointer;font-weight:500}
-@media(max-width:600px){button,.act{min-height:40px}.reading-page main{padding:28px 18px 60px}.reading-page header{padding:18px}}
+@media(max-width:600px){button,.act{min-height:44px}.reading-page main{padding:28px 18px 60px}.reading-page header{padding:18px}}
 /* A returning builder's runs and private comparisons. */
 #progress-body{min-width:0;overflow-wrap:anywhere}
 #progress-body h2{font-size:18px;line-height:1.3;margin:0 0 8px;letter-spacing:-.02em}
@@ -243,3 +243,11 @@ button,summary{touch-action:manipulation}
 @media(max-width:390px){
   .code-route{padding-left:12px;padding-right:12px}
 }
+
+/* THE SITE FOOTER, on every page: About, Privacy, Terms, Contact and how to delete your data.
+   Each link is a 44px tap target on a phone. */
+.site-foot{display:flex;flex-wrap:wrap;align-items:center;gap:0 18px;max-width:1320px;margin:0 auto;padding:12px 24px 40px;border-top:1px solid var(--rule);font-size:13px;color:var(--dim)}
+.site-foot a{color:var(--soft);text-decoration:none;display:inline-flex;align-items:center;min-height:44px}
+.site-foot a:hover{color:var(--ink)}
+.site-foot-line{flex-basis:100%;padding-top:8px}
+.site-foot [hidden]{display:none}
