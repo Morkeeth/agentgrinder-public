@@ -185,7 +185,7 @@ def test_copy_reads_the_stride_at_the_click_so_the_link_is_on_it():
 const dom=new JSDOM('<button class="fc-copy" data-copy="A">Copy</button>');
 global.window=dom.window;global.document=dom.window.document;
 const F=require(process.argv[1]+'/site/feed-card.js');
-const got=[];global.navigator={clipboard:{writeText:async t=>{got.push(t)}},share:d=>{got.push('share:'+d.text);return Promise.resolve()}};
+const got=[];Object.defineProperty(globalThis,'navigator',{value:{clipboard:{writeText:async t=>{got.push(t)}},share:d=>{got.push('share:'+d.text);return Promise.resolve()}},configurable:true});
 F.wireStride(document);const b=document.querySelector('.fc-copy');b.dataset.copy='B';
 b.click();document.querySelector('.fc-share').click();
 setTimeout(()=>process.stdout.write(JSON.stringify(got)),20);""")
