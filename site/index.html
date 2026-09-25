@@ -1545,6 +1545,14 @@ async function viewLanding(){
   frame('','',true);
   app.innerHTML=landingHTML();
   if(window.GrinderDropinUI) GrinderDropinUI.mount({post:token=>{history.pushState(null,'','/#import='+token);route();}});
+  // A /l/ page's ask links to /#drop-zone. The landing is drawn by script after load, so the
+  // browser's own jump to the anchor has already missed it: scroll here, then drop the hash.
+  if(location.hash==='#drop-zone'){
+    // The whole stage (zone plus, on a phone, the send button), and only as far as needed.
+    const stage=$('drop-stage');
+    if(stage) stage.scrollIntoView({block:'nearest'});
+    history.replaceState(null,'',location.pathname+location.search);
+  }
   const body=$('landing-feature-body');
   const line=$('public-run-count');
   const featured=await fetchLatestPublicRuns(3);
@@ -2248,6 +2256,8 @@ async function route(){ account.recover();
   }
   const u=q.get('u'); const rn=q.get('run');
   if(rn) return viewRun(rn); if(u) return viewProfile(u); if(q.get('explore')!==null) return viewExplore();
+  // The /l/ ask ("Drop yours") lands on the drop zone, signed in or not.
+  if(location.hash==='#drop-zone') return viewLanding();
   if(await shouldOnboard()) return viewOnboard();
   if(ME&&(await runCount())===0) return viewPost();
   return ME?viewMe():viewLanding(); }

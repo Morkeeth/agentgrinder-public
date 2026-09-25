@@ -85,21 +85,34 @@ const HEAD=`<link rel="preconnect" href="https://fonts.googleapis.com"><link rel
 // work. It reads nothing and sends nothing.
 const STRIDE_SCRIPT=`<script src="/run-contract.js"></script><script src="/feed-card.js"></script><script>GrinderFeed.wireStride(document)</script>`;
 
+// The drop-in sends "<harness> session, <day>" when the person typed no title (site/dropin.js
+// titleText). That default is the card's own words, not theirs.
+export function typedTitle(row){
+ const t=String(row.title??'').trim(),h=Feed.harnessName(row)||'Agent';
+ const auto=new RegExp('^'+h.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+' session(, \\d{1,2} [A-Z][a-z]{2})?$');
+ return t&&!auto.test(t)?t:'';
+}
+
 export function linkHtml(link,{origin}){
- const row=linkRow(link),title=esc(Feed.titleOf(row)),id=encodeURIComponent(link.id);
+ const row=linkRow(link),id=encodeURIComponent(link.id);
  const a=Feed.achievement(row);
  const lead=Feed.headline(row);
+ // The unfurl title is the typed title. With none, a ghost run's own sentence ("13h 5m while you
+ // slept") says more on X than "Claude Code session, 25 Sep" does. The card keeps its title.
+ const ghost=Feed.ghost(row);
+ const title=esc(!typedTitle(row)&&ghost?ghost.detail:Feed.titleOf(row));
  // A ghost lead is its own sentence ("12h 19m while you slept"); the badge then adds only its name.
  const description=esc([lead?`${lead.n} ${lead.unit}`:'',a?(lead&&lead.ghost?a.label:`${a.label}: ${a.detail}`):'',`${row.harness} session`].filter(Boolean).join(' · '));
  const url=origin+'/l/'+id,image=origin+'/api/link?id='+id+'&image=1';
  const shared=Feed.card(row,{preview:true,heading:'h1',foot:false,url,copy:true});
  // The maker's number is the ask: a reader who sees 98 tool calls is invited to drop their own.
+ // The ask lands on the drop zone itself (/#drop-zone), so one tap on a phone is one step, not a scroll.
  const ask=lead?`${lead.ghost?`Their agent ran ${esc(lead.n)} alone`:`They logged ${esc(lead.n)} ${esc(lead.unit)}`}. Drop yours.`:'Make a card from your session';
- return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · ${BRAND}</title><meta name="robots" content="noindex,nofollow"><meta property="og:type" content="article"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}">${HEAD}</head><body><main><a class="home" href="/" aria-label="${BRAND} home">${BRAND}</a>${shared}<p class="cta"><a class="open" href="/">${ask}</a></p><p class="note">Counts only. The session file never left the device that read it.</p><p class="note">Counts describe activity, not result quality.</p></main>${STRIDE_SCRIPT}</body></html>`;
+ return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · ${BRAND}</title><meta name="robots" content="noindex,nofollow"><meta property="og:type" content="article"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}">${HEAD}</head><body><main><a class="home" href="/" aria-label="${BRAND} home">${BRAND}</a>${shared}<p class="cta"><a class="open" href="/#drop-zone">${ask}</a></p><p class="note">Counts only. The session file never left the device that read it.</p><p class="note">Counts describe activity, not result quality.</p></main>${STRIDE_SCRIPT}</body></html>`;
 }
 
 export function missingHtml(){
- return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Link not found · ${BRAND}</title><meta name="robots" content="noindex">${HEAD}</head><body><main><a class="home" href="/">${BRAND}</a><article class="box"><h1>This link is gone</h1><p>It was deleted, or it expired after 90 days.</p><a class="open" href="/">Make a card from your session</a></article></main></body></html>`;
+ return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Link not found · ${BRAND}</title><meta name="robots" content="noindex">${HEAD}</head><body><main><a class="home" href="/">${BRAND}</a><article class="box"><h1>This link is gone</h1><p>It was deleted, or it expired after 90 days.</p><a class="open" href="/#drop-zone">Make a card from your session</a></article></main></body></html>`;
 }
 
 // The delete page. The secret is read from the fragment by the page itself and sent in a POST
