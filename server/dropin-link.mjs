@@ -7,6 +7,7 @@
 // would refuse anyway, so a bad request costs no database call, and it never forwards a key that
 // is not on the allowlist.
 import {BRAND} from './brand.mjs';
+import {linkTicket} from './fair-confirm.mjs';
 import Feed from '../site/feed-card.js';
 import Dropin from '../site/dropin-parse.js';
 
@@ -50,7 +51,9 @@ export async function createLink({method,headers,body},config,fetchImpl=fetch){
  const url=config.ORIGIN+'/l/'+r.id;
  // The delete secret rides in the fragment, which browsers never send to a server, so it cannot
  // land in an access log or a Referer header.
- return {status:200,body:{id:r.id,url,delete_url:url+'/delete#'+r.delete_token,expires_at:r.expires_at}};
+ // With Free Lunch confirm on, the creator also gets the ticket that proves they made this link.
+ const ticket=linkTicket(r.id);
+ return {status:200,body:{id:r.id,url,delete_url:url+'/delete#'+r.delete_token,expires_at:r.expires_at,...(ticket?{fair_ticket:ticket}:{})}};
 }
 
 export async function readLink(id,config,fetchImpl=fetch){
