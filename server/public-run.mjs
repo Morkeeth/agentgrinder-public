@@ -121,7 +121,9 @@ export function html(run,opts={}){const title=esc(Feed.titleOf(run)),insight=rou
  const handle=run.profiles?.handle||run.profiles?.github_handle;
  const profileHref=handle?'/?u='+encodeURIComponent(handle):'';
  // opts.kudos is the count readKudos returned: a number, or null when it could not be read.
- const shared=Feed.card(run,{page:true,count:opts.kudos===undefined?null:opts.kudos});
+ // The stride line is on the card with its address; the page carries no script (the probe in
+ // tests/fixtures/public_outcome_probe.mjs holds it to that), so it is text to select, not a button.
+ const shared=Feed.card(run,{page:true,count:opts.kudos===undefined?null:opts.kudos,url});
  const output=outputKind(run)&&safeUrl(run.output_url)?`<a class="output" href="${esc(run.output_url)}" rel="noopener noreferrer">View linked output</a>`:'';
  const profileAct=profileHref?`<a class="open-profile" href="${esc(profileHref)}">Open builder profile</a>`:'';
  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · ${BRAND}</title><meta property="og:type" content="article"><meta property="og:title" content="${title}"><meta property="og:description" content="${description}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${image}"><link rel="canonical" href="${url}">${pageHead}</head><body><main><a class="home" href="/" aria-label="${BRAND} home">${BRAND}</a>${shared}${pageCodeRoute(run)}${pageOutcome(run)}<p class="share-open"><a class="open" href="/?run=${id}">Open run and discussion</a>${profileAct}${output}</p><p class="note">Counts describe activity, not result quality.</p></main></body></html>`;
@@ -150,9 +152,9 @@ const ridgeSeries=run=>{
 const series=run=>{
  const ridge=ridgeSeries(run);
  if(ridge)return ridge;
- // Legacy rhythm/route remain readable when no ridge bins exist. A flat all-zero leftover
- // rhythm is not a route — that reads as a measured empty trace, so it stays undrawn.
- for(const [values,label] of [[run.rhythm,'Session trace'],[run.route,'Project ridge']]){
+ // A legacy rhythm remains readable when no ridge bins exist. A flat all-zero leftover rhythm is
+ // not a trace, so it stays undrawn. `route` is the run map (Feed.routeGeometry), never a line.
+ for(const [values,label] of [[run.rhythm,'Session trace']]){
   if(Array.isArray(values)&&values.length>1&&values.length<=10000&&values.every(v=>Number.isFinite(v)&&v>=0)&&values.some(v=>v>0))return{values,label,filled:false};
  }
  return null;
@@ -255,17 +257,29 @@ export function card(run,opts={}){
  const output=outputKind(run);
  const drawn=!!(plotted||routePlot);
  const W=1044;
+ // THE RUN MAP, the same geometry the card draws (Feed.routeGeometry), scaled to the image.
+ // The card's 300 by 44 drawing, scaled to the image: x by the width, y by a flatter 2.2 so the
+ // map stays a strip, and every station still a circle.
+ const geo=Feed.routeGeometry(run);
+ const SX=W/300,SY=2.2,MAP_H=Math.round(44*SY);
+ const hop=d=>{const n=d.match(/-?[\d.]+/g).map(Number);return `M${(n[0]*SX).toFixed(1)},${(n[1]*SY).toFixed(1)} Q${(n[2]*SX).toFixed(1)},${(n[3]*SY).toFixed(1)} ${(n[4]*SX).toFixed(1)},${(n[5]*SY).toFixed(1)}`;};
+ const map=geo?el('div',{style:{display:'flex',flexDirection:'column',marginTop:6}},
+  el('svg',{width:W,height:MAP_H,viewBox:`0 0 ${W} ${MAP_H}`},
+   el('line',{x1:12*SX,y1:30*SY,x2:288*SX,y2:30*SY,stroke:BLUE_SOFT,strokeWidth:2}),
+   ...geo.hops.map(d=>el('path',{d:hop(d),fill:'none',stroke:BLUE,strokeWidth:2.4,strokeOpacity:0.4,strokeLinecap:'round'})),
+   ...geo.stations.map(([cx,r])=>el('circle',{cx:cx*SX,cy:30*SY,r:r*2,fill:'#fff',stroke:BLUE,strokeWidth:3}))),
+  el('div',{style:{display:'flex',fontSize:17,color:SOFT,marginTop:0}},geo.label)):null;
  let drawing=null;
  if(plotted){
   // The page's rule for a short sitting (Feed.settle): a comb of ones and zeros is not a shape.
-  const values=Feed.settle(plotted.values),max=Math.max(...values)||1,h=110,top=10;
+  const values=Feed.settle(plotted.values),max=Math.max(...values)||1,h=geo?52:110,top=10;
   const x=i=>i*W/(values.length-1),y=v=>h-v/max*(h-top);
   const points=values.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
   const peak=values.indexOf(Math.max(...values));
-  drawing=el('div',{style:{display:'flex',flexDirection:'column',marginTop:18}},
+  drawing=el('div',{style:{display:'flex',flexDirection:'column',marginTop:geo?8:18}},
    el('svg',{width:W,height:h,viewBox:`0 0 ${W} ${h}`},...(plotted.filled?[
-    el('polygon',{points:`0,${h} ${points} ${W},${h}`,fill:WASH}),
-    el('polyline',{points,stroke:BLUE,strokeWidth:4,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'}),
+    el('polygon',{points:`0,${h} ${points} ${W},${h}`,fill:badge&&badge.key==='ghost'?'none':WASH}),
+    el('polyline',{points,stroke:BLUE,strokeWidth:4,strokeLinejoin:'round',strokeLinecap:'round',fill:'none',...(badge&&badge.key==='ghost'?{strokeDasharray:'8 10'}:{})}),
     el('circle',{cx:x(peak),cy:y(values[peak]),r:9,fill:ORANGE,stroke:'#fff',strokeWidth:3})]:[
     el('polyline',{points,stroke:BLUE,strokeWidth:5,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'})])));
  }else if(routePlot){
@@ -289,21 +303,25 @@ export function card(run,opts={}){
      meta?el('div',{style:{display:'flex',fontSize:19,color:SOFT,marginTop:2,height:26,overflow:'hidden'}},meta):null),
     output?el('div',{style:{display:'flex',fontSize:18,color:BLUE,background:WASH,border:`1px solid ${BLUE_SOFT}`,borderRadius:999,padding:'4px 14px',marginRight:18}},output):null,
     el('div',{style:{display:'flex',color:BLUE,fontSize:24,fontWeight:700,letterSpacing:4}},BRAND)),
-   el('div',{style:{display:'flex',fontSize:drawn?44:56,fontWeight:700,letterSpacing:-1,marginTop:22,height:drawn?56:140,lineHeight:1.2,overflow:'hidden'}},String(Feed.titleOf(run)).slice(0,120)),
+   el('div',{style:{display:'flex',fontSize:geo?38:drawn?44:56,fontWeight:700,letterSpacing:-1,marginTop:geo?16:22,height:geo?50:drawn?56:140,lineHeight:1.2,overflow:'hidden'}},String(Feed.titleOf(run)).slice(0,120)),
    run.caption&&!routePlot?el('div',{style:{display:'flex',fontSize:20,color:INK,marginTop:4,height:28,overflow:'hidden'}},String(run.caption).slice(0,160)):null,
-   lead||facts.length?el('div',{style:{display:'flex',alignItems:'flex-end',marginTop:drawn?14:28}},
+   lead||facts.length?el('div',{style:{display:'flex',alignItems:'flex-end',marginTop:geo?12:drawn?14:28}},
     lead?el('div',{style:{display:'flex',flexDirection:'column',marginRight:56}},
-     el('div',{style:{display:'flex',fontSize:drawn?84:120,fontWeight:700,letterSpacing:-3,lineHeight:1}},lead.n),
+     el('div',{style:{display:'flex',fontSize:geo?64:drawn?84:120,fontWeight:700,letterSpacing:-3,lineHeight:1}},lead.n),
      el('div',{style:{display:'flex',fontSize:20,color:SOFT,marginTop:6}},lead.unit)):null,
     ...facts.map(([label,value])=>el('div',{style:{display:'flex',flexDirection:'column',marginRight:44,paddingBottom:4}},
      el('div',{style:{display:'flex',fontSize:17,color:SOFT}},label),
      el('div',{style:{display:'flex',fontSize:32,fontWeight:500,marginTop:2}},String(value))))):null,
    // The badge, as on the card: blue label, soft detail. Same function, so the image cannot award
    // a badge the page does not.
-   badge?el('div',{style:{display:'flex',alignItems:'center',fontSize:22,marginTop:drawn?12:22}},
-    el('div',{style:{display:'flex',width:14,height:14,borderRadius:7,border:`3px solid ${BLUE}`,marginRight:10}}),
-    el('div',{style:{display:'flex',color:BLUE,fontWeight:700,marginRight:10}},badge.label),
+   // The ghost badge is the image's one orange word, as on the card.
+   badge?el('div',{style:{display:'flex',alignItems:'center',fontSize:22,marginTop:geo?8:drawn?12:22}},
+    badge.key==='ghost'
+     ?el('svg',{width:20,height:20,viewBox:'0 0 16 16',style:{marginRight:10}},el('path',{d:'M3 14.5V7.5a5 5 0 0 1 10 0v7l-2-1.6-2 1.6-1-1.6-1 1.6-2-1.6Z',fill:ORANGE}),el('circle',{cx:6,cy:7.5,r:1.1,fill:'#fff'}),el('circle',{cx:10,cy:7.5,r:1.1,fill:'#fff'}))
+     :el('div',{style:{display:'flex',width:14,height:14,borderRadius:7,border:`3px solid ${BLUE}`,marginRight:10}}),
+    el('div',{style:{display:'flex',color:badge.key==='ghost'?ORANGE:BLUE,fontWeight:700,marginRight:10}},badge.label),
     el('div',{style:{display:'flex',color:SOFT}},badge.detail)):null,
+   map,
    drawing,
    el('div',{style:{display:'flex',fontSize:15,color:SOFT,marginTop:'auto'}},'Counts describe activity, not result quality.')));
 }
@@ -318,7 +336,7 @@ export function homeCard(){
    el('div',{style:{display:'flex',color:'#123cff',fontSize:30,fontWeight:800,letterSpacing:6}},BRAND),
    el('div',{style:{display:'flex',fontSize:64,fontWeight:700,marginTop:26,lineHeight:1.1}},TAGLINE),
    el('div',{style:{display:'flex',fontSize:26,color:'#687083',marginTop:24,lineHeight:1.35}},
-     'Every run your agent made, on a card you can share.'),
+     'Strava is for people who ran. STRIVE is for people who didn\'t.'),
    el('div',{style:{display:'flex',fontSize:20,color:'#687083',marginTop:'auto'}},
      'Capture a Cursor, Claude Code, Codex or Grok Bot session · private until you choose to share')));
 }

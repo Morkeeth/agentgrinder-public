@@ -3,7 +3,8 @@
    agentgrinder/ingest.py (parse_session, parse_cursor_session, parse_codex_session with
    native_trace.codex_activity), limited to the numbers the card draws:
 
-     turns typed, tool calls, files changed, commits, wall time, start, activity line.
+     turns typed, tool calls, files changed, commits, wall time, start, activity line, and the
+     route through folders as station indices (folderRoute below).
 
    scripts/test-dropin-parity.mjs runs both readers over the same files and fails on any
    difference. If you change a rule here, change it in ingest.py too, or the test goes red.
@@ -57,6 +58,32 @@
   const blocks = (msg) => (msg && Array.isArray(msg.content) ? msg.content : []);
   const isObj = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 
+  // THE ROUTE: the folders the run went through, as station indices. agentgrinder/ingest.py
+  // folder_route is the same rule, and scripts/test-dropin-parity.mjs compares the two.
+  //   station = the folder a touched file sits in (the path up to its last slash), numbered in
+  //             the order the run first reached it, at most 16 stations;
+  //   a move  = one file touch, with consecutive touches in one folder collapsed to one stay,
+  //             at most 400 moves.
+  // The folder is a key in this function and nowhere else: what leaves is the list of indices.
+  const MAX_STATIONS = 16, MAX_MOVES = 400;
+  function folderRoute(paths) {
+    const stations = new Map();
+    const out = [];
+    for (const p of paths) {
+      const key = String(p).slice(0, Math.max(0, String(p).lastIndexOf("/")));
+      let i = stations.get(key);
+      if (i === undefined) {
+        if (stations.size >= MAX_STATIONS) continue;
+        i = stations.size;
+        stations.set(key, i);
+      }
+      if (out.length && out[out.length - 1] === i) continue;
+      if (out.length >= MAX_MOVES) break;
+      out.push(i);
+    }
+    return out;
+  }
+
   // agentgrinder/authorship.is_human_turn, the one gate every typed-turn count goes through.
   function isHumanTurn(o) {
     if (o.type !== "user") return false;
@@ -70,7 +97,7 @@
   function claudeReader() {
     const typed = [], all = [];
     let tools = 0, commits = 0;
-    const files = new Set();
+    const files = new Set(), touched = [], toolsAt = [];
     return {
       harness: "Claude Code",
       add(o) {
@@ -83,8 +110,11 @@
           for (const b of blocks(msg)) {
             if (!isObj(b) || b.type !== "tool_use") continue;
             tools += 1;
+            if (t != null) toolsAt.push(t);
             const input = isObj(b.input) ? b.input : {};
             const name = b.name || "";
+            const at = typeof input.file_path === "string" && input.file_path ? input.file_path : typeof input.notebook_path === "string" && input.notebook_path ? input.notebook_path : null;
+            if (at) touched.push(at);
             if ((name === "Edit" || name === "Write" || name === "NotebookEdit") && input.file_path) files.add(String(input.file_path));
             else if (name === "Bash" && String(input.command || "").includes("git commit")) commits += 1;
           }
@@ -101,8 +131,21 @@
           rhythm = new Array(24).fill(0);
           for (const t of typed) rhythm[Math.min(23, Math.floor(((t - t0) / span) * 24))] += 1;
         } else rhythm = [typed.length];
+        // THE LINE THE CARD DRAWS. `rhythm` is the Python rhythm (typed turns per bin, parity
+        // tested) and a one-prompt night is a single spike on it. The file also stamps every tool
+        // call, so the card draws those: tool calls per bin over the same moving time, a gap over
+        // twenty minutes counted as twenty, the same clock `duration_s` is read from.
+        let line;
+        if (span > 0 && toolsAt.length) {
+          const pos = new Map();
+          let at = 0;
+          ev.forEach((t, i) => { if (i) at += Math.min(t - ev[i - 1], 1200); if (!pos.has(t)) pos.set(t, at); });
+          line = new Array(24).fill(0);
+          for (const t of toolsAt) if (pos.has(t)) line[Math.min(23, Math.floor((pos.get(t) / span) * 24))] += 1;
+        }
         return { turns_typed: typed.length, tool_calls: tools, files_touched: files.size, commits,
-          duration_s: Math.trunc(span), started: t0, rhythm };
+          duration_s: Math.trunc(span), started: t0, rhythm, route: folderRoute(touched),
+          ...(line ? { line, line_basis: "tool calls per bin of moving time" } : {}) };
       },
     };
   }
@@ -116,7 +159,7 @@
 
   function cursorReader() {
     let typed = 0, tools = 0, commits = 0;
-    const files = new Set(), stamps = [], perTurn = [];
+    const files = new Set(), stamps = [], perTurn = [], touched = [];
     let edits = 0;
     return {
       harness: "Cursor",
@@ -133,6 +176,7 @@
           for (const b of blocks(msg)) {
             if (isObj(b) && b.type != null && b.type !== "text") { tools += 1; if (perTurn.length) perTurn[perTurn.length - 1] += 1; }
             if (!isObj(b) || b.type !== "tool_use" || !isObj(b.input)) continue;
+            if (typeof b.input.path === "string" && b.input.path) touched.push(b.input.path);
             if (b.name === "Write" || b.name === "StrReplace") {
               if (typeof b.input.path === "string" && b.input.path) { files.add(b.input.path); edits += 1; }
             } else if (b.name === "Shell" && String(b.input.command || "").includes("git commit")) commits += 1;
@@ -155,12 +199,13 @@
         perTurn.forEach((v, i) => { line[Math.min(bins - 1, Math.floor((i * bins) / perTurn.length))] += v; });
         return { turns_typed: typed, tool_calls: tools, files_touched: files.size || null,
           commits: edits || commits ? commits : null, duration_s: null,
-          started: stamps.length ? Math.min(...stamps) : null, rhythm, line, line_basis: "tool calls per typed turn, in turn order" };
+          started: stamps.length ? Math.min(...stamps) : null, rhythm, line, line_basis: "tool calls per typed turn, in turn order",
+          route: folderRoute(touched) };
       },
     };
   }
 
-  const CODEX_INJECTED = ["<recommended_plugins>", "<environment_context>", "<turn_aborted>"];
+  const CODEX_INJECTED = ["<recommended_plugins>", "<environment_context>", "<turn_aborted>", "# Files mentioned by the user:"];
   function codexCommand(blob) {
     if (typeof blob !== "string") return "";
     let parsed;
@@ -175,7 +220,10 @@
 
   function codexReader() {
     let delegated = false, index = -1, commits = 0, edits = 0;
-    const users = [], events = [], calls = new Set(), files = new Set(), stamps = [];
+    // Typed turns come in two shapes (agentgrinder/native_trace.py says why): the CLI's
+    // event_msg user_message, or the desktop app's response_item user message. The event form
+    // wins when the file has it; `messages` is the fallback.
+    const users = [], messages = [], events = [], calls = new Set(), files = new Set(), stamps = [], touched = [];
     return {
       harness: "Codex",
       add(o) {
@@ -192,18 +240,23 @@
           const text = String(p.message || "").replace(/^\s+/, "");
           users.push({ t, injected: CODEX_INJECTED.some((m) => text.startsWith(m)) });
           return;
+        } else if (o.type === "response_item" && p.type === "message" && p.role === "user") {
+          const text = (Array.isArray(p.content) ? p.content.filter(isObj).map((c) => c.text || "").join("") : String(p.content || "")).replace(/^\s+/, "");
+          messages.push({ t, injected: CODEX_INJECTED.some((m) => text.startsWith(m)) });
+          return;
         } else if (p.type === "function_call" || p.type === "custom_tool_call") {
           const id = p.call_id || p.id || "record:" + index;
           if (!calls.has(id)) { calls.add(id); kind = "tool"; }
           if (p.type === "custom_tool_call" && p.name === "exec" && codexCommand(p.input).includes("git commit")) commits += 1;
         } else if (p.type === "patch_apply_end" && p.success === true) {
           kind = "edit";
-          if (isObj(p.changes)) for (const k of Object.keys(p.changes)) if (k) { files.add(k); edits += 1; }
+          if (isObj(p.changes)) for (const k of Object.keys(p.changes)) if (k) { files.add(k); edits += 1; touched.push(k); }
         }
         if (kind && t != null) events.push(t);
       },
       done() {
-        const human = delegated ? [] : users.filter((u) => !u.injected);
+        const typedIn = users.length ? users : messages;
+        const human = delegated ? [] : typedIn.filter((u) => !u.injected);
         if (!human.length) throw readError(delegated ? "delegated" : "no-turns");
         const all = events.concat(human.filter((u) => u.t != null).map((u) => u.t)).sort((a, b) => a - b);
         const start = all.length ? all[0] : 0;
@@ -213,7 +266,7 @@
         return { turns_typed: human.length, tool_calls: calls.size, files_touched: files.size || null,
           commits: edits || commits ? commits : null,
           duration_s: stamps.length >= 2 ? Math.trunc(Math.max(...stamps) - Math.min(...stamps)) : null,
-          started: stamps.length ? Math.min(...stamps) : null, rhythm };
+          started: stamps.length ? Math.min(...stamps) : null, rhythm, route: folderRoute(touched) };
       },
     };
   }
@@ -304,7 +357,7 @@
 
   // THE ONLY THING THAT MAY LEAVE THE DEVICE. "Get a link" sends exactly this object, and the
   // database refuses any key that is not on the same list (supabase/strava/011_dropin_links.sql).
-  const UPLOAD_KEYS = ["title", "harness", "turns_typed", "tool_calls", "files_touched", "commits", "duration_s", "started_hour", "rhythm"];
+  const UPLOAD_KEYS = ["title", "harness", "turns_typed", "tool_calls", "files_touched", "commits", "duration_s", "started_hour", "rhythm", "route"];
   function uploadPayload(run, title) {
     const whole = (v) => (Number.isSafeInteger(v) && v >= 0 ? v : null);
     const started = run.started ? new Date(run.started) : null;
@@ -318,10 +371,12 @@
       duration_s: whole(run.duration_s),
       started_hour: started && Number.isFinite(started.getTime()) ? started.getHours() : null,
       rhythm: (Array.isArray(run.line) && run.line.length ? run.line : Array.isArray(run.rhythm) ? run.rhythm : []).slice(0, 24).map((v) => whole(v) ?? 0),
+      // Station indices only (folderRoute); a run that touched no file has no map.
+      route: Array.isArray(run.route) && run.route.length ? run.route.slice(0, MAX_MOVES).map((v) => Math.min(MAX_STATIONS - 1, whole(v) ?? 0)) : null,
     };
   }
 
-  const api = { parseText, parseFile, createReader, uploadPayload, UPLOAD_KEYS, HARNESSES, isHumanTurn, cursorTime, seconds };
+  const api = { parseText, parseFile, createReader, uploadPayload, folderRoute, UPLOAD_KEYS, HARNESSES, isHumanTurn, cursorTime, seconds };
   root.GrinderDropin = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

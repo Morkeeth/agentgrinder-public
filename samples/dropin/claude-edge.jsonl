@@ -10,4 +10,5 @@ not json at all
 
 {"type": "user", "timestamp": "2026-09-20T23:40:00Z", "promptSource": "typed", "message": {"role": "user", "content": "[fixture] PROMPT-SENTINEL-7f3a do not upload this sentence after the break"}}
 {"type": "assistant", "timestamp": "2026-09-20T23:41:30.5Z", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "NotebookEdit", "input": {"file_path": "/Users/fixture/code/demo/n.ipynb"}}, {"type": "tool_use", "name": "Bash", "input": {"command": "git commit --amend"}}]}}
+{"type": "assistant", "timestamp": "2026-09-20T23:41:40Z", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "Read", "input": {"file_path": "/Users/fixture/code/demo/SECRET-FOLDER-9c1b/deep/read-only.py"}}, {"type": "tool_use", "name": "Edit", "input": {"file_path": "/Users/fixture/code/demo/a.py"}}]}}
 {"type": "user", "timestamp": "2026-09-20T23:42:00Z", "promptSource": "sdk", "message": {"role": "user", "content": "peer [fixture]"}}

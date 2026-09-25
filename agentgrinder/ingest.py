@@ -74,11 +74,42 @@ def searched_paths() -> tuple:
     return (CLAUDE_GLOB, CURSOR_GLOB, GROKBOT_GLOB) + CODEX_GLOBS
 
 
+# THE ROUTE: the folders the run went through, as station indices. site/dropin-parse.js
+# folderRoute is the same rule and scripts/test-dropin-parity.mjs compares the two readers.
+#   station = the folder a touched file sits in (the path up to its last slash), numbered in the
+#             order the run first reached it, at most 16 stations;
+#   a move  = one file touch, with consecutive touches in one folder collapsed to one stay, at
+#             most 400 moves.
+# The folder name is a key here and nowhere else. `route` (the indices) may be pushed;
+# `route_legend` (the folder names) is LOCAL only and hook.py drops it before any save.
+ROUTE_STATIONS = 16
+ROUTE_MOVES = 400
+
+
+def folder_route(paths) -> tuple[list[int], list[str]]:
+    stations: dict[str, int] = {}
+    out: list[int] = []
+    for p in paths:
+        key = str(p)[: max(0, str(p).rfind("/"))]
+        i = stations.get(key)
+        if i is None:
+            if len(stations) >= ROUTE_STATIONS:
+                continue
+            i = len(stations)
+            stations[key] = i
+        if out and out[-1] == i:
+            continue
+        if len(out) >= ROUTE_MOVES:
+            break
+        out.append(i)
+    return out, [os.path.basename(k) or "root" for k in stations]
+
+
 def parse_session(path: str, athlete: str = "you") -> dict:
     typed_ts, all_ts = [], []
     tool_calls = 0
     files: set[str] = set()
-    route: list[str] = []  # ordered top-level regions touched (the code 'GPS' path)
+    touched: list[str] = []  # every file a tool named, in order: the route
     commits = 0
     project = None
     first_prompt = None
@@ -126,11 +157,12 @@ def parse_session(path: str, athlete: str = "you") -> dict:
                     tracker.assistant_text(c)
                 for name, inp in _tool_uses(msg):
                     tool_calls += 1
+                    at = inp.get("file_path") if isinstance(inp.get("file_path"), str) and inp.get("file_path") else (
+                        inp.get("notebook_path") if isinstance(inp.get("notebook_path"), str) and inp.get("notebook_path") else None)
+                    if at:
+                        touched.append(at)
                     if name in _EDIT_TOOLS and inp.get("file_path"):
                         fp = inp["file_path"]; files.add(fp); written.add(fp)
-                        # region = first meaningful path segment (privacy: names stay local; only indices are pushed)
-                        parts = [p for p in fp.replace(str(project or ""), "").split("/") if p and not p.startswith(".")]
-                        route.append(parts[0] if parts else "root")
                     elif name == "Bash":
                         cmd = (inp.get("command") or "")
                         if "git commit" in cmd:
@@ -183,6 +215,7 @@ def parse_session(path: str, athlete: str = "you") -> dict:
                 except OSError: rules_lines = 0
                 break
     title = (first_prompt[:60] + "…") if first_prompt and len(first_prompt) > 60 else (first_prompt or f"{proj_name} session")
+    route_ix, route_names = folder_route(touched)
 
     return {
         "athlete": athlete,
@@ -206,8 +239,8 @@ def parse_session(path: str, athlete: str = "you") -> dict:
         "reach_reason": reach_reason,            # the sentence the dash prints on hover
         "has_rules": bool(rules), "rules_file": rules, "rules_lines": rules_lines, "has_plan": has_plan,
         "rig": detect_rig(),
-        "route": _route_indices(route),          # numbers only -- safe to publish
-        "route_legend": _dedupe(route),          # region names — LOCAL only, never pushed
+        "route": route_ix,                       # numbers only -- safe to publish
+        "route_legend": route_names,             # folder names — LOCAL only, never pushed
     }
 
 
@@ -337,7 +370,8 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
     stamps = []
     files: set[str] = set()
     written: set[str] = set()
-    edits: list[str] = []      # ordered, for the route
+    edits: list[str] = []      # ordered writes, for the repository root
+    touched: list[str] = []    # every path a tool named, in order: the route
     first_prompt = None
     best_prompt = None
     ts_re = _re.compile(r"<timestamp>(.*?)</timestamp>")
@@ -372,6 +406,8 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
                 tool_call_index += 1
                 if not isinstance(inp, dict):
                     continue
+                if isinstance(inp.get("path"), str) and inp.get("path"):
+                    touched.append(inp["path"])
                 if name in _CURSOR_EDIT_TOOLS:
                     fp = inp.get("path")
                     if isinstance(fp, str) and fp:
@@ -454,7 +490,7 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
     else:
         reach_value, reach_reason = None, reachmod.HARNESS_LIMIT["Cursor"]
 
-    route = [_region_of(fp, repo_root) for fp in edits]
+    route_ix, route_names = folder_route(touched)
     run = {
         "athlete": athlete, "title": title, "harness": "Cursor",
         "project": public_project or proj or None,
@@ -479,8 +515,8 @@ def parse_cursor_session(path: str, athlete: str = "you", records=None, cursor_d
         "artifacts_promised": None,   # no harness records what a run said it would deliver
         "corrections": None,          # the inverse class, not built
         "reach": reach_value, "reach_reason": reach_reason,
-        "route": _route_indices(route),      # integers only, safe to publish
-        "route_legend": _dedupe(route),      # region names, LOCAL only, never pushed
+        "route": route_ix,                   # integers only, safe to publish
+        "route_legend": route_names,         # folder names, LOCAL only, never pushed
         "private_title_prompt": private_title_prompt,  # LOCAL only — never a share default
     }
     # Cursor transcript JSONL has no agent event clock. Its local SQLite store does: bubble
@@ -859,7 +895,7 @@ def parse_codex_session(path: str, athlete: str = "you", records=None) -> dict:
     else:
         reach_value, reach_reason = None, reachmod.R_CWD_NOT_REPO
 
-    route = [_region_of(fp, repo_root) for fp in edits]
+    route_ix, route_names = folder_route(edits)
     from .code_route import attach_measured_code_route
 
     return attach_measured_code_route({
@@ -885,8 +921,8 @@ def parse_codex_session(path: str, athlete: str = "you", records=None) -> dict:
         "corrections": None,
         "reach": reach_value,
         "reach_reason": reach_reason,
-        "route": _route_indices(route),
-        "route_legend": _dedupe(route),
+        "route": route_ix,
+        "route_legend": route_names,
     })
 
 

@@ -1,6 +1,6 @@
 # STRIVE
 
-**Post your strides. Every run your agent made, on a card you can share.**
+**Strava is for people who ran. STRIVE is for people who didn't.** Every run your agent made, on a card you can share: the numbers, the run map, and a stride line to paste anywhere.
 
 A free, MIT-licensed social app for people building with coding agents. Capture a session, preview its card, choose to post it, and follow other builders. Keep it minimal: runs, a feed, profiles, ACKs and replies.
 

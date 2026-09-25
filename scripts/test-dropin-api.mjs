@@ -25,6 +25,7 @@ for (const [k, v] of Object.entries(payload)) {
   if (k === 'title') assert.equal(v, 'My title');
   else if (k === 'harness') assert.ok(Dropin.HARNESSES.includes(v));
   else if (k === 'rhythm') assert.ok(v.every(Number.isSafeInteger));
+  else if (k === 'route') assert.ok(v === null || (Array.isArray(v) && v.every(n => Number.isSafeInteger(n) && n >= 0 && n <= 15)), 'route is station indices only');
   else assert.ok(v === null || Number.isSafeInteger(v), `${k} must be a whole number or null`);
 }
 // Nothing on the parsed run itself can carry text either: the reader keeps no prompt.

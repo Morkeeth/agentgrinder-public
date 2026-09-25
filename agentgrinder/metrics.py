@@ -26,6 +26,8 @@ words, WHICH FACT is missing and whether the person reading it can supply that f
 """
 from __future__ import annotations
 
+from .feedcard import local_hour
+
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -381,6 +383,7 @@ def build_activity(run: dict) -> Activity:
             "caption": run.get("caption") if isinstance(run.get("caption"), str) else None,
             "harness": run.get("harness"),
             "started": run.get("started"),
+            "started_hour": local_hour(run.get("started")),
             "created_at": run.get("started"),
             "prompts": turns,
             "duration_s": dur,
@@ -392,6 +395,7 @@ def build_activity(run: dict) -> Activity:
             "commits": commits,
             "ridge": run.get("ridge") or None,
             "rhythm": rhythm or None,
+            "route": run.get("route") or None,      # station indices only (ingest.folder_route)
             "output_url": run.get("output_url") or None,
             "visibility": "private",
             "profiles": {"handle": who.handle or "", "github_handle": who.handle or None,

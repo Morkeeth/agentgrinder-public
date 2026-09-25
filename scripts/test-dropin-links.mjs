@@ -20,11 +20,17 @@ await db.exec(build('prepare-migration.py'));
 
 // Bootstrap the strava schema WITHOUT 011, snapshot every existing object, then apply 011 alone.
 const full = build('prepare-strava-database.py');
+// 011 made the tables and 012 added the route column; the pair is one feature, sliced out
+// together and applied together below.
 const marker = '-- strava/011_dropin_links.sql';
 assert.ok(full.includes(marker), '011 must be part of the strava bootstrap');
 const start = full.indexOf(marker);
-const next = full.indexOf('\n-- strava/', start + marker.length);
-const end = next === -1 ? full.indexOf("notify pgrst, 'reload schema';\ncommit;", start) : next;
+const marker12 = '-- strava/012_dropin_route.sql';
+assert.ok(full.includes(marker12), '012 must be part of the strava bootstrap');
+const start12 = full.indexOf(marker12);
+const next = full.indexOf('\n-- strava/', start12 + marker12.length);
+const end = next === -1 ? full.indexOf("notify pgrst, 'reload schema';\ncommit;", start12) : next;
+assert.ok(start < start12 && full.indexOf('\n-- strava/', start + marker.length) === start12 - 1, '011 and 012 must be adjacent');
 await db.exec(full.slice(0, start) + full.slice(end));
 
 async function existing() {
@@ -41,6 +47,7 @@ async function existing() {
 }
 const before = await existing();
 await db.exec(read('supabase/strava/011_dropin_links.sql'));
+await db.exec(read('supabase/strava/012_dropin_route.sql'));
 const after = await existing();
 const NEW_TABLES = new Set(['dropin_links', 'dropin_rate']);
 const NEW_FUNCS = /^strava\.dropin_(create|read|delete)\(/;
@@ -50,7 +57,8 @@ assert.deepEqual((after.functions || []).filter(f => !NEW_FUNCS.test(f.f)), befo
 assert.equal((after.functions || []).filter(f => NEW_FUNCS.test(f.f)).length, 3);
 // Re-applying is safe (create if not exists / create or replace).
 await db.exec(read('supabase/strava/011_dropin_links.sql'));
-console.log('011 is additive: no existing policy, grant, column, RLS flag, function or trigger changed.');
+await db.exec(read('supabase/strava/012_dropin_route.sql'));
+console.log('011 and 012 are additive: no existing policy, grant, column, RLS flag, function or trigger changed.');
 
 // Clients cannot read or write either table directly.
 await db.exec('set search_path=strava,pg_temp');
@@ -62,7 +70,7 @@ for (const role of ['anon', 'authenticated']) {
   await db.exec('reset role');
 }
 
-const good = { title: 'Shipped the drop-in', harness: 'Claude Code', turns_typed: 3, tool_calls: 12, files_touched: 2, commits: 1, duration_s: 1800, started_hour: 23, rhythm: [1, 0, 2] };
+const good = { title: 'Shipped the drop-in', harness: 'Claude Code', turns_typed: 3, tool_calls: 12, files_touched: 2, commits: 1, duration_s: 1800, started_hour: 23, rhythm: [1, 0, 2], route: [0, 1, 0, 2] };
 const create = async (payload, bucket = 'ip-a') => (await db.query('select strava.dropin_create($1::jsonb,$2) r', [JSON.stringify(payload), bucket])).rows[0].r;
 const refuse = (payload, re, bucket) => assert.rejects(create(payload, bucket), re);
 
@@ -73,6 +81,11 @@ assert.match(made.delete_token, /^[0-9a-f]{64}$/);
 const back = (await db.query('select strava.dropin_read($1) r', [made.id])).rows[0].r;
 assert.equal(back.title, good.title);
 assert.deepEqual(back.rhythm, good.rhythm);
+assert.deepEqual(back.route, good.route);
+// A link made by a client that predates the route (or a run with no file touch) has none.
+const { route: _omitted, ...without } = good;
+const older = await create(without, 'ip-route');
+assert.equal((await db.query('select strava.dropin_read($1) r', [older.id])).rows[0].r.route, null);
 assert.equal(back.delete_token, undefined, 'read must never return the secret');
 assert.equal(back.delete_hash, undefined, 'read must never return the hash');
 
@@ -92,6 +105,14 @@ await refuse({ ...good, rhythm: 'text' }, /rhythm/);
 await refuse({ ...good, rhythm: Array(25).fill(1) }, /out of range/);
 await refuse({ ...good, rhythm: [] }, /out of range/);
 await refuse({ ...good, started_hour: 24 }, /out of range/);
+// The route is indices only: a folder name, a path, a 17th station or a 401st move is refused.
+await refuse({ ...good, route: ['site'] }, /route holds small whole numbers/);
+await refuse({ ...good, route: ['/Users/alice/app'] }, /route holds small whole numbers/);
+await refuse({ ...good, route: [0, 16] }, /out of range/);
+await refuse({ ...good, route: Array(401).fill(0) }, /out of range/);
+// An empty route is no route: stored as null, read back as null.
+const empty = await create({ ...good, route: [] }, 'ip-route');
+assert.equal((await db.query('select strava.dropin_read($1) r', [empty.id])).rows[0].r.route, null);
 await refuse({ ...good, title: 'x'.repeat(40), rhythm: Array(24).fill(1), turns_typed: 1, pad: 'y'.repeat(5000) }, /4 KiB/);
 console.log('Allowlist holds: prompts, paths, links and unknown keys are refused.');
 

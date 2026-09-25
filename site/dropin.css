@@ -2,7 +2,9 @@
    dashed because nothing is in it yet, and a faint ghost of the blue trace where the real line
    will draw. Dropping a file fills the slot with the real card. Blue and ink only; orange stays
    on the card's own two marks. */
-.drop-hero h1{margin-bottom:20px}
+.drop-hero h1{margin-bottom:12px}
+.drop-hero h1 i{font-style:normal;color:var(--blue)}
+.drop-sub{margin:0 0 20px;font-size:15px;color:var(--soft);max-width:44ch}
 #drop-stage{max-width:560px}
 .drop-zone{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:22px 20px 18px;background:var(--box);border:1.5px dashed var(--blue-soft);cursor:pointer;min-width:0;transition:border-color .2s ease,background-color .2s ease}
 .drop-zone strong{font-size:22px;line-height:1.2;font-weight:600;letter-spacing:-.01em;color:var(--ink)}

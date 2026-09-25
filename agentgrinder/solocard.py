@@ -187,6 +187,7 @@ def card_row(run: dict, title: str | None = None) -> dict:
     The first typed prompt (run["title"]) is a keystroke log and is never the title unless the run
     says it was opted in; the card falls back to "<harness> session, 24 Sep"."""
     from .identity import of_run
+    from .feedcard import local_hour
     who = of_run(run)
     shown = title or (run.get("title") if run.get("prompt_shown") else "")
     changed = run.get("files_edited")
@@ -194,6 +195,7 @@ def card_row(run: dict, title: str | None = None) -> dict:
         "title": shown or "",
         "harness": run.get("harness") or "Claude Code",
         "started": run.get("started"),
+        "started_hour": local_hour(run.get("started")),
         "created_at": run.get("started"),
         "prompts": run.get("turns_typed"),
         "duration_s": run.get("duration_s"),
@@ -203,6 +205,7 @@ def card_row(run: dict, title: str | None = None) -> dict:
         "commits": run.get("commits"),
         "rhythm": run.get("rhythm") or run.get("series") or None,
         "ridge": run.get("ridge") or None,
+        "route": run.get("route") or None,
         "visibility": "private",
         "profiles": {"handle": who.handle or "", "github_handle": who.handle or None,
                      "display_name": who.display, "avatar_url": who.avatar_url or None},
