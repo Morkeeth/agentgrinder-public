@@ -5,34 +5,52 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;',
 }[char]));
 
+// A route either validates completely or tells no story (its public run then opens /r/<id>).
+// Nothing is filtered away and then counted: every stop has an id, a known project, a label and a
+// basis; every handoff joins two different stops, forward in route order. Projects the stops never
+// enter are dropped here, so they are never spoken, counted or drawn.
+const BASIS=new Set(['measured','declared']);
 const routeFacts=route=>{
  if(!route||route.v!==1||route.unavailable||!Array.isArray(route.projects)||!Array.isArray(route.stops))return null;
- const projects=route.projects.filter(project=>project&&typeof project.id==='string'&&typeof project.label==='string');
- // A stop the page can name: an id, a project and a non-empty label. Anything else is not printed.
- const stops=route.stops.filter(stop=>stop&&typeof stop.id==='string'&&typeof stop.project==='string'&&typeof stop.label==='string'&&stop.label.trim());
- if(!projects.length||!stops.length)return null;
+ const declared=route.projects.filter(project=>project&&typeof project.id==='string'&&typeof project.label==='string'&&project.label.trim());
+ if(declared.length!==route.projects.length)return null;
+ const known=new Set(declared.map(project=>project.id));
+ const stops=route.stops;
+ if(!stops.length)return null;
+ const ids=new Set();
+ for(const stop of stops){
+  if(!stop||typeof stop.id!=='string'||ids.has(stop.id)||!known.has(stop.project)||typeof stop.label!=='string'||!stop.label.trim()||!BASIS.has(stop.basis))return null;
+  ids.add(stop.id);
+ }
+ const order=Object.fromEntries(stops.map((stop,index)=>[stop.id,index]));
+ const connectors=Array.isArray(route.connectors)?route.connectors:[];
+ const handoffs=connectors.filter(connector=>connector&&connector.kind==='handoff');
+ for(const handoff of handoffs){
+  if(!(handoff.from in order)||!(handoff.to in order)||order[handoff.from]>=order[handoff.to])return null;
+ }
+ let finish=null;
+ if(route.finish!=null){
+  finish=stops.find(stop=>stop.id===route.finish.stop)||null;
+  if(!finish)return null;
+ }
  const counts=Object.create(null);
  for(const stop of stops)counts[stop.project]=(counts[stop.project]||0)+1;
+ const projects=declared.filter(project=>counts[project.id]);
  let dense=null,denseCount=0,tied=false;
  for(const project of projects){
-  const count=counts[project.id]||0;
+  const count=counts[project.id];
   if(count>denseCount){dense=project;denseCount=count;tied=false;}
-  else if(count===denseCount&&count>0)tied=true;
+  else if(count===denseCount)tied=true;
  }
  if(tied)dense=null;
- const finish=route.finish&&stops.find(stop=>stop.id===route.finish.stop);
  const finishProject=finish&&projects.find(project=>project.id===finish.project);
- const handoffs=(Array.isArray(route.connectors)?route.connectors:[]).filter(connector=>connector&&connector.kind==='handoff');
  const measured=stops.filter(stop=>stop.basis==='measured');
- // Only what the stops actually carry: the projects they enter (1), whether the finish comes after
- // the busiest stretch (3), whether the finish is the last measured stop (4), and whether a
- // handoff reaches the finish project (5).
- const crossed=projects.filter(project=>counts[project.id]);
+ const crossed=projects;
  const lastDense=dense?stops.map(stop=>stop.project).lastIndexOf(dense.id):-1;
- const finishAfterDense=Boolean(finish&&dense&&finishProject&&finishProject.id!==dense.id&&stops.indexOf(finish)>lastDense);
+ const finishAfterDense=Boolean(finish&&dense&&finishProject&&finishProject.id!==dense.id&&order[finish.id]>lastDense);
  const finishIsLastMeasured=Boolean(finish&&measured.length&&measured[measured.length-1]===finish);
  const byId=Object.fromEntries(stops.map(stop=>[stop.id,stop]));
- const handoffToFinish=Boolean(finishProject&&handoffs.some(connector=>byId[connector.to]?.project===finishProject.id));
+ const handoffToFinish=Boolean(finishProject&&handoffs.some(connector=>byId[connector.to].project===finishProject.id));
  return {projects,stops,dense,denseCount,finish,finishProject,handoffs,measured,crossed,finishAfterDense,finishIsLastMeasured,handoffToFinish};
 };
 

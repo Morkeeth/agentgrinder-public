@@ -110,8 +110,8 @@ console.log('PASS decision story uses the supplied route and preserves context i
  let h=R({projects:[{id:'a',label:'alpha'},{id:'g',label:'gamma'}],stops:[{id:'1',project:'a',kind:'edit',label:'One',basis:'measured'},{id:'2',project:'a',kind:'edit',label:'Two',basis:'measured'}],connectors:[]});
  assert.ok(!/across 2 projects/.test(text(h)),'counted an empty lane as a project');
  // 2. A stop without a label never prints "undefined" or an empty finish name.
- h=R({projects:[{id:'a',label:'alpha'}],stops:[{id:'1',project:'a',kind:'edit',label:'One',basis:'measured'},{id:'2',project:'a',kind:'edit',basis:'measured'}],connectors:[],finish:{stop:'2'}});
- assert.ok(!text(h).includes('undefined')&&!/Finish · \s*(<|$)/.test(h.replace(/<strong>\s*<\/strong>/,'<strong></strong>'))&&!h.includes('Finish · <strong></strong>'),'undefined or empty finish label');
+ {const {hasDecisionStory:ok}=await import('../../server/decision-story.mjs');
+  assert.equal(ok({id,title:'T',code_route:{v:1,projects:[{id:'a',label:'alpha'}],stops:[{id:'1',project:'a',kind:'edit',label:'One',basis:'measured'},{id:'2',project:'a',kind:'edit',basis:'measured'}],connectors:[],finish:{stop:'2'}}}),false,'unlabeled stop tells a story');}
  // 3. "beyond A to B" only when B comes after A's stretch.
  h=R({projects:[{id:'a',label:'alpha'},{id:'b',label:'beta'}],stops:[{id:'f',project:'b',kind:'edit',label:'Fin',basis:'measured'},{id:'1',project:'a',kind:'edit',label:'One',basis:'measured'},{id:'2',project:'a',kind:'edit',label:'Two',basis:'measured'}],connectors:[],finish:{stop:'f'}});
  assert.ok(!text(h).includes('beyond alpha to beta'),'decision reverses the route order');
@@ -121,4 +121,24 @@ console.log('PASS decision story uses the supplied route and preserves context i
  // 5. "Challenge the X handoff" only when a handoff reaches that project.
  assert.ok(!text(h).includes('Challenge the beta handoff'),'handoff named without a handoff connector');
  console.log('PASS second edges: lanes, labels, order, last measured stop, handoff');
+}
+
+// Third cold pass (Grok, 26 Sep): a malformed route is not a decision story at all. The public
+// run then opens its plain /r/ page. Empty lanes are dropped before anything is counted or drawn.
+{
+ const {decisionHtml:render,hasDecisionStory:ok}=await import('../../server/decision-story.mjs');
+ const id='eeeeeeee-ffff-4000-8111-222222222222';
+ const run=route=>({id,title:'T',code_route:{v:1,...route}});
+ const P=[{id:'a',label:'alpha'},{id:'b',label:'beta'}];
+ const S=(extra={})=>[{id:'1',project:'a',kind:'edit',label:'One',basis:'measured'},{id:'2',project:'b',kind:'edit',label:'Two',basis:'measured'},...(extra.stops||[])];
+ // Malformed: an unlabeled stop, a stop in an unknown project, a handoff with no ends, a self-loop, a backwards handoff.
+ assert.equal(ok(run({projects:P,stops:[...S(),{id:'3',project:'a',kind:'edit',basis:'declared'}],connectors:[]})),false,'unlabeled stop accepted');
+ assert.equal(ok(run({projects:P,stops:[...S(),{id:'3',project:'zzz',kind:'edit',label:'Z',basis:'measured'}],connectors:[]})),false,'stop in unknown project accepted');
+ for(const c of [{kind:'handoff'},{from:'1',to:'1',kind:'handoff'},{from:'2',to:'1',kind:'handoff'},{from:'1',to:'nope',kind:'handoff'}])
+  assert.equal(ok(run({projects:P,stops:S(),connectors:[c]})),false,'bad handoff accepted: '+JSON.stringify(c));
+ // Well formed, with an empty lane: the lane is not spoken or counted anywhere.
+ const html=render(run({projects:[...P,{id:'g',label:'gamma'}],stops:S(),connectors:[{from:'1',to:'2',kind:'handoff'}]}),{origin:'https://strive.test'});
+ assert.ok(!html.includes('gamma'),'empty lane printed');
+ assert.ok(!/across 0 projects/.test(html),'across 0 projects');
+ console.log('PASS third edges: malformed routes tell no story; empty lanes are never spoken');
 }
