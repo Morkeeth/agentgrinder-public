@@ -1524,7 +1524,7 @@ function landingHTML(){
       <p id="public-run-count" class="public-run-count" role="status"></p>
     </section></div>
     <section class="power-path"><h2>For power users</h2><p class="hint">The command line reads your latest session for you and can post on every run.</p><a class="act" href="/?onboard">Post your first run from the command line</a></section>
-    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/methodology">How the measurements work</a><a href="/privacy">Privacy</a><a href="${REAL_RUN}">A real run</a></div>`;
+    <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/methodology">How the numbers are made</a><a href="/privacy">Privacy</a><a href="${REAL_RUN}">A real run</a></div>`;
 }
 
 // The newest public runs, only Public ones: a Link run never reaches this door.
@@ -2171,7 +2171,7 @@ async function viewShareRig(handle){
       <div class="p-row"><span>MCP names</span><span class="v">${names||'not shared'}</span></div>
       ${rg.notes?`<div class="g-row meta">${esc(rg.notes)}</div>`:''}</div>
     <div class="cta"><button onclick="location.href='/?u=${encodeURIComponent(handle)}'">Open profile</button>
-      <button class="ghost" onclick="location.href='/?claim=1'">Claim your handle</button></div>`;
+      <button class="ghost" onclick="location.href='/'">Post yours</button></div>`;
 }
 
 async function viewShareProfile(handle){

@@ -1357,7 +1357,7 @@ window.GrinderSocial = function ({
           '<p class="hint">No shared runs yet. Each member posts one real run to this Crew.</p>';
       }
       byId("social-body").innerHTML =
-        `<div class="card"><h2>${esc(c.name)}</h2><p>${esc(c.description)}</p>${mine ? `<p><a href="/?experiments=${id}">Crew experiments</a> · <a href="/?practices">Practices</a></p>` : ""}<small>${esc(c.visibility)} · ${members.length} members</small><p>${members.map((m) => link(m.profile) + (m.role === "owner" ? " · owner" : "")).join(" · ")}</p>${loopNote}${owner ? '<button id="invite-crew">Invite one person</button><div id="crew-invite"></div>' : mine ? '<button id="leave-crew" class="ghost">Leave Crew</button>' : ""}</div><div class="head"><h2>Crew feed</h2><span class="meta">${runs.length || "none yet"}</span></div>` +
+        `<div class="card"><h2>${esc(c.name)}</h2><p>${esc(c.description)}</p><small>${esc(c.visibility)} · ${members.length} members</small><p>${members.map((m) => link(m.profile) + (m.role === "owner" ? " · owner" : "")).join(" · ")}</p>${loopNote}${owner ? '<button id="invite-crew">Invite one person</button><div id="crew-invite"></div>' : mine ? '<button id="leave-crew" class="ghost">Leave Crew</button>' : ""}</div><div class="head"><h2>Crew feed</h2><span class="meta">${runs.length || "none yet"}</span></div>` +
         (runs.length
           ? await renderRuns(runs)
           : empty(

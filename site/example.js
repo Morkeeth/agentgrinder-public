@@ -142,7 +142,7 @@
           state.secondReview
             ? `<p><strong>Second builder decision: ${esc(state.secondReview.decision)}</strong> · ${esc(state.secondReview.note)}</p>
             <p class="hint">Audience revocation on the source would hide the author's excerpt here and keep this person's own baseline, review and outcome. This demo does not leak revoked source text.</p>
-            <div class="cta"><a class="act" href="/?example=share">Share my outcome</a><a href="/?community">See community techniques</a><a href="/?onboard">Bring my own run</a></div>`
+            <div class="cta"><a class="act" href="/?example=share">Share my outcome</a><a href="/?onboard">Bring my own run</a></div>`
             : `<form id="ex-second"><label>Decision<select name="decision"><option value="keep">Keep</option><option value="change">Change</option><option value="drop">Drop</option><option value="incomparable">Incomparable</option></select></label>
           <label>Your observed outcome<textarea name="note" required maxlength="4000"></textarea></label>
           <button>Save my outcome</button></form>`
