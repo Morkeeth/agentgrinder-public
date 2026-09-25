@@ -177,7 +177,9 @@ def main(argv=None) -> int:
     from .capture import add_parser as add_capture_parser
     add_capture_parser(sub)
     from .hook import add_parser as add_hook_parser
+    from .sync import add_parser as add_sync_parser
     add_hook_parser(sub)
+    add_sync_parser(sub)
     from .rig_config import add_parser as add_rig_parser
     add_rig_parser(sub)
     rv = sub.add_parser("return-view",
@@ -364,6 +366,9 @@ def main(argv=None) -> int:
         return run_cli(args)
     if args.cmd == "capture":
         from .capture import run_cli
+        return run_cli(args)
+    if args.cmd == "sync":
+        from .sync import run_cli
         return run_cli(args)
     if args.cmd == "hook":
         from .hook import run_cli
