@@ -303,7 +303,7 @@ window.GrinderSocial = function ({
     start(
       home ? "Your feed" : "Following",
       home
-        ? "Public runs from the people you follow. Add a run from the Post button."
+        ? "Public runs from the people you follow."
         : "Public runs from people you follow. Close-friends runs stay on their profile, not here.",
       "feed",
     );

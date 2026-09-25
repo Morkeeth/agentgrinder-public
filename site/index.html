@@ -539,8 +539,9 @@ function projectStats(runs){
 }
 function railHtml(active,runs){
   const a=(href,label,on,count)=>`<a href="${href}"${on?' class="on"':''}>${esc(label)}${count!=null?`<span>${count}</span>`:''}</a>`;
-  let o='<p class="lbl">Primary</p>'+a('/','Feed',active==='feed'||active==='following',(runs&&runs.length)||null);
-  o+=a('/?explore','Discover',active==='discover')+a('/?post','Add a run',active==='post');
+  // The count belongs to the list on screen, which is only ever Discover's public list.
+  let o='<p class="lbl">Primary</p>'+a('/','Feed',active==='feed'||active==='following');
+  o+=a('/?explore','Discover',active==='discover',(active==='discover'&&runs&&runs.length)||null)+a('/?post','Add a run',active==='post');
   if(ME) o+=a('/?mine','My runs',active==='me')+a('/?inbox','Responses',active==='inbox');
   o+='<p class="lbl">About</p>'+a('/privacy','Privacy')+a('/terms','Terms');
   return o;
@@ -1535,7 +1536,7 @@ function landingHTML(){
   // in and build your profile. The drop zone moved to Add a run (/?post), one tap away.
   return `<div class="land"><section class="landing-intro social-hero">
     <h1>Strava is for people who ran. <i>__BRAND__</i> is for people who didn't.</h1>
-    <p class="drop-sub">Follow the builders you know, join a club, and see what their agents did. Every number on a card comes from a real session.</p>
+    <p class="drop-sub">Follow the builders you know and see what their agents did. Every number on a card comes from a real session.</p>
     <div class="cta"><button type="button" class="act primary" data-signin>${signInLabel()} and build your profile</button><a class="act" href="/?people">Find people</a></div>
     <p class="hint">Runs stay private until you choose Public and save them.</p>
     </section>
