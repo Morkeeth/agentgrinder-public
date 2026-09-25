@@ -1900,7 +1900,7 @@ async function viewBoards(){
   app.innerHTML=`<div class="head"><h1>Marathon and boards</h1><span class="meta">public runs only</span></div>
     <p class="hint">Every row is a public run anyone can open. This week starts Monday ${esc(weekLabel)} in your time zone. Time on a run is the measured wall time, else the session length.</p>
     <div class="boards-grid">
-      ${boardHtml('Longest ghost run this week','an hour or more and 30+ tool calls, typed to at most twice or 40+ calls per typed turn; with typed turns unknown, a night start',ghosts,'No ghost run this week yet. Leave the agent running while you sleep.')}
+      ${boardHtml('Longest ghost run this week','an hour or more and 30+ tool calls; typed to at most twice, or 40+ tool calls per typed turn; when typed turns are unknown, a start between 22:00 and 04:59',ghosts,'No ghost run this week yet. Leave the agent running while you sleep.')}
       ${boardHtml('Most tool calls this week','one run, one count',tools,'No public run with tool calls this week yet.')}
       ${boardHtml('Honest failure of the week','most tool calls with zero files changed. The run that tried hardest and shipped nothing, on the record',failures,'No run with zero files changed this week. Post the ugly one.')}
     </div>
