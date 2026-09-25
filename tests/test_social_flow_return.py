@@ -47,7 +47,8 @@ def test_responses_return_and_ack_paths_remain():
 
 
 def test_auth_return_allowlist_source():
-    assert "people|account|connect)(=|&|$)" in INDEX or "SOCIAL_RETURN_RE" in SOCIAL
-    pat = re.compile(r"^\?(post|mine|following|inbox|run|u|example|people|account|connect)(=|&|$)")
+    assert "people|account|connect|explore|boards|projects?|crews?)(=|&|$)" in INDEX and "SOCIAL_RETURN_RE" in SOCIAL
+    pat = re.compile(r"^\?(post|mine|following|inbox|run|u|example|people|account|connect|explore|boards|projects?|crews?)(=|&|$)")
     assert pat.match("?inbox&filter=unread")
-    assert not pat.match("?explore")
+    assert pat.match("?explore")          # home is the feed now, so Discover is a place to return to
+    assert not pat.match("?forum")

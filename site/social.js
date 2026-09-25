@@ -96,7 +96,7 @@ window.GrinderSocial = function ({
   }
 
   const RESPONSE_RETURN_KEY = "ag_response_return";
-  const SOCIAL_RETURN_RE = /^\?(post|mine|following|inbox|run|u|example|people|account|connect)(=|&|$)/;
+  const SOCIAL_RETURN_RE = /^\?(post|mine|following|inbox|run|u|example|people|account|connect|explore|boards|projects?|crews?)(=|&|$)/;
   function isSocialReturn(pending) {
     return typeof pending === "string" && SOCIAL_RETURN_RE.test(pending);
   }
@@ -313,7 +313,15 @@ window.GrinderSocial = function ({
       await suggestBuilders(slot);
       return;
     }
+    // The latest public runs under an empty feed. A failure here leaves the rest of the page.
     const latest = async (heading) => {
+      try {
+        return await latestRuns(heading);
+      } catch (_) {
+        return "";
+      }
+    };
+    const latestRuns = async (heading) => {
       const runs = await result(
         db
           .from("runs")
@@ -412,6 +420,9 @@ window.GrinderSocial = function ({
       if (!picks.length) return;
       slot.innerHTML = `<section class="fc-builders" aria-label="Builders to follow"><h2>Builders posting runs</h2>${picks.map((r) => window.GrinderFeed.builderRow(r)).join("")}</section>`;
       for (const el of slot.querySelectorAll(".card-follow[data-profile]")) {
+        // Mark it wired first: the page-wide wiring (wireKudos) skips a wired slot, so a Follow
+        // button is never drawn twice.
+        el.dataset.wired = "true";
         await followControl({ id: el.dataset.profile, handle: el.dataset.handle || null, github_handle: el.dataset.handle || null }, el);
       }
     } catch (_) {}

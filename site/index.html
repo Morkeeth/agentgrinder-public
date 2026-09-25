@@ -539,8 +539,8 @@ function projectStats(runs){
 }
 function railHtml(active,runs){
   const a=(href,label,on,count)=>`<a href="${href}"${on?' class="on"':''}>${esc(label)}${count!=null?`<span>${count}</span>`:''}</a>`;
-  let o='<p class="lbl">Primary</p>'+a('/?explore','Feed',active==='feed'||active==='following',(runs&&runs.length)||null);
-  o+=a('/?post','Post a run',active==='post');
+  let o='<p class="lbl">Primary</p>'+a('/','Feed',active==='feed'||active==='following',(runs&&runs.length)||null);
+  o+=a('/?explore','Discover',active==='discover')+a('/?post','Add a run',active==='post');
   if(ME) o+=a('/?mine','My runs',active==='me')+a('/?inbox','Responses',active==='inbox');
   o+='<p class="lbl">About</p>'+a('/privacy','Privacy')+a('/terms','Terms');
   return o;
@@ -1768,14 +1768,14 @@ async function viewPost(){
 async function viewExplore(){
   const app=$('app');
   setPrimarySection('feed');
-  frame(railHtml('feed'),null); app.innerHTML=skeletonCard()+skeletonCard()+skeletonCard();
+  frame(railHtml('discover'),null); app.innerHTML=skeletonCard()+skeletonCard()+skeletonCard();
   const {data:runs,error}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('visibility','public').order('created_at',{ascending:false}).limit(50);
   noteTraces(runs);
   if(error){status(error.message,true);return;}
   const ad=await ackData(runs||[]);
   const R=runs||[];
   const first=ME&&(await runCount())===0;
-  frame(railHtml('feed',R), null);
+  frame(railHtml('discover',R), null);
   // The feed is the feed. A first-time poster gets the "Your run goes here" slot under the
   // cards, never a command line above them (25 Sep 2026).
   app.innerHTML=feedTabs('discover')
@@ -2366,7 +2366,7 @@ async function route(){ account.recover();
   if(IDENTITY_SETUP)return viewIdentitySetup();
   restoreImport();
   if(await importRun()) return;
-  if(social&&typeof social.applyStoredSocialReturn==='function'){social.applyStoredSocialReturn();}else if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example|people|account|connect)(=|&|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
+  if(social&&typeof social.applyStoredSocialReturn==='function'){social.applyStoredSocialReturn();}else if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example|people|account|connect|explore|boards|projects?|crews?)(=|&|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
   const q=new URLSearchParams(location.search);
   if(q.has('example')){
     if(q.get('example')==='share') return GrinderExample.viewShare();

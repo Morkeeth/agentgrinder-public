@@ -89,7 +89,7 @@ def test_shell_is_integrated_not_patched_in_memory():
     assert "async function route(){ account.recover();" in INDEX
     assert "authErrorFromUrl" not in INDEX
     assert "if(q.has('account')){return account.view();}" in INDEX
-    assert "people|account|connect)(=|&|$)" in INDEX
+    assert "people|account|connect|explore|boards|projects?|crews?)(=|&|$)" in INDEX
     # The You menu is drawn by menuLinks() and lists Account settings only for a signed-in reader.
     you = INDEX[INDEX.index("function menuLinks(kind)"):INDEX.index("function syncAuthNav()")]
     assert '<a href="/?account" role="menuitem">Account settings</a>' in you
