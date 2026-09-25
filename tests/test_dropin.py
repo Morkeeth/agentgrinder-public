@@ -83,9 +83,10 @@ def test_a_phone_is_sent_to_the_laptop_and_the_mac_paths_fold():
     assert "navigator.share" in phone and "navigator.clipboard.writeText(url)" in phone
     assert 'choose.classList.remove("primary")' in phone
     assert "where.open = false" in phone
-    # The paths sit in a fold that is open by default, so a laptop sees them as before.
+    # The paths are on Add a run / Connect, one per agent, since the home became the feed.
     html = (ROOT / "site/index.html").read_text()
-    assert '<details class="drop-where" open>' in html
+    connect = html[html.index("function connectBodyHtml(){"):]
+    assert "AGENT_FILES[0][1]" in connect and "${dropZoneHtml()}" in connect
     # The share sends the page address and nothing from any file.
     send = phone[phone.index("async function sendToLaptop"):phone.index("function phoneStage")]
     # The page the person is on, so Connect sends Connect and the landing sends the landing.

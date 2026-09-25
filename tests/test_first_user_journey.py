@@ -12,11 +12,12 @@ GROK = (ROOT / "docs" / "GROK-PUSH.md").read_text()
 DRY_RUN = (ROOT / "scripts" / "check-hosted-config.mjs").read_text()
 
 
-def test_fresh_signed_in_builder_lands_on_the_drop_zone_not_a_tour():
-    # 25 Sep 2026: home is the landing for everyone. A person who signed in to post the file they
-    # dropped used to land on a command line with the drop zone gone.
+def test_signed_in_builder_lands_on_the_feed_not_a_tour():
+    # 25 Sep 2026 evening: home is the feed. Signed in, the people you follow; signed out, the
+    # public feed. Adding a run is /?post, and a /l/ "Drop yours" ask still lands on the drop zone.
     route = INDEX[INDEX.index("async function route(){") :]
     assert "if(ME&&(await runCount())===0) return viewPost();" not in route
+    assert "if(ME) return social.following({home:true});" in route
     assert "return viewLanding(); }" in route
     onboard = INDEX[INDEX.index("async function shouldOnboard(){") : INDEX.index("// THE ONE CONNECT PAGE")]
     assert "runCount()" not in onboard

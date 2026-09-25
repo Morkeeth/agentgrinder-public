@@ -454,8 +454,8 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 <div class="bar"><div class="bar-in">
   <a class="mark" href="/">__BRAND__</a>
   <nav id="nav" aria-label="Primary">
-    <a href="/?explore" data-section="feed">Feed</a>
-    <a href="/?post" data-section="post">Post a run</a>
+    <a href="/" data-section="feed">Feed</a>
+    <a href="/?post" data-section="post">Add a run</a>
     <details id="account-menu" class="account-menu" data-section="you">
       <summary aria-haspopup="menu">You<span id="nav-inbox-badge" class="nav-badge" hidden aria-hidden="true"></span></summary>
       <div class="account-panel" role="menu" data-you-links></div>
@@ -472,7 +472,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   </div>
 </div></div>
 <nav id="mobile-product-nav" class="tabbar" aria-label="Primary">
-  <a href="/?explore" data-section="feed"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Feed</a>
+  <a href="/" data-section="feed"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Feed</a>
   <a href="/?post" data-section="post" class="tab-post"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Post</a>
   <button type="button" data-sheet="you" data-section="you" aria-expanded="false" aria-controls="sheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>You<span class="nav-badge mobile-inbox-badge" hidden aria-hidden="true"></span></button>
   <button type="button" data-sheet="more" aria-expanded="false" aria-controls="sheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="18.5" cy="12" r="1.8" fill="currentColor"/></svg>More</button>
@@ -539,8 +539,9 @@ function projectStats(runs){
 }
 function railHtml(active,runs){
   const a=(href,label,on,count)=>`<a href="${href}"${on?' class="on"':''}>${esc(label)}${count!=null?`<span>${count}</span>`:''}</a>`;
-  let o='<p class="lbl">Primary</p>'+a('/?explore','Feed',active==='feed'||active==='following',(runs&&runs.length)||null);
-  o+=a('/?post','Post a run',active==='post');
+  // The count belongs to the list on screen, which is only ever Discover's public list.
+  let o='<p class="lbl">Primary</p>'+a('/','Feed',active==='feed'||active==='following');
+  o+=a('/?explore','Discover',active==='discover',(active==='discover'&&runs&&runs.length)||null)+a('/?post','Add a run',active==='post');
   if(ME) o+=a('/?mine','My runs',active==='me')+a('/?inbox','Responses',active==='inbox');
   o+='<p class="lbl">About</p>'+a('/privacy','Privacy')+a('/terms','Terms');
   return o;
@@ -580,7 +581,8 @@ function syncAuthNav(){
   if(sheet&&!sheet.hidden) sheet.innerHTML=menuLinks(sheet.dataset.kind);
 }
 function feedTabs(active){
-  return `<nav class="feed-tabs" aria-label="Feed filters"><a href="/?explore" class="${active==='discover'?'on':''}" ${active==='discover'?'aria-current="page"':''}>Discover</a><a href="/?people" class="${active==='people'?'on':''}" ${active==='people'?'aria-current="page"':''}>Find people</a><a href="/?following" class="${active==='following'?'on':''}" ${active==='following'?'aria-current="page"':''}>Following</a></nav>`;
+  const tab=(href,key,label)=>`<a href="${href}" class="${active===key?'on':''}" ${active===key?'aria-current="page"':''}>${label}</a>`;
+  return `<nav class="feed-tabs" aria-label="Feed filters">${tab('/?following','following','Following')}${tab('/?explore','discover','Discover')}${tab('/?people','people','Find people')}</nav>`;
 }
 function myRunsTabs(active){
   return `<nav class="section-tabs" aria-label="My runs"><a href="/?mine" class="${active==='runs'?'on':''}" ${active==='runs'?'aria-current="page"':''}>My runs</a></nav>`;
@@ -682,8 +684,9 @@ const profileHandle=p=>GrinderAuth.present(p)?.handle||'';
 // A person who arrived from Responses keeps a way back even when the run is gone or private.
 function responseReturnLink(){try{return sessionStorage.getItem('ag_response_return')==='?inbox'?'<p class="response-return"><a class="act" href="/?inbox">Back to Responses</a></p>':''}catch(_){return ''}}
 let ME=null, IDENTITY_SETUP=null;
+// The social feeds (home, Following, a club) draw the same feed card as the public feed.
 const social=GrinderSocial({client:sb,me:()=>ME,app:()=>$('app'),frame,status,signInGitHub:()=>signInWithGitHub(),
-  renderRuns:async runs=>{noteTraces(runs);const ad=await ackData(runs);setTimeout(()=>{wireKudos();countUp()},0);return runs.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('')}});
+  renderRuns:async runs=>{noteTraces(runs);const ad=await ackData(runs);setTimeout(()=>{wireKudos();countUp()},0);return feedCards(runs,ad)}});
 const people=GrinderPeople({client:sb,me:()=>ME,app:()=>$('app'),frame,status,social,drawAvatar:avatar,renderRuns:async runs=>{noteTraces(runs);const ad=await ackData(runs);setTimeout(()=>{wireKudos();countUp()},0);return runs.map(r=>runCard(r,ad.mine.has(r.id),ad.counts[r.id])).join('')}});
 const practices=GrinderPractices({client:sb,me:()=>ME,app:()=>$('app'),frame,status});
 const progress=GrinderProgress({client:sb,me:()=>ME,app:()=>$('app'),frame,status,signIn:showSignIn,signInGitHub:()=>signInWithGitHub()});
@@ -1528,24 +1531,21 @@ function playStrip(){
     if(st) st.textContent = i===steps.length-1 ? x.querySelector('.o').textContent : x.querySelector('.n').textContent; },320+i*520));
 }
 function landingHTML(){
-  // THE HERO IS THE DROP ZONE (Oscar, 24 Sep 2026: no install, no login until the feed). The file
-  // is read in this tab by site/dropin-parse.js.
-  const where=AGENT_FILES;
-  return `<div class="land"><section class="landing-intro drop-hero">
+  // THE HOME IS THE SOCIAL PRODUCT (Oscar, 25 Sep 2026 evening): follow friends, build a profile,
+  // see the feed, the clubs and the events. Signed out, it is the public feed with one ask: sign
+  // in and build your profile. The drop zone moved to Add a run (/?post), one tap away.
+  return `<div class="land"><section class="landing-intro social-hero">
     <h1>Strava is for people who ran. <i>__BRAND__</i> is for people who didn't.</h1>
-    <p class="drop-sub">Drop the session your agent ran. Get the card, the map, and a line to paste anywhere.</p>
-    ${dropZoneHtml()}
-    <details class="drop-where" open><summary class="meta">Where the file is, on a Mac</summary>
-      ${where.map(([h,path,rest,note])=>`<div class="drop-path"><span class="drop-h">${h}${note?`<small>${note}</small>`:''}</span><code>${esc(path)}</code><button type="button" class="act" data-copy="${esc(path)}" aria-label="Copy the ${h} folder">Copy</button><small class="drop-rest">${esc(rest)}</small></div>`).join('')}
-      <p class="hint">In Finder or the file picker, press Cmd+Shift+G, paste the folder, press Return.</p>
-    </details>
+    <p class="drop-sub">Follow the builders you know and see what their agents did. Every number on a card comes from a real session.</p>
+    <div class="cta"><button type="button" class="act primary" data-signin>${signInLabel()} and build your profile</button><a class="act" href="/?people">Find people</a></div>
+    <p class="hint">Runs stay private until you choose Public and save them.</p>
     </section>
     <section class="landing-feature" aria-label="A public run" id="landing-feature">
       <div class="land-head"><h2>Latest runs</h2><a href="/?explore">See all</a></div>
       <div id="landing-feature-body">${skeletonCard()}</div>
       <p id="public-run-count" class="public-run-count" role="status"></p>
     </section></div>
-    <section class="power-path"><h2>For power users</h2><p class="hint">One command per agent reads your latest session and opens the preview. Grok Bot and other bots too.</p><a class="act" href="/?connect">Post your first run from the command line</a></section>
+    <section class="power-path"><h2>Add a run</h2><p class="hint">Drop a session file from Claude Code, Cursor or Codex, or run one command on the computer your agent ran on. Grok Bot and other bots too.</p><a class="act" href="/?post">Add a run</a> <a class="act" href="/?connect">Connect your agent</a></section>
     <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/?boards">Marathon and boards</a><a href="/methodology">How the numbers are made</a><a href="/privacy">Privacy</a><a href="${REAL_RUN}">A real run</a></div>`;
 }
 
@@ -1586,23 +1586,15 @@ function feedCards(runs,ad){
 async function viewLanding(){
   const app=$('app');
   frame('','',true);
+  setPrimarySection('feed');
   app.innerHTML=landingHTML();
-  if(window.GrinderDropinUI) GrinderDropinUI.mount({post:token=>{history.pushState(null,'','/#import='+token);route();}});
-  // A /l/ page's ask links to /#drop-zone. The landing is drawn by script after load, so the
-  // browser's own jump to the anchor has already missed it: scroll here, then drop the hash.
-  if(location.hash==='#drop-zone'){
-    // The whole stage (zone plus, on a phone, the send button), and only as far as needed.
-    const stage=$('drop-stage');
-    if(stage) stage.scrollIntoView({block:'nearest'});
-    history.replaceState(null,'',location.pathname+location.search);
-  }
   const body=$('landing-feature-body');
   const line=$('public-run-count');
-  const featured=await fetchLatestPublicRuns(3);
+  const featured=await fetchLatestPublicRuns(20);
   if(featured.length){
     noteTraces(featured);
     const ad=await ackData(featured);
-    if(body) body.innerHTML=feedCards(featured,ad)+(featured.length<3?GrinderFeed.nextSlot():'');
+    if(body) body.innerHTML=feedCards(featured,ad)+(featured.length<4?GrinderFeed.nextSlot():'');
     wireKudos();
   }else if(body){
     body.innerHTML=`<div class="card"><div class="empty"><h3>No public run yet</h3><p>When a builder posts a Public run, it shows here first. Link runs stay off this door.</p></div></div>`+GrinderFeed.nextSlot();
@@ -1759,25 +1751,32 @@ function postComposerHtml({first=false}={}){
 async function viewPost(){
   setPrimarySection('post');
   frame(railHtml('post'),null);
-  $('app').innerHTML=`<div class="head"><h1>Post a run</h1><span class="meta">capture → preview → choose audience</span></div>
+  $('app').innerHTML=`<div class="head"><h1>Add a run</h1><span class="meta">capture → preview → choose audience</span></div>
     ${connectBodyHtml()}
     ${ME?postComposerHtml({first:true}):'<div class="panel pad auth-empty"><h3>Sign in to save</h3><p>Preview stays private on this device until you choose an audience. Sign-in keeps your handle; nothing posts until Save.</p><button id="post-signin" class="act blue">'+signInLabel()+'</button></div>'}`;
   if(window.GrinderDropinUI) GrinderDropinUI.mount({post:token=>{history.pushState(null,'','/#import='+token);route();}});
   wireConnectCopies($('app'));
+  // A /l/ page's ask links to /#drop-zone. The page is drawn by script after load, so the
+  // browser's own jump to the anchor has already missed it: scroll here, then drop the hash.
+  if(location.hash==='#drop-zone'){
+    const stage=$('drop-stage');
+    if(stage) stage.scrollIntoView({block:'nearest'});
+    history.replaceState(null,'','/?post');
+  }
   if(ME){await loadSegmentChoices('f_segment');wireComposer();} else $('post-signin').onclick=()=>showSignIn();
 }
 
 async function viewExplore(){
   const app=$('app');
   setPrimarySection('feed');
-  frame(railHtml('feed'),null); app.innerHTML=skeletonCard()+skeletonCard()+skeletonCard();
+  frame(railHtml('discover'),null); app.innerHTML=skeletonCard()+skeletonCard()+skeletonCard();
   const {data:runs,error}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('visibility','public').order('created_at',{ascending:false}).limit(50);
   noteTraces(runs);
   if(error){status(error.message,true);return;}
   const ad=await ackData(runs||[]);
   const R=runs||[];
   const first=ME&&(await runCount())===0;
-  frame(railHtml('feed',R), null);
+  frame(railHtml('discover',R), null);
   // The feed is the feed. A first-time poster gets the "Your run goes here" slot under the
   // cards, never a command line above them (25 Sep 2026).
   app.innerHTML=feedTabs('discover')
@@ -2368,7 +2367,7 @@ async function route(){ account.recover();
   if(IDENTITY_SETUP)return viewIdentitySetup();
   restoreImport();
   if(await importRun()) return;
-  if(social&&typeof social.applyStoredSocialReturn==='function'){social.applyStoredSocialReturn();}else if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example|people|account|connect)(=|&|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
+  if(social&&typeof social.applyStoredSocialReturn==='function'){social.applyStoredSocialReturn();}else if(ME){try{const pending=sessionStorage.getItem('ag_social_return');if(pending&&/^\?(post|mine|following|inbox|run|u|example|people|account|connect|explore|boards|projects?|crews?)(=|&|$)/.test(pending)){history.replaceState(null,'','/'+pending);sessionStorage.removeItem('ag_social_return');}}catch(_){}}
   const q=new URLSearchParams(location.search);
   if(q.has('example')){
     if(q.get('example')==='share') return GrinderExample.viewShare();
@@ -2402,11 +2401,12 @@ async function route(){ account.recover();
   const u=q.get('u'); const rn=q.get('run');
   if(rn) return viewRun(rn); if(u) return viewProfile(u); if(q.get('explore')!==null) return viewExplore();
   // The /l/ ask ("Drop yours") lands on the drop zone, signed in or not.
-  if(location.hash==='#drop-zone') return viewLanding();
+  if(location.hash==='#drop-zone') return viewPost();
   if(await shouldOnboard()) return viewOnboard();
-  // Home is the same page signed in or out: the drop zone, then the latest runs. Until 25 Sep
-  // 2026 a person who had just signed in to post the file they dropped landed on a command line
-  // instead, and the drop zone was gone. My runs is one tap away under You.
+  // Home is the feed (Oscar, 25 Sep 2026 evening). Signed in: the runs of the people you follow,
+  // with people to follow and the latest public runs when that is empty. Signed out: the public
+  // feed and the ask to sign in and build a profile. Adding a run is /?post.
+  if(ME) return social.following({home:true});
   return viewLanding(); }
 
 document.addEventListener('DOMContentLoaded',()=>{

@@ -95,16 +95,18 @@ assert.equal(applied, "?inbox&filter=unread");
 assert.equal(window.location.search, "?inbox&filter=unread");
 assert.equal(window.sessionStorage.getItem("ag_social_return"), null, "return key cleared");
 
-window.sessionStorage.setItem("ag_social_return", "?explore");
-assert.equal(signedIn.applyStoredSocialReturn(), null, "disallowed explore not applied");
-assert.equal(window.sessionStorage.getItem("ag_social_return"), "?explore");
+// A retired section is not a return target. Discover is, since the home became the feed.
+window.sessionStorage.setItem("ag_social_return", "?forum");
+assert.equal(signedIn.applyStoredSocialReturn(), null, "disallowed forum not applied");
+assert.equal(window.sessionStorage.getItem("ag_social_return"), "?forum");
 
 window.sessionStorage.setItem("ag_social_return", "?u=friend");
 assert.equal(signedIn.applyStoredSocialReturn(), "?u=friend");
 assert.equal(window.location.search, "?u=friend");
 
 assert.equal(signedIn.isSocialReturn("?inbox&filter=unread"), true);
-assert.equal(signedIn.isSocialReturn("?explore"), false);
+assert.equal(signedIn.isSocialReturn("?forum"), false);
+assert.equal(signedIn.isSocialReturn("?explore"), true);
 
 console.log(
   JSON.stringify({
@@ -113,6 +115,6 @@ console.log(
     signInCalls,
     inboxFilterReturn: true,
     profileReturn: true,
-    exploreRejected: true,
+    forumRejected: true,
   }),
 );

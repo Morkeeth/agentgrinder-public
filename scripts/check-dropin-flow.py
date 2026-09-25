@@ -36,7 +36,7 @@ def main() -> None:
         page = browser.new_page(viewport={"width": 390, "height": 844}, device_scale_factor=2)
         page.on("request", lambda r: requests.append({"url": r.url, "method": r.method, "body": r.post_data, "at": time.monotonic()}))
         t0 = time.monotonic()
-        page.goto(BASE + "/", wait_until="domcontentloaded")
+        page.goto(BASE + "/?post", wait_until="domcontentloaded")
         page.wait_for_selector("#drop-zone", state="visible")
         t_zone = time.monotonic()
         page.screenshot(path=str(OUT / "1-landing-390.png"))

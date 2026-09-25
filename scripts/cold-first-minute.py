@@ -82,7 +82,7 @@ window.addEventListener('load',()=>{
       const sideBySide=innerWidth>800;
       const pitchFirst=Boolean(
         introBox&&featureBox&&ctaBox&&
-        /Choose a file/i.test(cta.textContent||'')&&
+        /Sign in with GitHub/i.test(cta.textContent||'')&&
         ctaBox.top>=0&&ctaBox.bottom<=innerHeight&&
         (sideBySide
           ? introBox.left<=featureBox.left+1
@@ -91,6 +91,7 @@ window.addEventListener('load',()=>{
       document.documentElement.dataset.coldPitchFirst=String(pitchFirst);
       document.documentElement.dataset.coldFeatureVisible=String(visible>=120);
       document.documentElement.dataset.coldSampleAbsent=String(!sample);
+      document.documentElement.dataset.coldDropAbsent=String(!document.getElementById('drop-zone'));
       document.documentElement.dataset.coldCountRendered=String(
         Boolean(count&&count.offsetHeight&&count.dataset.countState==='ready')
       );
@@ -246,8 +247,9 @@ def main() -> None:
     assert "Cold public run" in phone
     assert "A measured outcome from a real public post." in phone
     assert "1 public run is live." in phone
-    assert "Post your first run" in phone
-    assert "Drop a session file" in phone
+    # 25 Sep 2026 evening: the home is the feed. The drop zone lives on Add a run (/?post).
+    assert "and build your profile" in phone and "Add a run" in phone
+    assert 'data-cold-drop-absent="true"' in phone
     # 25 Sep 2026: the landing links a real public run, never the bundled example.
     assert 'href="/r/3afa89e7-aff5-488d-bec3-da36196b8c5e"' in phone
     assert 'href="/?example"' not in phone
