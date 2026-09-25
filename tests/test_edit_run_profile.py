@@ -10,7 +10,9 @@ def test_run_edit_panel_offers_title_project_and_photo():
     panel = INDEX[INDEX.index("controls.id='run-edit'"):INDEX.index("$('run-delete').onclick")]
     for field in ("run-title", "run-project", "run-image-url", "run-caption", "run-output-url", "run-audience"):
         assert f'id="{field}"' in panel
-    assert "title:title||null,project:project||null,image_url:imageUrl||null" in panel
+    # runs.title is NOT NULL: an empty title is refused in the page, an empty project saves null.
+    assert "if(!title){status('Add a title.',true)" in panel
+    assert "update({title,project:project||null,image_url:imageUrl||null" in panel
     assert "isRunPhotoUrl(imageUrl)" in panel
     # Only the owner gets the panel.
     assert "if(ME?.id===r.profile_id){" in INDEX[INDEX.index("async function viewRun(id){"):INDEX.index("controls.id='run-edit'")]
