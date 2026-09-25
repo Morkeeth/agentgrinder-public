@@ -88,4 +88,5 @@ def test_a_phone_is_sent_to_the_laptop_and_the_mac_paths_fold():
     assert '<details class="drop-where" open>' in html
     # The share sends the page address and nothing from any file.
     send = phone[phone.index("async function sendToLaptop"):phone.index("function phoneStage")]
-    assert 'const url = location.href;'  # the page the person is on (Connect sends Connect) in send and "run" not in send.replace("return", "")
+    # The page the person is on, so Connect sends Connect and the landing sends the landing.
+    assert 'const url = location.href;' in send and "run" not in send.replace("return", "")
