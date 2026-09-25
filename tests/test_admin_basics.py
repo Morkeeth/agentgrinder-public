@@ -32,3 +32,24 @@ def test_each_spa_page_sets_its_own_title():
 def test_the_404_page_is_branded_and_not_indexed():
     page = (SITE / "404.html").read_text()
     assert '<meta name="robots" content="noindex">' in page and 'href="/"' in page
+
+
+def test_server_pages_carry_footer_and_favicon():
+    for name in ("server/public-run.mjs", "server/dropin-link.mjs"):
+        src = (ROOT / name).read_text()
+        assert 'rel="icon" href="/favicon.svg"' in src
+        assert src.count("</main>") == src.count("</main>${siteFoot}")
+
+
+def test_page_titles_follow_route_order():
+    src = (ROOT / "site/index.html").read_text()
+    block = src[src.index("function pageTitle(q)"):src.index("async function route(){")]
+    # route() opens a run before a profile, so the title must too.
+    assert block.index("if(q.get('run'))") < block.index("if(q.get('u'))")
+    for key in ("segment", "join", "agent", "example"):
+        assert f"['{key}'," in src
+    assert "q.get('event')" in block and "q.get('share')" in block
+
+
+def test_about_does_not_claim_runs_start_private():
+    assert "Every run starts private" not in (ROOT / "site/about.html").read_text()
