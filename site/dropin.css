@@ -92,3 +92,4 @@
 .spin{display:inline-block;width:14px;height:14px;margin-right:8px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;vertical-align:-2px;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.post-steps li::before,.ps-dot,.aud-opt,.aud-check::after{transition:none}.aud-opt:active{transform:none}.spin{animation-duration:2s}}
+.aud legend:focus,#drop-out:focus{outline:none}

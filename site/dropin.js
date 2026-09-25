@@ -168,17 +168,17 @@
       ${stepsHtml()}
       <div id="drop-card">${cardHtml()}</div>
       <section class="post-pane" data-pane="1" aria-label="Preview">
-        <label class="drop-name">Title<input id="drop-title" maxlength="80" autocomplete="off" placeholder="What did you get done?"></label>
+        <label class="drop-name">Title<input id="drop-title" data-autofocus maxlength="80" autocomplete="off" placeholder="What did you get done?"></label>
         <div class="drop-actions"><button type="button" class="act primary" id="drop-next">Choose who sees it</button></div>
       </section>
       <section class="post-pane" data-pane="2" aria-label="Who sees it" hidden>
-        <fieldset class="aud"><legend>Who sees this run?</legend>
+        <fieldset class="aud"><legend tabindex="-1" data-autofocus>Who sees this run?</legend>
           ${AUDIENCES.map((a) => `<label class="aud-opt"><input type="radio" name="drop-aud" value="${a.v}"><span class="aud-check" aria-hidden="true"></span><span class="aud-t">${esc(a.t)}</span><span class="aud-d">${esc(a.d)}</span></label>`).join("")}
         </fieldset>
         <div class="drop-actions"><button type="button" class="act" id="drop-back">Back</button><button type="button" class="act primary" id="drop-continue" disabled>Continue</button></div>
       </section>
       <section class="post-pane" data-pane="3" aria-label="Share" hidden>
-        <div id="drop-out"></div>
+        <div id="drop-out" tabindex="-1" data-autofocus></div>
       </section>
       <p class="hint" id="drop-state" role="status">No prompts, code or file paths from the session file leave this device.</p>
       <button type="button" class="drop-again" id="drop-again">Read another file</button>
@@ -202,7 +202,7 @@
       };
     });
     $("drop-continue").onclick = share;
-    $("drop-again").onclick = () => { run = null; mount(opts); };
+    $("drop-again").onclick = () => { run = null; step = 1; linkUrl = null; mount(opts); };
   }
 
   function titleText() {
