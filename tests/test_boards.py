@@ -18,7 +18,7 @@ def test_boards_read_public_runs_only_and_use_the_card_time_rule():
     assert ".order('wall_time_s',{ascending:false,nullsFirst:false})" in boards
     assert "Honest failure of the week" in boards
     # Empty lanes say so. No sample, no placeholder row.
-    for empty in ("No public run this week yet", "No public run with tool calls this week yet", "No run with zero files changed this week", "No public run of 3 hours or more yet"):
+    for empty in ("No public run with a measured time this week yet", "No public run with tool calls this week yet", "No run with zero files changed this week", "No public run of 3 hours or more yet"):
         assert empty in boards
     assert "weekStart(" in boards and "d.getDate()-((d.getDay()+6)%7)" in INDEX
 

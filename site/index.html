@@ -1448,7 +1448,7 @@ function featuredCard(r){
   const when=r.created_at?new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
   return `<div class="card launch-card">
     <div class="runtop">${avatar(att.handle,{rhythm:r.rhythm,ghost:att.ghost})}
-      <div class="who"><span>${esc(att.ghost?'Ghost grinder':att.name)}</span><small>${att.ghost?'metrics only':'@'+esc(att.handle)}${when?' · '+esc(when):''}</small></div>
+      <div class="who"><span>${esc(att.name)}</span><small>${att.ghost?'metrics only':'@'+esc(att.handle)}${when?' · '+esc(when):''}</small></div>
       <span class="state">Public run</span></div>
     <div class="title">${esc(r.title||'A run')}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:''}
@@ -1878,7 +1878,7 @@ const runSeconds=r=>{const v=r.wall_time_s??r.duration_s;return Number.isFinite(
 const runStart=r=>Date.parse(r.started_at||r.created_at||'')||0;
 // The card's own count (tool_calls, else the ridge count), so a lane never zeroes a run the card counts.
 const runTools=r=>{const n=GrinderContract.toolCallCount(r);return Number.isFinite(n)&&n>0?n:0};
-function fmtSecs(secs){const m=Math.round(secs/60);return m>=60?`${Math.floor(m/60)}h ${m%60}m`:`${m}m`}
+function fmtSecs(secs){const m=Math.round(secs/60);return m<1?'<1m':m>=60?`${Math.floor(m/60)}h ${m%60}m`:`${m}m`}
 // Monday 00:00 in the reader's time zone: the week a board counts.
 function weekStart(now=new Date()){const d=new Date(now);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
 
@@ -1910,7 +1910,7 @@ async function viewBoards(){
   app.innerHTML=`<div class="head"><h1>Marathon and boards</h1><span class="meta">public runs only</span></div>
     <p class="hint">Every row is a public run anyone can open. This week starts Monday ${esc(weekLabel)} in your time zone. Time on a run is the measured wall time, else the session length.</p>
     <div class="boards-grid">
-      ${boardHtml('Longest run this week','measured time, one run',longest,'No public run this week yet.')}
+      ${boardHtml('Longest run this week','measured time, one run',longest,'No public run with a measured time this week yet.')}
       ${boardHtml('Most tool calls this week','one run, one count',tools,'No public run with tool calls this week yet.')}
       ${boardHtml('Honest failure of the week','most tool calls with zero files changed. Runs that went nowhere count too',failures,'No run with zero files changed this week. Post the ugly one.')}
     </div>
