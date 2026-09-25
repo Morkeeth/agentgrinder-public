@@ -10,13 +10,16 @@ MIGRATION = (ROOT / "supabase" / "migrations" / "2026-09-14-run-post-fields.sql"
 
 def test_post_page_exposes_priority_harnesses_and_private_preview():
     block = INDEX[INDEX.index("async function viewPost()") : INDEX.index("async function viewExplore()")]
-    composer = INDEX[INDEX.index("function postComposerHtml(") : INDEX.index("function firstRunPrompt()")]
-    # The page promises four tools, so the command it hands out must read all four.
-    assert "Capture from Cursor, Claude Code, Codex or Grok Bot" in INDEX
-    assert "python3 -m agentgrinder grind --harness auto --push" in INDEX
-    assert "--harness cursor" not in INDEX
-    assert "Grok Bot" in composer
-    assert "docs/GROK-PUSH.md" in composer
+    composer = INDEX[INDEX.index("function postComposerHtml(") : INDEX.index("async function viewPost()")]
+    # 25 Sep 2026: the page names four agents and gives each its own command, on one page.
+    connect = INDEX[INDEX.index("function connectBodyHtml()") : INDEX.index("function wireConnectCopies(")]
+    for name, harness in (("Claude Code", "claude"), ("Cursor", "cursor"), ("Codex", "codex")):
+        assert f"agent('{name}','{harness}'" in connect
+    assert "ONE_LINE('grokbot')" in connect
+    assert "Grok Bot" in connect
+    assert "docs/GROK-PUSH.md" in connect
+    assert "${connectBodyHtml()}" in block
+    assert "Capture from Cursor, Claude Code, Codex or Grok Bot" in composer
     assert "capture → preview → choose audience" in block
     assert "private until you choose" in INDEX
 

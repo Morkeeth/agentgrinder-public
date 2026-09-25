@@ -48,8 +48,10 @@ def test_mobile_nav_is_four_or_fewer_destinations():
 def test_account_links_are_reachable_on_a_phone():
     """The You sheet carries what the desktop account menu carries; it used to be display:none on phones."""
     you = INDEX[INDEX.index("function menuLinks(kind)"):INDEX.index("function syncAuthNav()")]
-    for href in ("/?mine", "/?inbox", "/?connect", "/?account", "/?onboard"):
+    for href in ("/?mine", "/?inbox", "/?connect", "/?account"):
         assert href in you
+    # 25 Sep 2026: "Get started" pointed at the retired wizard; the signed-out sheet leads to Connect.
+    assert 'href="/?connect" role="menuitem">Connect your agent</a>' in you
     assert "data-signin" in you
 
 

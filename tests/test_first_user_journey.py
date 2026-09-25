@@ -20,14 +20,14 @@ def test_fresh_signed_in_builder_lands_on_the_drop_zone_not_a_tour():
     assert "return viewLanding(); }" in route
     onboard = INDEX[INDEX.index("async function shouldOnboard(){") : INDEX.index("function stepBar(")]
     assert "runCount()" not in onboard
-    assert "Start with a private preview" in INDEX or "Your first post defaults to Only me." in INDEX
-    assert "python3 -m agentgrinder grind --harness auto --push" in INDEX
-    assert "Using Grok Bot?" in INDEX
+    # 25 Sep 2026: one Connect page, one command per agent, the drop zone first.
+    assert "function connectBodyHtml()" in INDEX
+    assert "ONE_LINE('grokbot')" in INDEX
+    assert "docs/GROK-PUSH.md" in INDEX
 
 
 def test_zero_run_surfaces_connect_and_deliberate_save():
-    assert "Your first post defaults to Only me." in INDEX
-    assert "Review the title, caption and audience" in INDEX
+    assert "Preview stays private on this device until you choose an audience." in INDEX
     assert "Your first run starts private" in PROGRESS
     assert 'href="/?connect">Connect an agent</a>' in PROGRESS
     assert "Private uploads appear here" in PROGRESS
