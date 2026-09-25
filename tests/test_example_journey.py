@@ -41,8 +41,9 @@ def test_second_builder_uses_their_own_baseline():
     assert "author's counts are not shown" in EXAMPLE_JS
 
 
-def test_landing_and_router_expose_the_example_without_signup():
-    assert 'href="/?example"' in INDEX or "location.href='/?example'" in INDEX
+def test_router_still_serves_the_example_without_signup():
+    # 25 Sep 2026: index.html links a real public run instead (REAL_RUN). /?example still resolves.
+    assert "/?example" not in INDEX and "const REAL_RUN=" in INDEX
     assert "q.has('example')" in INDEX
     assert 'src="/example.js"' in INDEX
     assert "GrinderExample.view" in INDEX

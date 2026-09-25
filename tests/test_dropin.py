@@ -72,3 +72,20 @@ def test_migration_011_only_creates():
     assert not re.search(r"\bdrop\s+(table|policy|function|trigger|column)\b", body, re.I)
     assert not re.search(r"\bcreate\s+(or\s+replace\s+)?policy\b", body, re.I)
     assert not re.search(r"\bgrant\s+[^;]*\bon\s+(table\s+)?strava\.(?!dropin_)", body, re.I)
+
+
+def test_a_phone_is_sent_to_the_laptop_and_the_mac_paths_fold():
+    # Slice 4 (25 Sep 2026). The session file lives on the computer the agent ran on, so on a
+    # phone the one primary action sends this page there. Choose a file stays, as the secondary.
+    phone = UI[UI.index("function isPhone()"):UI.index("function mount(options)")]
+    assert '"(pointer: coarse)"' in phone and '"(hover: none)"' in phone and '!m("(any-pointer: fine)")' in phone
+    assert "Send this link to your laptop" in phone
+    assert "navigator.share" in phone and "navigator.clipboard.writeText(url)" in phone
+    assert 'choose.classList.remove("primary")' in phone
+    assert "where.open = false" in phone
+    # The paths sit in a fold that is open by default, so a laptop sees them as before.
+    html = (ROOT / "site/index.html").read_text()
+    assert '<details class="drop-where" open>' in html
+    # The share sends the page address and nothing from any file.
+    send = phone[phone.index("async function sendToLaptop"):phone.index("function phoneStage")]
+    assert 'const url = location.origin + "/";' in send and "run" not in send.replace("return", "")

@@ -44,10 +44,12 @@ def test_landing_names_where_each_harness_keeps_its_session_file():
     assert body.index('drop-zone') < body.index('landing-feature') < body.index('For power users')
 
 
-def test_landing_puts_sample_behind_example_link_not_first_fold():
+def test_landing_points_to_a_real_run_not_the_bundled_sample():
+    # 25 Sep 2026: every /?example link became the real public run. A stranger meets a real card.
     body = landing()
-    assert 'href="/?example"' in body
-    assert 'Try a labelled example' in body or 'Labelled example' in body
+    assert "const REAL_RUN='/r/3afa89e7-aff5-488d-bec3-da36196b8c5e';" in HTML
+    assert 'href="${REAL_RUN}">A real run</a>' in body
+    assert '/?example' not in HTML
     assert 'aria-label="Sample run card"' not in body
     assert 'WHAT A RUN LOOKS LIKE' not in body
     assert 'HOME_SAMPLE' not in body
