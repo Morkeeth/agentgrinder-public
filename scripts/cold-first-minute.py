@@ -89,7 +89,11 @@ window.addEventListener('load',()=>{
         introBox.top>=0&&introBox.bottom<=innerHeight&&
         featureBox.top<innerHeight&&
         introBox.bottom<=featureBox.top+1&&
-        ctaBox.top>featureBox.bottom
+        // Sign in closes the page: after the week, clubs, builders and popular runs.
+        ['#home-week','#home-clubs','#home-builders','#landing-feature'].every(sel=>{
+          const box=document.querySelector(sel)?.getBoundingClientRect();
+          return Boolean(box&&ctaBox.top>=box.bottom);
+        })
       );
       document.documentElement.dataset.coldPitchFirst=String(pitchFirst);
       document.documentElement.dataset.coldFeatureVisible=String(Boolean(rect&&visible>=rect.height-1));

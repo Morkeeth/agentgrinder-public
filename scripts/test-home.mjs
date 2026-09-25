@@ -33,4 +33,14 @@ assert.equal(b[0].n,2);
 // Popular: most XUDOS first, then newest.
 assert.deepEqual(H.popular(runs,{c:2,b:2}).map(r=>r.id),['b','c','a','old']);
 assert.deepEqual(H.popular(runs,{old:5}).map(r=>r.id)[0],'old');
+// read(): each failed section is null (the page says it failed); a missing events table is none.
+const q=(result)=>{const o={select:()=>o,eq:()=>o,gte:()=>o,lt:()=>o,order:()=>o,limit:()=>o,then:(a,b)=>Promise.resolve(result).then(a,b)};return o};
+const sbOK={from:(t)=>q(t==='grinder_events'?{data:null,error:{code:'PGRST205'}}:{data:[],error:null})};
+const ok=await H.read(sbOK,now);
+assert.deepEqual([ok.runs,ok.clubs,ok.events],[[],[],[]]);
+const sbBad={from:(t)=>q(t==='grinder_crews'?{data:null,error:{code:'500'}}:{data:[],error:null})};
+const bad=await H.read(sbBad,now);
+assert.equal(bad.clubs,null);assert.deepEqual(bad.runs,[]);
+const thrown=await H.read({from:()=>{throw new Error('x')}},now);
+assert.deepEqual([thrown.runs,thrown.clubs,thrown.events],[null,null,null]);
 console.log('Home checks passed.');

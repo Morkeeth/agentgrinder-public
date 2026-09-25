@@ -74,7 +74,7 @@
 
   // Never throws: a failed or missing read is an empty section, not a broken page.
   async function read(sb, now) {
-    try { return await readAll(sb, now); } catch (_) { return { runs: [], clubs: [], events: null, ok: false }; }
+    try { return await readAll(sb, now); } catch (_) { return { runs: null, clubs: null, events: null }; }
   }
   async function readAll(sb, now) {
     const since = new Date(addDays(now, -30)).toISOString();
@@ -84,13 +84,16 @@
     const clubsQ = sb.from("grinder_crews").select("id,name,visibility,created_at,grinder_memberships(count)").eq("visibility", "public").order("created_at", { ascending: false }).limit(12);
     const eventsQ = sb.from("grinder_events").select("id,title,place,starts_at,crew_id,grinder_crews(name),grinder_event_people(count)")
       .gte("starts_at", new Date(now).toISOString()).lt("starts_at", until).order("starts_at", { ascending: true }).limit(20);
-    const [runs, clubs, events] = await Promise.all([runsQ, clubsQ, eventsQ].map((q) => q.then((r) => (r.error ? null : r.data), () => null)));
+    // Each section is its own read. null means that read failed, and the page says so; it never
+    // turns a failure into an empty claim. A missing events table (migration 014 not applied) is
+    // not a failure: no event can exist, so it reads as none.
+    const MISSING_TABLE = new Set(["42P01", "PGRST205"]);
+    const settle = (q, missingIsEmpty) => q.then((r) => (r.error ? (missingIsEmpty && MISSING_TABLE.has(r.error.code) ? [] : null) : r.data || []), () => null);
+    const [runs, clubs, events] = await Promise.all([settle(runsQ), settle(clubsQ), settle(eventsQ, true)]);
     return {
-      runs: runs || [],
-      clubs: (clubs || []).map((c) => ({ id: c.id, name: c.name, members: c.grinder_memberships?.[0]?.count ?? 0 })).sort((a, b) => b.members - a.members),
-      // null means the events table is not there yet (014 not applied), [] means none planned.
-      events: events === null ? null : events.map((e) => ({ id: e.id, title: e.title, place: e.place, starts_at: e.starts_at, club: e.grinder_crews ? { name: e.grinder_crews.name } : null, going: e.grinder_event_people?.[0]?.count ?? 0 })),
-      ok: runs !== null,
+      runs,
+      clubs: clubs && clubs.map((c) => ({ id: c.id, name: c.name, members: c.grinder_memberships?.[0]?.count ?? 0 })).sort((a, b) => b.members - a.members),
+      events: events && events.map((e) => ({ id: e.id, title: e.title, place: e.place, starts_at: e.starts_at, club: e.grinder_crews ? { name: e.grinder_crews.name } : null, going: e.grinder_event_people?.[0]?.count ?? 0 })),
     };
   }
 

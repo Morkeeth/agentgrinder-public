@@ -1590,15 +1590,17 @@ async function viewLanding(){
   setPrimarySection('feed');
   app.innerHTML=landingHTML();
   const H=window.GrinderHome, now=Date.now();
-  const data=H&&sb?await H.read(sb,now):{runs:[],clubs:[],events:null,ok:false};
+  const data=H&&sb?await H.read(sb,now):{runs:null,clubs:null,events:null};
   const put=(id,html)=>{const el=$(id);if(el)el.innerHTML=html};
-  put('home-week',H?H.weekHtml(data.runs,data.events||[],now):'');
-  put('home-events',data.events&&data.events.length?`<div class="evs">${data.events.slice(0,3).map(H.eventRow).join('')}</div>`:'<p class="home-none">No events planned yet.</p>');
-  put('home-clubs',data.clubs.length?`<div class="clubs">${data.clubs.slice(0,6).map(H.clubRow).join('')}</div>`:'<p class="home-none">No clubs yet.</p>');
-  const who=H?H.builders(data.runs,6):[];
-  put('home-builders',who.length?who.map(b=>GrinderFeed.builderRow(b.run)).join(''):'<p class="home-none">No builder has posted a public run in the last 30 days.</p>');
+  // A failed read says it failed; only a read that worked may say there is nothing.
+  const failed='<p class="home-none" data-failed>This section could not load. Refresh to try again.</p>';
+  put('home-week',data.runs===null&&data.events===null?failed:H.weekHtml(data.runs||[],data.events||[],now));
+  put('home-events',data.events===null?'':data.events.length?`<div class="evs">${data.events.slice(0,3).map(H.eventRow).join('')}</div>`:'<p class="home-none">No events planned yet.</p>');
+  put('home-clubs',data.clubs===null?failed:data.clubs.length?`<div class="clubs">${data.clubs.slice(0,6).map(H.clubRow).join('')}</div>`:'<p class="home-none">No clubs yet.</p>');
+  const who=data.runs?H.builders(data.runs,6):[];
+  put('home-builders',data.runs===null?failed:who.length?who.map(b=>GrinderFeed.builderRow(b.run)).join(''):'<p class="home-none">No builder has posted a public run in the last 30 days.</p>');
   const body=$('landing-feature-body');
-  let runs=data.runs;
+  let runs=data.runs||[];
   if(!runs.length) runs=await fetchLatestPublicRuns(5);
   if(runs.length){
     noteTraces(runs);
@@ -1606,7 +1608,7 @@ async function viewLanding(){
     const top=H?H.popular(runs,ad.counts,5):runs.slice(0,5);
     if(body) body.innerHTML=feedCards(top,ad);
   }else if(body){
-    body.innerHTML='<p class="home-none">No public run yet.</p>';
+    body.innerHTML=data.runs===null?failed:'<p class="home-none">No public run yet.</p>';
   }
   wireKudos();
   if(ME||location.search||location.hash) return;
