@@ -66,7 +66,9 @@ def test_social_actions_remain_in_the_focused_app():
     assert "Scene photo URL" in INDEX
     assert "history.replaceState(null,'','/?explore')" in INDEX
     assert "async function viewEvent()" in INDEX
-    assert "return viewExplore()" in INDEX[INDEX.index("async function viewEvent()") : INDEX.index("const forum=")]
+    # Since migration 014 an event is a real page: the club's event, who is going, and Join.
+    event = INDEX[INDEX.index("async function viewEvent()") : INDEX.index("const forum=")]
+    assert "grinder_events" in event and "grinder_join_event" in event and "This event is not on __BRAND__" in event
 
 
 def test_caption_and_output_are_bounded_by_database_constraints():
