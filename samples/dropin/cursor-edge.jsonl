@@ -1,0 +1,7 @@
+{"role": "user", "message": {"role": "user", "content": [{"type": "text", "text": "<timestamp>Monday, Sep 21, 2026, 11:05 PM (UTC+2)</timestamp>\n<user_query>\n[fixture] PROMPT-SENTINEL-7f3a do not upload this sentence\n</user_query>"}]}}
+{"role": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "ok"}, {"type": "tool_use", "name": "Write", "input": {"path": "/Users/fixture/code/demo/a.py", "contents": "x"}}, {"type": "tool_use", "name": "Read", "input": {"path": "/Users/fixture/code/demo/b.py"}}]}}
+{"role": "user", "message": {"role": "user", "content": [{"type": "text", "text": "<attached_files>fixture</attached_files>"}]}}
+{"role": "assistant", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "StrReplace", "input": {"path": "/Users/fixture/code/demo/a.py"}}, {"type": "tool_use", "name": "Shell", "input": {"command": "git commit -m fixture"}}, {"type": "thinking", "text": "x"}]}}
+{"role": "user", "message": {"role": "user", "content": [{"type": "text", "text": "<timestamp>Tuesday, Sep 22, 2026, 12:10 AM (UTC+2)</timestamp>\n<user_query>\n[fixture] PROMPT-SENTINEL-7f3a do not upload this sentence two\n</user_query>"}]}}
+{"role": "assistant", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "Grep", "input": {"pattern": "x"}}]}}
+{"role": "user", "message": {"role": "user", "content": [{"type": "text", "text": "<timestamp>2026-09-21T22:30:00Z</timestamp>\n<user_query>\n[fixture] PROMPT-SENTINEL-7f3a do not upload this sentence three\n</user_query>"}]}}

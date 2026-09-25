@@ -91,6 +91,36 @@
     return out;
   }
 
+  // THE BADGE. One small achievement per run, computed from the run's own numbers and nothing
+  // else: no history, no other runs, no guess. The first rule that holds wins, and its detail line
+  // prints the number that earned it, so a reader can check the badge against the card. A run that
+  // earns none carries none. agentgrinder/feedcard.py achievement() is the same list.
+  function achievement(r) {
+    const secs = whole(r.wall_time_s ?? r.duration_s);
+    const turns = whole(r.prompts ?? r.turns_typed);
+    const tools = toolCalls(r);
+    const commits = whole(r.commits);
+    const files = whole(r.files_touched);
+    const hour = Number.isInteger(r.started_hour) && r.started_hour >= 0 && r.started_hour <= 23 ? r.started_hour : null;
+    if (secs >= 10800) return { key: "marathon", label: "Marathon", detail: `${durationLabel(secs)} in one session` };
+    if (turns === 1 && tools >= 60) return { key: "one-shot", label: "One-shot", detail: `1 prompt, ${tools.toLocaleString()} tool calls` };
+    if (hour != null && (hour >= 23 || hour < 5)) return { key: "night-owl", label: "Night owl", detail: hour >= 23 ? "started after 23:00" : "started before 05:00" };
+    if (commits >= 5) return { key: "shipper", label: "Shipper", detail: `${commits.toLocaleString()} commits in one run` };
+    if (files >= 25) return { key: "wide-net", label: "Wide net", detail: `${files.toLocaleString()} files changed` };
+    if (turns >= 2 && tools && tools / turns >= 30) return { key: "delegator", label: "Delegator", detail: `${Math.round(tools / turns).toLocaleString()} tool calls per prompt` };
+    if (secs > 0 && secs < 900 && commits >= 1) return { key: "sprint", label: "Sprint", detail: "a commit in under 15 minutes" };
+    if (secs >= 3600) return { key: "deep-focus", label: "Deep focus", detail: "over an hour in one session" };
+    if (hour != null && hour >= 5 && hour < 7) return { key: "early-bird", label: "Early bird", detail: "started before 07:00" };
+    return null;
+  }
+
+  const BADGE_ICON =
+    '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 1.5h6l-1.6 4.2M5 1.5l1.6 4.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="10" r="4.2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+  function badge(r) {
+    const a = achievement(r);
+    return a ? `<p class="fc-badge" data-badge="${esc(a.key)}">${BADGE_ICON}<b>${esc(a.label)}</b><span>${esc(a.detail)}</span></p>` : "";
+  }
+
   function profileOf(r) {
     const p = r.profiles || {};
     const A = root.GrinderAuth;
@@ -198,12 +228,12 @@
     <${tag} class="fc-title">${esc(titleOf(r))}</${tag}>
     ${r.caption || r.note ? `<p class="fc-cap">${esc(r.caption || r.note)}</p>` : ""}
     <div class="fc-numbers">${lead ? `<div class="fc-hero"><span class="fc-n num">${esc(lead.n)}</span><span class="fc-u">${esc(lead.unit)}</span></div>` : ""}${facts.length ? `<dl class="fc-stats">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd class="num">${esc(v)}</dd></div>`).join("")}</dl>` : ""}</div>
-    ${spark(r)}
+    ${badge(r)}${spark(r)}
   `;
     return `<article class="card fc"${preview ? "" : ` id="card-${id}" data-run-id="${id}"`}>
   <header class="fc-top">${faceHtml}<div class="fc-who">${who}<small>${meta}</small></div>${shipped}</header>
   ${preview ? `<div class="fc-body">${body}</div>` : `<a class="fc-body" href="/?run=${id}">${body}</a>`}
-  <footer class="fc-foot">${kudos}${talk}</footer>
+  ${opts.foot === false ? "" : `<footer class="fc-foot">${kudos}${talk}</footer>`}
 </article>`;
   }
 
@@ -220,7 +250,7 @@
     return `<div class="fc-builder">${face(r, 44)}<div class="fc-who"><a class="fc-name" href="/?u=${encodeURIComponent(p.handle)}">${esc(p.name)}</a><small>Latest: <a href="/?run=${esc(r.id)}">${esc(titleOf(r))}</a></small></div><span class="card-follow" data-profile="${esc(r.profile_id)}" data-handle="${esc(p.handle)}" data-label="Follow"></span></div>`;
   }
 
-  const api = { card, face, headline, stats, spark, settle, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };
+  const api = { card, face, headline, stats, achievement, badge, spark, settle, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };
   root.GrinderFeed = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

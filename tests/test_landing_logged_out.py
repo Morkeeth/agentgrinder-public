@@ -1,4 +1,4 @@
-"""The public STRIVE entry leads with the pitch and first-run CTA, then a real public run."""
+"""The public STRIVE entry leads with the pitch and the drop zone, then a real public run."""
 from pathlib import Path
 
 HTML = (Path(__file__).resolve().parents[1] / 'site/index.html').read_text()
@@ -26,9 +26,21 @@ def test_logged_out_landing_exposes_browsing_and_first_post():
 
 
 def test_landing_explains_deliberate_publication():
+    # The hero is the drop zone since 24 Sep 2026: the file is read in the tab, and the only
+    # thing that ever leaves is asked for by name.
     body = landing()
-    assert 'Capture locally' in body and 'Preview privately' in body
-    assert 'You choose what goes public' in body
+    assert 'Drop a session file' in body and 'id="drop-file"' in body
+    assert 'Read on this device. Nothing leaves it until you ask for a link.' in body
+
+
+def test_landing_names_where_each_harness_keeps_its_session_file():
+    body = landing()
+    for path in ('~/.claude/projects/', '~/.cursor/projects/', '~/.codex/sessions/'):
+        assert path in body
+    assert 'Cmd+Shift+G' in body
+    assert 'checked on test files only' in body   # Codex: no typed Codex session on the author's Mac
+    # The command line stays, below the fold, for power users.
+    assert body.index('drop-zone') < body.index('landing-feature') < body.index('For power users')
 
 
 def test_landing_puts_sample_behind_example_link_not_first_fold():

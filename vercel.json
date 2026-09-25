@@ -8,6 +8,14 @@
       "destination": "/api/run?id=:id"
     },
     {
+      "source": "/l/:id/delete",
+      "destination": "/api/link?id=:id&view=delete"
+    },
+    {
+      "source": "/l/:id",
+      "destination": "/api/link?id=:id"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/:path*"
     },

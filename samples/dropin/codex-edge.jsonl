@@ -1,0 +1,12 @@
+{"timestamp": "2026-09-21T01:00:00.000Z", "type": "session_meta", "payload": {"id": "fixture", "cwd": "/Users/fixture/code/demo", "source": "cli"}}
+{"timestamp": "2026-09-21T01:00:01.007Z", "type": "event_msg", "payload": {"type": "user_message", "message": "<environment_context>fixture</environment_context>"}}
+{"timestamp": "2026-09-21T01:00:05.035Z", "type": "event_msg", "payload": {"type": "user_message", "message": "[fixture] PROMPT-SENTINEL-7f3a do not upload this sentence"}}
+{"timestamp": "2026-09-21T01:00:09.063Z", "type": "response_item", "payload": {"type": "function_call", "name": "shell", "call_id": "c1", "arguments": "{}"}}
+{"timestamp": "2026-09-21T01:00:10.070Z", "type": "response_item", "payload": {"type": "function_call", "name": "shell", "call_id": "c1", "arguments": "{}"}}
+{"timestamp": "2026-09-21T01:00:30.210Z", "type": "response_item", "payload": {"type": "custom_tool_call", "name": "exec", "call_id": "c2", "input": "{\"cmd\": [\"git\", \"commit\", \"-m\", \"fixture\"]}"}}
+{"timestamp": "2026-09-21T01:00:40.280Z", "type": "response_item", "payload": {"type": "custom_tool_call", "name": "apply_patch", "input": "*** fixture"}}
+{"timestamp": "2026-09-21T01:00:41.287Z", "type": "event_msg", "payload": {"type": "patch_apply_end", "success": true, "changes": {"/Users/fixture/code/demo/a.py": {}, "/Users/fixture/code/demo/b.py": {}}}}
+{"timestamp": "2026-09-21T01:00:42.294Z", "type": "event_msg", "payload": {"type": "patch_apply_end", "success": false, "changes": {"/Users/fixture/code/demo/c.py": {}}}}
+{"timestamp": "2026-09-21T01:05:00.100Z", "type": "event_msg", "payload": {"type": "user_message", "message": "  [fixture] PROMPT-SENTINEL-7f3a do not upload this sentence again"}}
+{"timestamp": "2026-09-21T01:05:01.107Z", "type": "response_item", "payload": {"type": "custom_tool_call", "name": "exec", "id": "i9", "input": "git commit -am plain"}}
+{"timestamp": "2026-09-21T01:15:00.300Z", "type": "event_msg", "payload": {"type": "agent_message", "message": "done"}}

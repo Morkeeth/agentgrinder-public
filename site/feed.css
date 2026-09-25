@@ -32,6 +32,10 @@
 .fc-area{fill:var(--blue-wash)}
 .fc-line{fill:none;stroke:var(--blue);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 .fc-peak{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--strive-orange);box-shadow:0 0 0 2px var(--box)}
+.fc-badge{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:13px;line-height:1.3;color:var(--soft);min-width:0}
+.fc-badge svg{flex:none;color:var(--blue)}
+.fc-badge b{font-weight:600;color:var(--blue)}
+.fc-badge span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fc .fc-foot{display:flex;border-top:1px solid var(--rule-2);margin:14px 0 0;padding:0;max-width:none;color:inherit;font-size:inherit}
 .fc .fc-top{max-width:none;margin:0}
 .landing-feature .fc{margin:0 0 12px}
@@ -44,9 +48,11 @@ button.fc-act:hover,a.fc-act:hover{background:var(--blue-wash);color:var(--blue)
 .fc-kudos-mine{cursor:default}
 .fc .ack-picker{padding:14px 16px;border-top:1px solid var(--rule-2)}
 @media (prefers-reduced-motion:no-preference){
-  .fc-act.kudo svg{transition:transform .18s ease-out,color .18s ease-out}
+  .fc-act.kudo svg{transition:transform .18s cubic-bezier(.23,1,.32,1),color .18s ease-out}
   .fc-act.kudo:active svg{transform:scale(.86)}
+  .fc-act.kudo.on.pop svg{animation:fc-kudo .32s cubic-bezier(.23,1,.32,1)}
 }
+@keyframes fc-kudo{from{transform:scale(.72)}to{transform:scale(1)}}
 
 /* the empty chair after a short feed */
 .fc-next{display:flex;align-items:center;gap:12px;padding:16px;border:1px dashed var(--blue-soft);background:none;margin:0 0 12px;color:var(--ink)}

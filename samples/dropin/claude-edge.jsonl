@@ -1,0 +1,13 @@
+{"type": "summary", "summary": "x", "leafUuid": "u0"}
+{"type": "user", "timestamp": "2026-09-20T22:50:00Z", "cwd": "/Users/fixture/code/demo", "promptSource": "typed", "message": {"role": "user", "content": "[fixture] PROMPT-SENTINEL-7f3a do not upload this sentence"}}
+{"type": "assistant", "timestamp": "2026-09-20T22:50:20.250000Z", "message": {"role": "assistant", "content": [{"type": "text", "text": "ok"}, {"type": "tool_use", "name": "Write", "input": {"file_path": "/Users/fixture/code/demo/a.py"}}, {"type": "tool_use", "name": "Read", "input": {"file_path": "/Users/fixture/code/demo/b.py"}}]}}
+{"type": "user", "timestamp": "2026-09-20T22:50:25Z", "promptSource": "typed", "toolUseResult": {"ok": 1}, "message": {"role": "user", "content": [{"type": "tool_result", "content": "done"}]}}
+{"type": "user", "timestamp": "2026-09-20T22:50:26Z", "isMeta": true, "promptSource": "typed", "message": {"role": "user", "content": "skill body [fixture]"}}
+{"type": "user", "timestamp": "2026-09-20T22:50:27Z", "isSidechain": true, "promptSource": "typed", "message": {"role": "user", "content": "subagent brief [fixture]"}}
+{"type": "assistant", "timestamp": "2026-09-20T22:51:03.999Z", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "Edit", "input": {"file_path": "/Users/fixture/code/demo/a.py"}}, {"type": "tool_use", "name": "Bash", "input": {"command": "git add -A && git commit -m fixture"}}]}}
+{"type": "user", "timestamp": "2026-09-20T22:52:00Z", "promptSource": "queued", "message": {"role": "user", "content": [{"type": "text", "text": "[fixture] PROMPT-SENTINEL-7f3a do not upload this sentence queued"}]}}
+not json at all
+
+{"type": "user", "timestamp": "2026-09-20T23:40:00Z", "promptSource": "typed", "message": {"role": "user", "content": "[fixture] PROMPT-SENTINEL-7f3a do not upload this sentence after the break"}}
+{"type": "assistant", "timestamp": "2026-09-20T23:41:30.5Z", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "NotebookEdit", "input": {"file_path": "/Users/fixture/code/demo/n.ipynb"}}, {"type": "tool_use", "name": "Bash", "input": {"command": "git commit --amend"}}]}}
+{"type": "user", "timestamp": "2026-09-20T23:42:00Z", "promptSource": "sdk", "message": {"role": "user", "content": "peer [fixture]"}}
