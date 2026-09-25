@@ -38,6 +38,17 @@ export function proofHtml(run,options={}){
  return `<!doctype html><html lang="en"><head>${head(title,description,canonical)}</head><body><main><a class="brand" href="/" aria-label="${BRAND} home">${BRAND} · public proof</a><article class="story"><span class="label">Recorded agent run</span><h1>${esc(title)}</h1><p class="summary">A public route across ${facts.projects.length} projects. ${esc(measured)}.</p><div class="route" style="--lanes:${facts.projects.length}">${route}</div><div class="facts"><div class="fact"><b>${facts.projects.length}</b><span>projects</span></div><div class="fact"><b>${facts.stops.length}</b><span>recorded checkpoints</span></div></div><section class="section"><span class="label">Route evidence</span><h2>What was recorded</h2><ul class="checkpoints">${checkpoints}</ul></section>${outcomes?`<section class="section"><span class="label">Author-reported outcomes</span><h2>What the author says changed</h2><ul class="outcomes">${outcomes}</ul></section>`:''}${receipts?`<section class="section"><span class="label">Linked receipts</span><h2>Open the underlying work</h2><ul class="receipts">${receipts}</ul></section>`:''}<a class="open" href="/r/${encodeURIComponent(run.id)}">Open the public run</a><p class="boundary">The route is recorded activity. Author-reported outcomes are labelled separately.</p></article></main></body></html>`;
 }
 
+// A public run is allowed to have no Code Route: older exports and short sessions do not carry
+// one. That is not a server failure, and it must not be turned into a proof by inference.
+export function routeNotRecordedHtml(run,options={}){
+ if(!run||!validId(run.id))throw new Error('Route fallback requires a public run id');
+ const origin=options.origin||defaultOrigin;
+ const canonical=`${origin}/proof/${encodeURIComponent(run.id)}`;
+ const title=String(run.title||'This public run').trim().slice(0,160)||'This public run';
+ const description='This public run has no recorded Code Route, so STRIVE cannot make a proof page for it.';
+ return `<!doctype html><html lang="en"><head>${head(title,description,canonical)}</head><body><main><a class="brand" href="/">${BRAND} · public proof</a><article class="story neutral"><span class="label">Public run</span><h1>${esc(title)}</h1><p>This run has no recorded Code Route, so there is no route proof to show.</p><a class="open" href="/r/${encodeURIComponent(run.id)}">Open the public run</a><p class="boundary">STRIVE does not infer a route from incomplete activity data.</p></article></main></body></html>`;
+}
+
 export function neutralProofHtml(id,options={}){
  const origin=options.origin||defaultOrigin;
  const canonical=`${origin}/proof/${encodeURIComponent(id||'')}`;
