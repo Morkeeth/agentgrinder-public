@@ -1,0 +1,27 @@
+{
+  "id": "11111111-1111-1111-1111-111111111111",
+  "title": "A measured four-project release run",
+  "visibility": "public",
+  "shipped": [
+    "Release route rendered on the public run page",
+    "State renderer repair merged after a reproduced failure"
+  ],
+  "receipts": [
+    {"label": "Release pull request", "url": "https://github.com/Morkeeth/agentgrinder-public/pull/61"}
+  ],
+  "code_route": {
+    "v": 1,
+    "projects": [
+      {"id": "strive", "label": "agentgrinder-public"},
+      {"id": "zup", "label": "zup"},
+      {"id": "helicon", "label": "mountain-of-helicon"},
+      {"id": "fleet", "label": "fleet-ops"}
+    ],
+    "stops": [
+      {"id": "capture", "project": "strive", "label": "Run captured and read back", "basis": "measured"},
+      {"id": "wake", "project": "zup", "label": "Live priority checked", "basis": "measured"},
+      {"id": "release", "project": "helicon", "label": "Release candidate merged", "basis": "measured"},
+      {"id": "repair", "project": "fleet", "label": "State renderer repair verified", "basis": "measured"}
+    ]
+  }
+}

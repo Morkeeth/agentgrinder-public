@@ -4,6 +4,10 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/proof/:id",
+      "destination": "/api/proof?id=:id"
+    },
+    {
       "source": "/r/:id",
       "destination": "/api/run?id=:id"
     },
