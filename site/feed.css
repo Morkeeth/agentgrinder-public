@@ -1,6 +1,5 @@
 /* FEED CARD, TAB BAR, SHEETS. Same ground as the app: IBM Plex Sans, paper, hairlines, STRIVE blue.
-   Orange is one variable and is spent on three marks only: the peak of a card's drawing, the ghost
-   badge, and a sent XUDOS. The run map is blue. Nothing here pulses or bounces. */
+   Orange is one variable and is spent on two marks only: the peak of a card's drawing and a sent XUDOS. The run map is blue. Nothing here pulses or bounces. */
 :root{--strive-orange:#fc4c02}
 
 /* the card */
@@ -37,9 +36,6 @@
 .fc-badge svg{flex:none;color:var(--blue)}
 .fc-badge b{font-weight:600;color:var(--blue)}
 .fc-badge span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fc-badge.fc-ghost svg,.fc-badge.fc-ghost b{color:var(--strive-orange)}
-.fc.ghost .fc-line{stroke-dasharray:3 4}
-.fc.ghost .fc-area{fill:none}
 .fc-map{margin:14px 0 0}
 .fc-map svg{display:block;width:100%;height:auto}
 .fc-rail{stroke:var(--blue-soft);stroke-width:1}

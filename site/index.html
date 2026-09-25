@@ -765,7 +765,7 @@ function avatar(handle,opts){
 
 const esc=s=>String(s??'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
 function runAttribution(r){
-  if(r.visibility==='anonymous') return {handle:'ghost',name:'Ghost grinder',ghost:true,link:null};
+  if(r.visibility==='anonymous') return {handle:'anonymous',name:'Anonymous builder',ghost:true,link:null};
   const p=r.profiles||{}, h=profileHandle(p)||'someone';
   return {handle:h,name:p.display_name||p.name||h,ghost:false,link:`/?u=${encodeURIComponent(h)}`};
 }
@@ -1279,7 +1279,7 @@ function shareCurveSvg(rhythm,w=420,h=100){
 function shareCardHtml(opts){
   const h=(opts.handle||'you').replace(/^@/,'');
   const ghost=!!opts.ghost;
-  const stamp=opts.stamp||(ghost?'Ghost grind':'Claimed');
+  const stamp=opts.stamp||(ghost?'Anonymous':'Claimed');
   const heroN=opts.heroN??'-';
   const heroK=opts.heroK||'verified per turn';
   const claimUrl=location.host+'/';
@@ -1448,7 +1448,7 @@ function featuredCard(r){
   const when=r.created_at?new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'';
   return `<div class="card launch-card">
     <div class="runtop">${avatar(att.handle,{rhythm:r.rhythm,ghost:att.ghost})}
-      <div class="who"><span>${esc(att.ghost?'Ghost grinder':att.name)}</span><small>${att.ghost?'metrics only':'@'+esc(att.handle)}${when?' · '+esc(when):''}</small></div>
+      <div class="who"><span>${esc(att.name)}</span><small>${att.ghost?'metrics only':'@'+esc(att.handle)}${when?' · '+esc(when):''}</small></div>
       <span class="state">Public run</span></div>
     <div class="title">${esc(r.title||'A run')}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:''}
@@ -1878,7 +1878,7 @@ const runSeconds=r=>{const v=r.wall_time_s??r.duration_s;return Number.isFinite(
 const runStart=r=>Date.parse(r.started_at||r.created_at||'')||0;
 // The card's own count (tool_calls, else the ridge count), so a lane never zeroes a run the card counts.
 const runTools=r=>{const n=GrinderContract.toolCallCount(r);return Number.isFinite(n)&&n>0?n:0};
-function fmtSecs(secs){const m=Math.round(secs/60);return m>=60?`${Math.floor(m/60)}h ${m%60}m`:`${m}m`}
+function fmtSecs(secs){const m=Math.round(secs/60);return m<1?'<1m':m>=60?`${Math.floor(m/60)}h ${m%60}m`:`${m}m`}
 // Monday 00:00 in the reader's time zone: the week a board counts.
 function weekStart(now=new Date()){const d=new Date(now);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
 
@@ -1899,7 +1899,7 @@ async function viewBoards(){
   const all=recent||[]; noteTraces(all);
   const week=all.filter(r=>runStart(r)>=since.getTime());
   const top=(list,score,fmt,n=5)=>list.map(r=>[r,score(r)]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,n).map(([r,v])=>[r,fmt(v)]);
-  const ghosts=top(week.filter(r=>GrinderFeed.ghost(r)),runSeconds,fmtSecs);
+  const longest=top(week,runSeconds,fmtSecs);
   const tools=top(week,runTools,v=>`${v.toLocaleString()} calls`);
   // The honest failure: the run recorded zero files changed (or, with files unknown, zero
   // commits) and the most tool calls. Both numbers come from the run row.
@@ -1910,9 +1910,9 @@ async function viewBoards(){
   app.innerHTML=`<div class="head"><h1>Marathon and boards</h1><span class="meta">public runs only</span></div>
     <p class="hint">Every row is a public run anyone can open. This week starts Monday ${esc(weekLabel)} in your time zone. Time on a run is the measured wall time, else the session length.</p>
     <div class="boards-grid">
-      ${boardHtml('Longest ghost run this week','an hour or more and 30+ tool calls; typed to at most twice, or 40+ tool calls per typed turn; when typed turns are unknown, a start between 22:00 and 04:59',ghosts,'No ghost run this week yet. Leave the agent running while you sleep.')}
+      ${boardHtml('Longest run this week','measured time, one run',longest,'No public run with a measured time this week yet.')}
       ${boardHtml('Most tool calls this week','one run, one count',tools,'No public run with tool calls this week yet.')}
-      ${boardHtml('Honest failure of the week','most tool calls with zero files changed. The run that tried hardest and shipped nothing, on the record',failures,'No run with zero files changed this week. Post the ugly one.')}
+      ${boardHtml('Honest failure of the week','most tool calls with zero files changed. Runs that went nowhere count too',failures,'No run with zero files changed this week. Post the ugly one.')}
     </div>
     ${boardHtml('Marathon, all time','public runs of 3 hours or more',marathon,'No public run of 3 hours or more yet. The first one goes here.')}
     <p class="hint"><a href="/?post">Post a run</a> · <a href="/?projects">Projects</a> · <a href="/methodology">How the numbers are made</a></p>`;

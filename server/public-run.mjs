@@ -278,8 +278,8 @@ export function card(run,opts={}){
   const peak=values.indexOf(Math.max(...values));
   drawing=el('div',{style:{display:'flex',flexDirection:'column',marginTop:geo?8:18}},
    el('svg',{width:W,height:h,viewBox:`0 0 ${W} ${h}`},...(plotted.filled?[
-    el('polygon',{points:`0,${h} ${points} ${W},${h}`,fill:badge&&badge.key==='ghost'?'none':WASH}),
-    el('polyline',{points,stroke:BLUE,strokeWidth:4,strokeLinejoin:'round',strokeLinecap:'round',fill:'none',...(badge&&badge.key==='ghost'?{strokeDasharray:'8 10'}:{})}),
+    el('polygon',{points:`0,${h} ${points} ${W},${h}`,fill:WASH}),
+    el('polyline',{points,stroke:BLUE,strokeWidth:4,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'}),
     el('circle',{cx:x(peak),cy:y(values[peak]),r:9,fill:ORANGE,stroke:'#fff',strokeWidth:3})]:[
     el('polyline',{points,stroke:BLUE,strokeWidth:5,strokeLinejoin:'round',strokeLinecap:'round',fill:'none'})])));
  }else if(routePlot){
@@ -314,13 +314,10 @@ export function card(run,opts={}){
      el('div',{style:{display:'flex',fontSize:32,fontWeight:500,marginTop:2}},String(value))))):null,
    // The badge, as on the card: blue label, soft detail. Same function, so the image cannot award
    // a badge the page does not.
-   // The ghost badge is the image's one orange word, as on the card.
    badge?el('div',{style:{display:'flex',alignItems:'center',fontSize:22,marginTop:geo?8:drawn?12:22}},
-    badge.key==='ghost'
-     ?el('svg',{width:20,height:20,viewBox:'0 0 16 16',style:{marginRight:10}},el('path',{d:'M3 14.5V7.5a5 5 0 0 1 10 0v7l-2-1.6-2 1.6-1-1.6-1 1.6-2-1.6Z',fill:ORANGE}),el('circle',{cx:6,cy:7.5,r:1.1,fill:'#fff'}),el('circle',{cx:10,cy:7.5,r:1.1,fill:'#fff'}))
-     :el('div',{style:{display:'flex',width:14,height:14,borderRadius:7,border:`3px solid ${BLUE}`,marginRight:10}}),
-    el('div',{style:{display:'flex',color:badge.key==='ghost'?ORANGE:BLUE,fontWeight:700,marginRight:10}},badge.label),
-    el('div',{style:{display:'flex',color:SOFT}},badge.key==='ghost'?'':badge.detail)):null,
+    el('div',{style:{display:'flex',width:14,height:14,borderRadius:7,border:`3px solid ${BLUE}`,marginRight:10}}),
+    el('div',{style:{display:'flex',color:BLUE,fontWeight:700,marginRight:10}},badge.label),
+    el('div',{style:{display:'flex',color:SOFT}},badge.detail)):null,
    map,
    drawing,
    el('div',{style:{display:'flex',fontSize:15,color:SOFT,marginTop:'auto'}},'Counts describe activity, not result quality.')));
