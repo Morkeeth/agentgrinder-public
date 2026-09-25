@@ -8,7 +8,7 @@
 // without making any request. The secret never leaves this file: the browser sends ids, never a
 // signature, and cannot confirm an action that did not happen.
 // Protocol: the-fair README "How a build confirms" and proof/engine.mjs signCompletion.
-import {createHash,createHmac} from 'node:crypto';
+import {createHash,createHmac,timingSafeEqual} from 'node:crypto';
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CHALLENGE_ID=UUID; // the-fair randomId is a v4 UUID
@@ -24,6 +24,19 @@ export const canonical=value=>{
 export function signCompletion(secret,challenge,{actionId,evidenceHash}){
  const body={protocol:'fair-proof-v1',challenge,actionId,evidenceHash};
  return {...body,signature:createHmac('sha256',secret).update(canonical(body)).digest('hex')};
+}
+
+// A link id is public (it is in the /l/ address), so the link's creator also gets a ticket when the
+// link is made: an HMAC of the id under the product secret, returned once, like the delete token.
+// Confirming a link needs it, so nobody can confirm a stranger's card against their own visit.
+export function linkTicket(id,env=process.env){
+ const fair=fairConfig(env);
+ return fair?createHmac('sha256',fair.secret).update('strive-link-ticket\0'+id).digest('hex'):null;
+}
+function ticketOK(id,ticket,secret){
+ if(typeof ticket!=='string'||!/^[a-f0-9]{64}$/.test(ticket)) return false;
+ const want=createHmac('sha256',secret).update('strive-link-ticket\0'+id).digest();
+ return timingSafeEqual(want,Buffer.from(ticket,'hex'));
 }
 
 export function fairConfig(env=process.env){
@@ -58,8 +71,9 @@ export async function confirm({method,headers={},body},config,env=process.env,fe
  const fair=fairConfig(env);
  if(!fair) return {status:200,body:{off:true}};
  if(Number(headers['content-length']||0)>MAX_BYTES||!body||typeof body!=='object') return {status:400,body:{error:'Send { challengeId, kind, id }.'}};
- const {challengeId,kind,id}=body;
+ const {challengeId,kind,id,ticket}=body;
  if(typeof challengeId!=='string'||!CHALLENGE_ID.test(challengeId)||!KINDS.has(kind)||typeof id!=='string'||!UUID.test(id)) return {status:400,body:{error:'Send { challengeId, kind, id }.'}};
+ if(kind==='link'&&!ticketOK(id,ticket,fair.secret)) return {status:404,body:{error:'No such action of yours on STRIVE.'}};
  const accessToken=String(headers.authorization||'').replace(/^Bearer\s+/i,'')||null;
  let created;
  try{created=await actionTime({kind,id,accessToken},config,fetchImpl)}catch{return {status:503,body:{error:'STRIVE could not check the action.'}}}

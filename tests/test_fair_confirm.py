@@ -17,4 +17,4 @@ def test_the_page_strips_the_challenge_and_holds_no_secret():
     index = (ROOT / "site/index.html").read_text()
     assert '<script src="/fair.js"></script>' in index
     assert index.count("fairConfirmRun(") == 3  # the helper and the two new-save paths
-    assert 'root.StriveFair.confirm("link", body.id)' in (ROOT / "site/dropin.js").read_text()
+    assert 'root.StriveFair.confirm("link", body.id, null, body.fair_ticket)' in (ROOT / "site/dropin.js").read_text()

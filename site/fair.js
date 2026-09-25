@@ -23,15 +23,16 @@
     try { const id = root.sessionStorage.getItem(KEY); return id && UUID.test(id) ? id : null; } catch (_) { return null; }
   }
 
-  // kind is "run" or "link"; accessToken is needed for a run, which must be the visitor's own.
-  async function confirm(kind, id, accessToken) {
+  // kind is "run" or "link". A run needs the visitor's accessToken (it must be theirs); a link needs
+  // the ticket STRIVE returned when this visitor made it.
+  async function confirm(kind, id, accessToken, ticket) {
     const challengeId = pending();
     if (!challengeId) return null;
     try {
       const res = await fetch("/api/fair/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(accessToken ? { Authorization: "Bearer " + accessToken } : {}) },
-        body: JSON.stringify({ challengeId, kind, id }),
+        body: JSON.stringify({ challengeId, kind, id, ...(ticket ? { ticket } : {}) }),
       });
       const body = await res.json().catch(() => ({}));
       // One challenge, one confirmation: done, closed or refused, it is not tried again.
