@@ -38,6 +38,8 @@ window.supabase={createClient(){
     const query={
       select(_columns,options){countOnly=Boolean(options&&options.count==='exact'&&options.head);return query},
       eq(){return query},
+      gte(){return query},
+      lt(){return query},
       in(){return query},
       order(){return query},
       limit(){return query},
@@ -67,10 +69,12 @@ window.addEventListener('load',()=>{
   setTimeout(()=>{
     if(window.__coldSignin) showSignIn();
     setTimeout(()=>{
-      const intro=document.querySelector('.landing-intro');
-      const cta=document.querySelector('.landing-intro .cta .primary');
-      const featureSection=document.querySelector('#landing-feature');
-      const feature=document.querySelector('#landing-feature .card[data-run-id]');
+      // 25 Sep 23:1x (Oscar): what is going on first, then people, then runs, then sign in.
+      // So the pitch and the week lead, and the sign-in ask closes the page.
+      const intro=document.querySelector('.home-hero');
+      const cta=document.querySelector('.home-join .primary');
+      const featureSection=document.querySelector('#home-week');
+      const feature=document.querySelector('#home-week .wk');
       const sample=document.querySelector('[data-home-sample]');
       const count=document.getElementById('public-run-count');
       const explanation=document.getElementById('signin-explanation');
@@ -79,17 +83,16 @@ window.addEventListener('load',()=>{
       const introBox=intro&&intro.getBoundingClientRect();
       const ctaBox=cta&&cta.getBoundingClientRect();
       const featureBox=featureSection&&featureSection.getBoundingClientRect();
-      const sideBySide=innerWidth>800;
       const pitchFirst=Boolean(
         introBox&&featureBox&&ctaBox&&
         /Sign in with GitHub/i.test(cta.textContent||'')&&
-        ctaBox.top>=0&&ctaBox.bottom<=innerHeight&&
-        (sideBySide
-          ? introBox.left<=featureBox.left+1
-          : introBox.bottom<=featureBox.top+1)
+        introBox.top>=0&&introBox.bottom<=innerHeight&&
+        featureBox.top<innerHeight&&
+        introBox.bottom<=featureBox.top+1&&
+        ctaBox.top>featureBox.bottom
       );
       document.documentElement.dataset.coldPitchFirst=String(pitchFirst);
-      document.documentElement.dataset.coldFeatureVisible=String(visible>=120);
+      document.documentElement.dataset.coldFeatureVisible=String(Boolean(rect&&visible>=rect.height-1));
       document.documentElement.dataset.coldSampleAbsent=String(!sample);
       document.documentElement.dataset.coldDropAbsent=String(!document.getElementById('drop-zone'));
       document.documentElement.dataset.coldCountRendered=String(

@@ -72,7 +72,11 @@
     return [...(runs || [])].sort((a, b) => ((counts[b.id] || 0) - (counts[a.id] || 0)) || String(b.created_at).localeCompare(String(a.created_at))).slice(0, limit || 5);
   }
 
+  // Never throws: a failed or missing read is an empty section, not a broken page.
   async function read(sb, now) {
+    try { return await readAll(sb, now); } catch (_) { return { runs: [], clubs: [], events: null, ok: false }; }
+  }
+  async function readAll(sb, now) {
     const since = new Date(addDays(now, -30)).toISOString();
     const until = new Date(addDays(now, 8)).toISOString(); // the end of the seventh day ahead
     const runsQ = sb.from("runs").select("*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)")
