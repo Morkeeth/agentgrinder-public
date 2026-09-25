@@ -14,10 +14,11 @@ MIGRATION = (ROOT / "supabase" / "strava" / "013_x_handle.sql").read_text()
 
 
 def test_providers_are_read_from_auth_settings_at_load():
-    assert 'let PROVIDERS_ENABLED=["github"];' in INDEX
+    assert 'const PROVIDERS_ENABLED=["github"];' in INDEX
     assert "async function loadProviders()" in INDEX
     assert "'/auth/v1/settings'" in INDEX
-    assert "s.external.x===true" in INDEX
+    assert "ext.x===true||ext.twitter===true" in INDEX
+    assert "PROVIDERS_ENABLED.push('x')" in INDEX
     # The first route waits for the settings call, and a failed call still routes.
     assert "loadProviders().then(refreshAndRoute,refreshAndRoute);" in INDEX
 

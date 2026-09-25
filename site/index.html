@@ -647,13 +647,17 @@ const auth=sb?GrinderAuth.create({client:sb,redirectTo:location.origin+'/'}):nul
 // X joins the list at load when Supabase Auth reports the X provider enabled (25 Sep 2026), so
 // the button appears the moment the provider is switched on, with no redeploy. GitHub is always
 // offered; the settings call failing or timing out changes nothing.
-let PROVIDERS_ENABLED=["github"];
+const PROVIDERS_ENABLED=["github"];
 async function loadProviders(){
   if(!SB_URL||!SB_KEY||/127\.0\.0\.1|localhost/.test(SB_URL)) return PROVIDERS_ENABLED;
   try{
     const r=await fetch(SB_URL+'/auth/v1/settings',{headers:{apikey:SB_KEY},signal:AbortSignal.timeout(2500)});
     const s=r.ok?await r.json():null;
-    if(s&&s.external&&s.external.x===true&&!PROVIDERS_ENABLED.includes('x')) PROVIDERS_ENABLED=[...PROVIDERS_ENABLED,'x'];
+    // GoTrue reports the X / Twitter provider under the key "twitter" (probed 25 Sep 2026: the
+    // settings body has no "x" key). Either spelling switches the button on. The array is
+    // mutated in place because GrinderAccount holds a reference to it.
+    const ext=s&&s.external||{};
+    if((ext.x===true||ext.twitter===true)&&!PROVIDERS_ENABLED.includes('x')) PROVIDERS_ENABLED.push('x');
   }catch(_){}
   return PROVIDERS_ENABLED;
 }
