@@ -74,3 +74,27 @@ console.log('PASS decision story uses the supplied route and preserves context i
  assert.equal(hasDecisionStory({id:other.id,title:'x',code_route:null}),false);
  console.log('PASS decision story is derived from any run\'s own route; a run without one goes to /r/');
 }
+
+// Edges a stranger must never see as false or empty copy (cold review, 26 Sep).
+{
+ const {decisionHtml:render,hasDecisionStory}=await import('../../server/decision-story.mjs');
+ const text=h=>h.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+ const edge={id:'cccccccc-dddd-4eee-8fff-000000000000',title:'Edge night',code_route:{v:1,
+  projects:[{id:'a',label:'alpha'},{id:'b',label:'beta'}],
+  stops:[{id:'x',project:'a',kind:'edit',label:'X',basis:'measured',evidence:['ran']},{id:'y',project:'b',kind:'edit',label:'Y',basis:'declared'}],
+  connectors:[]}};
+ assert.ok(hasDecisionStory(edge));
+ const page=text(render(edge,{origin:'https://strive.test'}));
+ // 3: no unique busiest project, no handoffs, mixed basis: no bare "." insight line.
+ const html=render(edge,{origin:'https://strive.test'});
+ assert.ok(!/<p class="because">\s*\.?\s*<\/p>/.test(html),'bare or empty insight line');
+ assert.ok(!/\s\.\s*"/.test(html.match(/name="description" content="[^"]*"/)?.[0]||''),'description ends in a bare "."');
+ // 4: no finish stop: no "Recorded finish" and no finish line.
+ assert.ok(!page.includes('Recorded finish')&&!page.includes('Finish ·'),'finish printed without a finish stop');
+ assert.ok(!/recorded finish/i.test(page),'decision names a finish that does not exist');
+ // 5: "measured" only when a stop was measured; a route with no measured stop tells no decision story.
+ assert.ok(!/every stop was measured|measured route/.test(page),'claims measured beyond what was measured');
+ const declared={...edge,code_route:{...edge.code_route,stops:edge.code_route.stops.map(s=>({...s,basis:'declared'}))}};
+ assert.equal(hasDecisionStory(declared),false,'a route with no measured stop is not a decision story');
+ console.log('PASS edges: no bare insight, no invented finish, no unearned "measured"');
+}

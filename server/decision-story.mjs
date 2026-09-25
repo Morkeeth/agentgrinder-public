@@ -33,7 +33,8 @@ const stopEvidence=stop=>{
 
 // Whether a run can carry a decision story: it needs a measured Code Route. A public run without
 // one is still a real public story, at /r/<id> (api/decision.js sends the reader there).
-export const hasDecisionStory=run=>Boolean(run&&validId(run.id)&&routeFacts(run.code_route));
+// At least one stop must be measured: a route that is all declared is a claim, not a record.
+export const hasDecisionStory=run=>{const facts=run&&validId(run.id)?routeFacts(run.code_route):null;return Boolean(facts&&facts.measured.length)};
 
 // Everything in the challenge comes from this run's own route, never from one run's names.
 const actionUrl=(runId,canonical,finish,decision)=>{
@@ -79,14 +80,19 @@ export function decisionHtml(run,options={}){
  const canonical=`${pageOrigin}/d/${encodeURIComponent(run.id)}`;
  const dense=facts.dense;
  const finishProject=facts.finishProject;
+ // Every clause below is only said when the route carries it: no finish is named without a finish
+ // stop, "measured" is only said of measured stops, and an insight with nothing in it is left out.
  const decision=dense&&finishProject&&dense.id!==finishProject.id
   ?`Carry the work beyond ${dense.label} to ${finishProject.label}.`
-  :'Carry the measured route through to its recorded finish.';
- const insight=[
+  :facts.finish
+   ?`Carry the route through to ${facts.finish.label}.`
+   :`Carry the route across ${facts.projects.length} project${facts.projects.length===1?'':'s'}.`;
+ const parts=[
   dense?`${dense.label} held ${facts.denseCount} of ${facts.stops.length} stops`:null,
-  facts.handoffs.length?`${facts.handoffs.length} handoffs carried it onward`:null,
-  facts.measured.length===facts.stops.length?'every stop was measured':null,
- ].filter(Boolean).join(' · ')+'.';
+  facts.handoffs.length?`${facts.handoffs.length} handoff${facts.handoffs.length===1?'':'s'} carried it onward`:null,
+  facts.measured.length===facts.stops.length?'every stop was measured':`${facts.measured.length} of ${facts.stops.length} stops were measured`,
+ ].filter(Boolean);
+ const insight=parts.length?parts.join(' · ')+'.':'';
  // Receipts: the decision point itself. The last stop in the busiest project (where the work
  // could have stopped), the first stop in the finish project (where it went instead), then the
  // recorded finish. Without a busiest project or a move, the first stop with evidence stands in.
@@ -100,8 +106,8 @@ export function decisionHtml(run,options={}){
  // instead of relying on the fixture-only note.
  const goal=run.title;
  const action=actionUrl(run.id,canonical,facts.finish,decision);
- const description=`${decision} ${insight}`;
- return `<!doctype html><html lang="en"><head>${head(run.title,description,canonical)}</head><body><main><a class="brand" href="/" aria-label="${BRAND} home">${BRAND} · decision story</a><article class="story">${options.preview?`<p class="preview"><strong>Local preview, not live</strong> of ${esc(run.id.slice(0,8))} · not a public run</p>`:''}<h1>${esc(run.title)}</h1><p class="goal"><span class="label">Human goal</span>${esc(goal)}</p><div class="route-wrap">${routePlot(facts)}<div class="lanes">${lanes}</div></div><section class="decision"><span class="label">Agent decision that changed the route</span><h2>${esc(decision)}</h2><p class="because">${esc(insight)}</p></section><section class="evidence"><div class="evidence-head"><h2>Evidence on this route</h2><span class="measured">${facts.measured.length}/${facts.stops.length} measured stops</span></div><ul class="receipts">${receipts}</ul><p class="finish">Finish · <strong>${esc(facts.finish?.label||'Recorded finish')}</strong></p></section><a class="action" href="${esc(action)}" rel="noopener noreferrer">${esc(finishProject&&dense&&finishProject.id!==dense.id?`Challenge the ${finishProject.label} handoff`:'Challenge this decision')}</a><p class="boundary">Opens a prefilled ${BRAND} issue draft on GitHub. GitHub sign-in is required to post; opening it posts nothing.</p></article></main></body></html>`;
+ const description=insight?`${decision} ${insight}`:decision;
+ return `<!doctype html><html lang="en"><head>${head(run.title,description,canonical)}</head><body><main><a class="brand" href="/" aria-label="${BRAND} home">${BRAND} · decision story</a><article class="story">${options.preview?`<p class="preview"><strong>Local preview, not live</strong> of ${esc(run.id.slice(0,8))} · not a public run</p>`:''}<h1>${esc(run.title)}</h1><p class="goal"><span class="label">Human goal</span>${esc(goal)}</p><div class="route-wrap">${routePlot(facts)}<div class="lanes">${lanes}</div></div><section class="decision"><span class="label">Agent decision that changed the route</span><h2>${esc(decision)}</h2>${insight?`<p class="because">${esc(insight)}</p>`:''}</section><section class="evidence"><div class="evidence-head"><h2>Evidence on this route</h2><span class="measured">${facts.measured.length}/${facts.stops.length} measured stops</span></div><ul class="receipts">${receipts}</ul>${facts.finish?`<p class="finish">Finish · <strong>${esc(facts.finish.label)}</strong></p>`:''}</section><a class="action" href="${esc(action)}" rel="noopener noreferrer">${esc(finishProject&&dense&&finishProject.id!==dense.id?`Challenge the ${finishProject.label} handoff`:'Challenge this decision')}</a><p class="boundary">Opens a prefilled ${BRAND} issue draft on GitHub. GitHub sign-in is required to post; opening it posts nothing.</p></article></main></body></html>`;
 }
 
 export function neutralDecisionHtml(id,options={}){
