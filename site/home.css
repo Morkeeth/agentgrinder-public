@@ -54,3 +54,7 @@
 .ev-about{margin:18px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
 .ev-going{margin:18px 0 12px;font-size:15px;font-weight:600}
 .event-page .act.primary{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;font-size:15px;background:var(--blue);border-color:var(--blue);color:#fff}
+/* Pin to profile (migration 015): a checkbox row in the run's edit panel, a 44 px target. */
+.pin-check{display:flex;align-items:center;gap:10px;min-height:44px;font-size:15px;color:var(--ink)}
+.pin-check input{width:20px;height:20px;accent-color:var(--blue)}
+.pinned{margin:0 0 18px}
