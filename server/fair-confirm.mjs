@@ -12,6 +12,7 @@ import {createHash,createHmac,timingSafeEqual} from 'node:crypto';
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CHALLENGE_ID=UUID; // the-fair randomId is a v4 UUID
+const RETURN_TOKEN=/^[a-f0-9]{64}$/;
 const KINDS=new Set(['run','link']);
 const MAX_BYTES=2048;
 
@@ -71,8 +72,9 @@ export async function confirm({method,headers={},body},config,env=process.env,fe
  const fair=fairConfig(env);
  if(!fair) return {status:200,body:{off:true}};
  if(Number(headers['content-length']||0)>MAX_BYTES||!body||typeof body!=='object') return {status:400,body:{error:'Send { challengeId, kind, id }.'}};
- const {challengeId,kind,id,ticket}=body;
+ const {challengeId,kind,id,ticket,returnToken}=body;
  if(typeof challengeId!=='string'||!CHALLENGE_ID.test(challengeId)||!KINDS.has(kind)||typeof id!=='string'||!UUID.test(id)) return {status:400,body:{error:'Send { challengeId, kind, id }.'}};
+ if(returnToken!==undefined&&(typeof returnToken!=='string'||!RETURN_TOKEN.test(returnToken))) return {status:400,body:{error:'The Free Lunch return capability is not valid.'}};
  if(kind==='link'&&!ticketOK(id,ticket,fair.secret)) return {status:404,body:{error:'No such action of yours on STRIVE.'}};
  const accessToken=String(headers.authorization||'').replace(/^Bearer\s+/i,'')||null;
  let created;
@@ -93,7 +95,7 @@ export async function confirm({method,headers={},body},config,env=process.env,fe
  const evidenceHash=createHash('sha256').update(`strive:${kind}:${id}:${created}`).digest('hex');
  const proof=signCompletion(fair.secret,challenge,{actionId,evidenceHash});
  try{
-  const r=await fetchImpl(`${fair.url}/api/build/confirm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proof}),signal:AbortSignal.timeout(8000),redirect:'error'});
+  const r=await fetchImpl(`${fair.url}/api/build/confirm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({proof,...(returnToken?{token:returnToken}:{})}),signal:AbortSignal.timeout(8000),redirect:'error'});
   const out=await r.json().catch(()=>null);
   if(r.ok&&out?.receipt?.kind) return {status:200,body:{confirmed:true,kind:out.receipt.kind}};
   // Free Lunch's code is a short constant (for example TOO_EARLY); nothing else is passed on.

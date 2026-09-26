@@ -7,6 +7,7 @@ import {confirm,canonical,linkTicket} from '../server/fair-confirm.mjs';
 const SECRET='s'.repeat(64), FAIR='http://127.0.0.1:4999', SB={SB_URL:'https://db.test',SB_KEY:'sb_publishable_x'};
 const env={FAIR_PRODUCT_SECRET_STRIVE:SECRET,FAIR_URL:FAIR};
 const CH='11111111-2222-4333-8444-555555555555', LINK='aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', RUN='bbbbbbbb-cccc-4ddd-8eee-ffffffffffff';
+const RETURN_TOKEN='1'.repeat(64);
 const now=Date.now(), iso=t=>new Date(t).toISOString();
 const challenge={id:CH,nonce:'n',projectId:'strive',version:1,taskId:'t',visitorId:'v',issuedAt:now-60e3,expiresAt:now+60e3}; // epoch ms, as the-fair sends them
 function net(over={}){
@@ -17,7 +18,7 @@ function net(over={}){
   if(url.endsWith('/auth/v1/user')) return json(over.user??{id:'me'});
   if(url.includes('/rest/v1/runs?')) return json(over.runs??[{id:RUN,created_at:iso(now),profiles:{auth_uid:'me'}}]);
   if(url.includes('/api/build/challenge')) return over.challenge===null?json({},404):json({challenge:over.challenge??challenge});
-  if(url.endsWith('/api/build/confirm')){f.proof=JSON.parse(opts.body).proof;return json(over.confirm??{receipt:{id:'r',kind:'fair-witnessed'}},over.confirmStatus??200);}
+  if(url.endsWith('/api/build/confirm')){f.confirmBody=JSON.parse(opts.body);f.proof=f.confirmBody.proof;return json(over.confirm??{receipt:{id:'r',kind:'fair-witnessed'}},over.confirmStatus??200);}
   throw new Error('unexpected '+url);
  };
  f.calls=calls;return f;
@@ -39,6 +40,8 @@ for(const e of [{},{FAIR_URL:FAIR},{FAIR_PRODUCT_SECRET_STRIVE:SECRET},{FAIR_PRO
 for(const b of [{},{challengeId:'x',kind:'link',id:LINK},{challengeId:CH,kind:'post',id:LINK},{challengeId:CH,kind:'link',id:'1'}]){
  const f=net();const out=await confirm(post(b),SB,env,f);assert.equal(out.status,400);assert.equal(f.calls.length,0);
 }
+// A malformed return capability is refused before STRIVE reads the action or contacts Free Lunch.
+{const f=net();const out=await confirm(post({challengeId:CH,kind:'link',id:LINK,ticket:TICKET,returnToken:'not-a-capability'}),SB,env,f);assert.equal(out.status,400);assert.equal(f.calls.length,0);}
 // No such link: Free Lunch is never called.
 {const f=net({link:null});const out=await confirm(post({challengeId:CH,kind:'link',id:LINK,ticket:TICKET}),SB,env,f);assert.equal(out.status,404);assert.ok(!f.calls.some(u=>u.startsWith(FAIR)));}
 // A run needs the owner's token, and must be theirs.
@@ -55,6 +58,16 @@ for(const [kind,id,headers] of [['link',LINK,{}],['run',RUN,{authorization:'Bear
  const {signature,...body}=f.proof;
  assert.deepEqual(body.challenge,challenge);assert.equal(body.protocol,'fair-proof-v1');assert.equal(body.actionId,`strive-${kind}-${id}`);assert.match(body.evidenceHash,/^[a-f0-9]{64}$/);
  assert.equal(signature,createHmac('sha256',SECRET).update(canonical(body)).digest('hex'));
+ assert.equal('token' in f.confirmBody,false,'day one never invents a return token');
+}
+// Day two: STRIVE echoes the exact Free Lunch capability beside the new proof. It is not put in
+// the proof, persisted by STRIVE, or sent on an ordinary day-one confirmation.
+{
+ const f=net({confirm:{receipt:{id:'return-r',kind:'fair-return'}}});
+ const out=await confirm(post({challengeId:CH,kind:'link',id:LINK,ticket:TICKET,returnToken:RETURN_TOKEN}),SB,env,f);
+ assert.deepEqual(out.body,{confirmed:true,kind:'fair-return'});
+ assert.equal(f.confirmBody.token,RETURN_TOKEN);
+ assert.equal('token' in f.confirmBody.proof,false);
 }
 // Free Lunch refuses: only its short code comes back, never its text.
 {const f=net({confirm:{error:'TOO_EARLY <b>x</b>',code:'TOO_EARLY'},confirmStatus:409});const out=await confirm(post({challengeId:CH,kind:'link',id:LINK,ticket:TICKET}),SB,env,f);assert.deepEqual(out.body,{confirmed:false,code:'TOO_EARLY'});}

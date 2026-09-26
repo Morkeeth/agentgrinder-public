@@ -32,7 +32,7 @@ async function rpc(name,args,{SB_URL,SB_KEY},fetchImpl){
  return {ok:response.ok,status:response.status,result};
 }
 
-export async function createLink({method,headers,body},config,fetchImpl=fetch){
+export async function createLink({method,headers,body},config,fetchImpl=fetch,env=process.env){
  if(method!=='POST') return {status:405,headers:{Allow:'POST'},body:{error:'Use POST.'}};
  if(Number(headers['content-length']||0)>MAX_BYTES) return {status:413,body:{error:'Send a run under 4 KiB.'}};
  if(!body||typeof body!=='object'||Array.isArray(body)) return {status:400,body:{error:'Send one run as a JSON object.'}};
@@ -52,7 +52,7 @@ export async function createLink({method,headers,body},config,fetchImpl=fetch){
  // The delete secret rides in the fragment, which browsers never send to a server, so it cannot
  // land in an access log or a Referer header.
  // With Free Lunch confirm on, the creator also gets the ticket that proves they made this link.
- const ticket=linkTicket(r.id);
+ const ticket=linkTicket(r.id,env);
  return {status:200,body:{id:r.id,url,delete_url:url+'/delete#'+r.delete_token,expires_at:r.expires_at,...(ticket?{fair_ticket:ticket}:{})}};
 }
 

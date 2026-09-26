@@ -12,6 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PGlite } from '@electric-sql/pglite';
 import * as L from '../server/dropin-link.mjs';
+import { confirm as fairConfirm } from '../server/fair-confirm.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const DIST = path.join(ROOT, 'dist');
@@ -55,9 +56,10 @@ export function postgrest(db) {
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.txt': 'text/plain' };
 
-export async function serve({ db, listen = port } = {}) {
+export async function serve({ db, listen = port, fairEnv = process.env } = {}) {
   db = db || await database();
-  const fetchImpl = postgrest(db);
+  const dbFetch = postgrest(db);
+  const fetchImpl = (url, init) => String(url).startsWith('http://postgrest.local/') ? dbFetch(url, init) : fetch(url, init);
   const config = { SB_URL: 'http://postgrest.local', SB_KEY: 'local-development-only', ORIGIN: `http://localhost:${listen}` };
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, config.ORIGIN);
@@ -69,7 +71,13 @@ export async function serve({ db, listen = port } = {}) {
         const headers = { ...req.headers, 'x-forwarded-for': req.headers['x-forwarded-for'] || req.socket.remoteAddress };
         const out = url.searchParams.get('action') === 'delete'
           ? await L.deleteLink({ method: 'POST', body }, config, fetchImpl)
-          : await L.createLink({ method: 'POST', headers, body }, config, fetchImpl);
+          : await L.createLink({ method: 'POST', headers, body }, config, fetchImpl, fairEnv);
+        return send(out.status, out.body);
+      }
+      if (url.pathname === '/api/fair/confirm' && req.method === 'POST') {
+        let raw = ''; for await (const c of req) raw += c;
+        let body; try { body = JSON.parse(raw); } catch { body = undefined; }
+        const out = await fairConfirm({ method: 'POST', headers: req.headers, body }, config, fairEnv, fetchImpl);
         return send(out.status, out.body);
       }
       const m = /^\/l\/([^/]+)(\/delete)?$/.exec(url.pathname);
@@ -86,7 +94,9 @@ export async function serve({ db, listen = port } = {}) {
       send(200, await readFile(file), TYPES[path.extname(file)] || 'application/octet-stream');
     } catch (e) { send(500, { error: String(e.message || e) }); }
   });
-  await new Promise(r => server.listen(listen, r));
+  await new Promise(r => server.listen(listen, '127.0.0.1', r));
+  const address = server.address();
+  config.ORIGIN = `http://127.0.0.1:${address.port}`;
   return { server, db, origin: config.ORIGIN };
 }
 

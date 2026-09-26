@@ -10,9 +10,15 @@ def test_confirm_module_with_a_fake_network():
     assert out.returncode == 0, out.stderr[-2000:]
 
 
+def test_return_pair_survives_the_browser_confirmation_flow():
+    out = subprocess.run(["node", "scripts/test-fair-return-browser.mjs"], cwd=ROOT, capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr[-2000:]
+
+
 def test_the_page_strips_the_challenge_and_holds_no_secret():
     fair = (ROOT / "site/fair.js").read_text()
     assert "/^fair_challenge(=|$)/" in fair and "replaceState" in fair
+    assert "fair_return_token" in fair
     assert "SECRET" not in fair.upper().replace("NEVER HOLDS A SECRET", "")
     index = (ROOT / "site/index.html").read_text()
     assert '<script src="/fair.js"></script>' in index
