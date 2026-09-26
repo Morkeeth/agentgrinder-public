@@ -21,8 +21,7 @@ python3 -m venv ~/.strive && ~/.strive/bin/pip install -U pip
 ~/.strive/bin/agentgrinder grind --push
 ```
 
-Nothing is uploaded by the command. Open the `preview ->` link, sign in with GitHub or an email
-link, write a title and caption, pick who can see it, then press **Save run**. No model API key
+Nothing is uploaded by the command. Open the `preview ->` link, sign in with GitHub, write a title and caption, pick who can see it, then press **Save run**. No model API key
 and no account are needed to make the card. Run `agentgrinder grind --list` first to see which
 session it picked.
 
@@ -47,7 +46,7 @@ python3 scripts/dev.py setup
 python3 scripts/dev.py check
 ```
 
-**Current status:** the app is live at [agentic-strava.vercel.app](https://agentic-strava.vercel.app). Sign in with GitHub or an email link, post a run, follow people and reply. The feed is new and mostly empty; the first runs you see may be your own. Local capture works offline with no account. This checkout defaults to localhost and does not connect to the hosted database unless you configure it. The hosted app runs on Vercel with a Supabase `strava` schema; see [CONTRIBUTING.md](CONTRIBUTING.md) for the setup notes.
+**Current status:** the app is live at [agentic-strava.vercel.app](https://agentic-strava.vercel.app). Sign in with GitHub, post a run, follow people and reply. The feed is new and mostly empty; the first runs you see may be your own. Local capture works offline with no account. This checkout defaults to localhost and does not connect to the hosted database unless you configure it. The hosted app runs on Vercel with a Supabase `strava` schema; see [CONTRIBUTING.md](CONTRIBUTING.md) for the setup notes.
 
 ## Build in Cursor or Grok Bot
 

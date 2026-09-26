@@ -13,20 +13,20 @@ const BASIS=new Set(['measured','declared']);
 const routeFacts=route=>{
  if(!route||route.v!==1||route.unavailable||!Array.isArray(route.projects)||!Array.isArray(route.stops))return null;
  const declared=route.projects.filter(project=>project&&typeof project.id==='string'&&typeof project.label==='string'&&project.label.trim());
- if(declared.length!==route.projects.length)return null;
+ if(declared.length!==route.projects.length||new Set(declared.map(project=>project.id)).size!==declared.length)return null;
  const known=new Set(declared.map(project=>project.id));
  const stops=route.stops;
  if(!stops.length)return null;
  const ids=new Set();
  for(const stop of stops){
-  if(!stop||typeof stop.id!=='string'||ids.has(stop.id)||!known.has(stop.project)||typeof stop.label!=='string'||!stop.label.trim()||!BASIS.has(stop.basis))return null;
+  if(!stop||typeof stop.id!=='string'||ids.has(stop.id)||!known.has(stop.project)||typeof stop.label!=='string'||!stop.label.trim()||!BASIS.has(stop.basis)||typeof stop.kind!=='string'||!stop.kind.trim())return null;
   ids.add(stop.id);
  }
  const order=Object.fromEntries(stops.map((stop,index)=>[stop.id,index]));
  const connectors=Array.isArray(route.connectors)?route.connectors:[];
  const handoffs=connectors.filter(connector=>connector&&connector.kind==='handoff');
  for(const handoff of handoffs){
-  if(!(handoff.from in order)||!(handoff.to in order)||order[handoff.from]>=order[handoff.to])return null;
+  if(!Object.hasOwn(order,handoff.from)||!Object.hasOwn(order,handoff.to)||order[handoff.from]>=order[handoff.to])return null;
  }
  let finish=null;
  if(route.finish!=null){

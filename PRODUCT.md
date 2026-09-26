@@ -35,7 +35,7 @@ This repository is the public product. Morkeeth/agentgrinder remains the hackath
 ## What exists · 15 September
 
 - Hosted at [agentic-strava.vercel.app](https://agentic-strava.vercel.app) on Vercel. App data lives in a dedicated `strava` schema in a Supabase project whose Auth is shared with the hackathon build; app data and profiles are separate. `/api/health` reports the database state.
-- Sign-in with GitHub or an email link. One profile per account, with a handle and display name you can edit.
+- Sign-in with GitHub. One profile per account, with a handle and display name you can edit.
 - Feed, post a run, My runs, profiles, follow, Following, XUDOS, reply and a Responses inbox. The public feed is new and mostly empty.
 - Local capture: `python3 -m agentgrinder grind --harness cursor` reads a real Cursor session with no keys and writes a card to `./grind.html`.
 - Private Cursor hook: `python3 -m agentgrinder hook install --harness cursor` watches completed local composers, dedupes by composer id and opens a loopback STRIVE preview without posting.
