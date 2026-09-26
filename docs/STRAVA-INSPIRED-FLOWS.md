@@ -24,7 +24,7 @@ the visual anchor. Unknown measurements remain unknown.
 
 ### 2. Sign-in / Auth return / cancel / error
 
-1. **Current:** choose Sign in → pick GitHub or email → provider returns to an allowlisted route.
+1. **Current:** choose Sign in → GitHub (the only provider enabled) → provider returns to an allowlisted route.
    A capture draft and edits are stashed before redirect. Cancel/error copy says nothing changed;
    the same-tab draft survives where browser storage is available.
 2. **Strava-inspired improvement:** explain why identity is needed, what remains private and where

@@ -94,7 +94,7 @@ Blockers for Sunday:
    after this branch is on `main`. Then run
    `uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --list`
    from an empty `HOME`.
-2. **Sign in on prod.** A real GitHub and email sign-in that returns to the preview is not
+2. **Sign in on prod.** A real GitHub sign-in that returns to the preview is not
    tested. Oscar can test it with his own account and save as Only me. His profile is excluded
    from the count.
 3. **Nine unnamed people.** See section 2.

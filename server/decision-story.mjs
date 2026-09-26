@@ -1,0 +1,150 @@
+import {BRAND} from './brand.mjs';
+import {origin as defaultOrigin, validId} from './public-run.mjs';
+
+const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({
+ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;',
+}[char]));
+
+// A route either validates completely or tells no story (its public run then opens /r/<id>).
+// Nothing is filtered away and then counted: every stop has an id, a known project, a label and a
+// basis; every handoff joins two different stops, forward in route order. Projects the stops never
+// enter are dropped here, so they are never spoken, counted or drawn.
+const BASIS=new Set(['measured','declared']);
+const routeFacts=route=>{
+ if(!route||route.v!==1||route.unavailable||!Array.isArray(route.projects)||!Array.isArray(route.stops))return null;
+ const declared=route.projects.filter(project=>project&&typeof project.id==='string'&&typeof project.label==='string'&&project.label.trim());
+ if(declared.length!==route.projects.length||new Set(declared.map(project=>project.id)).size!==declared.length)return null;
+ const known=new Set(declared.map(project=>project.id));
+ const stops=route.stops;
+ if(!stops.length)return null;
+ const ids=new Set();
+ for(const stop of stops){
+  if(!stop||typeof stop.id!=='string'||ids.has(stop.id)||!known.has(stop.project)||typeof stop.label!=='string'||!stop.label.trim()||!BASIS.has(stop.basis)||typeof stop.kind!=='string'||!stop.kind.trim())return null;
+  ids.add(stop.id);
+ }
+ const order=Object.fromEntries(stops.map((stop,index)=>[stop.id,index]));
+ const connectors=Array.isArray(route.connectors)?route.connectors:[];
+ const handoffs=connectors.filter(connector=>connector&&connector.kind==='handoff');
+ for(const handoff of handoffs){
+  if(!Object.hasOwn(order,handoff.from)||!Object.hasOwn(order,handoff.to)||order[handoff.from]>=order[handoff.to])return null;
+ }
+ let finish=null;
+ if(route.finish!=null){
+  finish=stops.find(stop=>stop.id===route.finish.stop)||null;
+  if(!finish)return null;
+ }
+ const counts=Object.create(null);
+ for(const stop of stops)counts[stop.project]=(counts[stop.project]||0)+1;
+ const projects=declared.filter(project=>counts[project.id]);
+ let dense=null,denseCount=0,tied=false;
+ for(const project of projects){
+  const count=counts[project.id];
+  if(count>denseCount){dense=project;denseCount=count;tied=false;}
+  else if(count===denseCount)tied=true;
+ }
+ if(tied)dense=null;
+ const finishProject=finish&&projects.find(project=>project.id===finish.project);
+ const measured=stops.filter(stop=>stop.basis==='measured');
+ const crossed=projects;
+ const lastDense=dense?stops.map(stop=>stop.project).lastIndexOf(dense.id):-1;
+ const finishAfterDense=Boolean(finish&&dense&&finishProject&&finishProject.id!==dense.id&&order[finish.id]>lastDense);
+ const finishIsLastMeasured=Boolean(finish&&measured.length&&measured[measured.length-1]===finish);
+ const byId=Object.fromEntries(stops.map(stop=>[stop.id,stop]));
+ const handoffToFinish=Boolean(finishProject&&handoffs.some(connector=>byId[connector.to].project===finishProject.id));
+ return {projects,stops,dense,denseCount,finish,finishProject,handoffs,measured,crossed,finishAfterDense,finishIsLastMeasured,handoffToFinish};
+};
+
+const stopEvidence=stop=>{
+ const evidence=Array.isArray(stop?.evidence)?stop.evidence.find(item=>typeof item==='string'&&item.trim()):null;
+ return evidence?evidence.trim():'';
+};
+
+// Whether a run can carry a decision story: it needs a measured Code Route. A public run without
+// one is still a real public story, at /r/<id> (api/decision.js sends the reader there).
+// At least one stop must be measured: a route that is all declared is a claim, not a record.
+export const hasDecisionStory=run=>{const facts=run&&validId(run.id)?routeFacts(run.code_route):null;return Boolean(facts&&facts.measured.length)};
+
+// Everything in the challenge comes from this run's own route, never from one run's names.
+const actionUrl=(runId,canonical,facts,decision)=>{
+ const finish=facts.finish;
+ const title=('Challenge: '+decision).slice(0,120);
+ const body=[
+  'Decision story: '+canonical,
+  '',
+  'Decision to challenge: '+decision,
+  finish?(facts.finishIsLastMeasured?'Last measured stop: ':'Finish: ')+finish.label+'.':'',
+  '',
+  'Challenge or next verified stop:',
+ ].filter(Boolean).join('\n');
+ const url=new URL('https://github.com/Morkeeth/agentgrinder-public/issues/new');
+ url.searchParams.set('title',title);
+ url.searchParams.set('body',body);
+ return url.href;
+};
+
+const routePlot=facts=>{
+ const width=330,left=9,right=9,top=8,rowHeight=15;
+ const height=top+facts.projects.length*rowHeight+8;
+ const rows=Object.fromEntries(facts.projects.map((project,index)=>[project.id,index]));
+ const points=facts.stops.map((stop,index)=>({
+  stop,
+  x:left+index/Math.max(1,facts.stops.length-1)*(width-left-right),
+  y:top+(rows[stop.project]??0)*rowHeight+rowHeight/2,
+ }));
+ const path=points.map((point,index)=>`${index?'L':'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ');
+ const dots=points.map(point=>{
+  const finish=point.stop.id===facts.finish?.id;
+  return `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="${finish?4.5:3}" fill="${finish?'#111':'#123cff'}"/>`;
+ }).join('');
+ return `<svg class="decision-route" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(`${facts.stops.length} ordered stops across ${facts.projects.map(project=>project.label).join(', ')}`)}"><path d="${path}" fill="none" stroke="#123cff" stroke-width="2.2"/>${dots}</svg>`;
+};
+
+const styles=`*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#f7f7f5;color:#111}body{font:14px/1.38 'IBM Plex Sans',system-ui,-apple-system,sans-serif;padding:0 12px 24px}a{color:inherit}main{width:min(100%,390px);margin:0 auto}.brand{display:flex;align-items:center;min-height:46px;color:#123cff;font-size:12px;font-weight:700;letter-spacing:.08em;text-decoration:none}.story{background:#fff;border:1px solid #dfe2e9;border-radius:14px;padding:15px 14px 14px;box-shadow:0 8px 24px rgba(23,35,70,.04)}.preview{margin:-3px 0 8px;color:#687083;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}.preview strong{color:#123cff}h1{font-size:25px;line-height:1.04;letter-spacing:-.025em;margin:0 0 10px}.goal{margin:0 0 13px;color:#363b46;font-size:13px}.label{display:block;color:#123cff;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}.route-wrap{border-top:1px solid #edf0f5;border-bottom:1px solid #edf0f5;padding:9px 0 8px}.decision-route{display:block;width:100%;height:auto}.lanes{display:flex;flex-wrap:wrap;gap:2px 11px;margin-top:2px;color:#4c5361;font-size:10px}.lanes b{color:#123cff;margin-right:3px}.decision{margin:12px 0 0;border-left:3px solid #123cff;padding:0 0 0 10px}.decision h2{font-size:18px;line-height:1.14;margin:0}.because{margin:5px 0 0;color:#596174;font-size:11px}.evidence{margin-top:12px}.evidence-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}.evidence-head h2{font-size:13px;margin:0}.measured{color:#596174;font-size:10px}.receipts{list-style:none;padding:0;margin:6px 0 0;display:grid;gap:5px}.receipts li{display:grid;grid-template-columns:auto 1fr;gap:7px;font-size:11px;line-height:1.25}.receipt-mark{color:#123cff;font-weight:700;text-transform:uppercase}.receipt-copy strong{display:block;font-size:12px}.receipt-copy span{color:#687083}.finish{margin:7px 0 0;color:#111;font-size:11px}.action{display:block;background:#123cff;color:#fff;text-align:center;text-decoration:none;font-weight:600;border-radius:5px;padding:11px 12px;margin-top:13px}.boundary{color:#687083;text-align:center;font-size:9px;margin:5px 5px 0}.story a:focus-visible,.brand:focus-visible{outline:3px solid #7b96ff;outline-offset:3px}.neutral{padding:22px}.neutral h1{font-size:22px}.neutral p{color:#596174}@media(min-width:600px){body{padding-top:8px}}`;
+const head=(title,description,canonical)=>`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} · ${BRAND}</title><meta name="description" content="${esc(description)}"><meta property="og:type" content="article"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description)}"><meta property="og:url" content="${esc(canonical)}"><link rel="canonical" href="${esc(canonical)}"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght%40400;500;600;700&display=swap" rel="stylesheet"><style>${styles}</style>`;
+
+export function decisionHtml(run,options={}){
+ const facts=routeFacts(run?.code_route);
+ if(!run||!validId(run.id)||!facts)throw new Error('Decision story requires a valid measured Code Route');
+ const pageOrigin=options.origin||defaultOrigin;
+ const canonical=`${pageOrigin}/d/${encodeURIComponent(run.id)}`;
+ const dense=facts.dense;
+ const finishProject=facts.finishProject;
+ // Every clause below is only said when the route carries it: no finish is named without a finish
+ // stop, "measured" is only said of measured stops, and an insight with nothing in it is left out.
+ const decision=facts.finishAfterDense
+  ?`Carry the work beyond ${dense.label} to ${finishProject.label}.`
+  :facts.finish
+   ?`Carry the route through to ${facts.finish.label}.`
+   :`Carry the route across ${facts.crossed.length} project${facts.crossed.length===1?'':'s'}.`;
+ const parts=[
+  dense?`${dense.label} held ${facts.denseCount} of ${facts.stops.length} stops`:null,
+  facts.handoffs.length?`${facts.handoffs.length} handoff${facts.handoffs.length===1?'':'s'} carried it onward`:null,
+  facts.measured.length===facts.stops.length?'every stop was measured':`${facts.measured.length} of ${facts.stops.length} stops were measured`,
+ ].filter(Boolean);
+ const insight=parts.length?parts.join(' · ')+'.':'';
+ // Receipts: the decision point itself. The last stop in the busiest project (where the work
+ // could have stopped), the first stop in the finish project (where it went instead), then the
+ // recorded finish. Without a busiest project or a move, the first stop with evidence stands in.
+ const lastInDense=dense?[...facts.stops].reverse().find(stop=>stop.project===dense.id):null;
+ const firstInFinish=finishProject?facts.stops.find(stop=>stop.project===finishProject.id):null;
+ const fallback=facts.stops.find(stop=>stopEvidence(stop));
+ const chosen=[lastInDense||fallback,firstInFinish,facts.finish].filter((stop,index,all)=>stop&&all.indexOf(stop)===index);
+ const receipts=chosen.map(stop=>`<li><span class="receipt-mark">${esc(stop.kind)}</span><span class="receipt-copy"><strong>${esc(stop.label)}</strong>${stopEvidence(stop)?`<span>${esc(stopEvidence(stop))}</span>`:''}</span></li>`).join('');
+ const lanes=facts.projects.map((project,index)=>`<span><b>${index+1}</b>${esc(project.label)}</span>`).join('');
+ // The public runs query already carries the title. Keep preview and cold public render identical
+ // instead of relying on the fixture-only note.
+ const goal=run.title;
+ const action=actionUrl(run.id,canonical,facts,decision);
+ const description=insight?`${decision} ${insight}`:decision;
+ return `<!doctype html><html lang="en"><head>${head(run.title,description,canonical)}</head><body><main><a class="brand" href="/" aria-label="${BRAND} home">${BRAND} · decision story</a><article class="story">${options.preview?`<p class="preview"><strong>Local preview, not live</strong> of ${esc(run.id.slice(0,8))} · not a public run</p>`:''}<h1>${esc(run.title)}</h1><p class="goal"><span class="label">Human goal</span>${esc(goal)}</p><div class="route-wrap">${routePlot(facts)}<div class="lanes">${lanes}</div></div><section class="decision"><span class="label">Agent decision that changed the route</span><h2>${esc(decision)}</h2>${insight?`<p class="because">${esc(insight)}</p>`:''}</section><section class="evidence"><div class="evidence-head"><h2>Evidence on this route</h2><span class="measured">${facts.measured.length}/${facts.stops.length} measured stops</span></div><ul class="receipts">${receipts}</ul>${facts.finish?`<p class="finish">Finish · <strong>${esc(facts.finish.label)}</strong></p>`:''}</section><a class="action" href="${esc(action)}" rel="noopener noreferrer">${esc(facts.finishAfterDense&&facts.handoffToFinish?`Challenge the ${finishProject.label} handoff`:'Challenge this decision')}</a><p class="boundary">Opens a prefilled ${BRAND} issue draft on GitHub. GitHub sign-in is required to post; opening it posts nothing.</p></article></main></body></html>`;
+}
+
+export function neutralDecisionHtml(id,options={}){
+ const pageOrigin=options.origin||defaultOrigin;
+ const canonical=`${pageOrigin}/d/${encodeURIComponent(id)}`;
+ const title='This decision story is not public';
+ const description='The run owner must make the run Public before strangers can read its decision story.';
+ return `<!doctype html><html lang="en"><head>${head(title,description,canonical)}<meta name="robots" content="noindex"></head><body><main><a class="brand" href="/">${BRAND} · decision story</a><article class="story neutral"><h1>${title}</h1><p>${description}</p><a class="action" href="/r/${encodeURIComponent(id)}">Open the run link</a></article></main></body></html>`;
+}
+
+export {routeFacts};
