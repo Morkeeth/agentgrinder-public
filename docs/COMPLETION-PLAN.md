@@ -26,7 +26,7 @@ steps in order:
 
 1. Confirm the shared Supabase Auth redirect allowlist accepts
    `https://agentic-strava.vercel.app` without replacing the shared Site URL or existing callbacks.
-2. Verify GitHub and email-link sign-in return to the intended live page with the private draft
+2. Verify GitHub sign-in (the only provider enabled) returns to the intended live page with the private draft
    intact. Check cancellation and sign-out as well.
 3. Run [the two-person live test](TWO-PERSON-TEST.md) with Oscar and one consenting friend, each
    using their own account and safe real session.

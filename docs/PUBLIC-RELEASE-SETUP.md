@@ -18,6 +18,6 @@ Review the transaction before applying it. Keep later migrations schema-qualifie
 
 Use the separate Vercel project. Configure the browser, server and CLI endpoints together, keep `SB_SCHEMA` fixed to `strava`, and put no privileged key in frontend assets.
 
-GitHub sign-in and email links use shared Auth but create a profile in `strava`. Add the exact site callback to the allowlist without changing the project Site URL. Public handles are labels, not proof of account ownership.
+GitHub sign-in (the only provider enabled, `PROVIDERS_ENABLED` in site/index.html) uses shared Auth but creates a profile in `strava`. Add the exact site callback to the allowlist without changing the project Site URL. Public handles are labels, not proof of account ownership.
 
 Before release, run `python3 scripts/dev.py check`, `npm run build`, and the relevant disposable browser path. Hosted acceptance needs consenting accounts and must verify private-by-default capture, deliberate posting, public browsing, responses and deletion. Local tests, hosted checks and real use are separate evidence.

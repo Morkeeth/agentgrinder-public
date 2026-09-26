@@ -87,7 +87,7 @@ hosted preview directly and does not require a handoff file.
 On the hosted page, review the white card and blue trace. Missing measurements remain unknown.
 Write only a public-facing title, caption and optional HTTPS output link. Leave the audience unset
 to stop at preview. Saving needs an account: while you are signed out the button reads
-**Sign in to save**, and pressing it starts sign-in with GitHub or an email link. Signed in, pick
+**Sign in to save**, and pressing it starts sign-in with GitHub. Signed in, pick
 one audience on purpose:
 
 - **Only me**: just you.
