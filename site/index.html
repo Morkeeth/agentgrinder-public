@@ -179,6 +179,10 @@ a.act{display:inline-block;text-decoration:none}
 .sub{padding:4px 16px 0;font-size:13px;color:var(--soft)}
 .card-harness{color:var(--ink);font-weight:500}
 .note{padding:8px 16px 0;font-size:14px;line-height:1.55}
+.result-lead{margin:14px 16px 0;padding:14px;border:1px solid var(--rule);overflow-wrap:anywhere}
+.result-lead p{margin:5px 0}.result-label{color:var(--blue);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+.result-outcome{font-size:19px;line-height:1.32;font-weight:600}.result-source,.result-lead [data-result-claim]:not(.result-outcome),.result-limit{color:var(--soft);font-size:11px;line-height:1.45}
+.result-duration{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--rule);padding-top:9px!important;margin-top:10px!important}.result-duration strong{font-size:18px;color:var(--ink)}
 .grp{padding:14px 16px 0;font-size:11px;color:var(--dim)}
 .para{padding:6px 16px 0;font-size:14px;line-height:1.6}
 .plan{margin:6px 16px 0;padding-left:18px;font-size:13px;line-height:1.55;color:var(--soft)}
@@ -492,6 +496,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
 <script src="/feed-card.js"></script>
+<script src="/result-lead.js"></script>
 <script src="/dropin-parse.js"></script>
 <script src="/fair.js"></script>
 <script src="/home.js"></script>
@@ -1086,6 +1091,10 @@ function achievedLabel(r){
   const done=(r.commits>0)||shipped>0||receipts>0||!!(r.output_url&&safeOutputUrl(r.output_url));
   return done?'<div class="run-story-label achieved">Achieved</div>':'';
 }
+function resultLeadHtml(r,surface='view'){
+  if(typeof GrinderResultLead!=='object') return '';
+  try{return GrinderResultLead.html(GrinderResultLead.guard(GrinderResultLead.present(r,surface),r),esc)}catch(_){return ''}
+}
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
   const projectName=()=>GrinderContract.projectLabel(r.project);
   const codeFacts=()=>{
@@ -1157,10 +1166,11 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   return `<div class="card" id="card-${r.id}" data-run-id="${esc(r.id)}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
+    ${resultLeadHtml(r)}
     ${cover}
     ${achievedLabel(r)}
     <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
-    ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
+    ${r.caption?`<div class="note">${esc(r.caption)}</div>`:(!r.note?'' : typeof GrinderResultLead!=='object'?`<div class="note">${esc(r.note)}</div>`:'')}
     ${audienceNote}
     ${eventChip}
     ${agentChip}

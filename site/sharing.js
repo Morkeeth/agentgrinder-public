@@ -119,12 +119,13 @@ function mount({run,slot,status,moment=null,review=null}){
   slot.innerHTML='<p>This moment belongs to a different measurement. Return to the grind and choose a current moment before making a card.</p>';return;
  }
  const publicShare=run.visibility==='public', handle=run.profiles?.github_handle;
+ const shareLead=(!moment&&!review&&typeof GrinderResultLead==='object')?GrinderResultLead.guard(GrinderResultLead.present(run,'share'),run):null;
  const url=moment?location.origin+'/?run='+encodeURIComponent(run.id)+'&moment='+encodeURIComponent(moment.id):location.origin+(publicShare?'/r/':'/?run=')+encodeURIComponent(run.id);
  slot.innerHTML=`<div class="head"><h2>${review?"Share my outcome":"Share your run"}</h2>${review?"":`<a href="/?run=${encodeURIComponent(run.id)}">Back to run</a>`}</div>
  <p class="hint">${publicShare?'Public run · anyone can read it at /r/.':run.visibility==='link'?'Link run · signed-in followers and close friends can open /?run=.':'Private run · exporting an image does not change who can read the run.'}</p>
  <div class="share-studio"><form id="post-editor" class="panel reply-form">
  <label>Title<input name="title" maxlength="100" required value="${esc(run.title)}"></label>
- <label>Caption (optional edit)<textarea name="result" maxlength="240" placeholder="One short result line. Leave as-is if the card already says it.">${esc(run.caption||'')}</textarea></label>
+ <label>Caption (optional, copied below the image)<textarea name="result" maxlength="240" placeholder="Add context without changing the stored account.">${esc(run.caption||'')}</textarea></label>
  <label>Image format<select name="format"><option value="square">Square · 1080 × 1080</option><option value="portrait">Portrait · 1080 × 1350</option></select></label>
  <label><input type="checkbox" name="identity" ${handle?'checked':''}> Include public handle and agent name</label>
  <p class="hint">The image is built from this run: title, caption, Code Route when recorded or the blue activity trace, and measured facts. It never includes command text, paths, code, prompts, secrets, or tool output.</p>
@@ -142,16 +143,17 @@ function mount({run,slot,status,moment=null,review=null}){
  let nextText='';
  const fields=()=>({title:form.elements.title.value.trim(),contribution:contributionText,result:form.elements.result.value.trim(),next:nextText,identity:form.elements.identity.checked});
  function lines(text,x,y,width,font,lineHeight,maxLines){ctx.font=font;let words=String(text).split(/\s+/),line='',rows=[];for(const word of words){const candidate=line?line+' '+word:word;if(ctx.measureText(candidate).width>width&&line){rows.push(line);line=word}else line=candidate;}if(line)rows.push(line);rows=rows.flatMap(row=>{if(ctx.measureText(row).width<=width)return[row];const parts=[];let part='';for(const c of row){if(ctx.measureText(part+c).width>width){parts.push(part);part=''}part+=c}if(part)parts.push(part);return parts});const clipped=rows.length>maxLines;rows=rows.slice(0,maxLines);if(clipped){let last=rows.at(-1);while(last&&ctx.measureText(last+'…').width>width)last=last.slice(0,-1);rows[rows.length-1]=last+'…'}rows.forEach((row,i)=>ctx.fillText(row,x,y+i*lineHeight));return clipped;}
- function draw(){const f=fields(),portrait=form.elements.format.value==='portrait';canvas.width=1080;canvas.height=portrait?1350:1080;let clipped=false;ctx.fillStyle='#f8f8f6';ctx.fillRect(0,0,1080,canvas.height);ctx.fillStyle='#123cff';ctx.fillRect(64,64,44,8);ctx.fillStyle='#111';ctx.font='600 23px sans-serif';ctx.fillText('__BRAND__',128,80);ctx.fillStyle='#666';ctx.font='20px sans-serif';ctx.fillText(review?'MY RETURN':'RUN NOTES',820,80);
- ctx.fillStyle='#123cff';ctx.font='600 16px sans-serif';ctx.fillText('ACHIEVED',64,124);
- ctx.fillStyle='#111';clipped=lines(f.title||'Your run',64,172,952,'600 46px sans-serif',54,2)||clipped;
- ctx.fillStyle='#444';clipped=lines(f.result||'Achievement caption unknown',64,275,952,'24px sans-serif',31,2)||clipped;
- ctx.fillStyle='#666';const identity=f.identity&&handle?'@'+handle:'Identity not included';const agentLabel=(()=>{const n=String(run.agent_name||'').trim();if(!n||/^connect$/i.test(n))return run.source_actor_id?'via Connect':'';return n;})();clipped=lines(identity+' · '+(run.harness||'Harness unknown')+(f.identity&&agentLabel?' · '+agentLabel:''),64,330,952,'19px sans-serif',24,1)||clipped;
- const facts=storyFacts(run),story=[['OUTPUT',facts.output],['PROJECT TOUCHED',facts.project],['CODE ACTIVITY',facts.code]].filter(([,value])=>value);story.forEach(([label,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='15px sans-serif';ctx.fillText(label,x,378);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'19px sans-serif':'600 20px sans-serif';clipped=lines(value,x,408,285,'600 20px sans-serif',24,1)||clipped;});
+ function draw(){const f=fields(),portrait=form.elements.format.value==='portrait';canvas.width=1080;canvas.height=portrait?1350:1080;let clipped=false;ctx.fillStyle='#f8f8f6';ctx.fillRect(0,0,1080,canvas.height);ctx.fillStyle='#123cff';ctx.fillRect(64,64,44,8);ctx.fillStyle='#111';ctx.font='600 23px sans-serif';ctx.fillText('__BRAND__',128,80);ctx.fillStyle='#666';ctx.font='20px sans-serif';ctx.fillText(review?'MY RETURN':shareLead?shareLead.label.toUpperCase():'RUN NOTES',780,80);
+ ctx.fillStyle='#123cff';ctx.font='600 16px sans-serif';ctx.fillText(shareLead?shareLead.label.toUpperCase():'RUN',64,124);
+ ctx.fillStyle='#111';clipped=lines(shareLead?.outcome||f.title||'No result account is stored for this view.',64,172,952,'600 38px sans-serif',46,3)||clipped;
+ if(shareLead){ctx.fillStyle='#555';ctx.font='17px sans-serif';ctx.fillText(shareLead.sourceLine,64,314);ctx.fillStyle='#666';clipped=lines('Limit: '+shareLead.limit,64,344,952,'17px sans-serif',21,2)||clipped;}
+ else{ctx.fillStyle='#444';clipped=lines(f.result||'Result account unknown',64,300,952,'24px sans-serif',31,2)||clipped;}
+ ctx.fillStyle='#666';const identity=f.identity&&handle?'@'+handle:'Identity not included';const agentLabel=(()=>{const n=String(run.agent_name||'').trim();if(!n||/^connect$/i.test(n))return run.source_actor_id?'via Connect':'';return n;})();clipped=lines(identity+' · '+(run.harness||'Harness unknown')+(f.identity&&agentLabel?' · '+agentLabel:''),64,395,952,'19px sans-serif',24,1)||clipped;
+ const facts=storyFacts(run),story=[['SESSION TIME',shareLead?.duration||null],['OUTPUT',facts.output],['CODE ACTIVITY',facts.code]].filter(([,value])=>value);story.forEach(([label,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='15px sans-serif';ctx.fillText(label,x,430);ctx.fillStyle='#111';ctx.font='600 20px sans-serif';clipped=lines(value,x,460,285,'600 20px sans-serif',24,1)||clipped;});
  const route=run.code_route&&run.code_route.v===1?run.code_route:null;
  if(route&&!route.unavailable&&Array.isArray(route.projects)&&Array.isArray(route.stops)&&route.projects.length&&route.stops.length){
   const projects=route.projects,stops=route.stops,idx=Object.fromEntries(projects.map((p,i)=>[p.id,i]));
-  const left=96,top=470,rowH=22,width=920;
+  const left=96,top=510,rowH=22,width=920;
   ctx.strokeStyle='#123cff';ctx.lineWidth=4;ctx.beginPath();
   stops.forEach((stop,i)=>{const row=idx[stop.project]??0;const x=left+i/Math.max(1,stops.length-1)*width;const y=top+row*rowH+rowH/2;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
   ctx.stroke();
@@ -164,11 +166,11 @@ function mount({run,slot,status,moment=null,review=null}){
   ctx.fillStyle='#111';ctx.font='600 20px sans-serif';
   clipped=lines(insight||'Code Route',64,top+projects.length*rowH+56,952,'600 20px sans-serif',26,2)||clipped;
  }else if(route&&route.unavailable){
-  ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Code Route unavailable',64,520);
-  ctx.font='17px sans-serif';ctx.fillText(String(route.unavailable.why||'').slice(0,90),64,592);
+  ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Code Route unavailable',64,550);
+  ctx.font='17px sans-serif';ctx.fillText(String(route.unavailable.why||'').slice(0,90),64,622);
  }else{
-  const trace=traceSeries(run),values=trace?.values;ctx.strokeStyle='#123cff';ctx.lineWidth=4;if(trace){const max=Math.max(...values)||1;ctx.beginPath();values.forEach((v,i)=>{const x=64+i/(values.length-1)*952,y=560-v/max*105;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}else{ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Trace unavailable',64,520)}
-  ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(traceSeries(run)?.label||'Session activity · time basis unknown',64,592);
+  const trace=traceSeries(run),values=trace?.values;ctx.strokeStyle='#123cff';ctx.lineWidth=4;if(trace){const max=Math.max(...values)||1;ctx.beginPath();values.forEach((v,i)=>{const x=64+i/(values.length-1)*952,y=600-v/max*105;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}else{ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Trace unavailable',64,560)}
+  ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(traceSeries(run)?.label||'Session activity · time basis unknown',64,632);
  }
   const hasRoute=route&&!route.unavailable&&Array.isArray(route.projects)&&Array.isArray(route.stops)&&route.projects.length&&route.stops.length;
  if(!hasRoute){
@@ -177,7 +179,7 @@ function mount({run,slot,status,moment=null,review=null}){
  }
  let y=hasRoute?720:770;const blocks=[['THE AGENT',f.contribution],['NEXT RUN',f.next]].filter(([,v])=>v);for(const [label,body] of blocks){ctx.fillStyle='#123cff';ctx.font='600 17px sans-serif';ctx.fillText(label,64,y);ctx.fillStyle='#111';clipped=lines(body,64,y+34,952,'26px sans-serif',32,portrait?3:2)||clipped;y+=portrait?160:110;}
  ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(64,canvas.height-65);ctx.lineTo(1016,canvas.height-65);ctx.stroke();ctx.fillStyle='#666';ctx.font='18px sans-serif';ctx.fillText(review?'My observation · this does not prove the practice caused the result':'Builder’s account · recorded counts are not independent verification',64,canvas.height-30);
- slot.querySelector('#post-caption').value=[f.title,hasRoute&&routeInsight(route),f.contribution&&'Agent: '+f.contribution,f.result&&'Result: '+f.result,f.next&&'Next run: '+f.next,review?'My observation, not proof the practice caused the result.':(publicShare||run.visibility==='link')?url:''].filter(Boolean).join('\n\n');
+ slot.querySelector('#post-caption').value=[shareLead?.label,shareLead?.outcome,shareLead?.sourceLine,shareLead&&'Limit: '+shareLead.limit,shareLead?.duration&&'Session time: '+shareLead.duration,f.title,hasRoute&&routeInsight(route),f.contribution&&'Agent: '+f.contribution,f.result&&'Context: '+f.result,f.next&&'Next run: '+f.next,review?'My observation, not proof the practice caused the result.':(publicShare||run.visibility==='link')?url:''].filter(Boolean).join('\n\n');
  slot.querySelector('#post-message').textContent=clipped?'Some text is shortened in the image. Shorten your text or choose portrait. Moment and review exports require the complete text to fit; the caption keeps the full text.':'';
  const ready=form.elements.review.checked&&!!f.title&&(!(moment||review)||!clipped)&&(!review||!!f.result);slot.querySelector('#post-download').disabled=!ready;slot.querySelector('#post-copy').disabled=!ready;
  }
