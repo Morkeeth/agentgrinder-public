@@ -41,18 +41,19 @@ CARD_CSS = """/* the card */
 .fc-face img{width:100%;height:100%;object-fit:cover;display:block}
 .fc-mono{color:var(--blue);font-weight:600;font-size:calc(var(--s) * .42)}
 .fc-body{display:block;padding:12px 16px 0;color:inherit}
-.fc-body:hover{color:inherit}
-.fc-body:hover .fc-title{color:var(--blue)}
-.fc-title{font-size:20px;line-height:1.25;font-weight:600;letter-spacing:-.01em;margin:0}
+.fc-title{font-size:28px;line-height:1.15;font-weight:600;letter-spacing:-.025em;margin:0}
+.fc-title a{color:inherit;text-decoration:none}.fc-title a:hover{color:var(--blue)}
 .fc-cap{margin:4px 0 0;font-size:14px;color:var(--ink)}
 .fc-numbers{display:flex;align-items:flex-end;gap:12px 28px;flex-wrap:wrap;margin:14px 0 0}
 .fc-hero{display:flex;flex-direction:column;line-height:1}
 .fc-n{font-size:44px;font-weight:600;letter-spacing:-.03em;color:var(--ink)}
 .fc-u{font-size:13px;color:var(--soft);margin-top:6px}
-.fc-stats{display:flex;gap:22px;margin:0;padding-bottom:2px}
-.fc-stats div{display:flex;flex-direction:column}
-.fc-stats dt{font-size:12px;color:var(--soft)}
-.fc-stats dd{margin:2px 0 0;font-size:17px;font-weight:500}
+.fc-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin:0;background:var(--rule-2);border-top:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2)}
+.fc-stats div{display:flex;flex-direction:column;background:var(--box);padding:12px 8px 12px 0}
+.fc-stats dt{font-size:12px;color:var(--soft);order:2}
+.fc-stats dd{margin:0 0 3px;font-size:24px;line-height:1;font-weight:500;order:1}
+.fc-visual{margin:16px 0 0}.fc-visual img{display:block;width:100%;max-height:420px;object-fit:cover}
+.fc-work{display:inline-flex;margin:14px 0 0;color:var(--blue);font-size:14px;font-weight:500}
 .fc-spark{position:relative;height:56px;margin:14px 0 0}
 .fc-spark svg{display:block;width:100%;height:100%}
 .fc-area{fill:var(--blue-wash)}
@@ -88,6 +89,7 @@ button.fc-act:hover,a.fc-act:hover{background:var(--blue-wash);color:var(--blue)
 .fc-act.kudo.on,.fc-act.kudo.on svg{color:var(--strive-orange)}
 .fc-kudos-mine{cursor:default}
 .fc .ack-picker{padding:14px 16px;border-top:1px solid var(--rule-2)}
+@media(max-width:560px){.fc-title{font-size:24px}.fc-stats dd{font-size:21px}.fc-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (prefers-reduced-motion:no-preference){
   .fc-act.kudo svg{transition:transform .18s cubic-bezier(.23,1,.32,1),color .18s ease-out}
   .fc-act.kudo:active svg{transform:scale(.86)}
@@ -119,6 +121,38 @@ def duration_label(seconds):
     if m < 1:
         return "<1m"
     return f"{m // 60}h {m % 60}m" if m >= 60 else f"{m}m"
+
+
+def public_facts(r: dict) -> list[tuple[str, str]]:
+    """Facts safe to promote on a public card, in the same order as site/feed-card.js."""
+    out: list[tuple[str, str]] = []
+
+    def add(label, value):
+        if value is not None and value != "" and len(out) < 3:
+            out.append((label, str(value)))
+
+    checks = whole(r.get("checks_passed"))
+    check_label = r.get("check_label", "").strip() if isinstance(r.get("check_label"), str) else ""
+    commits = whole(r.get("commits"))
+    files = whole(r.get("files_changed"))
+    if checks is not None and check_label:
+        add(check_label, f"{_thousands(checks)} passed")
+    elif commits is not None and commits > 0:
+        add("commit" if commits == 1 else "commits", _thousands(commits))
+    elif files is not None and files > 0:
+        add("file changed" if files == 1 else "files changed", _thousands(files))
+
+    wall = r.get("wall_time_s")
+    recorded = r.get("duration_s")
+    if _num(wall) and wall > 0:
+        add("Elapsed", duration_label(wall))
+    elif _num(recorded) and recorded > 0:
+        add("Recorded time", duration_label(recorded))
+
+    prompts = whole(r.get("prompts", r.get("turns_typed")))
+    if prompts is not None:
+        add("Your prompts", _thousands(prompts))
+    return out
 
 
 def _parse(iso):
@@ -501,29 +535,30 @@ def card(r: dict, meta_extra: str = "", avatars: bool = False, url: str | None =
     no network request when it is opened."""
     p = profile_of(r)
     anon = r.get("visibility") == "anonymous"
-    lead = headline(r)
-    facts = stats(r, lead)
+    facts = public_facts(r)
     who = '<span class="fc-name">Anonymous builder</span>' if anon else f'<span class="fc-name">{esc(p["name"])}</span>'
     meta = " · ".join(x for x in [esc(harness_name(r)),
                                   esc(when(r.get("created_at"))), esc(meta_extra) if meta_extra else ""] if x)
-    shipped = ('<span class="fc-chip">Shipped</span>'
-               if r.get("output_url") and re.match(r"^https://", str(r["output_url"]), re.I) else "")
     cap = r.get("caption") or r.get("note")
-    hero = (f'<div class="fc-hero"><span class="fc-n num">{esc(lead["n"])}</span><span class="fc-u">{esc(lead["unit"])}</span></div>'
-            if lead else "")
-    dl = ('<dl class="fc-stats">' + "".join(f'<div><dt>{esc(k)}</dt><dd class="num">{esc(v)}</dd></div>' for k, v in facts) + "</dl>"
+    dl = ('<dl class="fc-stats">' + "".join(f'<div><dd class="num">{esc(v)}</dd><dt>{esc(k)}</dt></div>' for k, v in facts) + "</dl>"
           if facts else "")
     cap_html = f'<p class="fc-cap">{esc(cap)}</p>' if cap else ""
+    image = (f'<figure class="fc-visual"><img src="{esc(r.get("image_url"))}" alt="Run visual chosen by the builder"></figure>'
+             if re.match(r"^https://", str(r.get("image_url") or ""), re.I) else "")
+    activity = "" if image else spark(r)
+    work = (f'<a class="fc-work" href="{esc(r.get("output_url"))}" target="_blank" rel="noopener noreferrer">Open work ↗</a>'
+            if re.match(r"^https://", str(r.get("output_url") or ""), re.I) else "")
     body = f"""
     <h1 class="fc-title">{esc(title_of(r))}</h1>
     {cap_html}
-    <div class="fc-numbers">{hero}{dl}</div>
-    {badge(r)}{route_map(r)}{spark(r)}{stride(r, url)}
+    {image}{activity}
+    {dl}
+    {work}
   """
     return f"""<article class="card fc">
-  <header class="fc-top">{face(r, avatars=avatars)}<div class="fc-who">{who}<small>{meta}</small></div>{shipped}</header>
+  <header class="fc-top">{face(r, avatars=avatars)}<div class="fc-who">{who}<small>{meta}</small></div></header>
   <div class="fc-body">{body}</div>
-  <footer class="fc-foot"><span class="fc-act" aria-label="Send XUDOS">{KUDOS_ICON}</span><span class="fc-act" aria-label="Discuss">{TALK_ICON}<span>Discuss</span></span><span class="fc-act" aria-label="Share">{SHARE_ICON}<span>Share</span></span></footer>
+  <footer class="fc-foot"><span class="fc-act" aria-label="Send XUDOS">{KUDOS_ICON}</span><span class="fc-act" aria-label="Reply">{TALK_ICON}<span>Reply</span></span><span class="fc-act" aria-label="Share">{SHARE_ICON}<span>Share</span></span></footer>
 </article>"""
 
 

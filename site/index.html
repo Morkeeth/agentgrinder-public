@@ -1802,7 +1802,7 @@ function askAgentHtml(){
     <details><summary>Import a file</summary>${dropZoneHtml()}</details></section>`;
 }
 function postExampleFallback(){
-  return `<article class="card fc" aria-label="STRIVE card structure"><header class="fc-top"><span class="fc-face fc-mono" aria-hidden="true">B</span><div class="fc-who"><span class="fc-name">Builder · Project</span><small>Agent · date</small></div></header><div class="fc-body"><h3 class="fc-title">What changed in this run?</h3><p class="fc-cap">One optional note from the builder.</p><div class="fc-spark" style="display:grid;place-items:center;border:1px solid var(--rule-2);color:var(--soft);font-size:13px">One chosen visual</div><dl class="fc-stats"><div><dd>—</dd><dt>Work fact</dt></div><div><dd>—</dd><dt>Time</dt></div><div><dd>—</dd><dt>Your prompts</dt></div></dl></div><footer class="fc-foot"><span class="fc-act">XUDOS</span><span class="fc-act">Reply</span><span class="fc-act">Share</span></footer></article>`;
+  return `<article class="card fc" aria-label="STRIVE card structure"><header class="fc-top"><span class="fc-face fc-mono" aria-hidden="true">B</span><div class="fc-who"><span class="fc-name">Builder · Project</span><small>Agent · date</small></div></header><div class="fc-body"><h3 class="fc-title">What changed in this run?</h3><p class="fc-cap">One optional note from the builder.</p><div class="fc-spark" style="display:grid;place-items:center;border:1px solid var(--rule-2);color:var(--soft);font-size:13px">One chosen visual</div><p class="hint">Work fact · Time · Your prompts, when measured</p></div><footer class="fc-foot"><span class="fc-act">XUDOS</span><span class="fc-act">Reply</span><span class="fc-act">Share</span></footer></article>`;
 }
 
 async function viewPost(){
@@ -2124,7 +2124,7 @@ async function refreshAuth(){
   try{
     const current=await auth.current();ME=current.profile;IDENTITY_SETUP=current.needsOnboarding?current:null;
     $('me').innerHTML=ME?'<a href="'+GrinderAuth.present(ME).url+'">@'+esc(profileHandle(ME))+'</a>':'';
-    $('auth').textContent=current.user?'Sign out':'Sign in';$('deletewrap').hidden=!ME;if($('delete-info'))$('delete-info').hidden=!!ME;
+    $('auth').textContent=current.user?'Sign out':'Sign in';if($('deletewrap'))$('deletewrap').hidden=!ME;if($('delete-info'))$('delete-info').hidden=!!ME;
     $('mobile-product-nav').hidden=false;syncAuthNav();status('');
     if(social.refreshUnread) social.refreshUnread();
   }catch(e){ME=null;IDENTITY_SETUP=null;status(e.detail?.message||'Sign-in could not be restored. Try again.',true);}
@@ -2194,7 +2194,7 @@ async function importRun(){
     ['measurement reference',run.measurement_revision],
     ['baseline reference',run.baseline_revision]].filter(r=>r[1]!=null&&r[1]!=='');
   frame(null,null);
-  app.innerHTML=`<div class="head"><h2>${sample?'Sample preview':'Preview your run'}</h2><span class="meta">${sample?'example data · not your activity':'private until you choose and save'}</span></div>
+  app.innerHTML=`<div class="head"><h2>${sample?'Sample preview':'Preview your run'}</h2>${sample?'<span class="meta">example data · not your activity</span>':''}</div>
     ${sample?'<p role="note">This sample is for trying the preview. It cannot be saved or posted. Capture your own session to share a run.</p>':''}
     <section aria-labelledby="import-card-heading"><h2 id="import-card-heading" class="visually-hidden">${sample?'Sample card preview':'Card preview'}, not posted</h2><div id="import-card-preview"></div></section>
     <div class="panel"><div class="pad preview-story">

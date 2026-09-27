@@ -12,7 +12,7 @@ import {card} from './server/public-run.mjs';
 
 const context={window:{},URL};
 vm.runInNewContext(fs.readFileSync('./site/sharing.js','utf8'),context);
-const {metricStrip:strip,storyFacts:story,traceSeries:trace}=context.window.GrinderSharing;
+const {metricStrip:strip,shareFacts:share,workLabel:work,storyFacts:story,traceSeries:trace}=context.window.GrinderSharing;
 const base={id:'r1',title:'A real run',visibility:'public',profiles:{handle:'sample'}};
 const zero={...base,duration_s:0,prompts:0,tool_calls:0,files_touched:0,commits:0};
 const unknown={...base,duration_s:null,prompts:null,tool_calls:null,files_touched:null,commits:null};
@@ -36,6 +36,12 @@ process.stdout.write(JSON.stringify({
   zero:strip(zero),
   unknown:strip(unknown),
   rich:story(rich),
+  shareRich:share({...rich,wall_time_s:900,prompts:3}),
+  shareRecorded:share({...base,duration_s:300,turns_typed:2,commits:null,files_changed:4,files_touched:19,tool_calls:88}),
+  shareNamedCheck:share({...base,checks_passed:12,check_label:'Browser journey',commits:2,wall_time_s:61,prompts:1}),
+  shareUnknown:share({...unknown,files_touched:12,tool_calls:40}),
+  shareZeroWork:share({...base,commits:0,files_changed:0,duration_s:60,prompts:1}),
+  workRich:work(rich),
   generic:story(generic),
   cursorTrace:trace(cursor),
   grokTrace:trace(grok),
@@ -101,6 +107,46 @@ def test_share_surfaces_tell_output_project_and_code_story_without_raw_data():
     for private in ("PRIVATE PROMPT", "PRIVATE COMMAND", "/private/", "PRIVATE OUTPUT"):
         assert private not in joined
     assert "Output" not in result["ogGeneric"]
+
+
+def test_download_share_photo_uses_the_card_metric_contract():
+    result = render()
+    assert result["shareRich"] == [
+        ["commits", "2"],
+        ["Elapsed", "15m"],
+        ["Your prompts", "3"],
+    ]
+    # files_touched is an attempted-target count. Only the separately measured files_changed may
+    # become the work fact, and a duration without a wall clock stays labelled Recorded time.
+    assert result["shareRecorded"] == [
+        ["files changed", "4"],
+        ["Recorded time", "5m"],
+        ["Your prompts", "2"],
+    ]
+    assert result["shareNamedCheck"] == [
+        ["Browser journey", "12 passed"],
+        ["Elapsed", "1m"],
+        ["Your prompts", "1"],
+    ]
+    assert result["shareUnknown"] == []
+    assert result["shareZeroWork"] == [
+        ["Recorded time", "1m"],
+        ["Your prompts", "1"],
+    ]
+    assert result["workRich"] == {"label": "View pull request", "host": "github.com"}
+
+
+def test_share_photo_keeps_provenance_and_limits_off_the_image():
+    source = (ROOT / "site" / "sharing.js").read_text()
+    draw = source.split("function draw(){", 1)[1].split("form.addEventListener", 1)[0]
+    for stale in ("sourceLine", "Limit: ", "SESSION TIME", "OUTPUT", "CODE ACTIVITY", "EFFORT"):
+        assert stale not in draw
+
+
+def test_removed_account_shortcut_does_not_break_session_restore():
+    index = (ROOT / "site" / "index.html").read_text()
+    assert "if($('deletewrap'))$('deletewrap').hidden=!ME" in index
+    assert "private until you choose and save" not in index
 
 
 def test_download_uses_cursor_timed_ridge_and_keeps_grok_time_unknown():

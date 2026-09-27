@@ -107,12 +107,17 @@
   function publicFacts(r) {
     const out = [];
     const add = (label, value) => { if (value != null && value !== "" && out.length < 3) out.push([label, value]); };
+    const checks = whole(r.checks_passed);
+    const checkLabel = typeof r.check_label === "string" ? r.check_label.trim() : "";
+    const commits = whole(r.commits);
+    const files = whole(r.files_changed);
+    if (checks != null && checkLabel) add(checkLabel, `${thousands(checks)} passed`);
+    else if (commits > 0) add(commits === 1 ? "commit" : "commits", thousands(commits));
+    else if (files > 0) add(files === 1 ? "file changed" : "files changed", thousands(files));
     if (Number.isFinite(r.wall_time_s) && r.wall_time_s > 0) add("Elapsed", durationLabel(r.wall_time_s));
     else if (Number.isFinite(r.duration_s) && r.duration_s > 0) add("Recorded time", durationLabel(r.duration_s));
     const turns = whole(r.prompts ?? r.turns_typed);
     if (turns != null) add("Your prompts", thousands(turns));
-    const tools = toolCalls(r);
-    if (tools != null) add("Tool calls", thousands(tools));
     return out;
   }
 
