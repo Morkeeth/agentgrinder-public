@@ -71,4 +71,10 @@ assert.equal(bytes.readUInt32BE(16),1200);assert.equal(bytes.readUInt32BE(20),63
 const design=await readFile(new URL('../site/design.css',import.meta.url),'utf8');
 const feed=await readFile(new URL('../site/feed.css',import.meta.url),'utf8');
 await writeFile('/tmp/strive-current-resultless-qa.html',currentPage.replace('</head>','<style>'+design+'\n'+feed+'</style></head>'));
+const appSource=await readFile(new URL('../site/index.html',import.meta.url),'utf8');
+const appStyles=(appSource.match(/<style>([\s\S]*?)<\/style>/)||[])[1]||'';
+const resultSource=(await readFile(new URL('../site/result-lead.js',import.meta.url),'utf8')).replaceAll('</script>','<\\/script>');
+const sharing=(await readFile(new URL('../site/sharing.js',import.meta.url),'utf8')).replaceAll('__BRAND__','STRIVE').replaceAll('</script>','<\\/script>');
+const shareQa='<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+design+'\n'+feed+'\n'+appStyles+'body{padding:16px}.share-studio{display:block}.post-preview canvas{width:100%;height:auto}</style><main id="slot"></main><div id="status"></div><script>'+resultSource+'</script><script>'+sharing+'</script><script>GrinderSharing.mount({run:'+JSON.stringify(current)+',slot:document.getElementById("slot"),status:m=>document.getElementById("status").textContent=m});</script>';
+await writeFile('/tmp/strive-current-resultless-share-qa.html',shareQa);
 console.log('Result lead passed: exact public run has no stored result account; production canonical is clean; fixture guard went red, was restored, and fixture OG rendered in memory only.');
