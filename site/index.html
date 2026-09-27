@@ -179,6 +179,10 @@ a.act{display:inline-block;text-decoration:none}
 .sub{padding:4px 16px 0;font-size:13px;color:var(--soft)}
 .card-harness{color:var(--ink);font-weight:500}
 .note{padding:8px 16px 0;font-size:14px;line-height:1.55}
+.result-lead{margin:14px 16px 0;padding:14px;border:1px solid var(--rule);overflow-wrap:anywhere}
+.result-lead p{margin:5px 0}.result-label{color:var(--blue);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+.result-outcome{font-size:19px;line-height:1.32;font-weight:600}.result-source,.result-lead [data-result-claim]:not(.result-outcome),.result-limit{color:var(--soft);font-size:11px;line-height:1.45}
+.result-duration{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--rule);padding-top:9px!important;margin-top:10px!important}.result-duration strong{font-size:18px;color:var(--ink)}
 .grp{padding:14px 16px 0;font-size:11px;color:var(--dim)}
 .para{padding:6px 16px 0;font-size:14px;line-height:1.6}
 .plan{margin:6px 16px 0;padding-left:18px;font-size:13px;line-height:1.55;color:var(--soft)}
@@ -432,6 +436,25 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .connect-agents{margin-top:18px}
 .connect-agent{padding:14px 0 6px;border-top:1px solid var(--rule)}
 .connect-agent h3{margin:0 0 8px;font-size:16px}
+.post-intro{margin:0 0 22px}
+.post-intro h1{font-size:32px;line-height:1.05;letter-spacing:-.03em;margin:0 0 8px}
+.post-intro p{margin:0;color:var(--soft);font-size:16px}
+.post-workshop{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,620px);gap:36px;align-items:start}
+.capture-card{border:1px solid var(--rule);background:var(--box);padding:20px}
+.capture-card h2{font-size:20px;margin:0 0 5px}.capture-card>p{margin:0 0 18px;color:var(--soft)}
+.capture-card .agent-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
+.capture-card .agent-row select{margin:0}.capture-card .agent-row button{min-height:37px}
+.capture-card .capture-next{margin:12px 0 0;font-size:13px;color:var(--soft)}
+.capture-card .capture-fallbacks{display:flex;gap:16px;margin:18px 0 0;padding-top:14px;border-top:1px solid var(--rule-2);font-size:13px}
+.capture-card details{margin-top:14px}.capture-card details summary{cursor:pointer;color:var(--blue);font-size:13px}
+.capture-card .drop-zone{margin-top:12px}
+.post-example-label{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin:0 0 8px}
+.post-example-label strong{font-size:13px}.post-example-label span{font-size:12px;color:var(--soft)}
+.manual-post{margin-top:28px}.manual-post>summary{cursor:pointer;padding:14px 16px;font-weight:500}
+@media(max-width:800px){
+  .post-workshop{grid-template-columns:1fr;gap:22px}.post-intro h1{font-size:28px}
+  .post-preview{order:2}.capture-card{padding:16px}
+}
 .connect-then{margin-top:18px;padding-top:12px;border-top:1px solid var(--rule)}
 .connect-then h2{font-size:16px;margin:0 0 6px}
 .project-row a b{color:var(--ink)}
@@ -463,22 +486,16 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
       <summary aria-haspopup="menu">You<span id="nav-inbox-badge" class="nav-badge" hidden aria-hidden="true"></span></summary>
       <div class="account-panel" role="menu" data-you-links></div>
     </details>
-    <details id="more-menu" class="account-menu">
-      <summary aria-haspopup="menu">More</summary>
-      <div class="account-panel" role="menu" data-more-links></div>
-    </details>
   </nav>
   <div class="right">
-    <span class="wide">Private by default</span>
     <span id="me" class="you"></span>
     <button id="auth" class="ghost">Sign in</button>
   </div>
 </div></div>
 <nav id="mobile-product-nav" class="tabbar" aria-label="Primary">
   <a href="/" data-section="feed"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Feed</a>
-  <a href="/?post" data-section="post" class="tab-post"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Post</a>
+  <a href="/?post" data-section="post" class="tab-post"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Add a run</a>
   <button type="button" data-sheet="you" data-section="you" aria-expanded="false" aria-controls="sheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>You<span class="nav-badge mobile-inbox-badge" hidden aria-hidden="true"></span></button>
-  <button type="button" data-sheet="more" aria-expanded="false" aria-controls="sheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="18.5" cy="12" r="1.8" fill="currentColor"/></svg>More</button>
 </nav>
 <div id="sheet" class="sheet" role="menu" hidden></div>
 <div id="status"></div>
@@ -487,11 +504,12 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   <main class="main" id="app"></main>
   <aside class="side" id="side"></aside>
 </div>
-<footer class="site-foot"><span class="site-foot-line">Your agent runs, shared on your terms.</span><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/Morkeeth/agentgrinder-public/issues">Contact</a><a href="/privacy#deletion" id="delete-info">Delete your data</a><span id="deletewrap" hidden><a href="/?account#danger" id="delete">Delete my __BRAND__ profile</a></span></footer>
+<footer class="site-foot"><span class="site-foot-line">Your runs, in your words.</span><a href="/about">About</a><a href="/methodology">How cards work</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/Morkeeth/agentgrinder-public/issues">Contact</a></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
 <script src="/feed-card.js"></script>
+<script src="/result-lead.js"></script>
 <script src="/dropin-parse.js"></script>
 <script src="/fair.js"></script>
 <script src="/home.js"></script>
@@ -548,7 +566,6 @@ function railHtml(active,runs){
   let o='<p class="lbl">Primary</p>'+a('/','Feed',active==='feed'||active==='following');
   o+=a('/?explore','Discover',active==='discover',(active==='discover'&&runs&&runs.length)||null)+a('/?post','Add a run',active==='post');
   if(ME) o+=a('/?mine','My runs',active==='me')+a('/?inbox','Responses',active==='inbox');
-  o+='<p class="lbl">About</p>'+a('/privacy','Privacy')+a('/terms','Terms');
   return o;
 }
 function setPrimarySection(section){
@@ -1086,6 +1103,10 @@ function achievedLabel(r){
   const done=(r.commits>0)||shipped>0||receipts>0||!!(r.output_url&&safeOutputUrl(r.output_url));
   return done?'<div class="run-story-label achieved">Achieved</div>':'';
 }
+function resultLeadHtml(r,surface='view'){
+  if(typeof GrinderResultLead!=='object') return '';
+  try{return GrinderResultLead.html(GrinderResultLead.guard(GrinderResultLead.present(r,surface),r),esc)}catch(_){return ''}
+}
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
   const projectName=()=>GrinderContract.projectLabel(r.project);
   const codeFacts=()=>{
@@ -1157,10 +1178,11 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   return `<div class="card" id="card-${r.id}" data-run-id="${esc(r.id)}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
+    ${resultLeadHtml(r)}
     ${cover}
     ${achievedLabel(r)}
     <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
-    ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
+    ${r.caption?`<div class="note">${esc(r.caption)}</div>`:(!r.note?'' : typeof GrinderResultLead!=='object'?`<div class="note">${esc(r.note)}</div>`:'')}
     ${audienceNote}
     ${eventChip}
     ${agentChip}
@@ -1741,28 +1763,21 @@ function trendingBlock(repos){ if(!repos.length) return '';
       <span class="meta num">${r.stargazers_count.toLocaleString()} stars</span></a>`).join('')}</div>`;
 }
 
-function postComposerHtml({first=false}={}){
-  return `${first?'':`<div class="up post-panel">
-    <div class="up-top"><span class="t">Capture from Cursor, Claude Code, Codex or Grok Bot</span><span class="meta">local and private until you choose</span></div>
-    <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
-    <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness auto --push</span><span class="d">reads the freshest Cursor, Claude Code, Codex or imported Grok Bot session</span></div>
-    <div class="cmd"><span class="c"><span class="card-harness">Grok Bot</span> · use an explicitly selected export</span><a class="d" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Preview steps →</a></div>
-    <div class="up-foot">The reader sends recorded counts and timing, never prompt text, code or file paths. You review every field before choosing an audience.</div>
-  </div>`}
-  <details class="panel manual-post">
-    <summary>Post a run without a Cursor export</summary>
+function postComposerHtml(){
+  return `<details class="panel manual-post">
+    <summary>Write the card yourself</summary>
     <div id="manualbox" class="pad">
-      <p class="hint"><b>Manual posts have no capture identifier.</b> Use this only for a real session and leave unknown measurements blank. This browser gives each save an identifier and keeps the draft through an uncertain response, so Check and try again can open the first result instead of posting a duplicate. It never invents a measurement revision.</p>
-      <label>What did you build?<input id="f_title" required maxlength="120" placeholder="Parser refactor"></label>
+      <p class="hint">Use this for a real session. Leave any unknown measurement blank.</p>
+      <label>What changed?<input id="f_title" required maxlength="120" placeholder="What changed in this run?"></label>
       <label>Project<input id="f_project" maxlength="120" placeholder="Project name"></label>
       <label>Repository (optional)<input id="f_repo" type="url" maxlength="2048" placeholder="https://github.com/you/project"></label>
       <label>Model (optional)<input id="f_model" maxlength="120" placeholder="Model name"></label>
       ${segmentSelectHtml('f_segment')}
       <label>Segment wall time in seconds (optional)<input id="f_wall" type="number" min="0" step="1"></label>
-      <label>Short caption<textarea id="f_caption" required maxlength="280" placeholder="What changed in this session?"></textarea></label>
+      <label>Add a note<textarea id="f_caption" required maxlength="280" placeholder="One extra sentence"></textarea></label>
       <label>Link to what was built (optional)<input id="f_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
       <label>Scene photo URL (optional)<input id="f_image_url" type="url" maxlength="2048" placeholder="https://…/desk.jpg"><span class="hint">Optional lifestyle photo beside genuine output. Atmosphere only - not auto-published.</span></label>
-      <div class="row"><div><label>Typed turns</label><input id="f_prompts" type="number" min="0"></div><div><label>Minutes</label><input id="f_dur" type="number" min="0"></div><div><label>Commits</label><input id="f_commits" type="number" min="0"></div></div>
+      <div class="row"><div><label>Your prompts</label><input id="f_prompts" type="number" min="0"></div><div><label>Recorded time in minutes</label><input id="f_dur" type="number" min="0"></div><div><label>Commits (Explore only)</label><input id="f_commits" type="number" min="0"></div></div>
       <label>Who can see this run?
         <select id="f_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select>
       </label>
@@ -1773,14 +1788,40 @@ function postComposerHtml({first=false}={}){
   </details>`;
 }
 
+const STRIVE_AGENT_PROMPTS={
+  cursor:'Make a STRIVE preview for the work in this project. Use the selected Cursor session, confirm it belongs to this project, and run: uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --harness cursor --push --no-series. Return the preview link and selected session time. Do not upload, publish, enable automatic capture, or change project files.',
+  claude:'Make a STRIVE preview for the work in this project. Use the selected Claude Code session, confirm it belongs to this project, and run: uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --harness claude --push --no-series. Return the preview link and selected session time. Do not upload, publish, enable automatic capture, or change project files.',
+  codex:'Make a STRIVE preview for the work in this project. Use the selected Codex session, confirm it belongs to this project, and run: uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --harness codex --push --no-series. Return the preview link and selected session time. Do not upload, publish, enable automatic capture, or change project files.',
+  grokbot:'Make a STRIVE preview from the Grok Bot export I explicitly select. Run agentgrinder grind with that exact export and --harness grokbot --push --no-series. Return the preview link. Do not choose another export, upload, publish, or change project files.'
+};
+function askAgentHtml(){
+  return `<section class="capture-card"><h2>Ask your agent</h2><p>Make the card where you did the work.</p>
+    <div class="agent-row"><label>Agent<select id="capture-agent"><option value="cursor">Cursor</option><option value="claude">Claude Code</option><option value="codex">Codex</option><option value="grokbot">Grok Bot</option></select></label><button type="button" class="act blue" id="capture-copy">Copy prompt</button></div>
+    <p class="capture-next">Paste it into the chat where you did the work. It returns an unsaved preview for you to shape.</p>
+    <div class="capture-fallbacks"><a href="/?connect">Use a terminal</a></div>
+    <details><summary>Import a file</summary>${dropZoneHtml()}</details></section>`;
+}
+function postExampleFallback(){
+  return `<article class="card fc" aria-label="STRIVE card structure"><header class="fc-top"><span class="fc-face fc-mono" aria-hidden="true">B</span><div class="fc-who"><span class="fc-name">Builder · Project</span><small>Agent · date</small></div></header><div class="fc-body"><h3 class="fc-title">What changed in this run?</h3><p class="fc-cap">One optional note from the builder.</p><div class="fc-spark" style="display:grid;place-items:center;border:1px solid var(--rule-2);color:var(--soft);font-size:13px">One chosen visual</div><p class="hint">Work fact · Time · Your prompts, when measured</p></div><footer class="fc-foot"><span class="fc-act">XUDOS</span><span class="fc-act">Reply</span><span class="fc-act">Share</span></footer></article>`;
+}
+
 async function viewPost(){
   setPrimarySection('post');
-  frame(railHtml('post'),null);
-  $('app').innerHTML=`<div class="head"><h1>Add a run</h1><span class="meta">capture → preview → share</span></div>
-    ${connectBodyHtml()}
-    ${ME?postComposerHtml({first:true}):'<div class="panel pad auth-empty"><h3>Sign in to save</h3><p>Saving a run to your profile needs sign-in. Anyone with the link needs no account: whoever has the address can open that card.</p><button id="post-signin" class="act blue">'+signInLabel()+'</button></div>'}`;
+  frame('',null,true);
+  const app=$('app');
+  app.innerHTML=`<header class="post-intro"><h1>Add a run</h1><p>Turn this session into a card.</p></header>
+    <div class="post-workshop"><div>${askAgentHtml()}</div><section class="post-preview"><div class="post-example-label"><strong>A run on STRIVE</strong><span>Outcome, one visual, a few facts</span></div><div id="post-example">${postExampleFallback()}</div></section></div>
+    ${ME?postComposerHtml():'<div class="panel pad auth-empty"><h3>Sign in when you are ready to save</h3><p>You can make and review the preview first.</p><button id="post-signin" class="act blue">'+signInLabel()+'</button></div>'}`;
   if(window.GrinderDropinUI) GrinderDropinUI.mount({post:token=>{history.pushState(null,'','/#import='+token);route();}});
   wireConnectCopies($('app'));
+  const select=$('capture-agent'), copy=$('capture-copy');
+  const syncPrompt=()=>{if(copy)copy.dataset.copy=STRIVE_AGENT_PROMPTS[select?.value||'cursor']};
+  if(select)select.onchange=syncPrompt;syncPrompt();wireConnectCopies(app);
+  try{
+    const realId=REAL_RUN.split('/').pop();
+    const {data:r}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('id',realId).single();
+    if(r){noteTraces([r]);const slot=$('post-example');if(slot)slot.innerHTML=GrinderFeed.card(r,{preview:true,foot:true});}
+  }catch(_){}
   // A /l/ page's ask links to /#drop-zone. The page is drawn by script after load, so the
   // browser's own jump to the anchor has already missed it: scroll here, then drop the hash.
   if(location.hash==='#drop-zone'){
@@ -2083,7 +2124,7 @@ async function refreshAuth(){
   try{
     const current=await auth.current();ME=current.profile;IDENTITY_SETUP=current.needsOnboarding?current:null;
     $('me').innerHTML=ME?'<a href="'+GrinderAuth.present(ME).url+'">@'+esc(profileHandle(ME))+'</a>':'';
-    $('auth').textContent=current.user?'Sign out':'Sign in';$('deletewrap').hidden=!ME;if($('delete-info'))$('delete-info').hidden=!!ME;
+    $('auth').textContent=current.user?'Sign out':'Sign in';if($('deletewrap'))$('deletewrap').hidden=!ME;if($('delete-info'))$('delete-info').hidden=!!ME;
     $('mobile-product-nav').hidden=false;syncAuthNav();status('');
     if(social.refreshUnread) social.refreshUnread();
   }catch(e){ME=null;IDENTITY_SETUP=null;status(e.detail?.message||'Sign-in could not be restored. Try again.',true);}
@@ -2153,7 +2194,7 @@ async function importRun(){
     ['measurement reference',run.measurement_revision],
     ['baseline reference',run.baseline_revision]].filter(r=>r[1]!=null&&r[1]!=='');
   frame(null,null);
-  app.innerHTML=`<div class="head"><h2>${sample?'Sample preview':'Preview your run'}</h2><span class="meta">${sample?'example data · not your activity':'private until you choose and save'}</span></div>
+  app.innerHTML=`<div class="head"><h2>${sample?'Sample preview':'Preview your run'}</h2>${sample?'<span class="meta">example data · not your activity</span>':''}</div>
     ${sample?'<p role="note">This sample is for trying the preview. It cannot be saved or posted. Capture your own session to share a run.</p>':''}
     <section aria-labelledby="import-card-heading"><h2 id="import-card-heading" class="visually-hidden">${sample?'Sample card preview':'Card preview'}, not posted</h2><div id="import-card-preview"></div></section>
     <div class="panel"><div class="pad preview-story">

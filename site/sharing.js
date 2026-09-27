@@ -30,6 +30,40 @@ function metricStrip(run){
  ].filter(([,value])=>value!=null);
  return cells.map(([label,value])=>[label,String(value)]);
 }
+function whole(value){
+ if(value==null||value==='')return null;
+ const number=Number(value);
+ return Number.isSafeInteger(number)&&number>=0?number:null;
+}
+function shareFacts(run){
+ const facts=[];
+ const add=(label,value)=>{if(value!=null&&facts.length<3)facts.push([label,String(value)]);};
+ const checks=whole(run.checks_passed),checkLabel=typeof run.check_label==='string'?run.check_label.trim():'';
+ const commits=whole(run.commits),files=whole(run.files_changed);
+ if(checks!=null&&checkLabel)add(checkLabel,checks+' passed');
+ else if(commits>0)add(commits===1?'commit':'commits',commits);
+ else if(files>0)add(files===1?'file changed':'files changed',files);
+ const wall=whole(run.wall_time_s)??(run.ridge_basis==='wall-time'?whole(run.ridge_wall_seconds):null);
+ if(wall!=null)add('Elapsed',duration(wall));
+ else{const recorded=whole(run.duration_s);if(recorded!=null)add('Recorded time',duration(recorded));}
+ const prompts=whole(run.prompts??run.turns_typed);
+ if(prompts!=null)add('Your prompts',prompts);
+ return facts;
+}
+function dateLabel(run){
+ const raw=run.started_at||run.created_at||run.started;
+ if(!raw)return'';
+ const date=new Date(raw);
+ return Number.isNaN(date.getTime())?'':date.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+}
+function workLabel(run){
+ try{
+  const url=new URL(run.output_url);
+  if(url.protocol!=='https:')return null;
+  const label=/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(url.href)?'View pull request':'Open work';
+  return {label,host:url.hostname.replace(/^www\./,'')};
+ }catch(_){return null}
+}
 function projectName(run){
  // One rule for the label a reader sees (site/run-contract.js projectLabel): it also takes the
  // home directory out of a flattened workspace name.
@@ -119,12 +153,13 @@ function mount({run,slot,status,moment=null,review=null}){
   slot.innerHTML='<p>This moment belongs to a different measurement. Return to the grind and choose a current moment before making a card.</p>';return;
  }
  const publicShare=run.visibility==='public', handle=run.profiles?.github_handle;
+ const shareLead=(!moment&&!review&&typeof GrinderResultLead==='object')?GrinderResultLead.guard(GrinderResultLead.present(run,'share'),run):null;
  const url=moment?location.origin+'/?run='+encodeURIComponent(run.id)+'&moment='+encodeURIComponent(moment.id):location.origin+(publicShare?'/r/':'/?run=')+encodeURIComponent(run.id);
  slot.innerHTML=`<div class="head"><h2>${review?"Share my outcome":"Share your run"}</h2>${review?"":`<a href="/?run=${encodeURIComponent(run.id)}">Back to run</a>`}</div>
  <p class="hint">${publicShare?'Public run · anyone can read it at /r/.':run.visibility==='link'?'Link run · signed-in followers and close friends can open /?run=.':'Private run · exporting an image does not change who can read the run.'}</p>
  <div class="share-studio"><form id="post-editor" class="panel reply-form">
  <label>Title<input name="title" maxlength="100" required value="${esc(run.title)}"></label>
- <label>Caption (optional edit)<textarea name="result" maxlength="240" placeholder="One short result line. Leave as-is if the card already says it.">${esc(run.caption||'')}</textarea></label>
+ <label>Caption (optional, copied below the image)<textarea name="result" maxlength="240" placeholder="Add context without changing the stored account.">${esc(run.caption||'')}</textarea></label>
  <label>Image format<select name="format"><option value="square">Square · 1080 × 1080</option><option value="portrait">Portrait · 1080 × 1350</option></select></label>
  <label><input type="checkbox" name="identity" ${handle?'checked':''}> Include public handle and agent name</label>
  <p class="hint">The image is built from this run: title, caption, Code Route when recorded or the blue activity trace, and measured facts. It never includes command text, paths, code, prompts, secrets, or tool output.</p>
@@ -142,42 +177,33 @@ function mount({run,slot,status,moment=null,review=null}){
  let nextText='';
  const fields=()=>({title:form.elements.title.value.trim(),contribution:contributionText,result:form.elements.result.value.trim(),next:nextText,identity:form.elements.identity.checked});
  function lines(text,x,y,width,font,lineHeight,maxLines){ctx.font=font;let words=String(text).split(/\s+/),line='',rows=[];for(const word of words){const candidate=line?line+' '+word:word;if(ctx.measureText(candidate).width>width&&line){rows.push(line);line=word}else line=candidate;}if(line)rows.push(line);rows=rows.flatMap(row=>{if(ctx.measureText(row).width<=width)return[row];const parts=[];let part='';for(const c of row){if(ctx.measureText(part+c).width>width){parts.push(part);part=''}part+=c}if(part)parts.push(part);return parts});const clipped=rows.length>maxLines;rows=rows.slice(0,maxLines);if(clipped){let last=rows.at(-1);while(last&&ctx.measureText(last+'…').width>width)last=last.slice(0,-1);rows[rows.length-1]=last+'…'}rows.forEach((row,i)=>ctx.fillText(row,x,y+i*lineHeight));return clipped;}
- function draw(){const f=fields(),portrait=form.elements.format.value==='portrait';canvas.width=1080;canvas.height=portrait?1350:1080;let clipped=false;ctx.fillStyle='#f8f8f6';ctx.fillRect(0,0,1080,canvas.height);ctx.fillStyle='#123cff';ctx.fillRect(64,64,44,8);ctx.fillStyle='#111';ctx.font='600 23px sans-serif';ctx.fillText('__BRAND__',128,80);ctx.fillStyle='#666';ctx.font='20px sans-serif';ctx.fillText(review?'MY RETURN':'RUN NOTES',820,80);
- ctx.fillStyle='#123cff';ctx.font='600 16px sans-serif';ctx.fillText('ACHIEVED',64,124);
- ctx.fillStyle='#111';clipped=lines(f.title||'Your run',64,172,952,'600 46px sans-serif',54,2)||clipped;
- ctx.fillStyle='#444';clipped=lines(f.result||'Achievement caption unknown',64,275,952,'24px sans-serif',31,2)||clipped;
- ctx.fillStyle='#666';const identity=f.identity&&handle?'@'+handle:'Identity not included';const agentLabel=(()=>{const n=String(run.agent_name||'').trim();if(!n||/^connect$/i.test(n))return run.source_actor_id?'via Connect':'';return n;})();clipped=lines(identity+' · '+(run.harness||'Harness unknown')+(f.identity&&agentLabel?' · '+agentLabel:''),64,330,952,'19px sans-serif',24,1)||clipped;
- const facts=storyFacts(run),story=[['OUTPUT',facts.output],['PROJECT TOUCHED',facts.project],['CODE ACTIVITY',facts.code]].filter(([,value])=>value);story.forEach(([label,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='15px sans-serif';ctx.fillText(label,x,378);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'19px sans-serif':'600 20px sans-serif';clipped=lines(value,x,408,285,'600 20px sans-serif',24,1)||clipped;});
+ function draw(){const f=fields(),portrait=form.elements.format.value==='portrait';canvas.width=1080;canvas.height=portrait?1350:1080;let clipped=false;ctx.fillStyle='#f8f8f6';ctx.fillRect(0,0,1080,canvas.height);
+ ctx.fillStyle='#123cff';ctx.fillRect(64,64,38,7);ctx.fillStyle='#111';ctx.font='600 21px sans-serif';ctx.fillText('__BRAND__',118,78);
+ const identity=f.identity&&handle?'@'+handle:'Builder',project=projectName(run),when=dateLabel(run);
+ ctx.fillStyle='#666';clipped=lines([identity,project,run.harness,when].filter(Boolean).join(' · '),64,126,952,'18px sans-serif',23,1)||clipped;
+ const outcome=shareLead?.outcome||f.title||'Outcome not added';ctx.fillStyle='#111';clipped=lines(outcome,64,194,952,'600 44px sans-serif',52,4)||clipped;
+ const note=shareLead?.outcome?(f.title&&f.title!==shareLead.outcome?f.title:''):f.result;
+ if(note){ctx.fillStyle='#555';clipped=lines(note,64,414,952,'23px sans-serif',30,2)||clipped;}
+ const facts=shareFacts(run),factsY=note?494:446;
+ facts.forEach(([label,value],i)=>{const x=64+i*317;ctx.fillStyle='#111';clipped=lines(value,x,factsY,285,'600 31px sans-serif',36,1)||clipped;ctx.fillStyle='#666';ctx.font='15px sans-serif';ctx.fillText(label,x,factsY+29);});
  const route=run.code_route&&run.code_route.v===1?run.code_route:null;
  if(route&&!route.unavailable&&Array.isArray(route.projects)&&Array.isArray(route.stops)&&route.projects.length&&route.stops.length){
   const projects=route.projects,stops=route.stops,idx=Object.fromEntries(projects.map((p,i)=>[p.id,i]));
-  const left=96,top=470,rowH=22,width=920;
+  const left=96,top=factsY+86,rowH=26,width=920;
   ctx.strokeStyle='#123cff';ctx.lineWidth=4;ctx.beginPath();
-  stops.forEach((stop,i)=>{const row=idx[stop.project]??0;const x=left+i/Math.max(1,stops.length-1)*width;const y=top+row*rowH+rowH/2;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
-  ctx.stroke();
+  stops.forEach((stop,i)=>{const row=idx[stop.project]??0;const x=left+i/Math.max(1,stops.length-1)*width;const y=top+row*rowH+rowH/2;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
   stops.forEach((stop,i)=>{const row=idx[stop.project]??0;const x=left+i/Math.max(1,stops.length-1)*width;const y=top+row*rowH+rowH/2;const finish=route.finish&&route.finish.stop===stop.id;ctx.fillStyle=finish?'#111':'#123cff';ctx.beginPath();ctx.arc(x,y,finish?7:4.5,0,Math.PI*2);ctx.fill();});
   ctx.fillStyle='#666';ctx.font='15px sans-serif';projects.forEach((p,i)=>ctx.fillText(String(i+1),64,top+i*rowH+14));
-  ctx.fillStyle='#333';ctx.font='16px sans-serif';
-  const projectLine=projects.map((p,i)=>`${i+1} · ${p.label}`).join('   ');
-  clipped=lines(projectLine,64,top+projects.length*rowH+18,952,'16px sans-serif',20,2)||clipped;
-  const insight=routeInsight(route);
-  ctx.fillStyle='#111';ctx.font='600 20px sans-serif';
-  clipped=lines(insight||'Code Route',64,top+projects.length*rowH+56,952,'600 20px sans-serif',26,2)||clipped;
- }else if(route&&route.unavailable){
-  ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Code Route unavailable',64,520);
-  ctx.font='17px sans-serif';ctx.fillText(String(route.unavailable.why||'').slice(0,90),64,592);
+  const projectLine=projects.map((p,i)=>`${i+1} · ${p.label}`).join('   ');clipped=lines(projectLine,64,top+projects.length*rowH+18,952,'16px sans-serif',20,2)||clipped;
+  ctx.fillStyle='#111';clipped=lines(routeInsight(route)||'Code Route',64,top+projects.length*rowH+56,952,'600 20px sans-serif',26,2)||clipped;
  }else{
-  const trace=traceSeries(run),values=trace?.values;ctx.strokeStyle='#123cff';ctx.lineWidth=4;if(trace){const max=Math.max(...values)||1;ctx.beginPath();values.forEach((v,i)=>{const x=64+i/(values.length-1)*952,y=560-v/max*105;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}else{ctx.fillStyle='#666';ctx.font='24px sans-serif';ctx.fillText('Trace unavailable',64,520)}
-  ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(traceSeries(run)?.label||'Session activity · time basis unknown',64,592);
+  const trace=traceSeries(run),values=trace?.values,base=factsY+220;ctx.strokeStyle='#123cff';ctx.lineWidth=4;
+  if(trace){const max=Math.max(...values)||1;ctx.beginPath();values.forEach((v,i)=>{const x=64+i/(values.length-1)*952,y=base-v/max*120;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(trace.label,64,base+34);}
+  else{ctx.fillStyle='#666';ctx.font='20px sans-serif';ctx.fillText('No measured visual for this run',64,factsY+130);}
  }
-  const hasRoute=route&&!route.unavailable&&Array.isArray(route.projects)&&Array.isArray(route.stops)&&route.projects.length&&route.stops.length;
- if(!hasRoute){
-  ctx.fillStyle='#123cff';ctx.font='600 16px sans-serif';ctx.fillText('EFFORT',64,632);
-  metricStrip(run).forEach(([name,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='17px sans-serif';ctx.fillText(name,x,663);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'22px sans-serif':'600 31px sans-serif';ctx.fillText(value,x,705)});
- }
- let y=hasRoute?720:770;const blocks=[['THE AGENT',f.contribution],['NEXT RUN',f.next]].filter(([,v])=>v);for(const [label,body] of blocks){ctx.fillStyle='#123cff';ctx.font='600 17px sans-serif';ctx.fillText(label,64,y);ctx.fillStyle='#111';clipped=lines(body,64,y+34,952,'26px sans-serif',32,portrait?3:2)||clipped;y+=portrait?160:110;}
- ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(64,canvas.height-65);ctx.lineTo(1016,canvas.height-65);ctx.stroke();ctx.fillStyle='#666';ctx.font='18px sans-serif';ctx.fillText(review?'My observation · this does not prove the practice caused the result':'Builder’s account · recorded counts are not independent verification',64,canvas.height-30);
- slot.querySelector('#post-caption').value=[f.title,hasRoute&&routeInsight(route),f.contribution&&'Agent: '+f.contribution,f.result&&'Result: '+f.result,f.next&&'Next run: '+f.next,review?'My observation, not proof the practice caused the result.':(publicShare||run.visibility==='link')?url:''].filter(Boolean).join('\n\n');
+ const work=workLabel(run);if(work){ctx.fillStyle='#123cff';ctx.font='600 18px sans-serif';ctx.fillText(work.label.toUpperCase()+' · '+work.host,64,canvas.height-112);}
+ ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(64,canvas.height-65);ctx.lineTo(1016,canvas.height-65);ctx.stroke();ctx.fillStyle='#666';ctx.font='18px sans-serif';ctx.fillText(review?'My observation · this does not prove the practice caused the result':'Builder’s account · measured facts describe this run',64,canvas.height-30);
+ slot.querySelector('#post-caption').value=[outcome,f.result&&f.result!==outcome?f.result:null,work&&run.output_url,review?'My observation, not proof the practice caused the result.':(publicShare||run.visibility==='link')?url:''].filter(Boolean).join('\n\n');
  slot.querySelector('#post-message').textContent=clipped?'Some text is shortened in the image. Shorten your text or choose portrait. Moment and review exports require the complete text to fit; the caption keeps the full text.':'';
  const ready=form.elements.review.checked&&!!f.title&&(!(moment||review)||!clipped)&&(!review||!!f.result);slot.querySelector('#post-download').disabled=!ready;slot.querySelector('#post-copy').disabled=!ready;
  }
@@ -211,5 +237,5 @@ function mountReview({attempt,viewerId,slot,status}){
  if(!value){slot.textContent='Only your own saved review can be exported.';return;}
  return mount({...value,slot,status});
 }
-root.GrinderSharing={mount,reviewExport,mountReview,metricStrip,storyFacts,traceSeries};
+root.GrinderSharing={mount,reviewExport,mountReview,metricStrip,shareFacts,dateLabel,workLabel,storyFacts,traceSeries};
 })(window);

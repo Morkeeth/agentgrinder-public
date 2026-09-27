@@ -101,6 +101,26 @@
     return out;
   }
 
+  // Public cards show at most three literal facts. Importers do not yet preserve enough source
+  // information to claim that a mentioned git command became a commit or an edit target changed.
+  // Those raw counts remain available on the run detail page, not promoted here.
+  function publicFacts(r) {
+    const out = [];
+    const add = (label, value) => { if (value != null && value !== "" && out.length < 3) out.push([label, value]); };
+    const checks = whole(r.checks_passed);
+    const checkLabel = typeof r.check_label === "string" ? r.check_label.trim() : "";
+    const commits = whole(r.commits);
+    const files = whole(r.files_changed);
+    if (checks != null && checkLabel) add(checkLabel, `${thousands(checks)} passed`);
+    else if (commits > 0) add(commits === 1 ? "commit" : "commits", thousands(commits));
+    else if (files > 0) add(files === 1 ? "file changed" : "files changed", thousands(files));
+    if (Number.isFinite(r.wall_time_s) && r.wall_time_s > 0) add("Elapsed", durationLabel(r.wall_time_s));
+    else if (Number.isFinite(r.duration_s) && r.duration_s > 0) add("Recorded time", durationLabel(r.duration_s));
+    const turns = whole(r.prompts ?? r.turns_typed);
+    if (turns != null) add("Your prompts", thousands(turns));
+    return out;
+  }
+
   // THE BADGE. One small achievement per run, computed from the run's own numbers and nothing
   // else: no history, no other runs, no guess. The first rule that holds wins, and its detail line
   // prints the number that earned it, so a reader can check the badge against the card. A run that
@@ -342,8 +362,7 @@
     const page = !!opts.page;
     const p = profileOf(r);
     const anon = r.visibility === "anonymous";
-    const lead = headline(r);
-    const facts = stats(r, lead);
+    const facts = publicFacts(r);
     const id = esc(r.id);
     const count = preview || (opts.count === null && page) ? null : whole(opts.count) || 0;
     const countHtml = count === null ? "" : `<span class="num">${count}</span>`;
@@ -363,20 +382,23 @@
       ? `<span class="fc-act fc-kudos-mine">${KUDOS_ICON}<span class="num">${count}</span></span>`
       : `<button class="fc-act kudo${opts.acked ? " on" : ""}" data-run="${id}" data-to="${esc(r.profile_id)}" aria-label="${opts.acked ? "XUDOS sent" : "Send XUDOS"}, ${count} so far">${KUDOS_ICON}<span class="num">${count}</span></button>`;
     const talk = preview
-      ? `<span class="fc-act" aria-label="Discuss">${TALK_ICON}<span>Discuss</span></span><span class="fc-act" aria-label="Share">${SHARE_ICON}<span>Share</span></span>`
-      : `<a class="fc-act" href="/?run=${id}#grind-thread" aria-label="Discuss">${TALK_ICON}<span>Discuss</span></a><a class="fc-act" href="/?share=1&amp;run=${id}" aria-label="Share">${SHARE_ICON}<span>Share</span></a>`;
-    const shipped = r.output_url && /^https:\/\//i.test(r.output_url) ? `<span class="fc-chip">Shipped</span>` : "";
+      ? `<span class="fc-act" aria-label="Reply">${TALK_ICON}<span>Reply</span></span><span class="fc-act" aria-label="Share">${SHARE_ICON}<span>Share</span></span>`
+      : `<a class="fc-act" href="/?run=${id}#grind-thread" aria-label="Reply">${TALK_ICON}<span>Reply</span></a><a class="fc-act" href="/?share=1&amp;run=${id}" aria-label="Share">${SHARE_ICON}<span>Share</span></a>`;
     const faceHtml = anon || preview ? face(r) : `<a href="/?u=${encodeURIComponent(p.handle)}" tabindex="-1">${face(r)}</a>`;
-    const strideHtml = opts.stride === false || !(preview || page || opts.url) ? "" : stride(r, { url: opts.url, copy: !!opts.copy });
+    const image = /^https:\/\//i.test(String(r.image_url || "")) ? `<figure class="fc-visual"><img src="${esc(r.image_url)}" alt="Run visual chosen by the builder"></figure>` : "";
+    const activity = image ? "" : spark(r);
+    const work = /^https:\/\//i.test(String(r.output_url || "")) ? `<a class="fc-work" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer">Open work ↗</a>` : "";
+    const title = preview ? esc(titleOf(r)) : `<a href="/?run=${id}">${esc(titleOf(r))}</a>`;
     const body = `
-    <${tag} class="fc-title">${esc(titleOf(r))}</${tag}>
+    <${tag} class="fc-title">${title}</${tag}>
     ${r.caption || r.note ? `<p class="fc-cap">${esc(r.caption || r.note)}</p>` : ""}
-    <div class="fc-numbers">${lead ? `<div class="fc-hero"><span class="fc-n num">${esc(lead.n)}</span><span class="fc-u">${esc(lead.unit)}</span></div>` : ""}${facts.length ? `<dl class="fc-stats">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd class="num">${esc(v)}</dd></div>`).join("")}</dl>` : ""}</div>
-    ${badge(r)}${routeMap(r)}${spark(r)}${strideHtml}
+    ${image}${activity}
+    ${facts.length ? `<dl class="fc-stats">${facts.map(([k, v]) => `<div><dd class="num">${esc(v)}</dd><dt>${esc(k)}</dt></div>`).join("")}</dl>` : ""}
+    ${work}
   `;
     return `<article class="card fc"${preview ? "" : ` id="card-${id}" data-run-id="${id}"`}>
-  <header class="fc-top">${faceHtml}<div class="fc-who">${who}<small>${meta}</small></div>${shipped}</header>
-  ${preview ? `<div class="fc-body">${body}</div>` : `<a class="fc-body" href="/?run=${id}">${body}</a>`}
+  <header class="fc-top">${faceHtml}<div class="fc-who">${who}<small>${meta}</small></div></header>
+  <div class="fc-body">${body}</div>
   ${opts.foot === false ? "" : `<footer class="fc-foot">${kudos}${talk}</footer>`}
 </article>`;
   }
@@ -394,7 +416,7 @@
     return `<div class="fc-builder">${face(r, 44)}<div class="fc-who"><a class="fc-name" href="/?u=${encodeURIComponent(p.handle)}">${esc(p.name)}</a><small>Latest: <a href="/?run=${esc(r.id)}">${esc(titleOf(r))}</a></small></div><span class="card-follow" data-profile="${esc(r.profile_id)}" data-handle="${esc(p.handle)}" data-label="Follow"></span></div>`;
   }
 
-  const api = { card, face, headline, stats, achievement, harnessName, badge, spark, settle, routeGeometry, routeMap, strideBars, strideText, strideHtml, stride, wireStride, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };
+  const api = { card, face, headline, stats, publicFacts, achievement, harnessName, badge, spark, settle, routeGeometry, routeMap, strideBars, strideText, strideHtml, stride, wireStride, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };
   root.GrinderFeed = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

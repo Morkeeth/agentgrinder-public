@@ -185,13 +185,13 @@ def main():
             casey = casey_context.new_page()
             casey.on("pageerror", lambda error: errors.append("casey: " + str(error)))
             casey.goto(base + "/?post", wait_until="networkidle")
-            casey.get_by_role("heading", name="Post a run").wait_for()
-            casey.get_by_text("Post a run without a Cursor export").click()
-            casey.get_by_label("What did you build?").fill(
+            casey.get_by_role("heading", name="Add a run").wait_for()
+            casey.get_by_text("Write the card yourself").click()
+            casey.get_by_label("What changed?").fill(
                 "TEST DATA response return"
             )
             casey.get_by_label("Project").fill("agentgrinder-public TEST DATA")
-            casey.get_by_label("Short caption").fill(
+            casey.get_by_label("Add a note").fill(
                 "TEST DATA: response > return inbox path."
             )
             casey.get_by_label("Who can see this run?").select_option("public")
@@ -199,14 +199,14 @@ def main():
             casey.wait_for_url("**/?run=*", timeout=20_000)
             run_id = casey.url.split("run=", 1)[1].split("&", 1)[0]
 
-            # Riley ACKs and replies.
+            # Riley sends XUDOS and replies.
             riley_context = context_for(info["riley"], "test-riley", 390, 844)
             riley = riley_context.new_page()
             riley.on("pageerror", lambda error: errors.append("riley: " + str(error)))
             riley.goto(base + "/?run=" + run_id, wait_until="networkidle")
-            riley.get_by_role("button", name="ACK", exact=True).click()
-            riley.get_by_role("button", name="Send ACK", exact=True).click()
-            riley.get_by_role("button", name="ACKed 1", exact=True).wait_for()
+            riley.get_by_role("button", name="XUDOS · cheer this run", exact=True).click()
+            riley.get_by_role("button", name="Send XUDOS", exact=True).click()
+            riley.locator("button.kudo.on").wait_for()
             riley.get_by_label("Your reply").fill(
                 "TEST DATA reply for exact return."
             )
@@ -239,7 +239,7 @@ def main():
             casey.get_by_role("heading", name="Responses").wait_for()
             body = casey.locator("#social-body")
             assert "replied to your run" in body.inner_text()
-            assert "ACKed your work" in body.inner_text()
+            assert "sent XUDOS on your work" in body.inner_text()
             assert casey.locator(".response-item").count() >= 2
             exact = casey.get_by_role("link", name="Open exact reply").first
             href = exact.get_attribute("href") or ""
