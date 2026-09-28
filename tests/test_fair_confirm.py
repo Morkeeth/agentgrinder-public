@@ -10,10 +10,15 @@ def test_confirm_module_with_a_fake_network():
     assert out.returncode == 0, out.stderr[-2000:]
 
 
-def test_the_page_strips_the_challenge_and_holds_no_secret():
+def test_browser_referral_state_crosses_tabs_and_expires():
+    out = subprocess.run(["node", "scripts/test-fair-browser.mjs"], cwd=ROOT, capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr[-2000:]
+
+
+def test_the_page_strips_both_capabilities_and_holds_no_signing_key():
     fair = (ROOT / "site/fair.js").read_text()
-    assert "/^fair_challenge(=|$)/" in fair and "replaceState" in fair
-    assert "SECRET" not in fair.upper().replace("NEVER HOLDS A SECRET", "")
+    assert "/^fair_challenge(=|$)/" in fair and "/^fair_return_token(=|$)/" in fair and "replaceState" in fair
+    assert "FAIR_PRODUCT_SECRET_STRIVE" not in fair
     index = (ROOT / "site/index.html").read_text()
     assert '<script src="/fair.js"></script>' in index
     assert index.count("fairConfirmRun(") == 3  # the helper and the two new-save paths
