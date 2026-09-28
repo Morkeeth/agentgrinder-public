@@ -72,5 +72,5 @@ def test_the_unfurl_describes_the_product_and_names_the_tools_it_reads():
     # The drop-in reads these three; Grok Bot is a command-line capture, not a dropped file.
     for tool in ("Cursor", "Claude Code", "Codex"):
         assert tool in description, tool
-    assert "private until you ask for a link" in description.lower()
+    assert "review the private card and story before choosing an audience" in description.lower()
     assert description.startswith("Strava is for people who ran. __BRAND__ is for people who didn't.")

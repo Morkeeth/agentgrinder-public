@@ -62,9 +62,9 @@ def test_card_without_ridge_keeps_its_recorded_trace():
     })
     html = render_card(activity)
     assert 'class="fc-spark"' in html and 'class="fc-line"' in html      # the rhythm, drawn
-    assert '<dt>Turns</dt><dd class="num">3</dd>' in html                # prompts, as a small figure
-    assert '<span class="fc-n num">1</span><span class="fc-u">commit</span>' in html
-    assert "1 commit landed in sample" in html
+    assert '<dd class="num">3</dd><dt>Your prompts</dt>' in html         # prompts, as a small figure
+    assert '<dd class="num">1</dd><dt>commit</dt>' in html               # commit, as a supported proof fact
+    assert "1 commit landed in sample" in html                           # measured result lead stays above the card
 
 
 def test_card_draws_one_primary_ridge_and_story_before_effort():

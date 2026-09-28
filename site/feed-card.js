@@ -71,16 +71,27 @@
     return whole(C && C.toolCallCount ? C.toolCallCount(r) : r.tool_calls);
   }
 
+  function timeFact(r) {
+    const wall = Number.isFinite(r.wall_time_s) ? r.wall_time_s :
+      (r.ridge_basis === "wall-time" && Number.isFinite(r.ridge_wall_seconds) ? r.ridge_wall_seconds : null);
+    const elapsed = durationLabel(wall);
+    if (elapsed) return { label: "Elapsed", value: elapsed };
+    const recorded = durationLabel(r.duration_s);
+    if (!recorded) return null;
+    const hasElapsedBasis = r.trace_basis === "elapsed" || r.trace_basis === "elapsed-agent-tool-calls";
+    return { label: hasElapsedBasis ? "Recorded time" : "Duration · basis unknown", value: recorded };
+  }
+
   // The one number, Strava's distance slot: the first measured, non-zero value wins.
   function headline(r) {
     const commits = whole(r.commits);
     const files = whole(r.files_touched);
     const tools = toolCalls(r);
-    const time = durationLabel(r.wall_time_s ?? r.duration_s);
+    const time = timeFact(r);
     if (commits) return { n: thousands(commits), unit: commits === 1 ? "commit" : "commits", key: "commits" };
-    if (files) return { n: thousands(files), unit: files === 1 ? "file changed" : "files changed", key: "files" };
+    if (files) return { n: thousands(files), unit: files === 1 ? "file touched" : "files touched", key: "files" };
     if (tools) return { n: thousands(tools), unit: "tool calls", key: "tools" };
-    if (time) return { n: time, unit: "session", key: "time" };
+    if (time) return { n: time.value, unit: time.label.toLowerCase(), key: "time" };
     return null;
   }
 
@@ -91,13 +102,14 @@
       if (out.length >= 3 || value == null || value === "" || (lead && (lead.key === key || lead.also === key)) || out.some((f) => f[0] === label)) return;
       out.push([label, value]);
     };
-    add("time", "Time", durationLabel(r.wall_time_s ?? r.duration_s));
+    const time = timeFact(r);
+    add("time", time && time.label, time && time.value);
     const turns = whole(r.prompts ?? r.turns_typed);
     const tools = toolCalls(r);
     add("turns", "Turns", turns);
     add("tools", "Tool calls", tools ? thousands(tools) : null);
     add("commits", "Commits", whole(r.commits) || null);
-    add("files", "Files", whole(r.files_touched) || null);
+    add("files", "Files touched", whole(r.files_touched) || null);
     return out;
   }
 
@@ -114,8 +126,8 @@
     if (checks != null && checkLabel) add(checkLabel, `${thousands(checks)} passed`);
     else if (commits > 0) add(commits === 1 ? "commit" : "commits", thousands(commits));
     else if (files > 0) add(files === 1 ? "file changed" : "files changed", thousands(files));
-    if (Number.isFinite(r.wall_time_s) && r.wall_time_s > 0) add("Elapsed", durationLabel(r.wall_time_s));
-    else if (Number.isFinite(r.duration_s) && r.duration_s > 0) add("Recorded time", durationLabel(r.duration_s));
+    const time = timeFact(r);
+    if (time) add(time.label, time.value);
     const turns = whole(r.prompts ?? r.turns_typed);
     if (turns != null) add("Your prompts", thousands(turns));
     return out;
@@ -140,7 +152,7 @@
     if (turns === 1 && tools >= 60) return { key: "one-shot", label: "One-shot", detail: `1 prompt, ${thousands(tools)} tool calls` };
     if (hour != null && (hour >= 23 || hour < 5)) return { key: "night-owl", label: "Night owl", detail: hour >= 23 ? "started after 23:00" : "started before 05:00" };
     if (commits >= 5) return { key: "shipper", label: "Shipper", detail: `${thousands(commits)} commits in one run` };
-    if (files >= 25) return { key: "wide-net", label: "Wide net", detail: `${thousands(files)} files changed` };
+    if (files >= 25) return { key: "wide-net", label: "Wide net", detail: `${thousands(files)} files touched` };
     if (turns >= 2 && tools && tools / turns >= 30) return { key: "delegator", label: "Delegator", detail: `${thousands(Math.round(tools / turns))} tool calls per prompt` };
     if (secs > 0 && secs < 900 && commits >= 1) return { key: "sprint", label: "Sprint", detail: "a commit in under 15 minutes" };
     if (secs >= 3600) return { key: "deep-focus", label: "Deep focus", detail: "over an hour in one session" };
@@ -268,6 +280,27 @@
     return `<div class="fc-map"><svg viewBox="0 0 ${MAP_W} ${g.h}" role="img" aria-label="Route: ${esc(g.label)}">${rail}${hops}${stations}</svg><p class="fc-map-k">${esc(g.label)}</p></div>`;
   }
 
+  // ONE PROOF VISUAL. A run card used to stack an activity trace, a route map and a pasteable
+  // stride line. That made the instrumentation louder than the work. The author may choose one
+  // stored visual; otherwise the strongest available proof wins. A public signed-out page never
+  // embeds a builder-controlled remote image, so it falls back to the recorded route or rhythm.
+  function proofVisual(r, opts) {
+    opts = opts || {};
+    const page = !!opts.page;
+    const requested = ["image", "route", "activity"].includes(r.visual_choice) ? r.visual_choice : null;
+    const image = !page && /^https:\/\//i.test(String(r.image_url || ""))
+      ? `<figure class="fc-visual"><img src="${esc(r.image_url)}" alt="Final proof chosen by the builder"></figure>` : "";
+    const route = routeMap(r);
+    const activity = spark(r);
+    const available = { image, route, activity };
+    const kind = requested && available[requested]
+      ? requested
+      : image ? "image" : route ? "route" : activity ? "activity" : null;
+    if (!kind) return "";
+    const label = kind === "image" ? "Output" : kind === "route" ? "Work route" : "Run rhythm";
+    return `<section class="fc-proof" data-proof-visual="${kind}"><p class="fc-proof-label">Final proof · ${label}</p>${available[kind]}</section>`;
+  }
+
   // THE STRIDE LINE. Wordle's grid for a run: two lines of plain text a person pastes into a
   // reply, spoiler-free (no prompt, no code, no repo), readable with zero other users. The first
   // line is the card's own figures in the card's own order; the second is the activity line as
@@ -385,14 +418,14 @@
       ? `<span class="fc-act" aria-label="Reply">${TALK_ICON}<span>Reply</span></span><span class="fc-act" aria-label="Share">${SHARE_ICON}<span>Share</span></span>`
       : `<a class="fc-act" href="/?run=${id}#grind-thread" aria-label="Reply">${TALK_ICON}<span>Reply</span></a><a class="fc-act" href="/?share=1&amp;run=${id}" aria-label="Share">${SHARE_ICON}<span>Share</span></a>`;
     const faceHtml = anon || preview ? face(r) : `<a href="/?u=${encodeURIComponent(p.handle)}" tabindex="-1">${face(r)}</a>`;
-    const image = /^https:\/\//i.test(String(r.image_url || "")) ? `<figure class="fc-visual"><img src="${esc(r.image_url)}" alt="Run visual chosen by the builder"></figure>` : "";
-    const activity = image ? "" : spark(r);
+    const visual = proofVisual(r, { page });
+    const limit = page ? `<p class="fc-limit"><span>Limit</span> Counts show activity, not result quality.</p>` : "";
     const work = /^https:\/\//i.test(String(r.output_url || "")) ? `<a class="fc-work" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer">Open work ↗</a>` : "";
     const title = preview ? esc(titleOf(r)) : `<a href="/?run=${id}">${esc(titleOf(r))}</a>`;
     const body = `
     <${tag} class="fc-title">${title}</${tag}>
-    ${r.caption || r.note ? `<p class="fc-cap">${esc(r.caption || r.note)}</p>` : ""}
-    ${image}${activity}
+    ${r.caption || r.note ? `<p class="fc-cap"><span>Turning point</span>${esc(r.caption || r.note)}</p>` : ""}${limit}
+    ${visual}
     ${facts.length ? `<dl class="fc-stats">${facts.map(([k, v]) => `<div><dd class="num">${esc(v)}</dd><dt>${esc(k)}</dt></div>`).join("")}</dl>` : ""}
     ${work}
   `;
@@ -416,7 +449,7 @@
     return `<div class="fc-builder">${face(r, 44)}<div class="fc-who"><a class="fc-name" href="/?u=${encodeURIComponent(p.handle)}">${esc(p.name)}</a><small>Latest: <a href="/?run=${esc(r.id)}">${esc(titleOf(r))}</a></small></div><span class="card-follow" data-profile="${esc(r.profile_id)}" data-handle="${esc(p.handle)}" data-label="Follow"></span></div>`;
   }
 
-  const api = { card, face, headline, stats, publicFacts, achievement, harnessName, badge, spark, settle, routeGeometry, routeMap, strideBars, strideText, strideHtml, stride, wireStride, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };
+  const api = { card, face, headline, stats, publicFacts, achievement, harnessName, badge, spark, settle, routeGeometry, routeMap, proofVisual, strideBars, strideText, strideHtml, stride, wireStride, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };
   root.GrinderFeed = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

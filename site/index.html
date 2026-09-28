@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="__BRAND__">
 <meta property="og:title" content="__BRAND__ · __TAGLINE__">
-<meta property="og:description" content="Strava is for people who ran. __BRAND__ is for people who didn't. Drop a Cursor, Claude Code or Codex session; get the card, the map and a line to paste. Private until you ask for a link.">
+<meta property="og:description" content="Strava is for people who ran. __BRAND__ is for people who didn't. Tell Claude Code, Cursor, Codex or Grok Bot to share a run; review the private card and story before choosing an audience.">
 <meta property="og:url" content="__ORIGIN__/">
 <meta property="og:image" content="__ORIGIN__/api/og">
 <meta property="og:image:type" content="image/png">
@@ -21,7 +21,7 @@
 <meta property="og:image:alt" content="__BRAND__ · __TAGLINE__">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="__BRAND__ · __TAGLINE__">
-<meta name="twitter:description" content="Strava is for people who ran. __BRAND__ is for people who didn't. Drop a Cursor, Claude Code or Codex session; get the card, the map and a line to paste. Private until you ask for a link.">
+<meta name="twitter:description" content="Strava is for people who ran. __BRAND__ is for people who didn't. Tell Claude Code, Cursor, Codex or Grok Bot to share a run; review the private card and story before choosing an audience.">
 <meta name="twitter:image" content="__ORIGIN__/api/og">
 <meta name="twitter:image:alt" content="__BRAND__ · __TAGLINE__">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -182,6 +182,7 @@ a.act{display:inline-block;text-decoration:none}
 .result-lead{margin:14px 16px 0;padding:14px;border:1px solid var(--rule);overflow-wrap:anywhere}
 .result-lead p{margin:5px 0}.result-label{color:var(--blue);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
 .result-outcome{font-size:19px;line-height:1.32;font-weight:600}.result-source,.result-lead [data-result-claim]:not(.result-outcome),.result-limit{color:var(--soft);font-size:11px;line-height:1.45}
+.result-basis{display:block;color:var(--dim);font-size:10px;line-height:1.4;margin-top:3px}
 .result-duration{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--rule);padding-top:9px!important;margin-top:10px!important}.result-duration strong{font-size:18px;color:var(--ink)}
 .grp{padding:14px 16px 0;font-size:11px;color:var(--dim)}
 .para{padding:6px 16px 0;font-size:14px;line-height:1.6}
@@ -283,6 +284,20 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .preview-details>summary,.profile-summary>summary{cursor:pointer;color:var(--soft);font-size:13px;min-height:40px}
 .preview-details[open]>summary,.profile-summary[open]>summary{color:var(--ink);font-weight:500;margin-bottom:14px}
 .profile-context{color:var(--soft);font-size:13px;margin:0 0 18px}
+.proof-flipbook{margin:18px 0;border:1px solid var(--rule);background:var(--box)}
+.proof-flipbook-head{display:flex;justify-content:space-between;gap:16px;align-items:start;padding:14px 16px;border-bottom:1px solid var(--rule)}
+.proof-flipbook-head h2{font-size:14px;margin:0 0 3px}.proof-flipbook-head p{margin:0}
+.proof-flipbook-stage{min-height:260px;padding:28px;display:grid;align-content:center;background:var(--paper);border-bottom:1px solid var(--rule)}
+.proof-flipbook-stage .story-step{font-size:11px;color:var(--blue);margin-bottom:12px}
+.proof-flipbook-stage h3{font-size:28px;line-height:1.08;letter-spacing:-.03em;margin:0 0 16px;max-width:720px}
+.proof-flipbook-stage p{font-size:14px;color:var(--soft);margin:0;max-width:680px}
+.proof-flipbook-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--rule);margin-top:18px}
+.proof-flipbook-facts div{padding:12px;background:var(--paper)}
+.proof-flipbook-facts strong,.proof-flipbook-facts span{display:block}.proof-flipbook-facts span{font-size:11px;color:var(--dim);margin-top:3px}
+.proof-flipbook-editor{padding:14px 16px}.proof-flipbook-editor label{margin-bottom:8px}
+.proof-flipbook-editor textarea{min-height:66px;resize:vertical}
+.proof-flipbook-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.proof-flipbook-position{color:var(--soft);font-size:13px;margin-left:auto}
+@media(max-width:600px){.proof-flipbook-stage{min-height:300px;padding:22px 18px}.proof-flipbook-stage h3{font-size:24px}.proof-flipbook-facts{grid-template-columns:1fr}.proof-flipbook-position{width:100%;margin-left:0}}
 
 /* ack picker */
 .ack-picker{padding:12px 16px 14px;border-top:1px solid var(--rule)}
@@ -450,6 +465,8 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .capture-card .drop-zone{margin-top:12px}
 .post-example-label{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin:0 0 8px}
 .post-example-label strong{font-size:13px}.post-example-label span{font-size:12px;color:var(--soft)}
+.fair-referral{margin:0 0 18px;padding:12px 14px;border-left:3px solid var(--blue);background:var(--blue-wash);font-size:14px}
+.fair-referral b{display:block;margin-bottom:2px}
 .manual-post{margin-top:28px}.manual-post>summary{cursor:pointer;padding:14px 16px;font-weight:500}
 @media(max-width:800px){
   .post-workshop{grid-template-columns:1fr;gap:22px}.post-intro h1{font-size:28px}
@@ -1402,9 +1419,8 @@ function connectBodyHtml(){
   const agent=(name,harness,file,rest,note)=>`<article class="connect-agent"><h3>${name}</h3>
       ${file?`<div class="drop-path"><span class="drop-h">Drop the file${note?`<small>${note}</small>`:''}</span><code>${esc(file)}</code><button type="button" class="act" data-copy="${esc(file)}" aria-label="Copy the ${name} folder">Copy</button><small class="drop-rest">${esc(rest)}</small></div>`:''}
       <div class="cmd"><span class="c">${ONE_LINE(harness)}</span><button type="button" class="act" data-copy="${esc(ONE_LINE(harness))}">Copy</button></div></article>`;
-  return `<p class="connect-lead">Every agent keeps a session file on the computer it ran on. Drop that file here: the card is made in this tab and nothing leaves it until you ask. Or run one command on that computer and it opens the preview for you. No account for the card or the link. Sign in with GitHub${PROVIDERS_ENABLED.includes('x')?' or X':''} only to post it to the feed.</p>
+  return `<p class="connect-lead"><b>Tell your agent: “Share this run to __BRAND__.”</b> The command runs on the computer where the work happened, reads the current session locally, and opens a private card for you to shape. Nothing is posted until you choose an audience. No account is needed for the private preview.</p>
     <div class="ob-phone-handoff" data-phone-handoff="1"><p class="hint"><b style="color:var(--ink);font-weight:500">Capture runs on the computer where your agent runs</b> (Claude Code, Cursor, Codex or a Grok Bot export). This phone cannot record a sitting.</p></div>
-    ${dropZoneHtml()}
     <section class="connect-agents" aria-label="One path per agent">
       ${agent('Claude Code','claude',AGENT_FILES[0][1],AGENT_FILES[0][2],'')}
       ${agent('Cursor','cursor',AGENT_FILES[1][1],AGENT_FILES[1][2],'')}
@@ -1416,11 +1432,11 @@ function connectBodyHtml(){
       <article class="connect-agent"><h3>Any other agent or bot</h3>
         <p class="hint">No reader for it yet? Sign in and type the counts by hand under <a href="/?post#manualbox">Post a run</a>. A bot can post on its own through the upload API with one token: <a href="/?connect=auto">Automatic upload</a>. <a href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/AGENT-UPLOAD-API.md">API notes</a>.</p></article>
     </section>
+    <details class="capture-recovery"><summary>Recovery: import a session file</summary><p class="hint">Use this only when the chat or command route cannot open the preview.</p>${dropZoneHtml()}<p class="hint">In Finder or the file picker, press Cmd+Shift+G, paste the agent folder, then press Return.</p></details>
     <section class="connect-then"><h2>Then</h2>
       <p><b>Anyone with the link.</b> The card at its own address, no account, not in the feed, expires in 90 days.</p>
       <p><b>Only me, Followers or Everyone.</b> Sign in with GitHub${PROVIDERS_ENABLED.includes('x')?' or X':''}, name the project, save. Everyone puts it on Latest runs and your profile. No prompts, code or file paths from the session file leave your computer.</p>
-    </section>
-    <p class="hint">In Finder or the file picker, press Cmd+Shift+G, paste the folder, press Return.</p>`;
+    </section>`;
 }
 function wireConnectCopies(root){
   (root||document).querySelectorAll('[data-copy]').forEach(b=>{ if(b.dataset.wired) return; b.dataset.wired='1';
@@ -1569,7 +1585,7 @@ function landingHTML(){
     <section class="home-sec landing-feature" aria-labelledby="h-popular" id="landing-feature"><div class="land-head"><h2 id="h-popular">Popular runs</h2><a href="/?explore">See all</a></div><div id="landing-feature-body">${skeletonCard()}</div><p id="public-run-count" class="public-run-count" role="status"></p></section>
     <section class="home-join"><h2>Post your own runs</h2><button type="button" class="act primary" data-signin>${signInLabel()} and build your profile</button></section>
   </div>
-  <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/?boards">Marathon and boards</a><a href="/methodology">How the numbers are made</a><a href="/?post">Add a run from a file</a><a href="${REAL_RUN}">A real run</a></div>`;
+  <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/?boards">Marathon and boards</a><a href="/methodology">How the numbers are made</a><a href="/?post">Add a run</a><a href="${REAL_RUN}">A real run</a></div>`;
 }
 
 // THE DROP ZONE. One markup, mounted by site/dropin.js, on the landing and on Connect.
@@ -1734,9 +1750,9 @@ async function viewRun(id){
   const copyLink=$('run-copy-link');if(copyLink)copyLink.onclick=async()=>{try{const sharePath=r.visibility==='public'?'/r/'+r.id:'/?run='+r.id;await navigator.clipboard.writeText(location.origin+sharePath);copyLink.textContent='Link copied'}catch(_){status('Copy this page address to share your run.')}};
   if(ME?.id===r.profile_id){
     const controls=document.createElement('div');controls.className='panel reply-form';
-    controls.id='run-edit';controls.innerHTML='<h2>Edit your post</h2><label>Title<input id="run-title" required maxlength="120"></label><label>Project<input id="run-project" maxlength="120"></label><label>Photo link (optional)<input id="run-image-url" type="url" maxlength="2048" placeholder="https://…/photo.jpg"></label><label class="pin-check"><input type="checkbox" id="run-pin"> Pin to my profile</label><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label id="run-audience-label">Who can read this run<select id="run-audience"><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
+    controls.id='run-edit';controls.innerHTML='<h2>Edit your post</h2><label>What changed?<input id="run-title" required maxlength="120"></label><label>Project<input id="run-project" maxlength="120"></label><label>Output image (optional)<input id="run-image-url" type="url" maxlength="2048" placeholder="https://…/result.png"></label><label>Final proof visual<select id="run-visual">'+visualChoiceOptions(r,r.visual_choice)+'</select></label><label class="pin-check"><input type="checkbox" id="run-pin"> Pin to my profile</label><label>What made it difficult?<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label id="run-audience-label">Who can read this run<select id="run-audience"><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
     app.append(controls);$('run-title').value=r.title||'';$('run-pin').checked=!!r.pinned_at;$('run-project').value=r.project||'';$('run-image-url').value=r.image_url||'';$('run-caption').value=r.caption||r.note||'';$('run-output-url').value=r.output_url||'';$('run-audience').value=r.visibility==='anonymous'?'private':r.visibility;
-    $('run-save').onclick=async()=>{const title=$('run-title').value.trim(),project=$('run-project').value.trim(),imageUrl=$('run-image-url').value.trim(),caption=$('run-caption').value.trim(),output=$('run-output-url').value.trim(),audience=$('run-audience').value;if(!title){status('Add a title.',true);$('run-title').focus();return}if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}if(imageUrl&&!isRunPhotoUrl(imageUrl)){status('The photo link must be https and end in .png, .jpg, .jpeg or .webp.',true);return}if(!(await requireCloseFriendsForSave(audience)))return;const pin=$('run-pin').checked;const {error}=await sb.from('runs').update({title,project:project||null,image_url:imageUrl||null,caption:caption||null,output_url:output||null,visibility:audience,pinned_at:pin?(r.pinned_at||new Date().toISOString()):null}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};
+    $('run-save').onclick=async()=>{const title=$('run-title').value.trim(),project=$('run-project').value.trim(),imageUrl=$('run-image-url').value.trim(),visualChoice=$('run-visual').value||null,caption=$('run-caption').value.trim(),output=$('run-output-url').value.trim(),audience=$('run-audience').value;if(!title){status('Add a title.',true);$('run-title').focus();return}if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}if(imageUrl&&!isRunPhotoUrl(imageUrl)){status('The output image must be https and end in .png, .jpg, .jpeg or .webp.',true);return}if(visualChoice==='image'&&!imageUrl){status('Add an output image before choosing it as the final proof.',true);return}if(!(await requireCloseFriendsForSave(audience)))return;const pin=$('run-pin').checked;const {error}=await sb.from('runs').update({title,project:project||null,image_url:imageUrl||null,visual_choice:visualChoice,caption:caption||null,output_url:output||null,visibility:audience,pinned_at:pin?(r.pinned_at||new Date().toISOString()):null}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};
     $('run-delete').onclick=async()=>{if(!confirm('Delete this run and its discussion?'))return;const {error}=await sb.from('runs').delete().eq('id',r.id);if(error){status(error.message,true);return}history.replaceState(null,'','/?mine');viewMe()};
   }
   wireKudos(); if(openAck){ const card=$('card-'+id); if(card) wireAckPicker(card,r,preselect); }
@@ -1788,34 +1804,36 @@ function postComposerHtml(){
   </details>`;
 }
 
-const STRIVE_AGENT_PROMPTS={
-  cursor:'Make a STRIVE preview for the work in this project. Use the selected Cursor session, confirm it belongs to this project, and run: uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --harness cursor --push --no-series. Return the preview link and selected session time. Do not upload, publish, enable automatic capture, or change project files.',
-  claude:'Make a STRIVE preview for the work in this project. Use the selected Claude Code session, confirm it belongs to this project, and run: uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --harness claude --push --no-series. Return the preview link and selected session time. Do not upload, publish, enable automatic capture, or change project files.',
-  codex:'Make a STRIVE preview for the work in this project. Use the selected Codex session, confirm it belongs to this project, and run: uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --harness codex --push --no-series. Return the preview link and selected session time. Do not upload, publish, enable automatic capture, or change project files.',
-  grokbot:'Make a STRIVE preview from the Grok Bot export I explicitly select. Run agentgrinder grind with that exact export and --harness grokbot --push --no-series. Return the preview link. Do not choose another export, upload, publish, or change project files.'
+const AGENT_SHARE_PROMPTS={
+  cursor:'Share this run to __BRAND__. Read the current Cursor session in this project, confirm it belongs to this project, and run: uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --harness cursor --push --no-series. Open the private preview so I can choose the story and audience. Do not publish, enable automatic capture, or change project files.',
+  claude:'Share this run to __BRAND__. Read the current Claude Code session in this project, confirm it belongs to this project, and run: uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --harness claude --push --no-series. Open the private preview so I can choose the story and audience. Do not publish, enable automatic capture, or change project files.',
+  codex:'Share this run to __BRAND__. Read the current Codex session in this project, confirm it belongs to this project, and run: uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --harness codex --push --no-series. Open the private preview so I can choose the story and audience. Do not publish, enable automatic capture, or change project files.',
+  grokbot:'Share this run to __BRAND__. Use the Grok Bot export I explicitly select and run agentgrinder grind with that exact export, --harness grokbot --push --no-series. Open the private preview so I can choose the story and audience. Do not choose another export or publish.'
 };
 function askAgentHtml(){
-  return `<section class="capture-card"><h2>Ask your agent</h2><p>Make the card where you did the work.</p>
+  return `<section class="capture-card"><h2>Share this run to __BRAND__</h2><p>Tell the agent in the chat where the work happened. It reads the current session locally and opens a private preview.</p>
     <div class="agent-row"><label>Agent<select id="capture-agent"><option value="cursor">Cursor</option><option value="claude">Claude Code</option><option value="codex">Codex</option><option value="grokbot">Grok Bot</option></select></label><button type="button" class="act blue" id="capture-copy">Copy prompt</button></div>
-    <p class="capture-next">Paste it into the chat where you did the work. It returns an unsaved preview for you to shape.</p>
-    <div class="capture-fallbacks"><a href="/?connect">Use a terminal</a></div>
-    <details><summary>Import a file</summary>${dropZoneHtml()}</details></section>`;
+    <p class="capture-next">You get a private card and story draft. Choose the outcome, visual, frames and audience before anything is shared.</p>
+    <div class="capture-fallbacks"><a href="/?connect">Use the CLI</a></div>
+    <details><summary>Recovery: import a session file</summary>${dropZoneHtml()}</details></section>`;
 }
 function postExampleFallback(){
-  return `<article class="card fc" aria-label="STRIVE card structure"><header class="fc-top"><span class="fc-face fc-mono" aria-hidden="true">B</span><div class="fc-who"><span class="fc-name">Builder · Project</span><small>Agent · date</small></div></header><div class="fc-body"><h3 class="fc-title">What changed in this run?</h3><p class="fc-cap">One optional note from the builder.</p><div class="fc-spark" style="display:grid;place-items:center;border:1px solid var(--rule-2);color:var(--soft);font-size:13px">One chosen visual</div><p class="hint">Work fact · Time · Your prompts, when measured</p></div><footer class="fc-foot"><span class="fc-act">XUDOS</span><span class="fc-act">Reply</span><span class="fc-act">Share</span></footer></article>`;
+  return `<article class="card fc" aria-label="__BRAND__ card structure"><header class="fc-top"><span class="fc-face fc-mono" aria-hidden="true">B</span><div class="fc-who"><span class="fc-name">Builder · Project</span><small>Agent · date</small></div></header><div class="fc-body"><h3 class="fc-title">What changed in this run?</h3><p class="fc-cap">One optional note from the builder.</p><div class="fc-spark" style="display:grid;place-items:center;border:1px solid var(--rule-2);color:var(--soft);font-size:13px">One chosen visual</div><p class="hint">Work fact · Time · Your prompts, when measured</p></div><footer class="fc-foot"><span class="fc-act">XUDOS</span><span class="fc-act">Reply</span><span class="fc-act">Share</span></footer></article>`;
 }
 
 async function viewPost(){
   setPrimarySection('post');
   frame('',null,true);
   const app=$('app');
-  app.innerHTML=`<header class="post-intro"><h1>Add a run</h1><p>Turn this session into a card.</p></header>
-    <div class="post-workshop"><div>${askAgentHtml()}</div><section class="post-preview"><div class="post-example-label"><strong>A run on STRIVE</strong><span>Outcome, one visual, a few facts</span></div><div id="post-example">${postExampleFallback()}</div></section></div>
+  const fromFair=new URLSearchParams(location.search).get('via')==='the-fair';
+  app.innerHTML=`<header class="post-intro"><h1>${fromFair?'Finish the __BRAND__ task':'Add a run'}</h1><p>${fromFair?'Capture the run where the work happened, shape its story, then save it.':'Ask your agent for a private card + story. You choose what leaves.'}</p></header>
+    ${fromFair?'<div class="fair-referral"><b>Free Lunch sent you here.</b>Tell the agent in the active build chat to share this run. __BRAND__ opens a private draft; importing a file is only recovery.</div>':''}
+    <div class="post-workshop"><div>${askAgentHtml()}</div><section class="post-preview"><div class="post-example-label"><strong>A run on __BRAND__</strong><span>Outcome, one visual, a few facts</span></div><div id="post-example">${postExampleFallback()}</div></section></div>
     ${ME?postComposerHtml():'<div class="panel pad auth-empty"><h3>Sign in when you are ready to save</h3><p>You can make and review the preview first.</p><button id="post-signin" class="act blue">'+signInLabel()+'</button></div>'}`;
   if(window.GrinderDropinUI) GrinderDropinUI.mount({post:token=>{history.pushState(null,'','/#import='+token);route();}});
   wireConnectCopies($('app'));
   const select=$('capture-agent'), copy=$('capture-copy');
-  const syncPrompt=()=>{if(copy)copy.dataset.copy=STRIVE_AGENT_PROMPTS[select?.value||'cursor']};
+  const syncPrompt=()=>{if(copy)copy.dataset.copy=AGENT_SHARE_PROMPTS[select?.value||'cursor']};
   if(select)select.onchange=syncPrompt;syncPrompt();wireConnectCopies(app);
   try{
     const realId=REAL_RUN.split('/').pop();
@@ -2143,6 +2161,24 @@ function restoreImport(){
   try{ sessionStorage.removeItem(IMPORT_STASH); }catch(_){}
 }
 
+function storyEvery(callback,delay){return setInterval(callback,delay)}
+function stopStoryTimer(timer){clearInterval(timer)}
+
+function visualChoiceOptions(run,selected){
+  const hasImage=isRunPhotoUrl(String(run?.image_url||''));
+  const hasRoute=!!globalThis.GrinderFeed?.routeGeometry?.(run||{});
+  const hasActivity=!!globalThis.GrinderFeed?.spark?.(run||{});
+  const preferred=['image','route','activity'].includes(selected)?selected:(hasImage?'image':hasRoute?'route':hasActivity?'activity':'');
+  const options=[
+    ['','No proof visual recorded',!hasImage&&!hasRoute&&!hasActivity],
+    ['image','Output image',hasImage],
+    ['route','Work route',hasRoute],
+    ['activity','Run rhythm',hasActivity]
+  ];
+  return options.filter(([,value,available])=>available||value===preferred||value==='').map(([value,label,available])=>
+    `<option value="${value}"${value===preferred?' selected':''}${available?'':' disabled'}>${label}${available?'':' · unavailable'}</option>`).join('');
+}
+
 async function decodeImportPayload(payload){
   if(payload.startsWith('gz.')){
     if(typeof DecompressionStream!=='function'){
@@ -2158,12 +2194,57 @@ async function decodeImportPayload(payload){
   return JSON.parse(atob(decodeURIComponent(payload)));
 }
 
+function proofFlipbookDraft(run,edits={}){
+  const measured=(globalThis.GrinderSharing?.shareFacts?.(run)||[]).map(([label,value])=>({head:label,value:String(value),body:'Recorded on this run'}));
+  const shipped=Array.isArray(run.shipped)?run.shipped.filter(line=>typeof line==='string'&&line.trim()).slice(0,2):[];
+  const harness=run.harness||'Agent';
+  const project=GrinderContract.projectLabel(run.project)||'this project';
+  const values={
+    happened:(edits.happened||'').trim()||'Outcome not recorded yet',
+    changed:(edits.changed||'').trim()||shipped.join(' · ')||'Change not recorded yet',
+    evidence:(edits.evidence||'').trim()||measured.map(item=>item.value+' '+item.head.toLowerCase()).join(' · ')||'No supported run facts were recorded',
+    remains:(edits.remains||'').trim()||'Invite one builder to reply · not done yet'
+  };
+  return {
+    name:'strive-'+String(run.measurement_revision||run.started||'private-run').replace(/[^a-z0-9-]+/gi,'-').toLowerCase(),
+    title:values.happened,
+    fps:25,
+    brand:{label:'__BRAND__',ground:'#f7f7f5',bone:'#111111',slate:'#dcdcd8',dim:'#666662',dimmer:'#8a8a86',rule:'#deddd8',accent:'#123cff'},
+    theme:{heading_weight:600,body_weight:400,label_weight:600,label_case:'none',label_tracking:'.02em',tracking:'-.03em',radius:0},
+    sources:{capture:{read_from:'Private __BRAND__ capture · '+harness+' · '+project,read_at:new Date().toISOString().slice(0,10)}},
+    data:{facts:{values:measured,source:'capture'}},
+    scenes:[
+      {id:'happened',type:'statement',seconds:3.75,step:'What happened',heading:values.happened,sub:harness+' · '+project},
+      {id:'changed',type:'statement',seconds:3.75,step:'What changed',heading:values.changed,sub:'Uploader account · not independently verified'},
+      measured.length
+        ?{id:'evidence',type:'columns',seconds:3.75,step:'Evidence',heading:'What the run recorded',items:'@facts'}
+        :{id:'evidence',type:'statement',seconds:3.75,step:'Evidence',heading:values.evidence,sub:'Missing evidence stays missing'},
+      {id:'remains',type:'close',seconds:3.75,step:'What remains',heading:values.remains,sub:'Private draft · choose the story and audience before sharing',url:'Private review first'}
+    ],
+    invariants:[
+      {id:'no-file-drop-front-door',assert:"!sees('Drop a session file')",because:'file import is recovery, not the __BRAND__ story'},
+      {id:'remaining-frame-is-labelled',scene:'remains',assert:"sees('What remains')",because:'the final frame must identify the author-selected remaining work'}
+    ]
+  };
+}
+
 async function importRun(){
   const m=location.hash.match(/import=([^&]+)/); if(!m) return false;
   try{document.title='Preview a run · __BRAND__'}catch(_){}
   let run; try{ run=await decodeImportPayload(m[1]); }catch(error){ frame(null,null); $('app').innerHTML='<div class="card"><h2>This import link could not be read</h2><p>'+esc(error.importCompatibility?error.message:'The capture data on this link could not be read, usually because the address was cut when it was copied. Nothing was posted. Run the capture command again to open a fresh preview.')+'</p><p><a href="/?post">How to capture a run</a></p></div>'; return true; }
   if(Array.isArray(run?.ridge)&&run.worker_bins==null) run.worker_bins=Array(run.ridge.length).fill(0);
   const importedWholeNumber=id=>{const raw=$(id)?.value;if(raw==null||String(raw).trim()==='')return null;const value=Number(raw);return Number.isInteger(value)&&value>=0?value:Number.NaN};
+  // Keep this helper inside importRun: the import-preview probe executes this path in
+  // isolation, exactly as a capture link does before the rest of the signed-in shell exists.
+  const choiceOptions=(entry,selected)=>{
+    const hasImage=!!safeOutputUrl(String(entry?.image_url||''));
+    const hasRoute=!!globalThis.GrinderFeed?.routeGeometry?.(entry||{});
+    const hasActivity=!!globalThis.GrinderFeed?.spark?.(entry||{});
+    const preferred=['image','route','activity'].includes(selected)?selected:(hasImage?'image':hasRoute?'route':hasActivity?'activity':'');
+    return [['','No proof visual recorded',!hasImage&&!hasRoute&&!hasActivity],['image','Output image',hasImage],['route','Work route',hasRoute],['activity','Run rhythm',hasActivity]]
+      .filter(([,value,available])=>available||value===preferred||value==='')
+      .map(([value,label,available])=>`<option value="${value}"${value===preferred?' selected':''}${available?'':' disabled'}>${label}${available?'':' · unavailable'}</option>`).join('');
+  };
   try{ GrinderContract.validate(run); }
   catch(error){ frame(null,null); $('app').innerHTML='<div class="card"><h2>This grind could not be imported</h2><p>'+esc(error.message)+'</p></div>'; return true; }
   if(typeof GrinderContract==='object' && GrinderContract.rejectPaths){
@@ -2196,15 +2277,28 @@ async function importRun(){
   frame(null,null);
   app.innerHTML=`<div class="head"><h2>${sample?'Sample preview':'Preview your run'}</h2>${sample?'<span class="meta">example data · not your activity</span>':''}</div>
     ${sample?'<p role="note">This sample is for trying the preview. It cannot be saved or posted. Capture your own session to share a run.</p>':''}
-    <section aria-labelledby="import-card-heading"><h2 id="import-card-heading" class="visually-hidden">${sample?'Sample card preview':'Card preview'}, not posted</h2><div id="import-card-preview"></div></section>
+    <section aria-labelledby="import-card-heading"><p class="meta">Card · private preview</p><h2 id="import-card-heading" class="visually-hidden">${sample?'Sample card preview':'Card preview'}, not posted</h2><div id="import-card-preview"></div></section>
+    <section class="proof-flipbook" aria-labelledby="proof-flipbook-heading">
+      <div class="proof-flipbook-head"><div><h2 id="proof-flipbook-heading">Proof Flipbook · private draft</h2><p class="hint">Four evidence-bound frames · about 15 seconds</p></div><span class="meta">Not posted</span></div>
+      <div id="proof-flipbook-preview" class="proof-flipbook-stage" aria-live="polite"></div>
+      <div class="proof-flipbook-editor">
+        <p class="hint">Private draft. Nothing here is posted. Edit the story before choosing an audience.</p>
+        <label>What happened<textarea id="pf_happened" maxlength="120" placeholder="Add the real outcome"></textarea></label>
+        <label>What changed<textarea id="pf_changed" maxlength="180" placeholder="Name the change, not the activity"></textarea></label>
+        <label>Evidence<textarea id="pf_evidence" maxlength="180" readonly></textarea><span class="hint">Built only from supported facts in this capture.</span></label>
+        <label>What remains<textarea id="pf_remains" maxlength="180">Invite one builder to reply · not done yet</textarea></label>
+        <div class="proof-flipbook-controls"><button type="button" class="act blue" id="proof-flipbook-play">Play 15-second preview</button><button type="button" class="act" id="proof-flipbook-download">Download story definition</button><span id="proof-flipbook-position" class="proof-flipbook-position">Frame 1 of 4</span></div>
+      </div>
+    </section>
     <div class="panel"><div class="pad preview-story">
     <p class="meta">STORY FIRST</p>
     <label>What did you achieve?<input id="i_title" maxlength="120" required placeholder="Write the achievement. Prompt text is never used."></label>
-    <label>Short caption<textarea id="i_caption" maxlength="280" required placeholder="What changed in this session?"></textarea></label>
+    <label>What made it difficult?<textarea id="i_caption" maxlength="280" required placeholder="The failed attempt, correction or decision that changed the run"></textarea></label>
     <label>Project (optional)<input id="i_project" maxlength="80" value="${esc(capturedProject||'')}" placeholder="What to call this project"><span class="hint">Shown to readers as Project touched. Capture fills this in only when it could confirm the session ran in that project's git repository; otherwise type a name, or leave it empty.</span></label>
     <label>Repository (optional)<input id="i_repo" type="url" maxlength="2048" value="${esc(run.repo_url||'')}" placeholder="https://github.com/you/project"><span class="hint">An https link to the code. The run then sits on that project's page with every other run on it.</span></label>
     <label>Link to what was built (optional)<input id="i_output_url" type="url" maxlength="2048" placeholder="https://github.com/…"></label>
-    <label>Scene photo URL (optional)<input id="i_image_url" type="url" maxlength="2048" placeholder="https://…/cafe.jpg"><span class="hint">Optional lifestyle scene beside a genuine output image. Paste a URL; nothing is taken from your camera roll automatically.</span></label>
+    <label>Output image URL (optional)<input id="i_image_url" type="url" maxlength="2048" placeholder="https://…/result.png"><span class="hint">Use a real screenshot of the result. Nothing is taken from your camera roll automatically.</span></label>
+    <label>Final proof visual<select id="i_visual">${choiceOptions(run,run.visual_choice)}</select><span class="hint">One visual only. Missing proof stays missing.</span></label>
     <label>Who can see this run?<select id="i_vis" required><option value="" selected disabled>Choose an audience</option><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label>
     <p class="hint">Only me stays with you. Close friends is your private list. Link is for signed-in followers and close friends. Choosing Public is the deliberate action that adds the run to Feed and your profile.</p>
     <button id="i_pub" ${sample?'disabled':''}>${sample?'Sample - preview only':(ME?'Save run':'Sign in to save')}</button>
@@ -2222,13 +2316,31 @@ async function importRun(){
     </details>
     <div id="i_recover" hidden></div></div></div>
     `;
-  const editFields=['i_title','i_model','i_project','i_repo','i_segment','i_wall','i_caption','i_output_url','i_image_url','i_stack','i_vis'];
+  const editFields=['i_title','i_model','i_project','i_repo','i_segment','i_wall','i_caption','i_output_url','i_image_url','i_visual','i_stack','i_vis','pf_happened','pf_changed','pf_remains'];
   let savedImportEdits=null;
   try{const saved=JSON.parse(sessionStorage.getItem('ag_import_edits')||'null');if(saved?.token===m[1]){savedImportEdits=saved;for(const key of editFields)if(typeof saved[key]==='string')$(key).value=saved[key];$('i_share_rig').checked=!!saved.shareRig}}catch(_){}
   if(!$('i_image_url').value&&run.image_url)$('i_image_url').value=run.image_url;
   function saveImportEdits(){try{sessionStorage.setItem('ag_import_edits',JSON.stringify({token:m[1],...Object.fromEntries(editFields.map(key=>[key,$(key).value])),shareRig:$('i_share_rig').checked}))}catch(_){}}
+  let proofFrame=0,proofTimer=null,proofDraft=null;
+  function proofEdits(){return {
+    happened:$('pf_happened').value.trim()||$('i_title').value.trim(),
+    changed:$('pf_changed').value.trim()||$('i_caption').value.trim(),
+    evidence:$('pf_evidence').value.trim(),
+    remains:$('pf_remains').value.trim()
+  }}
+  function paintProofFlipbook(){
+    proofDraft=proofFlipbookDraft(run,proofEdits());
+    const facts=globalThis.GrinderSharing?.shareFacts?.(run)||[];
+    $('pf_evidence').value=facts.length?facts.map(([label,value])=>value+' '+label.toLowerCase()).join(' · '):'No supported run facts were recorded';
+    const scene=proofDraft.scenes[proofFrame]||proofDraft.scenes[0];
+    const factHtml=scene.type==='columns'&&facts.length?'<div class="proof-flipbook-facts">'+facts.map(([label,value])=>'<div><strong>'+esc(value)+'</strong><span>'+esc(label)+'</span></div>').join('')+'</div>':'';
+    $('proof-flipbook-preview').innerHTML='<div class="story-step">'+esc(scene.step)+'</div><h3>'+esc(scene.heading)+'</h3>'+(scene.sub?'<p>'+esc(scene.sub)+'</p>':'')+factHtml;
+    $('proof-flipbook-position').textContent='Frame '+(proofFrame+1)+' of '+proofDraft.scenes.length;
+  }
   function paintImportPreview(){
     const sceneUrl=($('i_image_url')?.value||'').trim()||run.image_url||null;
+    const visualSelect=$('i_visual'),selectedVisual=visualSelect.value||run.visual_choice||'';
+    visualSelect.innerHTML=choiceOptions({...run,image_url:sceneUrl},selectedVisual);
     // Signed out there is no account to show: the neutral label and its initial, never a
     // made-up GitHub login. An empty title falls back to "<harness> session, <day>" (titleOf).
     const preview={id:'preview',profile_id:ME?.id||'preview',profiles:ME||{display_name:'Local run'},title:$('i_title').value.trim(),
@@ -2243,14 +2355,26 @@ async function importRun(){
       // reader would see. Without these the preview silently dropped the repo, the shipped lines,
       // the receipt links and the demo, and only the counts survived.
       repo_url:safeRepoUrl($('i_repo')?.value)||null,receipts:run.receipts||null,shipped:run.shipped||null,
-      artifact_url:run.artifact_url||null,image_url:sceneUrl,
+      artifact_url:run.artifact_url||null,image_url:sceneUrl,visual_choice:visualSelect.value||null,
       code_route:run.code_route||null,
       visibility:'private',started_at:run.started||null,created_at:run.started||new Date().toISOString()};
     // The same card the feed draws (site/feed-card.js), in its unsaved form, above the form.
     $('import-card-preview').innerHTML=GrinderFeed.card(preview,{preview:true});
+    paintProofFlipbook();
   }
   editFields.forEach(key=>$(key).addEventListener('input',()=>{saveImportEdits();paintImportPreview()}));
   paintImportPreview();
+  $('proof-flipbook-play').addEventListener('click',()=>{
+    if(proofTimer){stopStoryTimer(proofTimer);proofTimer=null;$('proof-flipbook-play').textContent='Play 15-second preview';return}
+    proofFrame=0;paintProofFlipbook();$('proof-flipbook-play').textContent='Stop preview';
+    let shown=1;proofTimer=storyEvery(()=>{proofFrame=(proofFrame+1)%4;shown+=1;paintProofFlipbook();if(shown>=4){stopStoryTimer(proofTimer);proofTimer=null;$('proof-flipbook-play').textContent='Play again'}},3750);
+  });
+  $('proof-flipbook-download').addEventListener('click',()=>{
+    paintProofFlipbook();
+    const blob=new Blob([JSON.stringify(proofDraft,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download=proofDraft.name+'.json';document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);
+    status('Story definition downloaded. It is still private.');
+  });
   if(typeof loadSegmentChoices==='function') loadSegmentChoices('i_segment',savedImportEdits?.i_segment).then(paintImportPreview);
   $('i_pub').addEventListener('click',async()=>{
     if(sample){status('Samples are preview-only. Capture your own session to save a run.',true);return;}
@@ -2267,10 +2391,14 @@ async function importRun(){
       showSignIn(); return; }
     const caption=$('i_caption').value.trim(),output=$('i_output_url').value.trim(),audience=$('i_vis').value,wallTime=importedWholeNumber('i_wall');
     const sceneUrl=($('i_image_url')?.value||'').trim();
+    const visualChoice=$('i_visual').value||null;
     if(!$('i_title').value.trim()||!caption||!audience){status('Add a title and caption, then choose who can see the run.',true);return}
     if(Number.isNaN(wallTime)){status('Segment wall time must be a whole number of seconds.',true);return}
     if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}
     if(sceneUrl&&!(safeOutputUrl(sceneUrl)&&/\.(png|jpe?g|webp)([?#].*)?$/i.test(sceneUrl))){status('Scene photo must be an https image ending in .png, .jpg, .jpeg or .webp.',true);return}
+    if(visualChoice==='image'&&!sceneUrl){status('Add a real output image before choosing Output image.',true);return}
+    if(visualChoice==='route'&&!GrinderFeed.routeGeometry(run)){status('This capture did not record a work route. Choose another proof visual.',true);return}
+    if(visualChoice==='activity'&&!GrinderFeed.spark(run)){status('This capture did not record a run rhythm. Choose another proof visual.',true);return}
     if(!(await requireCloseFriendsForSave(audience)))return;
     const saveLabel=publishButton.textContent;
     publishButton.disabled=true;publishButton.setAttribute('aria-busy','true');publishButton.innerHTML='<span class="spin" aria-hidden="true"></span>Saving…';
@@ -2306,7 +2434,7 @@ async function importRun(){
       wall_time_s:wallTime,
       harness:run.harness||null,prompts:run.turns_typed??null,duration_s:run.duration_s??null,
       commits:run.commits??null,tool_calls:run.tool_calls??null,shell_calls:run.shell_calls??null,files_touched:run.files_touched??null,
-      rhythm:run.rhythm||null,caption,output_url:output||null,visibility:audience,started_at:run.started||null};
+      rhythm:run.rhythm||null,caption,output_url:output||null,visual_choice:visualChoice,visibility:audience,started_at:run.started||null};
     dropNullSegmentColumns(base);
     // the coach columns (nullable; migration 2026-09-03-coach.sql). Retry without them on a
     // database that does not have them yet, and say so.
@@ -2496,6 +2624,9 @@ async function route(){ account.recover(); try{document.title=pageTitle(new URLS
   if(q.has('projects'))return viewProjects();
   if(q.has('project'))return viewProject(q.get('project'));
   if(q.has('segment'))return GrinderSegments.mount({client:sb,id:q.get('segment'),slot:$('app'),frame,status});
+  // Free Lunch links to the product root. That referral is a task, not a feed visit: take it to
+  // the agent-native capture workshop while site/fair.js retains any fair_challenge callback.
+  if(q.get('via')==='the-fair')return viewPost();
   if(q.has('post'))return viewPost();
   if(q.has('mine')){setPrimarySection('mine');return progress.history();}
   if(q.has('people')){setPrimarySection('feed');return people.discover(q.get('q')||'');}

@@ -108,6 +108,8 @@
       throw new Error("repo_url must be a repository on github.com, gitlab.com or codeberg.org.");
     if (run.image_url != null && !/\.(png|jpe?g|webp)([?#].*)?$/i.test(run.image_url))
       throw new Error("image_url must end in .png, .jpg, .jpeg or .webp.");
+    if (run.visual_choice != null && !["image", "route", "activity"].includes(run.visual_choice))
+      throw new Error("visual_choice must be image, route or activity.");
     if (run.shipped != null) {
       if (!Array.isArray(run.shipped) || run.shipped.length > 5)
         throw new Error("shipped holds at most 5 lines.");

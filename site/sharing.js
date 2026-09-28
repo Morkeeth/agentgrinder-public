@@ -45,7 +45,10 @@ function shareFacts(run){
  else if(files>0)add(files===1?'file changed':'files changed',files);
  const wall=whole(run.wall_time_s)??(run.ridge_basis==='wall-time'?whole(run.ridge_wall_seconds):null);
  if(wall!=null)add('Elapsed',duration(wall));
- else{const recorded=whole(run.duration_s);if(recorded!=null)add('Recorded time',duration(recorded));}
+ else{
+  const recorded=whole(run.duration_s);
+  if(recorded!=null)add(['elapsed','elapsed-agent-tool-calls'].includes(run.trace_basis)?'Recorded time':'Duration · basis unknown',duration(recorded));
+ }
  const prompts=whole(run.prompts??run.turns_typed);
  if(prompts!=null)add('Your prompts',prompts);
  return facts;
@@ -84,13 +87,18 @@ function outputKind(run){
 function codeFacts(run){
  const facts=[];
  if(run.shell_calls!=null)facts.push(run.shell_calls+' shell calls');
- if(run.files_touched!=null)facts.push(run.files_touched+' files changed');
+ if(run.files_touched!=null)facts.push(run.files_touched+' files touched');
  if(run.commits!=null)facts.push(run.commits+' commits');
  const contract=contractApi();
  const tools=contract&&contract.toolCallCount
   ?contract.toolCallCount(run):run.tool_calls;
  if(!facts.length&&tools!=null)facts.push(tools+' tool calls');
  return facts;
+}
+function shareQualifier(lead,review){
+ if(review)return'My observation · this does not prove the practice caused the result';
+ const label=typeof lead?.label==='string'&&lead.label.trim()?lead.label.trim():'Outcome not recorded';
+ return label+' · measured facts describe this run';
 }
 function storyFacts(run){
  const project=projectName(run),code=codeFacts(run).join(' · ');return {project:project||null,output:outputKind(run),code:code||null};
@@ -202,7 +210,7 @@ function mount({run,slot,status,moment=null,review=null}){
   else{ctx.fillStyle='#666';ctx.font='20px sans-serif';ctx.fillText('No measured visual for this run',64,factsY+130);}
  }
  const work=workLabel(run);if(work){ctx.fillStyle='#123cff';ctx.font='600 18px sans-serif';ctx.fillText(work.label.toUpperCase()+' · '+work.host,64,canvas.height-112);}
- ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(64,canvas.height-65);ctx.lineTo(1016,canvas.height-65);ctx.stroke();ctx.fillStyle='#666';ctx.font='18px sans-serif';ctx.fillText(review?'My observation · this does not prove the practice caused the result':'Builder’s account · measured facts describe this run',64,canvas.height-30);
+ ctx.strokeStyle='#ddd';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(64,canvas.height-65);ctx.lineTo(1016,canvas.height-65);ctx.stroke();ctx.fillStyle='#666';ctx.font='18px sans-serif';ctx.fillText(shareQualifier(shareLead,review),64,canvas.height-30);
  slot.querySelector('#post-caption').value=[outcome,f.result&&f.result!==outcome?f.result:null,work&&run.output_url,review?'My observation, not proof the practice caused the result.':(publicShare||run.visibility==='link')?url:''].filter(Boolean).join('\n\n');
  slot.querySelector('#post-message').textContent=clipped?'Some text is shortened in the image. Shorten your text or choose portrait. Moment and review exports require the complete text to fit; the caption keeps the full text.':'';
  const ready=form.elements.review.checked&&!!f.title&&(!(moment||review)||!clipped)&&(!review||!!f.result);slot.querySelector('#post-download').disabled=!ready;slot.querySelector('#post-copy').disabled=!ready;
@@ -237,5 +245,5 @@ function mountReview({attempt,viewerId,slot,status}){
  if(!value){slot.textContent='Only your own saved review can be exported.';return;}
  return mount({...value,slot,status});
 }
-root.GrinderSharing={mount,reviewExport,mountReview,metricStrip,shareFacts,dateLabel,workLabel,storyFacts,traceSeries};
+root.GrinderSharing={mount,reviewExport,mountReview,metricStrip,shareFacts,dateLabel,workLabel,storyFacts,traceSeries,shareQualifier};
 })(window);

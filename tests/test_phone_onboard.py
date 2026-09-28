@@ -31,8 +31,9 @@ def test_one_page_one_command_per_agent_and_the_drop_zone():
     assert "uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind" in HTML
     for path in ("~/.claude/projects/", "~/.cursor/projects/", "~/.codex/sessions/"):
         assert path in HTML
-    # No account for the card or the link; sign-in only to post. No email, no mailto.
-    assert "No account for the card or the link" in body
+    # No account for the private preview; nothing is posted before the audience choice.
+    assert "No account is needed for the private preview" in body
+    assert "Nothing is posted until you choose an audience" in body
     assert "mailto:" not in body and "signInWithOtp" not in body
     # Bots and unsupported agents have a path too, and the token flow keeps its address.
     assert 'href="/?connect=auto"' in body
@@ -43,5 +44,6 @@ def test_onboard_and_connect_and_post_are_the_same_page():
     assert "async function viewOnboard(){ return viewConnect(); }" in HTML
     assert "if(q.get('connect')==='auto')" in HTML
     post = HTML[HTML.index("async function viewPost(){"):HTML.index("async function viewExplore(){")]
-    assert "${connectBodyHtml()}" in post
+    assert "${askAgentHtml()}" in post
+    assert "${connectBodyHtml()}" not in post
     assert "firstRunPrompt" not in HTML and "FIRST_RUN_CMD" not in HTML

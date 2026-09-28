@@ -128,15 +128,15 @@ def test_public_page_exposes_recorded_metrics_as_readable_html():
            "project": "session", "profiles": {"handle": "builder"}}
     visible = body(serve(MISSING, [row])["body"])
     assert '<article class="card fc"' in visible
-    assert '<span class="fc-n num">2</span><span class="fc-u">commits</span>' in visible
-    assert '<dt>Time</dt><dd class="num">10m</dd>' in visible
-    assert '<dt>Turns</dt><dd class="num">6</dd>' in visible
-    assert '<dt>Tool calls</dt><dd class="num">28</dd>' in visible
-    assert '<dt>Commits</dt>' not in visible  # already the big number
+    assert '<dd class="num">2</dd><dt>commits</dt>' in visible
+    assert '<dd class="num">15m</dd><dt>Elapsed</dt>' in visible
+    assert '<dd class="num">6</dd><dt>Your prompts</dt>' in visible
+    assert visible.count('<dt>') == 3
     assert "Built the import.\nThen checked the save." in visible
+    assert '<p class="fc-limit"><span>Limit</span> Counts show activity, not result quality.</p>' in visible
     assert 'href="/?u=builder"' in visible and '>builder</a>' in visible
     assert 'aria-label="STRIVE home"' in visible
-    assert 'aria-label="Discuss"' in visible and 'aria-label="Share"' in visible
+    assert 'aria-label="Reply"' in visible and 'aria-label="Share"' in visible
     assert '<img' not in visible  # no avatar and no GitHub account: the initial, no remote image
 
 
@@ -145,7 +145,7 @@ def test_unrecorded_metrics_are_not_guessed_and_recorded_zero_is_preserved():
            "prompts": 0, "tool_calls": None, "files_touched": None, "commits": -1,
            "ridge_basis": "turn-order", "ridge_wall_seconds": 120}
     visible = body(serve(MISSING, [row])["body"])
-    assert '<dt>Turns</dt><dd class="num">0</dd>' in visible
+    assert '<dd class="num">0</dd><dt>Your prompts</dt>' in visible
     for label in ("Time", "Tool calls", "Files", "Commits"):
         assert f'<dt>{label}</dt>' not in visible
     assert 'class="fc-hero"' not in visible  # nothing measured to lead with

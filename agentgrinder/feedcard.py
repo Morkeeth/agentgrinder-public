@@ -43,7 +43,8 @@ CARD_CSS = """/* the card */
 .fc-body{display:block;padding:12px 16px 0;color:inherit}
 .fc-title{font-size:28px;line-height:1.15;font-weight:600;letter-spacing:-.025em;margin:0}
 .fc-title a{color:inherit;text-decoration:none}.fc-title a:hover{color:var(--blue)}
-.fc-cap{margin:4px 0 0;font-size:14px;color:var(--ink)}
+.fc-cap{margin:8px 0 0;font-size:14px;line-height:1.42;color:var(--ink)}
+.fc-cap span{display:block;margin:0 0 2px;color:var(--blue);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
 .fc-numbers{display:flex;align-items:flex-end;gap:12px 28px;flex-wrap:wrap;margin:14px 0 0}
 .fc-hero{display:flex;flex-direction:column;line-height:1}
 .fc-n{font-size:44px;font-weight:600;letter-spacing:-.03em;color:var(--ink)}
@@ -52,6 +53,8 @@ CARD_CSS = """/* the card */
 .fc-stats div{display:flex;flex-direction:column;background:var(--box);padding:12px 8px 12px 0}
 .fc-stats dt{font-size:12px;color:var(--soft);order:2}
 .fc-stats dd{margin:0 0 3px;font-size:24px;line-height:1;font-weight:500;order:1}
+.fc-proof{margin:16px 0 0}.fc-proof-label{margin:0 0 7px;color:var(--soft);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.fc-proof .fc-visual,.fc-proof .fc-spark,.fc-proof .fc-map{margin-top:0}
 .fc-visual{margin:16px 0 0}.fc-visual img{display:block;width:100%;max-height:420px;object-fit:cover}
 .fc-work{display:inline-flex;margin:14px 0 0;color:var(--blue);font-size:14px;font-weight:500}
 .fc-spark{position:relative;height:56px;margin:14px 0 0}
@@ -123,6 +126,20 @@ def duration_label(seconds):
     return f"{m // 60}h {m % 60}m" if m >= 60 else f"{m}m"
 
 
+def time_fact(r: dict):
+    wall = r.get("wall_time_s")
+    if not _num(wall) and r.get("ridge_basis") == "wall-time":
+        wall = r.get("ridge_wall_seconds")
+    elapsed = duration_label(wall)
+    if elapsed:
+        return {"label": "Elapsed", "value": elapsed}
+    recorded = duration_label(r.get("duration_s"))
+    if not recorded:
+        return None
+    has_elapsed_basis = r.get("trace_basis") in ("elapsed", "elapsed-agent-tool-calls")
+    return {"label": "Recorded time" if has_elapsed_basis else "Duration · basis unknown", "value": recorded}
+
+
 def public_facts(r: dict) -> list[tuple[str, str]]:
     """Facts safe to promote on a public card, in the same order as site/feed-card.js."""
     out: list[tuple[str, str]] = []
@@ -142,12 +159,9 @@ def public_facts(r: dict) -> list[tuple[str, str]]:
     elif files is not None and files > 0:
         add("file changed" if files == 1 else "files changed", _thousands(files))
 
-    wall = r.get("wall_time_s")
-    recorded = r.get("duration_s")
-    if _num(wall) and wall > 0:
-        add("Elapsed", duration_label(wall))
-    elif _num(recorded) and recorded > 0:
-        add("Recorded time", duration_label(recorded))
+    timing = time_fact(r)
+    if timing:
+        add(timing["label"], timing["value"])
 
     prompts = whole(r.get("prompts", r.get("turns_typed")))
     if prompts is not None:
@@ -240,15 +254,15 @@ def _tools(r):
 def headline(r: dict):
     """The one number: the first measured, non-zero value of commits, files, tool calls, time."""
     commits, files, tools = whole(r.get("commits")), whole(r.get("files_touched")), _tools(r)
-    t = duration_label(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s"))
+    timing = time_fact(r)
     if commits:
         return {"n": _thousands(commits), "unit": "commit" if commits == 1 else "commits", "key": "commits"}
     if files:
-        return {"n": _thousands(files), "unit": "file changed" if files == 1 else "files changed", "key": "files"}
+        return {"n": _thousands(files), "unit": "file touched" if files == 1 else "files touched", "key": "files"}
     if tools:
         return {"n": _thousands(tools), "unit": "tool calls", "key": "tools"}
-    if t:
-        return {"n": t, "unit": "session", "key": "time"}
+    if timing:
+        return {"n": timing["value"], "unit": timing["label"].lower(), "key": "time"}
     return None
 
 
@@ -261,12 +275,13 @@ def stats(r: dict, lead) -> list:
             return
         out.append((label, value))
 
-    add("time", "Time", duration_label(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s")))
+    timing = time_fact(r)
+    add("time", timing["label"] if timing else None, timing["value"] if timing else None)
     tools = _tools(r)
     add("turns", "Turns", whole(r.get("prompts") if r.get("prompts") is not None else r.get("turns_typed")))
     add("tools", "Tool calls", _thousands(tools) if tools else None)
     add("commits", "Commits", whole(r.get("commits")) or None)
-    add("files", "Files", whole(r.get("files_touched")) or None)
+    add("files", "Files touched", whole(r.get("files_touched")) or None)
     return out
 
 
@@ -291,7 +306,7 @@ def achievement(r: dict):
     if commits is not None and commits >= 5:
         return {"key": "shipper", "label": "Shipper", "detail": f"{_thousands(commits)} commits in one run"}
     if files is not None and files >= 25:
-        return {"key": "wide-net", "label": "Wide net", "detail": f"{_thousands(files)} files changed"}
+        return {"key": "wide-net", "label": "Wide net", "detail": f"{_thousands(files)} files touched"}
     if turns is not None and turns >= 2 and tools and tools / turns >= 30:
         return {"key": "delegator", "label": "Delegator", "detail": f"{_thousands(whole(tools / turns))} tool calls per prompt"}
     if secs and secs < 900 and commits is not None and commits >= 1:
@@ -451,6 +466,21 @@ def route_map(r: dict) -> str:
             f'{rail}{hops}{stations}</svg><p class="fc-map-k">{esc(g["label"])}</p></div>')
 
 
+def proof_visual(r: dict, *, page: bool = False) -> str:
+    """One chosen proof visual, matching site/feed-card.js proofVisual."""
+    requested = r.get("visual_choice") if r.get("visual_choice") in ("image", "route", "activity") else None
+    image = (f'<figure class="fc-visual"><img src="{esc(r.get("image_url"))}" alt="Final proof chosen by the builder"></figure>'
+             if not page and re.match(r"^https://", str(r.get("image_url") or ""), re.I) else "")
+    route = route_map(r)
+    activity = spark(r)
+    available = {"image": image, "route": route, "activity": activity}
+    kind = requested if requested and available[requested] else ("image" if image else "route" if route else "activity" if activity else None)
+    if not kind:
+        return ""
+    label = {"image": "Output", "route": "Work route", "activity": "Run rhythm"}[kind]
+    return f'<section class="fc-proof" data-proof-visual="{kind}"><p class="fc-proof-label">Final proof · {label}</p>{available[kind]}</section>'
+
+
 # THE STRIDE LINE. site/feed-card.js strideBars, strideText and stride: two lines of plain text.
 BARS = "▁▂▃▄▅▆▇█"
 
@@ -542,16 +572,14 @@ def card(r: dict, meta_extra: str = "", avatars: bool = False, url: str | None =
     cap = r.get("caption") or r.get("note")
     dl = ('<dl class="fc-stats">' + "".join(f'<div><dd class="num">{esc(v)}</dd><dt>{esc(k)}</dt></div>' for k, v in facts) + "</dl>"
           if facts else "")
-    cap_html = f'<p class="fc-cap">{esc(cap)}</p>' if cap else ""
-    image = (f'<figure class="fc-visual"><img src="{esc(r.get("image_url"))}" alt="Run visual chosen by the builder"></figure>'
-             if re.match(r"^https://", str(r.get("image_url") or ""), re.I) else "")
-    activity = "" if image else spark(r)
+    cap_html = f'<p class="fc-cap"><span>Turning point</span>{esc(cap)}</p>' if cap else ""
+    visual = proof_visual(r)
     work = (f'<a class="fc-work" href="{esc(r.get("output_url"))}" target="_blank" rel="noopener noreferrer">Open work ↗</a>'
             if re.match(r"^https://", str(r.get("output_url") or ""), re.I) else "")
     body = f"""
     <h1 class="fc-title">{esc(title_of(r))}</h1>
     {cap_html}
-    {image}{activity}
+    {visual}
     {dl}
     {work}
   """

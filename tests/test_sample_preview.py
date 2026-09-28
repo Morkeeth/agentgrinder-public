@@ -91,7 +91,7 @@ const cardFn=html.slice(html.indexOf('function connectWrapperName('),html.indexO
 // call-order ridge, so the vm needs those two helpers as the page defines them.
 const helper=name=>{const start=html.indexOf('function '+name+'(');return html.slice(start,html.indexOf('\n}\n',start)+3);};
 const constant=name=>{const start=html.indexOf('const '+name+'=');const line=html.indexOf('\n',start);const oneLine=html.slice(start,line);return oneLine.trimEnd().endsWith(';')?oneLine:html.slice(start,html.indexOf('\n};',start)+3);};
-const helpers=constant('cnt')+'\n'+constant('VPT_SRC')+'\n'+helper('fiveRow')+helper('coachBlock');
+const helpers=constant('cnt')+'\n'+constant('VPT_SRC')+'\n'+helper('fiveRow')+helper('coachBlock')+helper('safeRepoUrl');
 const nodes={},events={};let signins=0;
 function $(id){return nodes[id]??=( {value:'',checked:false,disabled:false,innerHTML:'',addEventListener(type,fn){events[id+':'+type]=fn;}} );}
 const context={$: $,GrinderContract:require(root+'/site/run-contract.js'),GrinderFeed:require(root+'/site/feed-card.js'),location:url,ME:null,

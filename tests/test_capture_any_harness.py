@@ -56,15 +56,18 @@ def _claude_transcript(home: Path) -> Path:
 
 def test_the_copied_command_reads_any_of_the_four_tools():
     assert 'python3 -m agentgrinder grind --harness auto"' in INDEX     # INSTALL_CMD
-    assert "python3 -m agentgrinder grind --harness auto --push" in INDEX
-    assert "--harness cursor" not in INDEX
-    assert "Capture from Cursor, Claude Code, Codex or Grok Bot" in INDEX
+    for harness in ("cursor", "claude", "codex", "grokbot"):
+        assert f"--harness {harness} --push" in INDEX
+    assert "AGENT_SHARE_PROMPTS" in INDEX
 
 
 def test_the_page_promises_exactly_the_tools_the_reader_supports():
     """The mismatch the audit found was between a promise and a command, so bind them."""
     from agentgrinder.ingest import HARNESSES
-    assert "reads the freshest Cursor, Claude Code, Codex or imported Grok Bot session" in INDEX
+    assert "Read the current Cursor session" in INDEX
+    assert "Read the current Claude Code session" in INDEX
+    assert "Read the current Codex session" in INDEX
+    assert "Use the Grok Bot export I explicitly select" in INDEX
     for tool in HARNESSES.values():
         assert tool in INDEX, tool
     assert "python3 -m agentgrinder grind" in README

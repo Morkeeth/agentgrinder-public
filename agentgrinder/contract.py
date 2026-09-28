@@ -62,7 +62,7 @@ def validate_run(run: dict) -> dict:
     return run
 
 
-OUTCOME_FIELDS = ("repo_url", "receipts", "shipped", "artifact_url", "image_url", "insight")
+OUTCOME_FIELDS = ("repo_url", "receipts", "shipped", "artifact_url", "image_url", "visual_choice", "insight")
 MAX_INSIGHT = 120
 _REPO = re.compile(r"https://(github\.com|gitlab\.com|codeberg\.org)/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+", re.I)
 _IMAGE = re.compile(r"\.(png|jpe?g|webp)([?#].*)?\Z", re.I | re.S)
@@ -96,6 +96,11 @@ def public_outcome(run: dict) -> dict:
         if field == "image_url" and not _IMAGE.search(value):
             raise ValueError("image_url must end in .png, .jpg, .jpeg or .webp.")
         out[field] = value
+    visual = run.get("visual_choice")
+    if visual is not None:
+        if visual not in ("image", "route", "activity"):
+            raise ValueError("visual_choice must be image, route or activity.")
+        out["visual_choice"] = visual
     shipped = run.get("shipped")
     if shipped is not None:
         if not isinstance(shipped, list) or len(shipped) > 5:

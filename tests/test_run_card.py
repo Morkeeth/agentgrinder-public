@@ -83,6 +83,25 @@ def test_the_map_is_drawn_from_indices_and_hidden_without_them():
     assert js == feedcard.route_map({**LONG, "route": [0, 1, 0, 2, 1, 3, 3, 0]})
 
 
+def test_rich_and_sparse_runs_share_one_result_first_contract():
+    rich = {**LONG, "title": "The callback now returns to the campaign",
+            "caption": "The first redirect opened an empty feed, so the route now enters capture.",
+            "image_url": "https://example.com/result.png", "visual_choice": "route",
+            "route": [0, 1, 0, 2], "commits": 2}
+    card = feedcard.card(rich)
+    assert card.index("The callback now returns") < card.index("Turning point") < card.index("Final proof")
+    assert 'data-proof-visual="route"' in card
+    assert 'class="fc-map"' in card and 'class="fc-spark"' not in card and '<img ' not in card
+    assert card.count('<dt>') <= 3
+
+    sparse = {"title": "Named the missing return", "caption": "No route or output image was recorded.",
+              "harness": "Codex", "profiles": {"display_name": "Builder"}}
+    sparse_card = feedcard.card(sparse)
+    assert "Named the missing return" in sparse_card and "Turning point" in sparse_card
+    assert "fc-proof" not in sparse_card and "fc-stats" not in sparse_card
+    assert "Unknown" not in sparse_card and "—" not in sparse_card
+
+
 def test_the_route_never_carries_a_folder_name(tmp_path):
     session = tmp_path / "s.jsonl"
     lines = [
@@ -128,16 +147,17 @@ def test_the_stride_line_is_the_card_in_two_lines_and_pastes_the_same_from_both_
     py = [feedcard.stride_text(r, url) for r in rows]
     assert js == py
     first, second = py[0].split("\n")
-    assert first == "STRIVE · Claude Code · 270 tool calls · 12h 19m · 1 turn · Marathon"
-    assert py[1].startswith("STRIVE · Cursor · 112 tool calls · 2h 3m · 2 turns · Delegator\n")
+    assert first == "STRIVE · Claude Code · 270 tool calls · 12h 19m duration · basis unknown · 1 turn · Marathon"
+    assert py[1].startswith("STRIVE · Cursor · 112 tool calls · 2h 3m duration · basis unknown · 2 turns · Delegator\n")
     assert second.endswith("  agentic-strava.vercel.app/l/k7f2") and re.fullmatch(r"[▁▂▃▄▅▆▇█]{2,12}", second.split("  ")[0])
-    assert py[2].startswith("STRIVE · Cursor · 98 tool calls · 18m · 1 turn · One-shot\n")
+    assert py[2].startswith("STRIVE · Cursor · 98 tool calls · 18m duration · basis unknown · 1 turn · One-shot\n")
     # No prompt, no path, no code: the line is figures and a badge, nothing the run typed.
     assert "PROMPT" not in py[0] and "/" not in first
-    # Every card carries it; the local card has no Copy button because it carries no script.
-    assert '<div class="fc-stride"><pre>' in feedcard.card(LONG) and "fc-copy" not in feedcard.card(LONG)
+    # The stride stays available for copying, but no longer competes with the one proof visual on
+    # every feed card.
+    assert '<div class="fc-stride"><pre>' not in feedcard.card(LONG)
     web = node("const F=require(process.argv[1]+'/site/feed-card.js');process.stdout.write(F.card(JSON.parse(process.argv[2]),{preview:true,copy:true,url:process.argv[3]}))", json.dumps(LONG), url)
-    assert 'class="fc-copy" data-copy="STRIVE · Claude Code' in web
+    assert 'class="fc-copy" data-copy="STRIVE · Claude Code' not in web
     # And the terminal prints the same two lines.
     lines = feedcard.terminal_lines(LONG)
     assert lines[-2].strip() == first and lines[-1].strip() == second.split("  ")[0]
@@ -206,7 +226,7 @@ setTimeout(()=>process.stdout.write(JSON.stringify(got)),20);""")
 def test_a_long_run_leads_with_its_strongest_measured_number():
     lead = feedcard.headline(LONG)
     assert (lead["n"], lead["unit"]) == ("270", "tool calls")
-    assert [k for k, _ in feedcard.stats(LONG, lead)] == ["Time", "Turns"]
+    assert [k for k, _ in feedcard.stats(LONG, lead)] == ["Duration · basis unknown", "Turns"]
     assert feedcard.headline({**DAY_RATIO, "commits": 3, "files_touched": 9})["unit"] == "commits"
     assert feedcard.headline({"commits": 2, "files_touched": 5, "tool_calls": 40, "duration_s": 5400, "prompts": 12})["unit"] == "commits"
     js = json.loads(node("const F=require(process.argv[1]+'/site/feed-card.js');process.stdout.write(JSON.stringify(JSON.parse(process.argv[2]).map(r=>{const l=F.headline(r);return [l,F.stats(r,l)]})))",
@@ -222,7 +242,7 @@ def test_the_stride_bars_are_monospace_with_the_peak_marked_and_copy_plain():
     assert bars.count("<b>") == 1 and re.sub(r"</?b>", "", bars) == feedcard.stride_bars(row)
     assert re.search(r"<b>(.)</b>", bars).group(1) == "█"
     # What is copied is the plain text; the markup is only on the card.
-    web = node("const F=require(process.argv[1]+'/site/feed-card.js');process.stdout.write(F.card(JSON.parse(process.argv[2]),{preview:true,copy:true,url:process.argv[3]}))",
+    web = node("const F=require(process.argv[1]+'/site/feed-card.js');process.stdout.write(F.stride(JSON.parse(process.argv[2]),{copy:true,url:process.argv[3]}))",
                json.dumps(row), "https://agentic-strava.vercel.app/l/k7f2")
     copied = re.search(r'data-copy="([^"]*)"', web).group(1)
     assert "<" not in copied and "&lt;" not in copied and feedcard.stride_bars(row) in copied
