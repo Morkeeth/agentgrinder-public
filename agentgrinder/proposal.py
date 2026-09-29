@@ -58,16 +58,16 @@ def classify(run: dict) -> str:
     lanes, _ = _first_count(run, "lane_count", "lanes_returned")
     if (isinstance(projects, list) and len(projects) > 1) or (lanes or 0) > 1:
         return "fleet"
-    if any(_count(run.get(k)) is not None for k in
+    if any((_count(run.get(k)) or 0) > 0 for k in
            ("sources_count", "citations_count", "web_searches", "experiments_run")):
         return "research"
-    if any(_count(run.get(k)) is not None for k in
+    if any((_count(run.get(k)) or 0) > 0 for k in
            ("bugs_found", "bugs_fixed", "regressions_found", "tests_failed_before")):
         return "debugger"
     if any(run.get(k) for k in
            ("skills_used", "models_used", "routines_changed", "indexes_changed")):
         return "architect"
-    if any(_count(run.get(k)) is not None for k in
+    if any((_count(run.get(k)) or 0) > 0 for k in
            ("assets_created", "articles_created", "videos_created", "audio_created")):
         return "creator"
     return "shipper"
@@ -80,14 +80,23 @@ def _metric(value: int | None, label: str, basis: str) -> ProposedMetric | None:
 
 
 def _duration(run: dict) -> ProposedMetric | None:
-    key = next((name for name in ("wall_time_s", "duration_s")
+    key = next((name for name in ("wall_time_s", "wall_s", "duration_s")
                 if type(run.get(name)) in (int, float) and run[name] >= 0), "")
     if not key:
         return None
     wall = run[key]
     minutes = max(1, round(wall / 60)) if wall else 0
-    basis = "wall time measured by the capture" if key == "wall_time_s" else "elapsed session time"
-    return ProposedMetric(f"{minutes}m", "wall time" if key == "wall_time_s" else "elapsed", basis)
+    if key == "wall_time_s":
+        return ProposedMetric(f"{minutes}m", "wall time", "wall time measured by the capture")
+    if key == "wall_s":
+        return ProposedMetric(f"{minutes}m", "elapsed", "first-to-last event timestamps")
+    # solo.py computes duration_s with a capped-gap moving estimate. Other readers attach
+    # different timing bases to the same field, so it must never be presented as exact elapsed
+    # or exact active time.
+    return ProposedMetric(
+        f"{minutes}m", "activity estimate",
+        "capture-derived activity estimate; not exact active time",
+    )
 
 
 def metrics_for(run: dict, archetype: str) -> tuple[ProposedMetric, ...]:
@@ -131,10 +140,16 @@ def metrics_for(run: dict, archetype: str) -> tuple[ProposedMetric, ...]:
 
 
 def _turning_point(run: dict) -> str:
-    failed = _count(run.get("tests_failed_before"))
-    passed = _count(run.get("checks_passed"))
-    if failed and passed:
-        return f"{failed:,} failing check{'s' if failed != 1 else ''} became {passed:,} passing."
+    before = run.get("failed_check_ids_before")
+    after = run.get("passed_check_ids_after")
+    if isinstance(before, list) and isinstance(after, list):
+        failed_ids = {_safe_text(value) for value in before}
+        passed_ids = {_safe_text(value) for value in after}
+        matched = (failed_ids & passed_ids) - {""}
+        if matched:
+            count = len(matched)
+            return (f"{count:,} matching check{'s' if count != 1 else ''} failed before "
+                    "and passed after.")
     bugs = _count(run.get("bugs_fixed"))
     if bugs:
         return f"The run recorded {bugs:,} bug fix{'es' if bugs != 1 else ''}."

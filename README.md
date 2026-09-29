@@ -25,6 +25,15 @@ Nothing is uploaded by the command. Open the `preview ->` link, sign in with Git
 and no account are needed to make the card. Run `agentgrinder grind --list` first to see which
 session it picked.
 
+To workshop what the result card could say after a captured run, render a private proposal:
+
+```sh
+agentgrinder propose run.json -o proposal.html
+```
+
+The proposal stays on this machine, includes only supported evidence, and opens no browser unless
+you add `--open`. It does not publish or upload anything.
+
 **Come build it with us.** Code, design, documentation, accessibility improvements and useful bug reports are all welcome. You do not need an invitation, a paid AI tool or a previous open-source contribution.
 
 [Start contributing](CONTRIBUTING.md) · [Find a first contribution](docs/FIRST-PR.md) · [Get help](SUPPORT.md) · [Product direction](PRODUCT.md)
