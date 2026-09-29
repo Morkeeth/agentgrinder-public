@@ -193,6 +193,9 @@ def main(argv=None) -> int:
     c = sub.add_parser("card", help="render a run JSON to a card")
     c.add_argument("run"); c.add_argument("-o", "--out", default="card.html")
     c.add_argument("--no-open", action="store_true"); c.add_argument("--open", action="store_true", help="open the result in a browser (default: print the path or link, open nothing)")
+    pp = sub.add_parser("propose", help="compile one captured run into a private result-card proposal")
+    pp.add_argument("run", help="captured run JSON; this command never publishes")
+    pp.add_argument("-o", "--out", default=None, help="optional proposal JSON path (default: stdout)")
     g = sub.add_parser(
         "grind",
         aliases=["run"],
@@ -388,6 +391,17 @@ def main(argv=None) -> int:
     if args.cmd == "privacycheck":
         from .privacy import check_files
         return 1 if check_files(args.paths) else 0
+    if args.cmd == "propose":
+        from dataclasses import asdict
+        from .proposal import propose
+        run = json.loads(Path(args.run).read_text(encoding="utf-8"))
+        payload = json.dumps(asdict(propose(run)), indent=2, ensure_ascii=False)
+        if args.out:
+            Path(args.out).write_text(payload + "\n", encoding="utf-8")
+            print(f"  private proposal -> {args.out}")
+        else:
+            print(payload)
+        return 0
     if args.cmd == "flex":
         from .flex import format_flex, local_flex
         rows = local_flex()
