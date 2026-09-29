@@ -168,7 +168,76 @@ def test_unsupported_sections_and_unknown_metrics_are_absent():
     html = render_proposal(propose({"tool_calls": 90, "raw_transcript": "do not render me"}))
     assert ">Proof<" not in html and ">Turn<" not in html and ">Measured<" not in html
     assert "Measurement basis" not in html
-    assert "tool calls" not in html and "do not render me" not in html
+    assert '<span>tool calls</span>' not in html
+    assert "Unclosed activity: 90 tool calls were recorded, but no shipped outcome was recorded." in html
+    assert "do not render me" not in html
+
+
+def test_deep_dive_shape_and_three_relational_insights_from_sample_fields():
+    card = propose({
+        "project": "sample-project",
+        "duration_s": 8400,
+        "turns_typed": 47,
+        "tool_calls": 213,
+        "files_touched": 12,
+        "commits": 3,
+        "claims": 9,
+        "claims_verified": 6,
+    })
+    assert card.shape and card.shape.label == "Deep dive"
+    assert "140 recorded minutes" in card.shape.reason
+    assert card.change == "3 commits touched 12 files."
+    assert card.effort == "213 tool calls followed 47 typed turns."
+    assert [item.text for item in card.insights] == [
+        "Tool amplification: each typed turn led to about 4.5 tool calls (213/47).",
+        "Edit breadth: 4.0 files were touched per commit (12/3).",
+        "Verification gap: 6 of 9 recorded claims had verification; 3 did not.",
+    ]
+    assert "tool categories" in card.omitted
+
+
+def test_shipping_shape_compares_outcomes_receipts_and_names_time_gap():
+    card = propose({
+        "shipped": ["One", "Two", "Three", "Four"],
+        "receipts": [
+            {"label": "One", "url": "https://example.com/one"},
+            {"label": "Two", "url": "https://example.com/two"},
+            {"label": "Three", "url": "https://example.com/three"},
+        ],
+        "commits": 4,
+        "files_touched": 10,
+    })
+    assert card.shape and card.shape.label == "Shipping run"
+    assert card.change == "4 commits touched 10 files."
+    assert [item.text for item in card.insights] == [
+        "Edit breadth: 2.5 files were touched per commit (10/4).",
+        "Proof density: 4 declared outcomes are backed by 3 attached receipts.",
+        "Timing blind spot: the receipts show shipping evidence, but this record cannot say where time went.",
+    ]
+    assert card.next_action == "Verify that one person outside the run can reach and use the result."
+
+
+def test_rescue_shape_and_tool_mix_never_become_a_productivity_score():
+    card = propose({
+        "failed_check_ids_before": ["privacy", "mobile"],
+        "passed_check_ids_after": ["privacy", "mobile", "other"],
+        "tool_calls": 100,
+        "tool_calls_by_category": {"tests": 31, "shell": 29, "files": 40},
+        "bugs_found": 3,
+        "bugs_fixed": 2,
+    })
+    assert card.shape and card.shape.label == "Rescue mission"
+    assert card.effort == "Files was the largest tool category: 40 of 100 calls (40%)."
+    assert any("2 of 3 recorded bugs were fixed" in item.text for item in card.insights)
+    rendered = render_proposal(card).lower()
+    assert "productive" not in rendered and "efficient" not in rendered and "score" not in rendered
+
+
+def test_blocked_climb_never_claims_an_outcome():
+    card = propose({"auth_stops": 1, "tool_calls": 12})
+    assert card.shape and card.shape.label == "Blocked climb"
+    assert card.outcome == NOTHING_SHIPPED
+    assert "Clear the 1 recorded authorization" in card.next_action
 
 
 def test_activity_route_visual_is_compiled_from_numeric_route_only():
@@ -245,6 +314,7 @@ def test_phone_contract_has_no_fixed_card_width_or_horizontal_overflow():
     assert "html,body{margin:0;max-width:100%;overflow-x:hidden}" in html
     assert "main{width:100%;max-width:560px" in html
     assert "grid-template-columns:repeat(2,minmax(0,1fr))" in html
+    assert ".metric:only-child{grid-column:1/-1}" in html
     assert ".card{background:var(--box)" in html
     assert "width:390px" not in html
 

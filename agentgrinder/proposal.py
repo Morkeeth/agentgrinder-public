@@ -30,6 +30,19 @@ class ProposedVisual:
 
 
 @dataclass(frozen=True)
+class ProposedInsight:
+    text: str
+    basis: str
+
+
+@dataclass(frozen=True)
+class RunShape:
+    label: str
+    reason: str
+    basis: str
+
+
+@dataclass(frozen=True)
 class ResultCardProposal:
     archetype: str
     outcome: str
@@ -39,6 +52,15 @@ class ResultCardProposal:
     proof_url: str = ""
     proof_label: str = ""
     visual: ProposedVisual | None = None
+    shape: RunShape | None = None
+    change: str = ""
+    change_basis: str = ""
+    effort: str = ""
+    effort_basis: str = ""
+    insights: tuple[ProposedInsight, ...] = field(default_factory=tuple)
+    next_action: str = ""
+    next_basis: str = ""
+    omitted: tuple[str, ...] = field(default_factory=tuple)
     limit: str = ""
 
 
@@ -61,6 +83,122 @@ def _first_count(run: dict, *keys: str) -> tuple[int | None, str]:
         if value is not None:
             return value, key
     return None, ""
+
+
+def _list_count(run: dict, key: str) -> int | None:
+    value = run.get(key)
+    return len(value) if isinstance(value, list) else None
+
+
+def _repos(run: dict) -> int | None:
+    count, _ = _first_count(run, "repositories_touched", "repos_touched", "projects_touched")
+    if count is not None:
+        return count
+    projects = run.get("projects")
+    if isinstance(projects, list):
+        return len({value for value in projects if isinstance(value, str) and value})
+    return 1 if _safe_text(run.get("project")) else None
+
+
+def _files(run: dict) -> int | None:
+    return _first_count(run, "files_changed", "files_touched", "files_edited")[0]
+
+
+def _active_seconds(run: dict) -> float | None:
+    for key in ("active_time_s", "active_s"):
+        value = run.get(key)
+        if type(value) in (int, float) and value >= 0:
+            return value
+    return None
+
+
+def _elapsed_seconds(run: dict) -> float | None:
+    for key in ("wall_time_s", "wall_s"):
+        value = run.get(key)
+        if type(value) in (int, float) and value >= 0:
+            return value
+    return None
+
+
+def _matching_checks(run: dict) -> int:
+    before = run.get("failed_check_ids_before")
+    after = run.get("passed_check_ids_after")
+    if not isinstance(before, list) or not isinstance(after, list):
+        return 0
+    failed = {_safe_text(value) for value in before} - {""}
+    passed = {_safe_text(value) for value in after} - {""}
+    return len(failed & passed)
+
+
+def _has_outcome(run: dict) -> bool:
+    try:
+        return bool(public_outcome(run).get("shipped")) or outcome_of(run).shipped
+    except ValueError:
+        return outcome_of(run).shipped
+
+
+def _shape(run: dict) -> RunShape | None:
+    """Name an observed run shape. A shape describes evidence; it never grades quality."""
+    auth, auth_key = _first_count(run, "auth_stops", "human_input_stops")
+    if (auth or 0) > 0 and not _has_outcome(run):
+        return RunShape(
+            "Blocked climb",
+            f"The run ended with {auth:,} recorded authorization or human-input stop{'s' if auth != 1 else ''} and no recorded outcome.",
+            f"run.{auth_key} plus the absence of a measured or declared outcome",
+        )
+    matched = _matching_checks(run)
+    retries, retry_key = _first_count(run, "retries", "failed_attempts")
+    if matched or (retries or 0) > 0:
+        reason = (f"{matched:,} checks failed before and passed after."
+                  if matched else f"The run recorded {retries:,} retr{'ies' if retries != 1 else 'y'}.")
+        basis = ("intersection of run.failed_check_ids_before and run.passed_check_ids_after"
+                 if matched else f"run.{retry_key}")
+        return RunShape("Rescue mission", reason, basis)
+    repos = _repos(run)
+    lanes, lane_key = _first_count(run, "lane_count", "lanes_returned")
+    if (repos or 0) >= 3 or (lanes or 0) >= 3:
+        facts = []
+        if (repos or 0) >= 3:
+            facts.append(f"{repos:,} repositories or projects")
+        if (lanes or 0) >= 3:
+            facts.append(f"{lanes:,} lanes")
+        return RunShape(
+            "Fleet sprint", " and ".join(facts) + " were recorded in one run.",
+            "run.projects/repositories_touched and " + (f"run.{lane_key}" if lane_key else "captured project count"),
+        )
+    reads = sum((_count(run.get(key)) or 0) for key in
+                ("web_searches", "context_reads", "index_reads", "memory_reads"))
+    edits = (_files(run) or 0) + (_count(run.get("commits")) or 0)
+    if reads > 0 and reads > edits:
+        return RunShape(
+            "Research lap", f"{reads:,} recorded searches or reads outweighed {edits:,} files-plus-commits events.",
+            "sum of run.web_searches/context_reads/index_reads/memory_reads compared with files and commits",
+        )
+    receipts = _list_count(run, "receipts") or 0
+    prs, _ = _first_count(run, "pull_requests", "prs_opened", "prs_merged")
+    deploys, _ = _first_count(run, "deployments", "deployments_verified")
+    if receipts or (prs or 0) > 0 or (deploys or 0) > 0:
+        facts = []
+        if receipts:
+            facts.append(f"{receipts:,} receipt{'s' if receipts != 1 else ''}")
+        if prs:
+            facts.append(f"{prs:,} pull request{'s' if prs != 1 else ''}")
+        if deploys:
+            facts.append(f"{deploys:,} deployment{'s' if deploys != 1 else ''}")
+        return RunShape("Shipping run", " and ".join(facts) + " recorded.",
+                        "run.receipts/pull_requests/deployments")
+    duration = _active_seconds(run)
+    duration_key = "active_time_s"
+    if duration is None:
+        duration = run.get("duration_s") if type(run.get("duration_s")) in (int, float) else None
+        duration_key = "duration_s"
+    files = _files(run)
+    if duration is not None and duration >= 3600 and (files or 0) >= 5 and (repos or 1) <= 1:
+        return RunShape(
+            "Deep dive", f"One codebase held the run for {round(duration / 60):,} recorded minutes across {files:,} files.",
+            f"run.{duration_key}, files_changed/files_touched, and captured project count",
+        )
+    return None
 
 
 def classify(run: dict) -> str:
@@ -148,6 +286,196 @@ def metrics_for(run: dict, archetype: str) -> tuple[ProposedMetric, ...]:
     if duration is not None and len(selected) < 4:
         selected.append(duration)
     return tuple(selected[:4])
+
+
+def _change(run: dict) -> tuple[str, str]:
+    matched = _matching_checks(run)
+    if matched:
+        return (
+            f"{matched:,} check{'s' if matched != 1 else ''} moved from failing to passing.",
+            "intersection of run.failed_check_ids_before and run.passed_check_ids_after",
+        )
+    added, _ = _first_count(run, "lines_added")
+    deleted, _ = _first_count(run, "lines_deleted")
+    files = _files(run)
+    if added is not None or deleted is not None:
+        parts = [f"+{added or 0:,}", f"-{deleted or 0:,} lines"]
+        if files is not None:
+            parts.append(f"across {files:,} file{'s' if files != 1 else ''}")
+        return " ".join(parts) + ".", "run.lines_added, run.lines_deleted, and changed-file count"
+    commits = _count(run.get("commits"))
+    if commits is not None and files is not None:
+        return (
+            f"{commits:,} commit{'s' if commits != 1 else ''} touched {files:,} file{'s' if files != 1 else ''}.",
+            "run.commits and files_changed/files_touched in the same capture window",
+        )
+    if commits is not None:
+        return f"{commits:,} commit{'s' if commits != 1 else ''} landed.", "run.commits"
+    return "", ""
+
+
+def _tool_breakdown(run: dict) -> tuple[dict[str, int], int] | None:
+    raw = run.get("tool_calls_by_category")
+    if not isinstance(raw, dict) or not raw:
+        return None
+    clean = {}
+    for key, value in raw.items():
+        label = _safe_text(key)
+        count = _count(value)
+        if label and count is not None:
+            clean[label.lower()] = count
+    total = sum(clean.values())
+    declared = _count(run.get("tool_calls"))
+    if not clean or total <= 0 or (declared is not None and declared != total):
+        return None
+    return clean, total
+
+
+def _effort(run: dict) -> tuple[str, str]:
+    breakdown = _tool_breakdown(run)
+    if breakdown:
+        values, total = breakdown
+        label, count = max(values.items(), key=lambda item: (item[1], item[0]))
+        share = round(count * 100 / total)
+        return (
+            f"{label.title()} was the largest tool category: {count:,} of {total:,} calls ({share}%).",
+            "run.tool_calls_by_category; categories must sum to run.tool_calls when that total exists",
+        )
+    active, elapsed = _active_seconds(run), _elapsed_seconds(run)
+    if active is not None and elapsed is not None and elapsed > 0 and active <= elapsed:
+        return (
+            f"{round(active / 60):,}m active inside {round(elapsed / 60):,}m elapsed ({round(active * 100 / elapsed)}%).",
+            "run.active_time_s divided by run.wall_time_s/wall_s",
+        )
+    tools = _count(run.get("tool_calls"))
+    turns = _count(run.get("turns_typed"))
+    if tools is not None and turns:
+        return (
+            f"{tools:,} tool calls followed {turns:,} typed turns.",
+            "run.tool_calls and run.turns_typed in the same capture window",
+        )
+    return "", ""
+
+
+def _insights(run: dict) -> tuple[ProposedInsight, ...]:
+    """Relational observations only. Volume alone never becomes a quality judgement."""
+    insights: list[ProposedInsight] = []
+    breakdown = _tool_breakdown(run)
+    if breakdown:
+        values, total = breakdown
+        label, count = max(values.items(), key=lambda item: (item[1], item[0]))
+        insights.append(ProposedInsight(
+            f"Tool mix: {label} accounted for {round(count * 100 / total)}% of recorded calls ({count:,}/{total:,}).",
+            "run.tool_calls_by_category divided by its source-bound total",
+        ))
+    tools = _count(run.get("tool_calls"))
+    turns = _count(run.get("turns_typed"))
+    if tools is not None and turns:
+        insights.append(ProposedInsight(
+            f"Tool amplification: each typed turn led to about {tools / turns:.1f} tool calls ({tools:,}/{turns:,}).",
+            "run.tool_calls divided by run.turns_typed",
+        ))
+    commits = _count(run.get("commits"))
+    files = _files(run)
+    if commits and files is not None:
+        insights.append(ProposedInsight(
+            f"Edit breadth: {files / commits:.1f} files were touched per commit ({files:,}/{commits:,}).",
+            "files_changed/files_touched divided by run.commits",
+        ))
+    claims = _count(run.get("claims"))
+    verified = _count(run.get("claims_verified"))
+    if claims and verified is not None and verified <= claims:
+        unverified = claims - verified
+        insights.append(ProposedInsight(
+            (f"Verification gap: {verified:,} of {claims:,} recorded claims had verification; "
+             f"{unverified:,} did not."),
+            "run.claims_verified compared with run.claims",
+        ))
+    matched = _matching_checks(run)
+    if matched:
+        insights.append(ProposedInsight(
+            f"Recovery: all {matched:,} checks found in both snapshots changed from failing to passing.",
+            "intersection of run.failed_check_ids_before and run.passed_check_ids_after",
+        ))
+    found = _count(run.get("bugs_found"))
+    fixed = _count(run.get("bugs_fixed"))
+    if found and fixed is not None and fixed <= found:
+        insights.append(ProposedInsight(
+            f"Bug closure: {fixed:,} of {found:,} recorded bugs were fixed; {found - fixed:,} remained in the run record.",
+            "run.bugs_fixed compared with run.bugs_found",
+        ))
+    active, elapsed = _active_seconds(run), _elapsed_seconds(run)
+    if active is not None and elapsed is not None and elapsed > 0 and active <= elapsed:
+        unobserved = elapsed - active
+        insights.append(ProposedInsight(
+            f"Time shape: the capture observed {round(active * 100 / elapsed)}% active time; {round(unobserved / 60):,} elapsed minutes were not active capture.",
+            "run.active_time_s compared with run.wall_time_s/wall_s",
+        ))
+    outcomes = _list_count(run, "shipped")
+    receipts = _list_count(run, "receipts")
+    if outcomes and receipts is not None:
+        insights.append(ProposedInsight(
+            f"Proof density: {outcomes:,} declared outcomes are backed by {receipts:,} attached receipt{'s' if receipts != 1 else ''}.",
+            "count of run.shipped compared with count of run.receipts",
+        ))
+    repos = _repos(run)
+    repos_with_commits = _count(run.get("repositories_with_commits"))
+    if repos and repos_with_commits is not None and repos_with_commits <= repos:
+        insights.append(ProposedInsight(
+            f"Fleet spread: {repos:,} repositories were touched, but {repos_with_commits:,} produced a recorded commit.",
+            "repository count compared with run.repositories_with_commits",
+        ))
+    if tools is not None and tools > 0 and not _has_outcome(run):
+        insights.append(ProposedInsight(
+            f"Unclosed activity: {tools:,} tool calls were recorded, but no shipped outcome was recorded.",
+            "run.tool_calls compared with outcome_of(run)",
+        ))
+    # An absent timed capture is a useful comparison for receipt-driven shipping runs; it stops
+    # commit volume from masquerading as effort distribution.
+    if receipts and _elapsed_seconds(run) is None and _active_seconds(run) is None and run.get("duration_s") is None:
+        insights.append(ProposedInsight(
+            "Timing blind spot: the receipts show shipping evidence, but this record cannot say where time went.",
+            "run.receipts exists; active_time_s, wall_time_s, wall_s, and duration_s are absent",
+        ))
+    return tuple(insights[:3])
+
+
+def _next_action(run: dict, outcome, proof_url: str) -> tuple[str, str]:
+    failed = _count(run.get("tests_failed"))
+    if failed:
+        return (f"Resolve the {failed:,} remaining failed test{'s' if failed != 1 else ''}.",
+                "run.tests_failed")
+    auth, auth_key = _first_count(run, "auth_stops", "human_input_stops")
+    if auth:
+        return (f"Clear the {auth:,} recorded authorization or human-input stop{'s' if auth != 1 else ''}.",
+                f"run.{auth_key}")
+    if not outcome.shipped:
+        return ("Attach one result or receipt before sharing this as a completed run.",
+                "outcome_of(run) found no measured or declared shipped result")
+    if not run.get("outside_use_verified"):
+        return ("Verify that one person outside the run can reach and use the result.",
+                "run.outside_use_verified is absent or false")
+    if proof_url:
+        return "Open the attached proof and choose what to share.", "the run has a proof URL and outside use is verified"
+    return "Attach inspectable proof before sharing.", "a shipped result exists without an attached proof URL"
+
+
+def _omitted(run: dict) -> tuple[str, ...]:
+    groups = (
+        ("active time", ("active_time_s", "active_s")),
+        ("elapsed time", ("wall_time_s", "wall_s")),
+        ("tool categories", ("tool_calls_by_category",)),
+        ("line changes", ("lines_added", "lines_deleted")),
+        ("test totals", ("tests_run", "tests_passed", "tests_failed", "checks_passed")),
+        ("bug totals", ("bugs_found", "bugs_fixed")),
+        ("web searches", ("web_searches",)),
+        ("remote sessions", ("remote_sessions", "vm_logins")),
+        ("authorization stops", ("auth_stops", "human_input_stops")),
+        ("models used", ("models_used", "models_used_count")),
+        ("context and memory reads", ("context_reads", "index_reads", "memory_reads")),
+        ("pull request and deployment outcomes", ("pull_requests", "prs_opened", "prs_merged", "deployments", "deployments_verified")),
+    )
+    return tuple(label for label, keys in groups if not any(key in run for key in keys))
 
 
 def _sample(values: list[int], limit: int = 48) -> list[int]:
@@ -263,6 +591,9 @@ def propose(run: dict) -> ResultCardProposal:
     archetype = classify(run)
     outcome = outcome_of(run)
     proof_url, proof_label = _proof(run)
+    change, change_basis = _change(run)
+    effort, effort_basis = _effort(run)
+    next_action, next_basis = _next_action(run, outcome, proof_url)
     return ResultCardProposal(
         archetype=archetype,
         outcome=outcome.text,
@@ -272,5 +603,14 @@ def propose(run: dict) -> ResultCardProposal:
         proof_url=proof_url,
         proof_label=proof_label,
         visual=_visual(run),
+        shape=_shape(run),
+        change=change,
+        change_basis=change_basis,
+        effort=effort,
+        effort_basis=effort_basis,
+        insights=_insights(run),
+        next_action=next_action,
+        next_basis=next_basis,
+        omitted=_omitted(run),
         limit=_limit(run, outcome.measured, outcome.shipped, proof_url, outcome.basis),
     )
