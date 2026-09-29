@@ -20,6 +20,16 @@ class ProposedMetric:
 
 
 @dataclass(frozen=True)
+class ProposedVisual:
+    kind: str
+    label: str
+    values: tuple[int, ...]
+    basis: str
+    window: str
+    limitation: str
+
+
+@dataclass(frozen=True)
 class ResultCardProposal:
     archetype: str
     outcome: str
@@ -28,6 +38,7 @@ class ResultCardProposal:
     metrics: tuple[ProposedMetric, ...] = field(default_factory=tuple)
     proof_url: str = ""
     proof_label: str = ""
+    visual: ProposedVisual | None = None
     limit: str = ""
 
 
@@ -139,6 +150,66 @@ def metrics_for(run: dict, archetype: str) -> tuple[ProposedMetric, ...]:
     return tuple(selected[:4])
 
 
+def _sample(values: list[int], limit: int = 48) -> list[int]:
+    if len(values) <= limit:
+        return values
+    return [values[index * (len(values) - 1) // (limit - 1)] for index in range(limit)]
+
+
+def _normalize(values: list[int]) -> tuple[int, ...]:
+    peak = max(values, default=0)
+    if peak == 0:
+        return tuple(0 for _ in values)
+    return tuple(round(value * 100 / peak) for value in values)
+
+
+def _visual(run: dict) -> ProposedVisual | None:
+    """Compile safe numeric geometry only; never carry labels or capture prose."""
+    route = run.get("route")
+    if (isinstance(route, list) and 1 <= len(route) <= 10000
+            and all(type(value) is int and value >= 0 for value in route)):
+        collapsed = [route[0]]
+        for value in route[1:]:
+            if value != collapsed[-1]:
+                collapsed.append(value)
+        lanes = {value: index for index, value in enumerate(sorted(set(collapsed)))}
+        ordinal = [lanes[value] for value in collapsed]
+        if len(ordinal) == 1:
+            ordinal.append(ordinal[0])
+        sampled = _sample(ordinal)
+        return ProposedVisual(
+            kind="route",
+            label="Activity route",
+            values=_normalize(sampled),
+            basis=("run.route · categorical numeric station lanes · consecutive repeats "
+                   "collapsed; up to 48 evenly sampled points"),
+            window="captured session window; exact event timing is not represented",
+            limitation=("Activity shape only. Vertical station position is not a rank. "
+                        "This does not measure quality, progress, success, or code authorship."),
+        )
+
+    ridge = run.get("ridge")
+    if (isinstance(ridge, list) and 40 <= len(ridge) <= 60
+            and all(type(value) is int and value >= 0 for value in ridge)):
+        methods = {
+            "wall-time": "equal wall-time bins",
+            "call-index": "capture call-order bins",
+            "turn-order": "capture turn-order bins",
+        }
+        method = methods.get(run.get("ridge_basis"))
+        if method:
+            return ProposedVisual(
+                kind="rhythm",
+                label="Activity rhythm",
+                values=_normalize(ridge),
+                basis=f"run.ridge · {method} · each bin normalized to the run peak (0-100)",
+                window="the capture window represented by the supplied ridge bins",
+                limitation=("Relative activity only. It does not measure quality, progress, "
+                            "success, output, or code authorship."),
+            )
+    return None
+
+
 def _turning_point(run: dict) -> str:
     before = run.get("failed_check_ids_before")
     after = run.get("passed_check_ids_after")
@@ -200,5 +271,6 @@ def propose(run: dict) -> ResultCardProposal:
         metrics=metrics_for(run, archetype),
         proof_url=proof_url,
         proof_label=proof_label,
+        visual=_visual(run),
         limit=_limit(run, outcome.measured, outcome.shipped, proof_url, outcome.basis),
     )

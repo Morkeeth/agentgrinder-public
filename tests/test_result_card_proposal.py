@@ -171,6 +171,74 @@ def test_unsupported_sections_and_unknown_metrics_are_absent():
     assert "tool calls" not in html and "do not render me" not in html
 
 
+def test_activity_route_visual_is_compiled_from_numeric_route_only():
+    card = propose({"route": [8, 8, 3, 3, 8, 11], "commits": 1})
+    assert card.visual is not None
+    assert card.visual.kind == "route"
+    assert card.visual.label == "Activity route"
+    assert card.visual.values == (50, 0, 50, 100)
+    assert "run.route" in card.visual.basis
+    assert "evenly sampled" in card.visual.basis
+    assert "not a rank" in card.visual.limitation
+    assert "quality, progress, success" in card.visual.limitation
+    html = render_proposal(card)
+    assert ">Activity route<" in html
+    assert 'role="img" aria-labelledby="activity-title activity-desc"' in html
+    assert "Field and method" in html and "Window" in html and "Limit" in html
+
+
+def test_visual_is_absent_without_valid_route_or_ridge():
+    for payload in ({}, {"route": []}, {"route": ["private/path"]},
+                    {"ridge": [1] * 39, "ridge_basis": "wall-time"},
+                    {"ridge": [1] * 50, "ridge_basis": "unknown"}):
+        card = propose(payload)
+        assert card.visual is None
+        assert '<svg class="activity-visual"' not in render_proposal(card)
+
+    single = propose({"route": [4]})
+    assert single.visual is not None and single.visual.values == (0, 0)
+
+
+def test_rhythm_visual_drops_private_prose_paths_and_unnormalized_counts():
+    payload = {
+        "ridge": [0, 4, 20, 8, 0] * 10,
+        "ridge_basis": "turn-order",
+        "raw_transcript": "PRIVATE SENTENCE",
+        "prompt": "ship the secret",
+        "session_path": "/Users/person/private/session.jsonl",
+    }
+    card = propose(payload)
+    assert card.visual is not None
+    assert card.visual.kind == "rhythm"
+    assert set(card.visual.values) == {0, 20, 40, 100}
+    compiled = repr(card)
+    html = render_proposal(card)
+    for private in ("PRIVATE SENTENCE", "ship the secret", "/Users/", "session.jsonl"):
+        assert private not in compiled
+        assert private not in html
+    assert "run.ridge" in html and "turn-order bins" in html
+    assert "Relative activity only" in html
+
+
+def test_visual_replay_is_deterministic():
+    payload = {"route": [index % 7 for index in range(5000)], "commits": 2}
+    first = render_proposal(propose(payload))
+    second = render_proposal(propose(json.loads(json.dumps(payload))))
+    assert first == second
+    assert len(propose(payload).visual.values) <= 48
+
+
+def test_activity_visual_markup_stays_mobile_safe():
+    html = render_proposal(propose({
+        "ridge": [index % 9 for index in range(50)],
+        "ridge_basis": "wall-time",
+    }))
+    assert 'viewBox="0 0 520 116"' in html
+    assert ".activity-visual{display:block;width:100%;height:auto;max-width:100%;min-width:0" in html
+    assert "preserveAspectRatio=\"none\"" in html
+    assert "width:520px" not in html
+
+
 def test_phone_contract_has_no_fixed_card_width_or_horizontal_overflow():
     html = render_proposal(propose({"commits": 2, "files_changed": 12, "checks_passed": 48}))
     assert '<meta name="viewport" content="width=device-width,initial-scale=1">' in html

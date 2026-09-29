@@ -16,6 +16,34 @@ def _section(label: str, body: str, class_name: str = "") -> str:
     return f'<section class="block{extra}"><h2>{label}</h2>{body}</section>'
 
 
+def _visual(card: ResultCardProposal) -> str:
+    visual = card.visual
+    if visual is None or len(visual.values) < 2:
+        return ""
+    width, height, top, bottom = 520, 116, 10, 104
+    span = max(1, len(visual.values) - 1)
+    points = " ".join(
+        f"{index * width / span:.1f},{bottom - value * (bottom - top) / 100:.1f}"
+        for index, value in enumerate(visual.values)
+    )
+    graphic = (
+        f'<svg class="activity-visual" viewBox="0 0 {width} {height}" '
+        f'role="img" aria-labelledby="activity-title activity-desc" preserveAspectRatio="none">'
+        f'<title id="activity-title">{escape(visual.label)}</title>'
+        f'<desc id="activity-desc">{escape(visual.limitation)}</desc>'
+        f'<line class="activity-base" x1="0" y1="{bottom}" x2="{width}" y2="{bottom}"/>'
+        f'<polyline class="activity-line" points="{points}"/></svg>'
+    )
+    details = (
+        '<details class="visual-basis"><summary>Visual basis</summary><dl>'
+        f'<dt>Field and method</dt><dd>{escape(visual.basis)}</dd>'
+        f'<dt>Window</dt><dd>{escape(visual.window)}</dd>'
+        f'<dt>Limit</dt><dd>{escape(visual.limitation)}</dd>'
+        '</dl></details>'
+    )
+    return _section(visual.label, graphic + details, "visual-block")
+
+
 def render_proposal(card: ResultCardProposal) -> str:
     """Return deterministic, network-free HTML for one compiled proposal."""
     result = _section("Result", f'<p class="result">{escape(card.outcome)}</p>')
@@ -31,6 +59,8 @@ def render_proposal(card: ResultCardProposal) -> str:
     turn = ""
     if card.turning_point:
         turn = _section("Turn", f'<p class="turn">{escape(card.turning_point)}</p>')
+
+    visual = _visual(card)
 
     metrics = ""
     basis = ""
@@ -76,6 +106,15 @@ h2{{font-size:10px;line-height:1.2;text-transform:uppercase;letter-spacing:.09em
 p{{margin:0}}.result{{font-size:26px;line-height:1.14;font-weight:600;letter-spacing:-.02em}}
 .turn{{font-size:17px;line-height:1.35;font-weight:600;border-left:3px solid var(--blue);padding-left:10px}}
 .proof{{color:var(--blue);font-weight:600;text-underline-offset:3px;overflow-wrap:anywhere}}
+.visual-block{{padding-left:0;padding-right:0}}.visual-block>h2{{padding:0 16px}}
+.activity-visual{{display:block;width:100%;height:auto;max-width:100%;min-width:0;background:var(--box)}}
+.activity-base{{stroke:var(--rule);stroke-width:1}}.activity-line{{fill:none;stroke:var(--blue);stroke-width:3;
+  stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}}
+.visual-basis{{color:var(--soft);border-top:1px solid var(--rule-2)}}
+.visual-basis summary{{min-height:44px;display:flex;align-items:center;padding:0 16px;cursor:pointer;font-size:13px}}
+.visual-basis dl{{margin:0;padding:10px 16px 14px;border-top:1px solid var(--rule-2);font-size:12px}}
+.visual-basis dt{{color:var(--ink);font-weight:600;margin-top:7px}}.visual-basis dt:first-child{{margin-top:0}}
+.visual-basis dd{{margin:1px 0 0;overflow-wrap:anywhere}}
 .metrics{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--rule-2)}}
 .metric{{min-width:0;background:var(--box);padding:9px 10px 9px 0;display:flex;flex-direction:column}}
 .metric strong{{font-size:28px;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}}
@@ -93,7 +132,7 @@ a:focus-visible,summary:focus-visible{{outline:2px solid var(--blue);outline-off
 <p class="private">Private proposal · local only · not published</p>
 <article class="card" aria-labelledby="proposal-title">
 <h1 class="block" id="proposal-title">Post-run result card proposal</h1>
-{result}{proof}{turn}{metrics}{basis}{limit}
+{result}{proof}{turn}{visual}{metrics}{basis}{limit}
 </article>
 </main></body></html>"""
     privacy.assert_clean(html, "result proposal")
