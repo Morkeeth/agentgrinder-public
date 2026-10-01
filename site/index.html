@@ -1476,6 +1476,7 @@ function wireAutoSync(root){
 }
 function connectBodyHtml(){
   const capture=ONE_LINE('auto');
+  const hook='python3 -m agentgrinder hook install --harness cursor --open';
   const mcp='python3 -m agentgrinder connect cursor --project /your/project --install';
   return `${autoSyncHtml()}<h2 class="connect-or">Or add one run now</h2>
     <section class="ob-step"><p class="meta">1 · CAPTURE</p><h2>Your agent makes the card</h2>
@@ -1485,6 +1486,8 @@ function connectBodyHtml(){
     <section class="ob-step"><p class="meta">2 · REVIEW</p><h2>Your latest card</h2><div id="latest-card-preview">${skeletonCard()}</div>
       <p class="hint">Change the title, project and audience only if needed. Nothing posts without your action.</p></section>
     <details class="panel manual-post advanced-connect"><summary>Advanced options</summary><div class="pad">
+      <h3>MAKE IT AUTOMATIC · local preview only</h3><div class="cmd"><span class="c">${esc(hook)}</span><button type="button" class="act" data-copy="${esc(hook)}">Copy Cursor hook</button></div>
+      <p class="hint">This older hook opens a local preview when a Cursor run ends. It does not upload or publish.</p>
       <h3>Connect through MCP</h3><div class="cmd"><span class="c">${esc(mcp)}</span><button type="button" class="act" data-copy="${esc(mcp)}">Copy MCP setup</button></div>
       <p class="hint">Replace /your/project with the project folder. Replace cursor with claude when needed.</p>
       <h3>Import a session file manually</h3>${dropZoneHtml()}
