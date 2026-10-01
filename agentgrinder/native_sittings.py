@@ -42,10 +42,20 @@ def cursor_time(text):
 
 def sittings(path, harness, gap=1800):
     if gap <= 0: raise ValueError("Choose an idle gap greater than zero")
+    source = list(records(path))
+    # Codex CLI used event_msg/user_message. The desktop app now writes the same human
+    # turn as response_item/message. Prefer the event form when both exist so one turn is
+    # never counted twice, matching native_trace.codex_activity.
+    codex_has_events = harness == "codex" and any(
+        row.get("type") == "event_msg"
+        and isinstance(row.get("payload"), dict)
+        and row["payload"].get("type") == "user_message"
+        for row in source
+    )
     groups, current, metadata = [], [], []
     last = None
     delegated = False
-    for row in records(path):
+    for row in source:
         payload = row.get("payload") or {}
         if not isinstance(payload, dict): payload = {}
         if harness == "codex" and row.get("type") == "session_meta":
@@ -53,7 +63,18 @@ def sittings(path, harness, gap=1800):
             delegated = isinstance(payload.get("source"),dict) and "subagent" in payload["source"]
             continue
         if harness == "codex":
-            human = row.get("type")=="event_msg" and payload.get("type")=="user_message" and not delegated and not str(payload.get("message") or "").lstrip().startswith(("<recommended_plugins>","<environment_context>","<turn_aborted>"))
+            text = None
+            if row.get("type") == "event_msg" and payload.get("type") == "user_message":
+                text = str(payload.get("message") or "")
+            elif (not codex_has_events and row.get("type") == "response_item"
+                  and payload.get("type") == "message" and payload.get("role") == "user"):
+                content = payload.get("content")
+                text = "".join(
+                    part.get("text") or "" for part in content if isinstance(part, dict)
+                ) if isinstance(content, list) else str(content or "")
+            human = text is not None and not delegated and not text.lstrip().startswith(
+                ("<recommended_plugins>", "<environment_context>", "<turn_aborted>", "# Files mentioned by the user:")
+            )
             try:
                 stamp = datetime.fromisoformat(row.get("timestamp", "").replace("Z", "+00:00"))
                 stamp = stamp.astimezone(timezone.utc) if stamp.tzinfo else None
