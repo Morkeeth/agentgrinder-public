@@ -71,22 +71,28 @@ button.ghost:hover,.act:hover{background:var(--rule-2);border-color:var(--rule)}
 .run-outcome-shipped{margin:6px 0;padding-left:18px;font-size:13px}
 .run-outcome-links{margin:6px 0 0;font-size:13px}
 .run-outcome-image img{max-width:100%;border-radius:6px;margin-top:8px}
-.nav-badge{display:inline-block;min-width:8px;height:8px;margin-left:6px;border-radius:50%;background:var(--blue, #123cff);vertical-align:middle}
+.nav-badge{display:inline-grid;place-items:center;min-width:17px;height:17px;padding:0 4px;margin-left:4px;border-radius:999px;background:var(--blue, #123cff);color:#fff;font-size:10px;line-height:1;vertical-align:middle}
 .nav-badge[hidden]{display:none}
 .account-menu{position:relative}
-.account-menu>summary{list-style:none;cursor:pointer;color:var(--soft);font-size:13px}
+.account-menu>summary{list-style:none;cursor:pointer;color:var(--soft);font-size:13px;display:flex;align-items:center;justify-content:center;min-width:36px;min-height:36px}
 .account-menu>summary::-webkit-details-marker{display:none}
 .account-menu[open]>summary,.account-menu>summary:hover{color:var(--ink)}
 .account-panel{position:absolute;right:0;top:calc(100% + 8px);min-width:180px;background:var(--card, var(--bg));border:1px solid var(--line, var(--rule));padding:8px;z-index:40;display:grid;gap:4px}
-.account-panel a{display:block;padding:8px 10px;color:var(--ink);text-decoration:none}
-.account-panel a:hover{background:var(--bg)}
+.account-panel a,.account-panel button{display:block;width:100%;padding:8px 10px;color:var(--ink);text-decoration:none;text-align:left;background:none;border:0;font-weight:400}
+.account-panel a:hover,.account-panel button:hover{background:var(--rule-2);border:0}
+.icon-button{width:36px;height:36px;padding:0;display:inline-grid;place-items:center;background:none;color:var(--ink);border:1px solid transparent;position:relative}
+.icon-button:hover{background:var(--rule-2);border-color:var(--rule)}
+.icon-button svg{width:19px;height:19px}
+.profile-trigger{padding:0;border:0;background:none;color:var(--ink)}
+.profile-trigger:hover{background:none;border:0}
+.profile-trigger img,.profile-trigger .profile-fallback{width:30px;height:30px;border-radius:50%;object-fit:cover;display:grid;place-items:center;background:var(--ink);color:#fff;font-size:11px;font-weight:600}
 .feed-tabs,.section-tabs{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 18px;font-size:14px}
 .feed-tabs a,.section-tabs a{color:var(--soft);text-decoration:none}
 .feed-tabs a.on,.section-tabs a.on,[aria-current=page].tab{color:var(--ink);font-weight:600}
 .community-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .community-grid a{display:block;padding:18px;border:1px solid var(--line, var(--rule));text-decoration:none;color:inherit;overflow-wrap:anywhere}
 @media(max-width:700px){.community-grid{grid-template-columns:1fr}}
-.bar .right{margin-left:auto;display:flex;align-items:center;gap:16px;font-size:13px;color:var(--soft);white-space:nowrap}
+.bar .right{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--soft);white-space:nowrap}
 .bar .right .you{color:var(--ink);font-weight:500}
 .bar .right button{padding:7px 12px}
 
@@ -99,6 +105,11 @@ button.ghost:hover,.act:hover{background:var(--rule-2);border-color:var(--rule)}
 .rail a{display:flex;justify-content:space-between;gap:8px;padding:5px 0;color:var(--soft);font-size:13px}
 .rail a.on{color:var(--ink);font-weight:500}
 .rail a span{color:var(--dim)}
+.rail .rail-post{margin:0 0 20px;padding:10px 12px;background:var(--blue);border:1px solid var(--blue);color:#fff;justify-content:center;font-weight:500;transition:transform .16s ease,background .16s ease}
+.rail .rail-post:hover{color:#fff;background:#003de0;transform:translateY(-1px)}
+.rail-main{display:grid;gap:3px}
+.rail-main a{padding:9px 10px;margin-left:-10px;border-left:2px solid transparent}
+.rail-main a.on{border-left-color:var(--blue);background:var(--blue-wash);color:var(--ink)}
 .main{padding:24px 24px 90px;border-right:1px solid var(--rule);min-width:0}
 .side{padding:24px 0 90px 22px;position:sticky;top:54px}
 .shell.norail{grid-template-columns:minmax(0,1fr) 276px}
@@ -257,15 +268,26 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue)}
 footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);font-size:13px;
   border-top:1px solid var(--rule)}
 
+/* Notifications are a return surface, not another destination. */
+.notice-drawer{position:fixed;inset:0 0 0 auto;width:min(390px,100vw);z-index:70;background:var(--paper);border-left:1px solid var(--rule);box-shadow:-18px 0 48px rgba(0,0,0,.08);display:flex;flex-direction:column;transform:translateX(102%);transition:transform .2s ease}
+.notice-drawer.open{transform:translateX(0)}
+.notice-head{min-height:54px;padding:0 16px;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:10px}
+.notice-head h2{font-size:14px;margin:0}.notice-head .notice-actions{margin-left:auto;display:flex;align-items:center;gap:6px}
+.notice-body{overflow:auto;padding:10px 14px 24px;overscroll-behavior:contain}
+.notice-item{display:grid;grid-template-columns:8px minmax(0,1fr);gap:10px;padding:13px 2px;border-bottom:1px solid var(--rule-2)}
+.notice-dot{width:7px;height:7px;border-radius:50%;background:var(--blue);margin-top:7px}.notice-item.read .notice-dot{background:transparent;border:1px solid var(--rule)}
+.notice-copy{margin:0;font-size:13px;line-height:1.45}.notice-meta{margin:3px 0 7px;color:var(--dim);font-size:11px}.notice-links{display:flex;gap:12px;align-items:center;font-size:12px}.notice-links a{color:var(--blue)}.notice-links button{padding:0;border:0;background:none;color:var(--soft);font-size:12px;min-height:28px}.notice-empty{padding:32px 4px;color:var(--soft)}
+.notice-scrim{position:fixed;inset:0;background:rgba(0,0,0,.16);z-index:69;opacity:0;pointer-events:none;transition:opacity .2s ease}.notice-scrim.open{opacity:1;pointer-events:auto}
+
 /* onboarding */
 .steps{display:flex;gap:5px;margin:0 0 18px}
 .steps span{flex:1;height:2px;background:var(--rule)}
 .steps span.on,.steps span.done{background:var(--blue)}
-.ob-step{background:var(--box);border:1px solid var(--rule);padding:16px;margin-bottom:12px}
+.ob-step{background:var(--box);border:1px solid var(--rule);padding:16px;margin-bottom:12px;min-width:0;overflow:hidden}
 .ob-step h3{margin:0 0 8px}
 .ob-step .cmd{border:1px solid var(--rule);border-bottom:1px solid var(--rule);margin:10px 0;
   padding:11px 13px;word-break:break-word}
-.ob-step .cmd .c{white-space:normal;overflow:visible}
+.ob-step .cmd .c{white-space:normal;overflow:visible;overflow-wrap:anywhere}
 .ob-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 /* Phone onboard: honest desktop handoff. Hide the handoff on wide screens. */
 .ob-phone-handoff{display:none}
@@ -279,6 +301,14 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .preview-details>summary,.profile-summary>summary{cursor:pointer;color:var(--soft);font-size:13px;min-height:40px}
 .preview-details[open]>summary,.profile-summary[open]>summary{color:var(--ink);font-weight:500;margin-bottom:14px}
 .profile-context{color:var(--soft);font-size:13px;margin:0 0 18px}
+.profile-tools{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 20px}
+.tool-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid var(--rule);background:var(--box);font-size:12px;color:var(--soft)}
+.tool-mark{width:19px;height:19px;border:1px solid currentColor;border-radius:5px;display:grid;place-items:center;color:var(--ink);font-size:9px;font-weight:600;letter-spacing:-.02em}
+.profile-projects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 24px}
+.profile-project{border:1px solid var(--rule);background:var(--box);padding:14px;min-width:0;transition:transform .16s ease,border-color .16s ease}
+.profile-project:hover{transform:translateY(-1px);border-color:var(--blue-soft)}
+.profile-project h3{font-size:14px;margin:0 0 8px;overflow-wrap:anywhere}.profile-project .project-facts{display:flex;gap:10px;flex-wrap:wrap;color:var(--soft);font-size:12px}.project-load{height:2px;background:var(--rule-2);margin:13px 0 0;overflow:hidden}.project-load span{display:block;height:100%;background:var(--blue);transform-origin:left;animation:project-in .5s ease both}@keyframes project-in{from{transform:scaleX(0)}}
+.profile-actions{margin-left:auto;display:flex;gap:8px}.profile-edit-dialog{width:min(430px,calc(100vw - 28px));border:1px solid var(--rule);padding:0;background:var(--paper);color:var(--ink)}.profile-edit-dialog::backdrop{background:rgba(0,0,0,.24)}.profile-edit-dialog .dialog-head{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--rule)}.profile-edit-dialog .dialog-head h2{margin:0;font-size:15px}.profile-edit-dialog .dialog-head button{margin-left:auto}.profile-edit-dialog .dialog-body{padding:16px}.profile-photo-choice{display:flex;align-items:center;gap:12px;padding:10px 0 16px}.profile-photo-choice img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--rule)}
 
 /* ack picker */
 .ack-picker{padding:12px 16px 14px;border-top:1px solid var(--rule)}
@@ -377,6 +407,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   .main{padding:18px 0 80px}
   .bar-in{padding:0 18px;gap:16px}
   .bar nav{display:none}
+  .bar-in{height:52px}.bar .right{gap:4px}
 }
 @media (max-width:560px){
   .boxes,.fiverow,.ptotals{grid-template-columns:1fr 1fr 1fr}
@@ -391,6 +422,9 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   .check-top{flex-wrap:wrap}
   .check-top .s{margin-left:0;flex-basis:100%}
   .bar .right .wide{display:none}
+  .profile-projects{grid-template-columns:1fr}
+  .notice-drawer{inset:auto 0 0 0;width:100%;height:min(78vh,680px);border-left:0;border-top:1px solid var(--rule);transform:translateY(102%)}
+  .notice-drawer.open{transform:translateY(0)}
   .row{flex-wrap:wrap}
   .share-frame{height:auto;min-height:630px}
   .first-run-actions .act,.first-run-actions button{width:100%;text-align:center;min-height:44px}
@@ -429,6 +463,10 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .mode-banner.live{border-left:3px solid var(--blue);background:var(--blue-wash)}
 .experiment-card{padding:16px;border-top:1px solid var(--rule)}
 .connect-lead{max-width:640px}
+.run-hero{margin:14px 0 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);background:var(--blue-wash)}
+.proof-route{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:18px 16px;gap:0}.proof-route>div{position:relative;padding:20px 12px 8px;border-top:2px solid var(--blue)}.proof-route>div:before{content:"";position:absolute;left:10px;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--blue)}.proof-route dt{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);font-weight:600}.proof-route dd{margin:6px 0 0;font-size:13px;line-height:1.35;color:var(--ink)}
+.result-hero{padding:20px}.result-hero .result-number{font-size:44px;line-height:1;color:var(--blue);font-weight:600}.result-hero p{margin:8px 0 0;max-width:50ch}.run-photo-hero img{display:block;width:100%;max-height:360px;object-fit:cover}
+.visual-choice{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0 16px}.visual-choice label{border:1px solid var(--rule);padding:10px 12px;margin:0;cursor:pointer}.visual-choice input{margin-right:6px}
 .connect-agents{margin-top:18px}
 .connect-agent{padding:14px 0 6px;border-top:1px solid var(--rule)}
 .connect-agent h3{margin:0 0 8px;font-size:16px}
@@ -447,6 +485,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .p-links a{color:var(--ink)}
 .experiment-card h2{font-size:18px;line-height:1.3;margin:6px 0 10px}
 @media(max-width:700px){.landing-intro h1{max-width:none}}
+@media(max-width:700px){.proof-route{grid-template-columns:1fr 1fr}.proof-route>div:nth-child(n+3){margin-top:10px}}
 /* 390 px: every tap target at least 44px tall (fresh-eyes review, 25 Sep 2026). */
 @media(max-width:700px){.bar .mark,.feed-tabs a,.section-tabs a,.land-head a,.launch-more a{display:inline-flex;align-items:center;min-height:44px}input[type=checkbox]{width:22px;height:22px}label:has(input[type=checkbox]){min-height:44px}button,.act{min-height:44px}}
 </style><link rel="stylesheet" href="/social.css"><link rel="stylesheet" href="/people.css"><link rel="stylesheet" href="/account.css"><link rel="stylesheet" href="/feed.css"><link rel="stylesheet" href="/dropin.css"><link rel="stylesheet" href="/home.css">
@@ -456,31 +495,24 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 <body>
 <div class="bar"><div class="bar-in">
   <a class="mark" href="/">__BRAND__</a>
-  <nav id="nav" aria-label="Primary">
-    <a href="/" data-section="feed">Feed</a>
-    <a href="/?post" data-section="post">Add a run</a>
-    <details id="account-menu" class="account-menu" data-section="you">
-      <summary aria-haspopup="menu">You<span id="nav-inbox-badge" class="nav-badge" hidden aria-hidden="true"></span></summary>
+  <div class="right">
+    <a class="icon-button" href="/?post" aria-label="Post a run" title="Post a run"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></a>
+    <button id="notifications-toggle" class="icon-button" type="button" aria-label="Notifications" aria-expanded="false" aria-controls="notifications-drawer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 16.5h11l-1.2-1.8V10a4.3 4.3 0 0 0-8.6 0v4.7l-1.2 1.8Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 19h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span id="nav-inbox-badge" class="nav-badge" hidden aria-hidden="true"></span></button>
+    <details id="account-menu" class="account-menu" hidden>
+      <summary class="profile-trigger" aria-label="Profile and settings" aria-haspopup="menu"><span id="nav-avatar" class="profile-fallback">ME</span></summary>
       <div class="account-panel" role="menu" data-you-links></div>
     </details>
-    <details id="more-menu" class="account-menu">
-      <summary aria-haspopup="menu">More</summary>
-      <div class="account-panel" role="menu" data-more-links></div>
-    </details>
-  </nav>
-  <div class="right">
-    <span class="wide">Private by default</span>
-    <span id="me" class="you"></span>
+    <span id="me" class="you" hidden></span>
     <button id="auth" class="ghost">Sign in</button>
   </div>
 </div></div>
 <nav id="mobile-product-nav" class="tabbar" aria-label="Primary">
   <a href="/" data-section="feed"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Feed</a>
-  <a href="/?post" data-section="post" class="tab-post"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Post</a>
-  <button type="button" data-sheet="you" data-section="you" aria-expanded="false" aria-controls="sheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>You<span class="nav-badge mobile-inbox-badge" hidden aria-hidden="true"></span></button>
-  <button type="button" data-sheet="more" aria-expanded="false" aria-controls="sheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="18.5" cy="12" r="1.8" fill="currentColor"/></svg>More</button>
+  <a href="/?projects" data-section="projects"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l1.5 2H20v8.5H4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Projects</a>
+  <a href="/?u=me" data-profile-link data-section="profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Profile</a>
 </nav>
-<div id="sheet" class="sheet" role="menu" hidden></div>
+<div id="notifications-scrim" class="notice-scrim" hidden></div>
+<aside id="notifications-drawer" class="notice-drawer" aria-label="Notifications" aria-hidden="true" inert><div class="notice-head"><h2>Notifications</h2><div class="notice-actions"><button id="notifications-read-all" class="ghost" type="button">Mark all read</button><button id="notifications-close" class="icon-button" type="button" aria-label="Close notifications">×</button></div></div><div id="notifications-body" class="notice-body"><p class="notice-empty">Loading…</p></div></aside>
 <div id="status"></div>
 <div class="shell solo" id="shell">
   <aside class="rail" id="rail"></aside>
@@ -544,12 +576,11 @@ function projectStats(runs){
 }
 function railHtml(active,runs){
   const a=(href,label,on,count)=>`<a href="${href}"${on?' class="on"':''}>${esc(label)}${count!=null?`<span>${count}</span>`:''}</a>`;
-  // The count belongs to the list on screen, which is only ever Discover's public list.
-  let o='<p class="lbl">Primary</p>'+a('/','Feed',active==='feed'||active==='following');
-  o+=a('/?explore','Discover',active==='discover',(active==='discover'&&runs&&runs.length)||null)+a('/?post','Add a run',active==='post');
-  if(ME) o+=a('/?mine','My runs',active==='me')+a('/?inbox','Responses',active==='inbox');
-  o+='<p class="lbl">About</p>'+a('/privacy','Privacy')+a('/terms','Terms');
-  return o;
+  const profile=ME?'/?u='+encodeURIComponent(profileHandle(ME)):'/?account';
+  return `<a class="rail-post" href="/?post">Post a run</a><nav class="rail-main" aria-label="Product">`
+    +a('/','Feed',active==='feed'||active==='following'||active==='discover')
+    +a('/?projects','Projects',active==='projects'||active==='project',(active==='projects'&&runs&&runs.length)||null)
+    +a(profile,'Profile',active==='profile'||active==='me')+'</nav>';
 }
 function setPrimarySection(section){
   document.querySelectorAll('[data-section]').forEach(el=>{
@@ -557,33 +588,27 @@ function setPrimarySection(section){
     el.classList.toggle('on',on);
     if(on) el.setAttribute('aria-current','page'); else el.removeAttribute('aria-current');
   });
-  // You holds My runs and Responses, so it lights up for both.
-  document.querySelectorAll('[data-section="you"]').forEach(el=>el.classList.toggle('on',section==='mine'||section==='inbox'));
+  document.querySelectorAll('[data-section="profile"]').forEach(el=>el.classList.toggle('on',section==='profile'||section==='me'));
 }
-// THREE PLACES AND A DRAWER. Feed, Post and You are the product loop; everything else the app can
-// do sits behind More, one tap away and out of the way. One list feeds the desktop dropdown and the
-// phone sheet, so the two can never disagree.
 // A real public run, posted from a real session, for anyone who wants to see a card before making
 // one. It replaced the bundled sample on 25 Sep 2026: a stranger should meet a real run first.
 const REAL_RUN='/r/3afa89e7-aff5-488d-bec3-da36196b8c5e';
 // 25 Sep 2026, fresh eyes before the Sunday meetup: Community, Forum, Crews, Challenges and
 // Practices left the menu. PRODUCT.md already said none of them belong in the main app; the menu
 // had not caught up. The product is: post your run, see others, cheer.
-const MORE_LINKS=[['/?people','Find people'],['/?following','Following'],['/?projects','Projects'],['/?boards','Marathon and boards'],[REAL_RUN,'A real run'],['/methodology','How the numbers are made'],['/privacy','Privacy']];
 // Sections that are gone. Their addresses land on the feed with one line, so an old link is
 // not a dead end and a stranger never meets an empty programme page.
 const RETIRED=['community','forum','challenges','challenge','practices','practice','experiments','experiment','rigs','rigversion','progress','comparison','pitch','claim'];
 function menuLinks(kind){
-  if(kind==='more') return MORE_LINKS.map(([href,label])=>`<a href="${href}" role="menuitem">${esc(label)}</a>`).join('');
-  if(!ME) return `<a href="/?connect" role="menuitem">Connect your agent</a><div class="menu-sep"></div><button type="button" class="menu-signin" data-signin role="menuitem">${signInLabel()}</button>`;
-  return `<a href="/?mine" role="menuitem" data-section="mine">My runs</a><a href="/?inbox" role="menuitem" data-section="inbox">Responses</a><a id="account-scrapbook" href="/?u=${encodeURIComponent(profileHandle(ME))}" role="menuitem">My profile</a><a href="/?connect" role="menuitem">Connect your agent</a><a href="/?account" role="menuitem">Account settings</a>`;
+  if(!ME) return AUTH_USER
+    ? `<a href="/?connect" role="menuitem">Connect your agent</a><button type="button" data-signout role="menuitem">Sign out</button>`
+    : `<a href="/?connect" role="menuitem">Connect your agent</a><div class="menu-sep"></div><button type="button" class="menu-signin" data-signin role="menuitem">${signInLabel()}</button>`;
+  return `<a href="/?u=${encodeURIComponent(profileHandle(ME))}" role="menuitem">Profile</a><a href="/?connect" role="menuitem">Connect your agent</a><a href="/?account" role="menuitem">Settings</a><button type="button" data-signout role="menuitem">Sign out</button>`;
 }
 function syncAuthNav(){
   document.querySelectorAll('[data-auth="1"]').forEach(el=>{el.hidden=!ME});
   document.querySelectorAll('[data-you-links]').forEach(el=>{el.innerHTML=menuLinks('you')});
-  document.querySelectorAll('[data-more-links]').forEach(el=>{if(!el.innerHTML)el.innerHTML=menuLinks('more')});
-  const sheet=$('sheet');
-  if(sheet&&!sheet.hidden) sheet.innerHTML=menuLinks(sheet.dataset.kind);
+  document.querySelectorAll('[data-profile-link]').forEach(el=>{el.href=ME?'/?u='+encodeURIComponent(profileHandle(ME)):'/?account'});
 }
 function feedTabs(active){
   const tab=(href,key,label)=>`<a href="${href}" class="${active===key?'on':''}" ${active===key?'aria-current="page"':''}>${label}</a>`;
@@ -688,7 +713,7 @@ const signInLabel=()=>PROVIDERS_ENABLED.includes('x')?'Sign in with GitHub or X'
 const profileHandle=p=>GrinderAuth.present(p)?.handle||'';
 // A person who arrived from Responses keeps a way back even when the run is gone or private.
 function responseReturnLink(){try{return sessionStorage.getItem('ag_response_return')==='?inbox'?'<p class="response-return"><a class="act" href="/?inbox">Back to Responses</a></p>':''}catch(_){return ''}}
-let ME=null, IDENTITY_SETUP=null;
+let ME=null, IDENTITY_SETUP=null, AUTH_USER=null;
 // The social feeds (home, Following, a club) draw the same feed card as the public feed.
 const social=GrinderSocial({client:sb,me:()=>ME,app:()=>$('app'),frame,status,signInGitHub:()=>signInWithGitHub(),
   renderRuns:async runs=>{noteTraces(runs);const ad=await ackData(runs);setTimeout(()=>{wireKudos();countUp()},0);return feedCards(runs,ad)}});
@@ -1081,11 +1106,50 @@ function projectLinkHtml(r){
 // outcome: a commit, a declared shipped line or receipt, or a link to what was built. A run
 // with none of those gets no label, so a failed run reads as what it was.
 function achievedLabel(r){
+  if(typedOnlyRun(r))return '';
   const shipped=Array.isArray(r.shipped)?r.shipped.length:r.shipped?1:0;
   const receipts=Array.isArray(r.receipts)?r.receipts.length:r.receipts?1:0;
   const done=(r.commits>0)||shipped>0||receipts>0||!!(r.output_url&&safeOutputUrl(r.output_url));
   return done?'<div class="run-story-label achieved">Achieved</div>':'';
 }
+function proofRouteHtml(r){
+  const route=r&&r.code_route;
+  const stops=route&&route.v===1&&!route.unavailable&&Array.isArray(route.stops)?route.stops.filter(Boolean):[];
+  if(stops.length<2)return '';
+  const problem=stops.find(s=>s.kind==='check'||s.kind==='fail')||stops[0];
+  const change=stops.find(s=>['artifact','merge','change'].includes(s.kind)&&s.id!==problem.id)||stops[1];
+  const checked=[...stops].reverse().find(s=>s.basis==='measured'&&(s.kind==='check'||Array.isArray(s.evidence)&&s.evidence.length));
+  const result=(route.finish&&route.finish.label)||(Array.isArray(r.shipped)&&r.shipped[0])||null;
+  if(!problem?.label||!change?.label||!checked?.label||!result)return '';
+  const rows=[['Problem',problem.label],['Change',change.label],['Check',checked.label],['Result',result]];
+  return `<div class="run-hero proof-route" aria-label="Proof Route">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(String(v))}</dd></div>`).join('')}</div>`;
+}
+function resultHeroHtml(r){
+  const shipped=Array.isArray(r.shipped)?r.shipped.filter(Boolean):[];
+  const output=r.output_url&&safeOutputUrl(r.output_url);
+  const n=shipped.length||(r.commits>0?r.commits:0);
+  const label=shipped[0]||(output?'Linked output':r.commits>0?`${r.commits} commit${r.commits===1?'':'s'} recorded`:'');
+  if(!n||!label)return '';
+  return `<div class="run-hero result-hero" aria-label="Result"><div class="result-number num">${esc(n)}</div><p>${esc(label)}</p></div>`;
+}
+function photoHeroHtml(r){
+  const url=r.image_url&&isRunPhotoUrl(r.image_url)?r.image_url:'';
+  return url?`<div class="run-hero run-photo-hero"><img src="${esc(url)}" alt="Run photo" loading="lazy"></div>`:'';
+}
+function runHeroChoices(r,{codeRoute='',ridge=''}={}){
+  return [
+    ['proof_route','Proof Route',proofRouteHtml(r)],
+    ['activity_terrain','Activity Terrain',ridge],
+    ['change_atlas','Change Atlas',codeRoute],
+    ['result','Result',resultHeroHtml(r)],
+  ].filter(x=>x[2]);
+}
+function chosenRunHero(r,parts){
+  const choices=runHeroChoices(r,parts);
+  const selected=choices.find(x=>x[0]===r.hero_visual)||choices[0];
+  return selected?{key:selected[0],label:selected[1],html:selected[2],choices}:null;
+}
+const typedOnlyRun=r=>r&&r.trace_basis==='typed-by-author';
 function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handle;
   const projectName=()=>GrinderContract.projectLabel(r.project);
   const codeFacts=()=>{
@@ -1117,7 +1181,6 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   const date=new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'});
   const codeRoute=typeof GrinderContract==='object'&&GrinderContract.codeRoute?GrinderContract.codeRoute(r):'';
   const codeRouteDetail=typeof GrinderContract==='object'&&GrinderContract.codeRouteDetail?GrinderContract.codeRouteDetail(r):'';
-  const cover=typeof GrinderContract==='object'&&GrinderContract.coverHtml?GrinderContract.coverHtml(r):'';
   const eventChip=typeof GrinderContract==='object'&&GrinderContract.eventChip?GrinderContract.eventChip(r):'';
   const ridge=typeof GrinderContract==='object'&&GrinderContract.ridge?GrinderContract.ridge(r):'';
   const ridgeOutput=output?(/github\.com\/[^/]+\/[^/]+\/pull\/\d+/i.test(output)?'PR':/\.(png|jpe?g|webp)(?:[?#]|$)/i.test(output)?'Screenshot':'Output'):null;
@@ -1149,7 +1212,8 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   // Full receipts stay in the HTML for humans and agents. Collapsed for people; still in the
   // document for scrapers until a visibility-safe /runs/{id}.json exists.
   const explore=exploreInner?`<details class="ridge-more run-explore" id="run-detail-${esc(r.id)}" data-run-detail="1"><summary>Explore this run</summary><div class="run-detail-body">${exploreInner}</div></details>`:'';
-  const visual=codeRoute||ridge||`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>`;
+  const chosen=typedOnlyRun(r)?null:chosenRunHero(r,{codeRoute,ridge});
+  const visual=typedOnlyRun(r)?'<p class="meta run-source-note">Typed by the author. No capture.</p>':chosen?chosen.html:`<div class="run-signature">${GrinderContract.trace(r)}<span class="meta">${esc(r.trace_basis==='elapsed-agent-tool-calls'?'Agent tool requests · elapsed time':r.trace_basis==='elapsed'?'Session rhythm · elapsed time':r.trace_basis==='position'?'Session rhythm · event order':'Session rhythm · time basis unknown')}</span></div>`;
   const followSlot=(!opts.preview&&!selfAck&&r.profile_id)
     ?`<span class="card-follow" data-profile="${esc(r.profile_id)}" data-handle="${esc(h)}" data-label="Follow"></span>`
     :'';
@@ -1157,7 +1221,6 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
   return `<div class="card" id="card-${r.id}" data-run-id="${esc(r.id)}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
-    ${cover}
     ${achievedLabel(r)}
     <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
@@ -1304,7 +1367,7 @@ function shareCardHtml(opts){
       <section class="share-right"><div class="share-hero" title="${esc(opts.heroTip||'')}"><div class="n num">${esc(String(heroN))}</div><div class="k">${esc(heroK)}</div></div>
         ${hl}${roast}${curve}${stats?`<div class="share-stats">${stats}</div>`:''}</section>
     </div>
-    <div class="share-foot"><div class="cta">Your turn · <span>drop your session file</span></div>
+    <div class="share-foot"><div class="cta">Your turn · <span>connect your agent</span></div>
       <div class="url num">${esc(claimUrl)}</div></div>
   </div></div>
   <div class="share-actions">
@@ -1377,28 +1440,25 @@ async function shouldOnboard(){
 // agent, and the same drop zone as the landing. /?onboard and /?connect both land here.
 const ONE_LINE=h=>`uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind${h?' --harness '+h:''} --push`;
 function connectBodyHtml(){
-  const agent=(name,harness,file,rest,note)=>`<article class="connect-agent"><h3>${name}</h3>
-      ${file?`<div class="drop-path"><span class="drop-h">Drop the file${note?`<small>${note}</small>`:''}</span><code>${esc(file)}</code><button type="button" class="act" data-copy="${esc(file)}" aria-label="Copy the ${name} folder">Copy</button><small class="drop-rest">${esc(rest)}</small></div>`:''}
-      <div class="cmd"><span class="c">${ONE_LINE(harness)}</span><button type="button" class="act" data-copy="${esc(ONE_LINE(harness))}">Copy</button></div></article>`;
-  return `<p class="connect-lead">Every agent keeps a session file on the computer it ran on. Drop that file here: the card is made in this tab and nothing leaves it until you ask. Or run one command on that computer and it opens the preview for you. No account for the card or the link. Sign in with GitHub${PROVIDERS_ENABLED.includes('x')?' or X':''} only to post it to the feed.</p>
-    <div class="ob-phone-handoff" data-phone-handoff="1"><p class="hint"><b style="color:var(--ink);font-weight:500">Capture runs on the computer where your agent runs</b> (Claude Code, Cursor, Codex or a Grok Bot export). This phone cannot record a sitting.</p></div>
-    ${dropZoneHtml()}
-    <section class="connect-agents" aria-label="One path per agent">
-      ${agent('Claude Code','claude',AGENT_FILES[0][1],AGENT_FILES[0][2],'')}
-      ${agent('Cursor','cursor',AGENT_FILES[1][1],AGENT_FILES[1][2],'')}
-      ${agent('Codex','codex',AGENT_FILES[2][1],AGENT_FILES[2][2],AGENT_FILES[2][3])}
-      <article class="connect-agent"><h3>Grok Bot</h3>
-        <p class="hint">The export lives on the bot's computer, not this one. There, with the export you chose:</p>
-        <div class="cmd"><span class="c">${ONE_LINE('grokbot').replace('grind ','grind /path/to/export.jsonl ')}</span><button type="button" class="act" data-copy="${esc(ONE_LINE('grokbot').replace('grind ','grind /path/to/export.jsonl '))}">Copy</button></div>
-        <p class="hint">Bot activity stays labelled as bot activity. <a href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">The install-free kit for a bot workflow</a>.</p></article>
-      <article class="connect-agent"><h3>Any other agent or bot</h3>
-        <p class="hint">No reader for it yet? Sign in and type the counts by hand under <a href="/?post#manualbox">Post a run</a>. A bot can post on its own through the upload API with one token: <a href="/?connect=auto">Automatic upload</a>. <a href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/AGENT-UPLOAD-API.md">API notes</a>.</p></article>
-    </section>
-    <section class="connect-then"><h2>Then</h2>
-      <p><b>Anyone with the link.</b> The card at its own address, no account, not in the feed, expires in 90 days.</p>
-      <p><b>Only me, Followers or Everyone.</b> Sign in with GitHub${PROVIDERS_ENABLED.includes('x')?' or X':''}, name the project, save. Everyone puts it on Latest runs and your profile. No prompts, code or file paths from the session file leave your computer.</p>
-    </section>
-    <p class="hint">In Finder or the file picker, press Cmd+Shift+G, paste the folder, press Return.</p>`;
+  const capture=ONE_LINE('auto');
+  const hook='python3 -m agentgrinder hook install --harness cursor --open';
+  const mcp='python3 -m agentgrinder connect cursor --project /your/project --install';
+  return `<section class="ob-step"><p class="meta">1 · CONNECT ONCE</p><h2>Your agent makes the card</h2>
+      <p class="connect-lead">Run this on the computer where you build. __BRAND__ finds the latest supported session and opens a private preview. You decide if it is posted.</p>
+      <div class="cmd"><span class="c">${esc(capture)}</span><button type="button" class="act blue" data-copy="${esc(capture)}">Copy command</button></div>
+      <p class="hint">Works with Cursor, Claude Code and Codex. It sends measurements for the preview, never prompt text, code or file paths.</p></section>
+    <section class="ob-step"><p class="meta">2 · REVIEW</p><h2>Your latest card</h2><div id="latest-card-preview">${skeletonCard()}</div>
+      <p class="hint">Change the title, project and audience only if needed. Nothing posts without your action.</p></section>
+    <section class="ob-step"><p class="meta">3 · MAKE IT AUTOMATIC</p><h2>Capture when a Cursor run ends</h2>
+      <div class="cmd"><span class="c">${esc(hook)}</span><button type="button" class="act" data-copy="${esc(hook)}">Copy hook</button></div>
+      <p class="hint">The hook opens a local preview. It does not publish. Agent-native workflows can use MCP instead.</p></section>
+    <details class="panel manual-post advanced-connect"><summary>Advanced options</summary><div class="pad">
+      <h3>Connect through MCP</h3><div class="cmd"><span class="c">${esc(mcp)}</span><button type="button" class="act" data-copy="${esc(mcp)}">Copy MCP setup</button></div>
+      <p class="hint">Replace /your/project with the project folder. Replace cursor with claude when needed.</p>
+      <h3>Import a session file manually</h3>${dropZoneHtml()}
+      <p class="hint">Finder: press Cmd+Shift+G and paste the session folder. Claude Code: ${esc(AGENT_FILES[0][1])} · Cursor: ${esc(AGENT_FILES[1][1])} · Codex: ${esc(AGENT_FILES[2][1])}</p>
+      <p class="hint"><a href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/AGENT-UPLOAD-API.md">Agent upload API</a> · <a href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Grok Bot export</a></p>
+    </div></details>`;
 }
 function wireConnectCopies(root){
   (root||document).querySelectorAll('[data-copy]').forEach(b=>{ if(b.dataset.wired) return; b.dataset.wired='1';
@@ -1409,9 +1469,10 @@ async function viewConnect(){
   if(q.get('onboard')==='agent') return viewOnboardAgent();
   const app=$('app');
   frame(railHtml('post'),null);
-  app.innerHTML=`<div class="head"><h1>Connect your agent</h1><span class="meta">drop the file, or one command</span></div>${connectBodyHtml()}`;
+  app.innerHTML=`<div class="head"><h1>Connect your agent</h1><span class="meta">capture → preview → post</span></div>${connectBodyHtml()}`;
   if(window.GrinderDropinUI) GrinderDropinUI.mount({post:token=>{history.pushState(null,'','/#import='+token);route();}});
   wireConnectCopies(app);
+  await loadLatestCardPreview();
 }
 async function viewOnboard(){ return viewConnect(); }
 async function viewOnboardAgent(){
@@ -1541,8 +1602,8 @@ function landingHTML(){
   // every one is real, and an empty section says so in one line.
   return `<div class="home">
     <section class="home-hero"><h1>Strava is for people who ran. <i>__BRAND__</i> is for people who didn't.</h1></section>
-    <section class="home-sec" aria-labelledby="h-week"><div class="land-head"><h2 id="h-week">This week</h2></div><div id="home-week">${'<div class="wk-skel"></div>'}</div><div id="home-events"></div></section>
-    <section class="home-sec" aria-labelledby="h-clubs"><div class="land-head"><h2 id="h-clubs">Clubs</h2></div><div id="home-clubs"></div></section>
+    <section class="home-sec" id="home-week-section" aria-labelledby="h-week"><div class="land-head"><h2 id="h-week">This week</h2></div><div id="home-week">${'<div class="wk-skel"></div>'}</div><div id="home-events"></div></section>
+    <section class="home-sec" id="home-clubs-section" aria-labelledby="h-clubs"><div class="land-head"><h2 id="h-clubs">Clubs</h2></div><div id="home-clubs"></div></section>
     <section class="home-sec" aria-labelledby="h-builders"><div class="land-head"><h2 id="h-builders">Builders to follow</h2><a href="/?people">Find people</a></div><div id="home-builders"></div></section>
     <section class="home-sec landing-feature" aria-labelledby="h-popular" id="landing-feature"><div class="land-head"><h2 id="h-popular">Popular runs</h2><a href="/?explore">See all</a></div><div id="landing-feature-body">${skeletonCard()}</div><p id="public-run-count" class="public-run-count" role="status"></p></section>
     <section class="home-join"><h2>Post your own runs</h2><button type="button" class="act primary" data-signin>${signInLabel()} and build your profile</button></section>
@@ -1555,8 +1616,8 @@ function dropZoneHtml(){
   return `<div id="drop-stage"><label class="drop-zone" id="drop-zone">
       <input type="file" id="drop-file" class="visually-hidden" accept=".jsonl,.json,.txt,application/x-ndjson,application/jsonl,text/plain">
       <svg class="drop-ghost" viewBox="0 0 300 56" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,50 30,44 60,46 90,30 120,36 150,14 180,28 210,22 240,38 270,34 300,40"/></svg>
-      <strong>Drop a session file</strong>
-      <span class="cta"><span class="act primary">Choose a file</span></span>
+      <strong>Import a session export</strong>
+      <span class="cta"><span class="act primary">Select export</span></span>
       <span class="drop-local" id="drop-progress">Read on this device. Nothing leaves it until you ask for a link.</span>
     </label><p class="drop-error" id="drop-error" role="alert" hidden></p></div>`;
 }
@@ -1579,6 +1640,11 @@ async function fetchLatestPublicRuns(limit){
   }catch(_){ return null; } // null: the read failed, which is not the same as no runs
 }
 
+async function loadLatestCardPreview(){
+  const slot=$('latest-card-preview'); if(!slot) return;
+  slot.innerHTML='<div class="card"><div class="empty">Your captured preview opens here before it is saved. An older post is never shown as a new capture.</div></div>';
+}
+
 function feedCards(runs,ad){
   return runs.map(r=>GrinderFeed.card(r,{acked:ad.mine.has(r.id),count:ad.counts[r.id]||0,mine:!!(ME&&ME.id===r.profile_id),url:location.origin+'/r/'+r.id})).join('');
 }
@@ -1595,8 +1661,10 @@ async function viewLanding(){
   // A failed read says it failed; only a read that worked may say there is nothing.
   const failed='<p class="home-none" data-failed>This section could not load. Refresh to try again.</p>';
   put('home-week',data.runs===null&&data.events===null?failed:H.weekHtml(data.runs,data.events,now));
-  put('home-events',data.events===null?failed:data.events.length?`<div class="evs">${data.events.slice(0,3).map(H.eventRow).join('')}</div>`:'<p class="home-none">No events planned yet.</p>');
-  put('home-clubs',data.clubs===null?failed:data.clubs.length?`<div class="clubs">${data.clubs.slice(0,6).map(H.clubRow).join('')}</div>`:'<p class="home-none">No clubs yet.</p>');
+  put('home-events',data.events===null?failed:data.events.length?`<div class="evs">${data.events.slice(0,3).map(H.eventRow).join('')}</div>`:'');
+  put('home-clubs',data.clubs===null?failed:data.clubs.length?`<div class="clubs">${data.clubs.slice(0,6).map(H.clubRow).join('')}</div>`:'');
+  if(data.clubs!==null&&!data.clubs.length)$('home-clubs-section')?.setAttribute('hidden','');
+  if(data.runs!==null&&!data.runs.length&&data.events!==null&&!data.events.length)$('home-week-section')?.setAttribute('hidden','');
   const who=data.runs?H.builders(data.runs,6):[];
   put('home-builders',data.runs===null?failed:who.length?who.map(b=>GrinderFeed.builderRow(b.run)).join(''):'<p class="home-none">No builder has posted a public run in the last 30 days.</p>');
   const body=$('landing-feature-body');
@@ -1712,9 +1780,12 @@ async function viewRun(id){
   const copyLink=$('run-copy-link');if(copyLink)copyLink.onclick=async()=>{try{const sharePath=r.visibility==='public'?'/r/'+r.id:'/?run='+r.id;await navigator.clipboard.writeText(location.origin+sharePath);copyLink.textContent='Link copied'}catch(_){status('Copy this page address to share your run.')}};
   if(ME?.id===r.profile_id){
     const controls=document.createElement('div');controls.className='panel reply-form';
-    controls.id='run-edit';controls.innerHTML='<h2>Edit your post</h2><label>Title<input id="run-title" required maxlength="120"></label><label>Project<input id="run-project" maxlength="120"></label><label>Photo link (optional)<input id="run-image-url" type="url" maxlength="2048" placeholder="https://…/photo.jpg"></label><label class="pin-check"><input type="checkbox" id="run-pin"> Pin to my profile</label><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label id="run-audience-label">Who can read this run<select id="run-audience"><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
+    const availableVisuals=chosenRunHero(r,{codeRoute:GrinderContract.codeRoute(r),ridge:GrinderContract.ridge(r)})?.choices||[];
+    const suggestedVisual=availableVisuals.find(v=>v[0]===r.hero_visual)?.[0]||availableVisuals[0]?.[0]||'';
+    const visualPicker=availableVisuals.length>1?`<fieldset><legend>Card visual</legend><p class="hint">Suggested from this run. Choose one.</p><div class="visual-choice">${availableVisuals.map(([key,label])=>`<label><input type="radio" name="run-hero-visual" value="${key}" ${key===suggestedVisual?'checked':''}> ${esc(label)}</label>`).join('')}</div></fieldset>`:'';
+    controls.id='run-edit';controls.innerHTML='<h2>Edit your post</h2><label>Title<input id="run-title" required maxlength="120"></label><label>Project<input id="run-project" maxlength="120"></label><label>Photo link (optional)<input id="run-image-url" type="url" maxlength="2048" placeholder="https://…/photo.jpg"></label>'+visualPicker+'<label class="pin-check"><input type="checkbox" id="run-pin"> Pin to my profile</label><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label id="run-audience-label">Who can read this run<select id="run-audience"><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Link - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
     app.append(controls);$('run-title').value=r.title||'';$('run-pin').checked=!!r.pinned_at;$('run-project').value=r.project||'';$('run-image-url').value=r.image_url||'';$('run-caption').value=r.caption||r.note||'';$('run-output-url').value=r.output_url||'';$('run-audience').value=r.visibility==='anonymous'?'private':r.visibility;
-    $('run-save').onclick=async()=>{const title=$('run-title').value.trim(),project=$('run-project').value.trim(),imageUrl=$('run-image-url').value.trim(),caption=$('run-caption').value.trim(),output=$('run-output-url').value.trim(),audience=$('run-audience').value;if(!title){status('Add a title.',true);$('run-title').focus();return}if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}if(imageUrl&&!isRunPhotoUrl(imageUrl)){status('The photo link must be https and end in .png, .jpg, .jpeg or .webp.',true);return}if(!(await requireCloseFriendsForSave(audience)))return;const pin=$('run-pin').checked;const {error}=await sb.from('runs').update({title,project:project||null,image_url:imageUrl||null,caption:caption||null,output_url:output||null,visibility:audience,pinned_at:pin?(r.pinned_at||new Date().toISOString()):null}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};
+    $('run-save').onclick=async()=>{const title=$('run-title').value.trim(),project=$('run-project').value.trim(),imageUrl=$('run-image-url').value.trim(),caption=$('run-caption').value.trim(),output=$('run-output-url').value.trim(),audience=$('run-audience').value,heroVisual=controls.querySelector('input[name="run-hero-visual"]:checked')?.value||suggestedVisual||null;if(!title){status('Add a title.',true);$('run-title').focus();return}if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}if(imageUrl&&!isRunPhotoUrl(imageUrl)){status('The photo link must be https and end in .png, .jpg, .jpeg or .webp.',true);return}if(!(await requireCloseFriendsForSave(audience)))return;const pin=$('run-pin').checked;const {error}=await sb.from('runs').update({title,project:project||null,image_url:imageUrl||null,hero_visual:heroVisual,caption:caption||null,output_url:output||null,visibility:audience,pinned_at:pin?(r.pinned_at||new Date().toISOString()):null}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};
     $('run-delete').onclick=async()=>{if(!confirm('Delete this run and its discussion?'))return;const {error}=await sb.from('runs').delete().eq('id',r.id);if(error){status(error.message,true);return}history.replaceState(null,'','/?mine');viewMe()};
   }
   wireKudos(); if(openAck){ const card=$('card-'+id); if(card) wireAckPicker(card,r,preselect); }
@@ -1750,7 +1821,7 @@ function postComposerHtml({first=false}={}){
     <div class="up-foot">The reader sends recorded counts and timing, never prompt text, code or file paths. You review every field before choosing an audience.</div>
   </div>`}
   <details class="panel manual-post">
-    <summary>Post a run without a Cursor export</summary>
+    <summary>Advanced · enter a run by hand</summary>
     <div id="manualbox" class="pad">
       <p class="hint"><b>Manual posts have no capture identifier.</b> Use this only for a real session and leave unknown measurements blank. This browser gives each save an identifier and keeps the draft through an uncertain response, so Check and try again can open the first result instead of posting a duplicate. It never invents a measurement revision.</p>
       <label>What did you build?<input id="f_title" required maxlength="120" placeholder="Parser refactor"></label>
@@ -1781,6 +1852,7 @@ async function viewPost(){
     ${ME?postComposerHtml({first:true}):'<div class="panel pad auth-empty"><h3>Sign in to save</h3><p>Saving a run to your profile needs sign-in. Anyone with the link needs no account: whoever has the address can open that card.</p><button id="post-signin" class="act blue">'+signInLabel()+'</button></div>'}`;
   if(window.GrinderDropinUI) GrinderDropinUI.mount({post:token=>{history.pushState(null,'','/#import='+token);route();}});
   wireConnectCopies($('app'));
+  await loadLatestCardPreview();
   // A /l/ page's ask links to /#drop-zone. The page is drawn by script after load, so the
   // browser's own jump to the anchor has already missed it: scroll here, then drop the hash.
   if(location.hash==='#drop-zone'){
@@ -1859,7 +1931,7 @@ function wireComposer(){
       const prior=await existing();
       if(prior){await openExisting(prior);return}
     }catch(error){showRecovery(error);pb.disabled=false;return}
-    const row={id:attemptId,profile_id:ME.id,title,project:$('f_project').value||null,repo_url:safeRepoUrl($('f_repo')?.value),model:$('f_model').value.trim()||null,
+    const row={id:attemptId,profile_id:ME.id,title,project:$('f_project').value||null,repo_url:safeRepoUrl($('f_repo')?.value),model:$('f_model').value.trim()||null,trace_basis:'typed-by-author',
       segment_id:$('f_segment').value||null,wall_time_s:wallTime,
       harness:null,prompts:+$('f_prompts').value||null,duration_s:(+$('f_dur').value||0)*60||null,commits:+$('f_commits').value||null,
       caption,output_url:output||null,image_url:imageUrl||null,visibility:audience,started_at:new Date().toISOString()};
@@ -1920,7 +1992,7 @@ async function viewBoards(){
     sb.from('runs').select(PROJECT_SELECT).eq('visibility','public').order('created_at',{ascending:false}).limit(300),
     sb.from('runs').select(PROJECT_SELECT).eq('visibility','public').or(`wall_time_s.gte.${MARATHON_SECS},duration_s.gte.${MARATHON_SECS}`).order('wall_time_s',{ascending:false,nullsFirst:false}).order('duration_s',{ascending:false,nullsFirst:false}).limit(100)]);
   if(error){status(error.message,true);app.innerHTML='<div class="card"><div class="empty">Boards could not load.</div></div>';return;}
-  const all=recent||[]; noteTraces(all);
+  const all=(recent||[]).filter(r=>!typedOnlyRun(r)); noteTraces(all);
   const week=all.filter(r=>runStart(r)>=since.getTime());
   const top=(list,score,fmt,n=5)=>list.map(r=>[r,score(r)]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,n).map(([r,v])=>[r,fmt(v)]);
   const longest=top(week,runSeconds,fmtSecs);
@@ -1929,7 +2001,7 @@ async function viewBoards(){
   // commits) and the most tool calls. Both numbers come from the run row.
   const failures=week.filter(r=>(r.files_touched===0)||(r.files_touched==null&&r.commits===0)).map(r=>[r,runTools(r)]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,5)
     .map(([r,v])=>[r,`${v.toLocaleString()} calls, ${r.files_touched===0?'0 files changed':'0 commits'}`]);
-  const marathon=top([...new Map((longRuns||[]).map(r=>[r.id,r])).values()].filter(r=>runSeconds(r)>=MARATHON_SECS),runSeconds,fmtSecs,10);
+  const marathon=top([...new Map((longRuns||[]).map(r=>[r.id,r])).values()].filter(r=>!typedOnlyRun(r)&&runSeconds(r)>=MARATHON_SECS),runSeconds,fmtSecs,10);
   const weekLabel=`${since.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][since.getMonth()]}`;
   app.innerHTML=`<div class="head"><h1>Marathon and boards</h1><span class="meta">public runs only</span></div>
     <p class="hint">Every row is a public run anyone can open. This week starts Monday ${esc(weekLabel)} in your time zone. Time on a run is the measured wall time, else the session length.</p>
@@ -1970,7 +2042,7 @@ function projectTotals(R){
     hours:Math.round(R.reduce((a,r)=>a+(r.wall_time_s||r.duration_s||0),0)/360)/10,builders:new Set(R.map(r=>r.profile_id)).size};
 }
 async function viewProject(name){
-  const app=$('app'); frame(null,null); app.innerHTML=skeletonCard();
+  const app=$('app'); frame(railHtml('project'),null); setPrimarySection('projects'); app.innerHTML=skeletonCard();
   if(!name){return viewProjects();}
   const {data:pub,error}=await sb.from('runs').select(PROJECT_SELECT).eq('project',name).eq('visibility','public').order('created_at',{ascending:false}).limit(100);
   if(error){status(error.message,true);app.innerHTML='<div class="card"><div class="empty">This project could not load.</div></div>';return;}
@@ -1991,7 +2063,7 @@ async function viewProject(name){
   wireKudos(); countUp();
 }
 async function viewProjects(){
-  const app=$('app'); frame(railHtml('feed'),null); setPrimarySection('feed'); app.innerHTML=skeletonCard();
+  const app=$('app'); frame(railHtml('projects'),null); setPrimarySection('projects'); app.innerHTML=skeletonCard();
   const {data:runs,error}=await sb.from('runs').select('project,repo_url,profile_id,tool_calls,ridge_tool_calls,commits,created_at').eq('visibility','public').not('project','is',null).order('created_at',{ascending:false}).limit(500);
   if(error){status(error.message,true);app.innerHTML='<div class="card"><div class="empty">Projects could not load.</div></div>';return;}
   const by=new Map();
@@ -2002,6 +2074,19 @@ async function viewProjects(){
     ${list.length?`<div class="card">${list.map(v=>{const T=projectTotals(v.runs);const repo=v.runs.map(r=>r.repo_url&&safeOutputUrl(r.repo_url)).find(Boolean);
       return `<div class="p-row project-row"><span><a href="/?project=${encodeURIComponent(v.name)}"><b>${esc(GrinderContract.projectLabel(v.name))}</b></a>${repo?` <a class="meta" href="${esc(repo)}" target="_blank" rel="noopener noreferrer">repo ↗</a>`:''}</span><span class="v num">${T.runs} run${T.runs===1?'':'s'} · ${T.builders} builder${T.builders===1?'':'s'} · ${T.tool_calls} tool calls</span></div>`}).join('')}</div>`
       :`<div class="card"><div class="empty"><h3>No projects yet</h3><p>The first public run that names its project starts the list.</p><div class="cta"><a class="act blue" href="/?post">Post a run</a></div></div></div>`}`;
+}
+function toolLogoHtml(name){
+  const raw=String(name||''), key=raw.toLowerCase();
+  const label=key.includes('cursor')?'Cursor':key.includes('claude')?'Claude Code':key.includes('codex')?'Codex':key.includes('grok')?'Grok Bot':key.includes('astra')?'Astra':raw;
+  const mark=label==='Cursor'?'◩':label==='Claude Code'?'✳':label==='Codex'?'◎':label==='Grok Bot'?'𝕏':label==='Astra'?'✦':'•';
+  return `<span class="tool-chip"><span class="tool-mark" aria-hidden="true">${mark}</span>${esc(label)}</span>`;
+}
+function profileProjectsHtml(runs){
+  const groups=new Map();
+  for(const r of runs||[]){const name=GrinderContract.projectLabel(r.project);if(!name)continue;const g=groups.get(r.project)||{key:r.project,name,runs:0,commits:0,tools:0,latest:r.created_at};g.runs++;g.commits+=r.commits||0;g.tools+=r.tool_calls||r.ridge_tool_calls||0;if(String(r.created_at)>String(g.latest))g.latest=r.created_at;groups.set(r.project,g)}
+  const rows=[...groups.values()].sort((a,b)=>String(b.latest).localeCompare(String(a.latest))).slice(0,6);if(!rows.length)return '';
+  const max=Math.max(...rows.map(r=>r.runs),1);
+  return `<section aria-labelledby="profile-projects-title"><div class="head"><h2 id="profile-projects-title">Projects</h2><span class="meta">${groups.size} active</span></div><div class="profile-projects">${rows.map(p=>`<a class="profile-project" href="/?project=${encodeURIComponent(p.key)}"><h3>${esc(p.name)}</h3><div class="project-facts"><span>${p.runs} run${p.runs===1?'':'s'}</span>${p.commits?`<span>${p.commits} commit${p.commits===1?'':'s'}</span>`:''}${p.tools?`<span>${p.tools} tool calls</span>`:''}</div><div class="project-load" aria-hidden="true"><span style="width:${Math.max(10,Math.round(p.runs/max*100))}%"></span></div></a>`).join('')}</div></section>`;
 }
 async function viewProfile(handle){
   const app=$('app');
@@ -2024,17 +2109,17 @@ async function viewProfile(handle){
     ...vptTotals(R)};
   const harnesses=[...new Set(R.map(r=>r.harness).filter(Boolean))];
   const rg=prof.rig||{};
-  const setup=harnesses.join(' · ');
-  frame(railHtml(mine?'me':null,R), null);
+  const setup=harnesses.map(toolLogoHtml).join('');
+  frame(railHtml(mine?'profile':null,R), null); if(mine)setPrimarySection('profile');
   // A person's profile shows their face: their photo link, else their GitHub picture. An agent keeps its trace tile.
   app.innerHTML=`<div class="phero">${!isAgentProfile(prof)&&window.GrinderFeed?.face?GrinderFeed.face({profiles:prof},56):avatar(handle,{size:36,agent:isAgentProfile(prof)})}
-      <div><h1>${esc(prof.display_name||prof.name||handle)}</h1><div class="h">@${esc(handle)}${setup?' · '+esc(setup):''}</div>${profileLinksHtml(prof,mine)}</div></div>
+      <div><h1>${esc(prof.display_name||prof.name||handle)}</h1><div class="h">@${esc(handle)}</div>${profileLinksHtml(prof,mine)}</div>${mine?'<div class="profile-actions"><button id="edit-profile-open" class="ghost">Edit profile</button></div>':''}</div>
     <div id="social-follow" class="social-follow"></div>
+    ${profileProjectsHtml(R)}
+    ${setup?`<div class="head"><h2>Tools</h2></div><div class="profile-tools">${setup}</div>`:''}
     ${heatmapSvg(R)}
-    ${mine?`<details class="profile-settings"><summary>Edit profile</summary><div class="panel pad"><label>Handle<input id="e_handle" maxlength="40" value="${esc(handle)}"></label><label>Display name<input id="e_name" maxlength="60" value="${esc(prof.display_name||prof.name||'')}"></label><label>Photo link (optional)<input id="e_avatar" type="url" maxlength="2048" placeholder="https://…/me.jpg" value="${esc(prof.avatar_url||'')}"></label><button id="savep">Save profile</button><div id="linked-accounts"><p class="meta">Sign-in methods, sign out on this device and profile deletion live in <a href="/?account">Account settings</a>.</p></div></div></details>`:''}
+    ${mine?`<dialog id="profile-edit-dialog" class="profile-edit-dialog"><div class="dialog-head"><h2>Edit profile</h2><button id="edit-profile-close" class="icon-button" type="button" aria-label="Close">×</button></div><div class="dialog-body"><label>Handle<input id="e_handle" maxlength="40" value="${esc(handle)}"></label><label>Display name<input id="e_name" maxlength="60" value="${esc(prof.display_name||prof.name||'')}"></label>${prof.github_handle?`<div class="profile-photo-choice"><img src="https://github.com/${encodeURIComponent(prof.github_handle)}.png?size=160" alt=""><div><button id="use-github-photo" type="button" class="ghost">Use GitHub photo</button><p class="hint">Fetched from your linked GitHub account.</p></div></div>`:'<p class="hint">Link GitHub in Settings to use its profile photo.</p>'}<button id="savep">Save profile</button><div id="linked-accounts"><p class="meta">Sign-in methods and profile deletion live in <a href="/?account">Settings</a>.</p></div></div></dialog>`:''}
     ${mine?'<div id="close-friends-management"></div>':''}
-    ${(()=>{const seen=new Map();R.forEach(r=>{const l=GrinderContract.projectLabel(r.project);if(l&&!seen.has(r.project))seen.set(r.project,l)});return seen.size?`<p class="profile-context">Projects: ${[...seen].map(([k,l])=>`<a href="/?project=${encodeURIComponent(k)}">${esc(l)}</a>`).join(' · ')}</p>`:''})()}
-    <p class="profile-context">Identity first, then recent work. XUDOS are recognition from people, not a quality score.</p>
     ${pinnedHtml}
     <div class="head"><h2>${mine?'Your recent runs':(ME?'Recent runs you can see':'Recent public runs')}</h2><span class="meta">${R.length||'none yet'}${mine?` · <a href="/?share=1&u=${encodeURIComponent(handle)}">share your profile</a>`:''}</span></div>
     ${!mine&&!ME?'<p class="hint profile-public-note">Only Public runs appear here. Link runs stay off this profile.</p>':''}
@@ -2043,9 +2128,12 @@ async function viewProfile(handle){
   wireKudos(); countUp();
   await social.followControl(prof,$('social-follow'));
   if(mine) await social.closeFriends($('close-friends-management'));
-  if(mine) $('savep').addEventListener('click',async()=>{
-    const avatarUrl=$('e_avatar').value.trim();if(avatarUrl&&!/^https:\/\/[^\s]+$/i.test(avatarUrl)){status('The photo link must start with https://.',true);return}
+  if(mine){
+    const editDialog=$('profile-edit-dialog');$('edit-profile-open').onclick=()=>editDialog.showModal();$('edit-profile-close').onclick=()=>editDialog.close();
+    let avatarUrl=prof.avatar_url||null;const githubPhoto=$('use-github-photo');if(githubPhoto)githubPhoto.onclick=()=>{avatarUrl=`https://github.com/${encodeURIComponent(prof.github_handle)}.png?size=160`;githubPhoto.textContent='GitHub photo selected'};
+    $('savep').addEventListener('click',async()=>{
     try{ME=await auth.updateProfile({handle:$('e_handle').value,display_name:$('e_name').value,avatar_url:avatarUrl});const h=profileHandle(ME);history.replaceState(null,'','/?u='+encodeURIComponent(h));await refreshAuth();await viewProfile(h);status('Saved.');}catch(e){status(e.detail?.message||'Your profile could not be saved.',true)} });
+  }
 }
 
 function signInWithGitHub(){
@@ -2081,12 +2169,17 @@ function viewIdentitySetup(){
 async function refreshAuth(){
   if(!auth)return;
   try{
-    const current=await auth.current();ME=current.profile;IDENTITY_SETUP=current.needsOnboarding?current:null;
+    const current=await auth.current();AUTH_USER=current.user||null;ME=current.profile;IDENTITY_SETUP=current.needsOnboarding?current:null;
     $('me').innerHTML=ME?'<a href="'+GrinderAuth.present(ME).url+'">@'+esc(profileHandle(ME))+'</a>':'';
-    $('auth').textContent=current.user?'Sign out':'Sign in';$('deletewrap').hidden=!ME;if($('delete-info'))$('delete-info').hidden=!!ME;
+    const shown=ME?GrinderAuth.present(ME):null, navAvatar=$('nav-avatar');
+    if(navAvatar){
+      if(shown?.avatar_url) navAvatar.outerHTML=`<img id="nav-avatar" src="${esc(shown.avatar_url)}" alt="" referrerpolicy="no-referrer">`;
+      else { navAvatar.outerHTML=`<span id="nav-avatar" class="profile-fallback">${esc((shown?.display_name||shown?.handle||'ME').slice(0,2).toUpperCase())}</span>`; }
+    }
+    $('account-menu').hidden=!current.user;$('auth').hidden=!!current.user;$('auth').textContent='Sign in';$('deletewrap').hidden=!ME;if($('delete-info'))$('delete-info').hidden=!!ME;
     $('mobile-product-nav').hidden=false;syncAuthNav();status('');
     if(social.refreshUnread) social.refreshUnread();
-  }catch(e){ME=null;IDENTITY_SETUP=null;status(e.detail?.message||'Sign-in could not be restored. Try again.',true);}
+  }catch(e){AUTH_USER=null;ME=null;IDENTITY_SETUP=null;status(e.detail?.message||'Sign-in could not be restored. Try again.',true);}
 }
 
 // The publish payload survives the OAuth round trip in sessionStorage, because it cannot survive
@@ -2201,7 +2294,7 @@ async function importRun(){
       // Declared outcome receipts travel into the preview, so what the card shows here is what a
       // reader would see. Without these the preview silently dropped the repo, the shipped lines,
       // the receipt links and the demo, and only the counts survived.
-      repo_url:safeRepoUrl($('i_repo')?.value)||null,receipts:run.receipts||null,shipped:run.shipped||null,
+      repo_url:(()=>{const url=safeOutputUrl($('i_repo')?.value);return url&&/^https:/.test(url)?url:null})(),receipts:run.receipts||null,shipped:run.shipped||null,
       artifact_url:run.artifact_url||null,image_url:sceneUrl,
       code_route:run.code_route||null,
       visibility:'private',started_at:run.started||null,created_at:run.started||new Date().toISOString()};
@@ -2321,7 +2414,7 @@ async function importRun(){
 }
 
 async function viewShareRun(id){
-  const app=$('app'); frame(null,null,true);
+  const app=$('app'); frame(railHtml(null),null,true);
   const q=new URLSearchParams(location.search);
   const {data:r,error:runError}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('id',id).single();
   if(runError&&runError.code!=='PGRST116'){app.innerHTML='<div class="empty">This run could not load. Please refresh to try again.</div>';return;}
@@ -2335,7 +2428,7 @@ async function viewShareRun(id){
   GrinderSharing.mount({run:r,slot:app,status,moment});
 }
 async function viewShareRig(handle){
-  const app=$('app'); frame(null,null);
+  const app=$('app'); frame(railHtml(null),null);
   let prof;try{prof=await auth.byHandle(handle)}catch(e){status(e.detail?.message||'Profile could not load. Try again.',true);app.innerHTML='<p>Profile unavailable. Please refresh.</p>';return;}
   if(prof)handle=profileHandle(prof);
   if(!prof){ app.innerHTML='<div class="card"><div class="empty">Profile not found.</div></div>'; return; }
@@ -2354,7 +2447,7 @@ async function viewShareRig(handle){
 }
 
 async function viewShareProfile(handle){
-  const app=$('app'); frame(null,null,true);
+  const app=$('app'); frame(railHtml(null),null,true);
   let prof;try{prof=await auth.byHandle(handle)}catch(e){status(e.detail?.message||'Profile could not load. Try again.',true);app.innerHTML='<p>Profile unavailable. Please refresh.</p>';return;}
   if(prof)handle=profileHandle(prof);
   if(!prof){ app.innerHTML='<div class="empty">Profile not found.</div>'; return; }
@@ -2488,29 +2581,24 @@ async function route(){ account.recover(); try{document.title=pageTitle(new URLS
 document.addEventListener('DOMContentLoaded',()=>{
   $('app').innerHTML=skeletonCard();
   syncAuthNav();
-  // Desktop dropdowns (You, More): one open at a time, closed by a click outside or Escape.
+  // The avatar menu is the only dropdown. Product destinations live in the rail.
   const menus=[...document.querySelectorAll('details.account-menu')];
   menus.forEach(m=>m.addEventListener('toggle',()=>{ if(m.open) menus.forEach(o=>{ if(o!==m) o.open=false; }); }));
   document.addEventListener('click',e=>{ menus.forEach(m=>{ if(m.open && !m.contains(e.target)) m.open=false; }); });
   document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; menus.forEach(m=>{ if(m.open){ m.open=false; m.querySelector('summary')?.focus(); } }); });
-  // Phone: the You and More tabs open one sheet above the tab bar.
-  const sheet=$('sheet');
-  const closeSheet=()=>{ if(!sheet) return; sheet.hidden=true; document.querySelectorAll('[data-sheet]').forEach(b=>b.setAttribute('aria-expanded','false')); };
-  document.querySelectorAll('[data-sheet]').forEach(b=>b.addEventListener('click',e=>{
-    e.stopPropagation(); if(!sheet) return;
-    const kind=b.dataset.sheet, wasOpen=!sheet.hidden&&sheet.dataset.kind===kind;
-    closeSheet(); if(wasOpen) return;
-    sheet.dataset.kind=kind; sheet.innerHTML=menuLinks(kind); sheet.hidden=false; b.setAttribute('aria-expanded','true');
-    sheet.querySelector('a,button')?.focus({preventScroll:true});
-  }));
+  const drawer=$('notifications-drawer'), scrim=$('notifications-scrim'), noticeToggle=$('notifications-toggle');
+  const closeNotifications=()=>{if(!drawer)return;drawer.classList.remove('open');drawer.setAttribute('aria-hidden','true');drawer.setAttribute('inert','');noticeToggle?.setAttribute('aria-expanded','false');if(scrim){scrim.classList.remove('open');setTimeout(()=>{if(!scrim.classList.contains('open'))scrim.hidden=true},210)}};
+  const openNotifications=async()=>{if(!drawer)return;drawer.removeAttribute('inert');drawer.classList.add('open');drawer.setAttribute('aria-hidden','false');noticeToggle?.setAttribute('aria-expanded','true');if(scrim){scrim.hidden=false;requestAnimationFrame(()=>scrim.classList.add('open'))}await social.notificationsPanel?.($('notifications-body'));$('notifications-close')?.focus({preventScroll:true})};
+  noticeToggle?.addEventListener('click',()=>drawer?.classList.contains('open')?closeNotifications():openNotifications());
+  $('notifications-close')?.addEventListener('click',closeNotifications);scrim?.addEventListener('click',closeNotifications);
+  $('notifications-read-all')?.addEventListener('click',async()=>{await social.markAllNotificationsRead?.();await social.notificationsPanel?.($('notifications-body'))});
   document.addEventListener('click',e=>{
-    if(e.target.closest('[data-signin]')){ e.preventDefault(); closeSheet(); menus.forEach(m=>m.open=false); showSignIn(); return; }
-    if(sheet&&!sheet.hidden&&(!sheet.contains(e.target)||e.target.closest('a'))) closeSheet();
+    if(e.target.closest('[data-signin]')){ e.preventDefault(); menus.forEach(m=>m.open=false); showSignIn(); return; }
+    if(e.target.closest('[data-signout]')){ e.preventDefault(); auth.signOutLocal().then(()=>location.href='/').catch(err=>status(err.detail?.message||'Sign-out failed. Try again.',true)); }
+    if(drawer?.classList.contains('open')&&e.target.closest('[data-notification-open]')) closeNotifications();
   });
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&sheet&&!sheet.hidden){ const kind=sheet.dataset.kind; closeSheet(); document.querySelector(`[data-sheet="${kind}"]`)?.focus(); } });
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&drawer?.classList.contains('open')){closeNotifications();noticeToggle?.focus()}});
   $('auth').addEventListener('click',async()=>{ if(!sb){status('Refresh.',true);return;}
-    const {data:{session}}=await sb.auth.getSession();
-    if(session){try{await auth.signOutLocal();location.href='/';}catch(e){status(e.detail?.message||'Sign-out failed. Try again.',true)}return;}
     showSignIn(); });
   if(sb){
     // Initial session loading and SIGNED_IN can arrive together. Finish one render

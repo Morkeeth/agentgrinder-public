@@ -68,13 +68,13 @@ def test_no_disclaimer_rides_on_the_card():
 
 
 def test_the_map_is_drawn_from_indices_and_hidden_without_them():
-    with_map = feedcard.card({**LONG, "route": [0, 1, 0, 2, 1, 3]})
+    with_map = feedcard.card({**LONG, "route": [0, 1, 0, 2, 1, 3], "hero_visual": "change_atlas"})
     assert 'class="fc-map"' in with_map and with_map.count('class="fc-hop"') == 5 and with_map.count('class="fc-stn"') == 4
     assert "4 folders · 5 moves · 2 returns" in visible(with_map)
     # A row saved before the readers collapsed stays reads the same: [0, 0, 1] is one move, no return.
-    assert "2 folders · 1 move · 0 returns" in visible(feedcard.card({**LONG, "route": [0, 0, 1]}))
+    assert "2 folders · 1 move · 0 returns" in visible(feedcard.card({**LONG, "route": [0, 0, 1], "hero_visual": "change_atlas"}))
     # A gap in the numbering names no phantom station: [0, 5, 0] is two folders and one return.
-    assert "2 folders · 2 moves · 1 return" in visible(feedcard.card({**LONG, "route": [0, 5, 0]}))
+    assert "2 folders · 2 moves · 1 return" in visible(feedcard.card({**LONG, "route": [0, 5, 0], "hero_visual": "change_atlas"}))
     for route in (None, [], [0], [0, 0, 0], [0, "site"], [0, 16], [-1, 0]):
         assert 'class="fc-map"' not in feedcard.card({**LONG, "route": route}), route
     # The browser draws the same map, character for character.

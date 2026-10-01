@@ -25,7 +25,9 @@ def test_boards_read_public_runs_only_and_use_the_card_time_rule():
 
 def test_boards_are_routed_and_in_the_menu():
     assert "if(q.has('boards'))return viewBoards();" in INDEX
-    assert "['/?boards','Marathon and boards']" in INDEX
+    # Boards remain directly addressable, but do not compete with Feed, Projects and Profile.
+    rail = INDEX[INDEX.index("function railHtml"):INDEX.index("function feedTabs")]
+    assert "/?boards" not in rail
     assert 'href="/?boards">Marathon and boards</a>' in INDEX
 
 

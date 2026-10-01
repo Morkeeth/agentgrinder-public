@@ -12,30 +12,26 @@ def connect_body():
     return HTML[HTML.index('function connectBodyHtml()'):HTML.index('function wireConnectCopies(')]
 
 
-def test_phone_handoff_says_capture_needs_the_computer():
+def test_connect_leads_with_computer_capture():
     body = connect_body()
-    assert 'data-phone-handoff="1"' in body
-    assert "Capture runs on the computer where your agent runs" in body
-    assert "This phone cannot record a sitting" in body
-    assert ".ob-phone-handoff{display:none}" in HTML
-    assert "@media(max-width:800px)" in HTML
-    assert ".ob-phone-handoff{display:block}" in HTML
+    assert "Run this on the computer where you build" in body
+    assert "opens a private preview" in body
+    assert "Copy command" in body
 
 
-def test_one_page_one_command_per_agent_and_the_drop_zone():
+def test_one_page_auto_capture_with_advanced_import():
     body = connect_body()
     assert "${dropZoneHtml()}" in body
-    for name, harness in (("Claude Code", "claude"), ("Cursor", "cursor"), ("Codex", "codex")):
-        assert f"agent('{name}','{harness}'" in body
-    assert "ONE_LINE('grokbot')" in body
+    assert "const capture=ONE_LINE('auto')" in body
+    assert "Advanced options" in body
+    assert "Connect through MCP" in body
     assert "uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind" in HTML
     for path in ("~/.claude/projects/", "~/.cursor/projects/", "~/.codex/sessions/"):
         assert path in HTML
     # No account for the card or the link; sign-in only to post. No email, no mailto.
-    assert "No account for the card or the link" in body
+    assert "Nothing posts without your action" in body
     assert "mailto:" not in body and "signInWithOtp" not in body
-    # Bots and unsupported agents have a path too, and the token flow keeps its address.
-    assert 'href="/?connect=auto"' in body
+    # Bots and unsupported agents have documented paths under Advanced.
     assert "docs/AGENT-UPLOAD-API.md" in body and "docs/GROK-PUSH.md" in body
 
 

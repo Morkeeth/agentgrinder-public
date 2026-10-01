@@ -57,7 +57,8 @@ def _claude_transcript(home: Path) -> Path:
 def test_the_copied_command_reads_any_of_the_four_tools():
     assert 'python3 -m agentgrinder grind --harness auto"' in INDEX     # INSTALL_CMD
     assert "python3 -m agentgrinder grind --harness auto --push" in INDEX
-    assert "--harness cursor" not in INDEX
+    assert "const capture=ONE_LINE('auto')" in INDEX
+    assert "hook install --harness cursor" in INDEX
     assert "Capture from Cursor, Claude Code, Codex or Grok Bot" in INDEX
 
 

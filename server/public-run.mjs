@@ -8,7 +8,7 @@ export const validId=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function readPublic(id,fetcher=fetch){
  if(!validId(id))return null;
- const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,created_at,title,caption,output_url,repo_url,receipts,shipped,artifact_url,image_url,project,harness,started_at,duration_s,wall_time_s,prompts,tool_calls,shell_calls,files_touched,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,code_route,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
+ const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,created_at,title,caption,output_url,repo_url,receipts,shipped,artifact_url,image_url,hero_visual,project,harness,started_at,duration_s,wall_time_s,prompts,tool_calls,shell_calls,files_touched,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,code_route,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
  const response=await fetcher(config.SB_URL+'/rest/v1/runs?'+query,{headers:{apikey:config.SB_KEY,"Accept-Profile":config.SB_SCHEMA},cache:'no-store',signal:AbortSignal.timeout(8000)});
  if(!response.ok)throw new Error('Public run unavailable');const rows=await response.json();
  // The query asks for public rows only. The row is checked again here, so a lost filter or a
@@ -245,9 +245,18 @@ export async function readAvatar(run,fetcher=fetch){
  }catch(_){return null}
 }
 export function card(run,opts={}){
- const routePlot=codeRoutePlot(run);
+ const availableRoutePlot=codeRoutePlot(run);
+ const availableSeries=series(run);
+ const availableGeo=Feed.routeGeometry(run);
+ const requested=run.hero_visual;
+ const selected=requested==='activity_terrain'&&availableSeries?'activity_terrain'
+  :requested==='change_atlas'&&(availableGeo||availableRoutePlot)?'change_atlas'
+  :requested==='proof_route'&&availableRoutePlot?'proof_route'
+  :requested==='result'?'result'
+  :availableRoutePlot?'proof_route':availableSeries?'activity_terrain':availableGeo?'change_atlas':'result';
+ const routePlot=selected==='proof_route'||(selected==='change_atlas'&&!availableGeo)?availableRoutePlot:null;
  const insight=routePlot?routeInsight(run.code_route):'';
- const plotted=routePlot?null:series(run);
+ const plotted=selected==='activity_terrain'?availableSeries:null;
  const lead=Feed.headline(run),facts=Feed.stats(run,lead);
  const who=Feed.profileOf(run);
  const name=run.visibility==='public'?who.name:run.visibility==='anonymous'?'Anonymous builder':'Builder';
@@ -262,7 +271,7 @@ export function card(run,opts={}){
  // THE RUN MAP, the same geometry the card draws (Feed.routeGeometry), scaled to the image.
  // The card's 300 by 44 drawing, scaled to the image: x by the width, y by a flatter 2.2 so the
  // map stays a strip, and every station still a circle.
- const geo=Feed.routeGeometry(run);
+ const geo=selected==='change_atlas'?availableGeo:null;
  const SX=W/300,SY=2.2,MAP_H=Math.round((geo?geo.h:44)*SY),RAIL_Y=(geo?geo.rail:30)*SY;
  const hop=d=>{const n=d.match(/-?[\d.]+/g).map(Number);return `M${(n[0]*SX).toFixed(1)},${(n[1]*SY).toFixed(1)} Q${(n[2]*SX).toFixed(1)},${(n[3]*SY).toFixed(1)} ${(n[4]*SX).toFixed(1)},${(n[5]*SY).toFixed(1)}`;};
  const map=geo?el('div',{style:{display:'flex',flexDirection:'column',marginTop:6}},

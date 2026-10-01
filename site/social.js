@@ -257,6 +257,65 @@ window.GrinderSocial = function ({
     }
   }
 
+  async function notificationsPanel(slot) {
+    if (!slot) return;
+    if (!me()) {
+      slot.innerHTML = '<p class="notice-empty">Sign in to see replies, XUDOS and new followers.</p>';
+      return;
+    }
+    slot.innerHTML = '<p class="notice-empty">Loading…</p>';
+    try {
+      const rows = await result(
+        db
+          .from("grinder_notifications")
+          .select("*,actor:profiles!grinder_notifications_actor_id_fkey(github_handle,name,handle,display_name,avatar_url)")
+          .eq("recipient_id", me().id)
+          .order("created_at", { ascending: false })
+          .limit(20),
+      );
+      if (!rows.length) {
+        slot.innerHTML = '<p class="notice-empty">No notifications yet. Replies, XUDOS and follows will appear here.</p>';
+        return;
+      }
+      slot.innerHTML = rows.map((n) => {
+        const actor = present(n.actor);
+        const kind = n.kind === "reply" ? "replied to your run" : n.kind === "ack" ? "sent XUDOS" : "followed you";
+        const href = notificationHref(n);
+        return `<article class="notice-item ${n.read_at ? "read" : "unread"}" data-notification-id="${esc(n.id)}">
+          <span class="notice-dot" aria-hidden="true"></span><div><p class="notice-copy"><b>${esc(actor.label)}</b> ${kind}</p>
+          <p class="notice-meta">${esc(new Date(n.created_at).toLocaleString())}</p><div class="notice-links">
+          ${href ? `<a href="${href}" data-notification-open="1">Open</a>` : ""}
+          ${!n.read_at ? '<button type="button" data-notification-read="1">Mark read</button>' : ""}</div></div></article>`;
+      }).join("");
+      slot.querySelectorAll("[data-notification-open]").forEach((a) => a.addEventListener("click", () => {
+        stashResponseReturn();
+        const id = a.closest("[data-notification-id]")?.dataset.notificationId;
+        if (id) markNotificationsRead([id]);
+      }));
+      slot.querySelectorAll("[data-notification-read]").forEach((button) => button.addEventListener("click", async () => {
+        const item = button.closest("[data-notification-id]");
+        if (!item) return;
+        button.disabled = true;
+        await markNotificationsRead([item.dataset.notificationId]);
+        item.classList.remove("unread"); item.classList.add("read"); button.remove();
+      }));
+    } catch (e) {
+      slot.innerHTML = '<p class="notice-empty">Notifications could not load. Try again.</p>';
+      fail(e);
+    }
+  }
+
+  async function markAllNotificationsRead() {
+    if (!me()) return 0;
+    try {
+      const rows = await result(db.from("grinder_notifications").select("id").eq("recipient_id", me().id).is("read_at", null).limit(50));
+      await markNotificationsRead(rows.map((row) => row.id));
+      return rows.length;
+    } catch (e) {
+      fail(e); return 0;
+    }
+  }
+
   async function resolveNotificationTargets(rows) {
     const runIds = [
       ...new Set(rows.map((n) => n.run_id).filter((id) => uuid(id))),
@@ -1885,6 +1944,8 @@ window.GrinderSocial = function ({
     thread,
     inbox,
     refreshUnread,
+    notificationsPanel,
+    markAllNotificationsRead,
     crews,
     crew,
     join,

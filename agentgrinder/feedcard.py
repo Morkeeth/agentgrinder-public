@@ -243,6 +243,8 @@ def _hour_of(r: dict):
 
 def achievement(r: dict):
     """site/feed-card.js achievement(): one badge from the run's own numbers, first rule wins."""
+    if r.get("trace_basis") == "typed-by-author":
+        return None
     secs = whole(r.get("wall_time_s") if r.get("wall_time_s") is not None else r.get("duration_s"))
     turns = whole(r.get("prompts") if r.get("prompts") is not None else r.get("turns_typed"))
     tools = _tools(r)
@@ -417,6 +419,26 @@ def route_map(r: dict) -> str:
             f'{rail}{hops}{stations}</svg><p class="fc-map-k">{esc(g["label"])}</p></div>')
 
 
+def result_visual(r: dict) -> str:
+    shipped = [x for x in (r.get("shipped") or []) if x] if isinstance(r.get("shipped"), list) else []
+    commits = whole(r.get("commits")) or 0
+    n = len(shipped) or commits
+    label = shipped[0] if shipped else (f'{n} commit{"" if n == 1 else "s"} recorded' if n else "")
+    return (f'<div class="fc-result" aria-label="Result"><b class="num">{n}</b>'
+            f'<span>{esc(label)}</span></div>') if n and label else ""
+
+
+def hero_visual(r: dict) -> str:
+    """The web card's evidence-only chooser. Typed claims never earn a measured visual."""
+    if r.get("trace_basis") == "typed-by-author":
+        return ""
+    choices = [("activity_terrain", spark(r)), ("change_atlas", route_map(r)),
+               ("result", result_visual(r))]
+    choices = [(key, markup) for key, markup in choices if markup]
+    selected = next((markup for key, markup in choices if key == r.get("hero_visual")), None)
+    return selected or (choices[0][1] if choices else "")
+
+
 # THE STRIDE LINE. site/feed-card.js strideBars, strideText and stride: two lines of plain text.
 BARS = "▁▂▃▄▅▆▇█"
 
@@ -514,11 +536,13 @@ def card(r: dict, meta_extra: str = "", avatars: bool = False, url: str | None =
     dl = ('<dl class="fc-stats">' + "".join(f'<div><dt>{esc(k)}</dt><dd class="num">{esc(v)}</dd></div>' for k, v in facts) + "</dl>"
           if facts else "")
     cap_html = f'<p class="fc-cap">{esc(cap)}</p>' if cap else ""
+    typed = r.get("trace_basis") == "typed-by-author"
+    visual = '<p class="fc-source">Typed by the author. No capture.</p>' if typed else hero_visual(r)
     body = f"""
     <h1 class="fc-title">{esc(title_of(r))}</h1>
     {cap_html}
     <div class="fc-numbers">{hero}{dl}</div>
-    {badge(r)}{route_map(r)}{spark(r)}{stride(r, url)}
+    {badge(r)}{visual}{stride(r, url)}
   """
     return f"""<article class="card fc">
   <header class="fc-top">{face(r, avatars=avatars)}<div class="fc-who">{who}<small>{meta}</small></div>{shipped}</header>

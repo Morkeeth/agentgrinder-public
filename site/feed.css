@@ -81,6 +81,17 @@ button.fc-act:hover,a.fc-act:hover{background:var(--blue-wash);color:var(--blue)
 .fc-builder+.fc-builder{border-top:1px solid var(--rule-2)}
 .fc-builder .card-follow{margin-left:auto}
 
+/* exactly one evidence-backed signature visual per run */
+.fc-proof{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:14px -16px 0;padding:16px;background:var(--blue-wash);border-top:1px solid var(--blue-soft);border-bottom:1px solid var(--blue-soft)}
+.fc-proof>div{position:relative;padding:18px 9px 4px;border-top:2px solid var(--blue)}
+.fc-proof>div:before{content:"";position:absolute;left:8px;top:-5px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
+.fc-proof dt{font-size:10px;line-height:1.2;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);font-weight:600}.fc-proof dd{margin:5px 0 0;font-size:12px;line-height:1.35;color:var(--ink)}
+.fc-result{display:flex;gap:14px;align-items:center;margin:14px -16px 0;padding:18px 16px;background:var(--blue-wash);border-top:1px solid var(--blue-soft);border-bottom:1px solid var(--blue-soft)}.fc-result b{font-size:40px;line-height:1;color:var(--blue)}.fc-result span{font-size:14px;line-height:1.35}
+.fc-photo{margin:14px -16px 0}.fc-photo img{display:block;width:100%;max-height:340px;object-fit:cover}
+.fc-source{margin:12px 0 0;color:var(--soft);font-size:12px}
+.fc-atlas{margin:14px -16px 0;padding:14px 16px;background:var(--blue-wash);border-top:1px solid var(--blue-soft);border-bottom:1px solid var(--blue-soft)}.fc-atlas svg{display:block;width:100%;height:auto}.fc-atlas path{fill:none;stroke:var(--blue);stroke-width:2}.fc-atlas circle{fill:var(--blue)}.fc-atlas p{margin:6px 0 0;color:var(--soft);font-size:11px;line-height:1.35}
+@media(max-width:520px){.fc-proof{grid-template-columns:1fr 1fr}.fc-proof>div:nth-child(n+3){margin-top:10px}}
+
 /* the landing: headline, one action, then real cards */
 .land{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,520px);gap:56px;align-items:start;padding:40px 0 24px}
 .land .landing-intro{padding:40px 0 0;position:sticky;top:94px}
@@ -100,7 +111,7 @@ button.fc-act:hover,a.fc-act:hover{background:var(--blue-wash);color:var(--blue)
   .land .landing-intro .hint{margin:0}
 }
 
-/* menus: You and More on desktop share the account-menu dropdown */
+/* the avatar owns account actions on desktop */
 .account-panel .menu-sep{border-top:1px solid var(--rule-2);margin:4px 0}
 .account-panel button.menu-signin{width:100%;text-align:left;padding:8px 10px;background:none;color:var(--blue);border:0;font-size:13px}
 .bar nav .account-menu>summary .nav-badge{margin-left:4px}
@@ -109,7 +120,7 @@ button.fc-act:hover,a.fc-act:hover{background:var(--blue-wash);color:var(--blue)
 .tabbar{display:none}
 .sheet{display:none}
 @media(max-width:900px){
-  .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(4,1fr);background:var(--box);border-top:1px solid var(--rule);padding:0 0 env(safe-area-inset-bottom);white-space:normal;overflow:visible;gap:0;font-size:12px}
+  .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(3,1fr);background:var(--box);border-top:1px solid var(--rule);padding:0 0 env(safe-area-inset-bottom);white-space:normal;overflow:visible;gap:0;font-size:12px}
   .tabbar[hidden]{display:none}
   .tabbar>a,.tabbar>button{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:56px;padding:6px 0;background:none;border:0;border-radius:0;color:var(--soft);font:500 12px/1 'IBM Plex Sans',system-ui,sans-serif;cursor:pointer;position:relative}
   .tabbar>a:hover,.tabbar>button:hover{background:none;color:var(--ink)}

@@ -30,7 +30,7 @@ def test_missing_or_private_run_keeps_the_responses_return_path():
 def test_phone_path_to_account_settings_exists():
     """Under 900px the header menu is hidden; the profile's Edit profile panel must link there."""
     assert '<div id="linked-accounts"><p class="meta">' in INDEX
-    assert 'href="/?account">Account settings</a>' in INDEX
+    assert 'href="/?account">Settings</a>' in INDEX
 
 
 def test_follow_row_offers_the_profile_once():

@@ -21,9 +21,10 @@ def test_signed_in_builder_lands_on_the_feed_not_a_tour():
     assert "return viewLanding(); }" in route
     onboard = INDEX[INDEX.index("async function shouldOnboard(){") : INDEX.index("// THE ONE CONNECT PAGE")]
     assert "runCount()" not in onboard
-    # 25 Sep 2026: one Connect page, one command per agent, the drop zone first.
+    # The current Connect page leads with one auto-detect command. Tool-specific setup is advanced.
     assert "function connectBodyHtml()" in INDEX
-    assert "ONE_LINE('grokbot')" in INDEX
+    assert "const capture=ONE_LINE('auto')" in INDEX
+    assert "Advanced options" in INDEX
     assert "docs/GROK-PUSH.md" in INDEX
 
 
