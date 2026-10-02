@@ -27,7 +27,10 @@ def health(commit_sha=None):
     script = """
 const assert = require('node:assert/strict');
 const handler = require('./api/health.js');
-global.fetch = async () => ({ok: true});
+process.env.STRIVE_STORAGE_SERVICE_ROLE_KEY = 'test-only';
+global.fetch = async url => url.includes('/rpc/')
+  ? {ok: false, status: 401, json: async () => ({code: '42501'})}
+  : {ok: true, status: 200, json: async () => url.includes('/bucket/') ? {public: false} : []};
 const headers = {};
 let status;
 let body;
