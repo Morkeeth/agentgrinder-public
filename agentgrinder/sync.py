@@ -35,6 +35,7 @@ from . import ingest
 DEFAULT_SITE = os.environ.get("STRIVE_URL", "https://agentic-strava.vercel.app")
 STATE_DIR = Path(os.environ.get("STRIVE_HOME", str(Path.home() / ".strive")))
 IDLE_SECONDS = 10 * 60
+SITTING_GAP = 30 * 60   # a run ends after 30 idle minutes, the same split as the card and the CLI
 SINCE_DAYS = 7
 INTERVAL = 15 * 60
 MAX_PER_SYNC = 20   # the database rate-limits uploads; the rest go on the next sync
@@ -84,17 +85,31 @@ def idempotency_key(key: str) -> str:
     return str(uuid.uuid5(NAMESPACE, key))
 
 
-def parse(harness: str, path: str) -> dict:
-    if harness == "cursor":
-        return ingest.parse_cursor_session(path)
-    if harness == "codex":
-        return ingest.parse_codex_session(path)
-    return ingest.parse_session(path)
+def sitting_count(harness: str, path: str) -> int:
+    """How many sittings a person sat through in this file, oldest first. Raises ValueError for none.
+
+    The same 30-minute split as the CLI and the card (native_sittings, solo). Appending to a file
+    only extends its last sitting or adds a new one, so a sitting's position is a stable identity.
+    """
+    if harness == "claude":
+        from .solo import human_sittings
+        count = len(human_sittings(path, SITTING_GAP))
+    else:
+        from .native_sittings import sittings
+        count = len(sittings(path, harness, SITTING_GAP))
+    if not count:
+        raise ValueError("no sitting with a typed turn")
+    return count
 
 
-def payload_for(harness: str, path: str) -> dict:
+def sitting_key(key: str, index: int) -> str:
+    return f"{key}|{index}"
+
+
+def payload_for(harness: str, path: str, pick: int = -1) -> dict:
     from .agent_api import run_payload
-    run = parse(harness, path)
+    from .native_sittings import read_sitting
+    run = read_sitting(path, harness, pick=pick, gap=SITTING_GAP)
     run.pop("title", None)
     return run_payload(run, "private")
 
@@ -206,36 +221,60 @@ def sync_once(token: str, site: str = DEFAULT_SITE, dry_run: bool = False, since
             continue
         digest = hashlib.sha256(key.encode()).hexdigest()   # the state file holds no paths
         seen = state.get(digest) or {}
-        if seen.get("status") in ("sent", "skipped"):
-            counts["already"] += 1
-            continue
         if not dry_run and seen.get("snapshot") != snap:
             # First sight, or it moved since the last sync: wait one more sync before sending.
             state[digest] = {"status": "waiting", "snapshot": snap, "at": int(time.time())}
             counts["waiting"] += 1
             continue
+        if seen.get("status") == "skipped":
+            counts["already"] += 1
+            continue
         try:
-            payload = payload_for(harness, path)
+            total = sitting_count(harness, path)
         except (ValueError, KeyError, TypeError, OSError):
-            # No typed turn, an unreadable file or a session still being written: not a run.
-            state[digest] = {"status": "skipped", "at": int(time.time())}
+            # No typed turn or an unreadable file: not a run. Looked at again only if the file changes.
+            state[digest] = {"status": "skipped", "snapshot": snap, "at": int(time.time())}
             counts["skipped"] += 1
             continue
-        if dry_run:
-            out(f"  would send a private {payload.get('harness') or harness} run: "
-                f"{payload.get('tool_calls') or 0} tool calls, {payload.get('turns_typed') or 0} turns")
+        # A long-lived session file holds many sittings. Each one is its own private run, sent once.
+        # Earlier sittings are closed. The last stays open until the split gap has passed.
+        open_last = (time.time() if now is None else now) - snap[1] / 1e9 < SITTING_GAP
+        stop = False
+        for index in range(1, total + 1):
+            if counts["sent"] >= MAX_PER_SYNC:
+                break
+            skey = sitting_key(key, index)
+            sdigest = hashlib.sha256(skey.encode()).hexdigest()
+            if (state.get(sdigest) or {}).get("status") in ("sent", "skipped"):
+                counts["already"] += 1
+                continue
+            if index == total and open_last:
+                counts["waiting"] += 1
+                continue
+            try:
+                payload = payload_for(harness, path, pick=index)
+            except (ValueError, KeyError, TypeError, OSError):
+                state[sdigest] = {"status": "skipped", "at": int(time.time())}
+                counts["skipped"] += 1
+                continue
+            if dry_run:
+                out(f"  would send a private {payload.get('harness') or harness} run: "
+                    f"{payload.get('tool_calls') or 0} tool calls, {payload.get('turns_typed') or 0} turns")
+                counts["sent"] += 1
+                continue
+            try:
+                result = upload(payload, token, idempotency_key(skey), site, opener)
+            except RuntimeError as error:
+                out(f"  not sent ({harness}): {error}")
+                counts["failed"] += 1
+                if "HTTP 401" in str(error) or "HTTP 403" in str(error) or "Refusing" in str(error):
+                    stop = True   # a revoked token or an untrusted site fails every file; stop and say so once
+                    break
+                continue
+            state[sdigest] = {"status": "sent", "id": result.get("id"), "at": int(time.time())}
             counts["sent"] += 1
-            continue
-        try:
-            result = upload(payload, token, idempotency_key(key), site, opener)
-        except RuntimeError as error:
-            out(f"  not sent ({harness}): {error}")
-            counts["failed"] += 1
-            if "HTTP 401" in str(error) or "HTTP 403" in str(error) or "Refusing" in str(error):
-                break   # a revoked token or an untrusted site fails every file; stop and say so once
-            continue
-        state[digest] = {"status": "sent", "id": result.get("id"), "at": int(time.time())}
-        counts["sent"] += 1
+        if stop:
+            break
     if not dry_run:
         save_state(state)
     return counts

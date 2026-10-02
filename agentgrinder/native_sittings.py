@@ -54,6 +54,7 @@ def sittings(path, harness, gap=1800):
     )
     groups, current, metadata = [], [], []
     last = None
+    idle = False
     delegated = False
     for row in source:
         payload = row.get("payload") or {}
@@ -88,11 +89,17 @@ def sittings(path, harness, gap=1800):
                 and (harness != "grokbot" or "<timestamp>" in text)
             )
             stamp = cursor_time(text)
-        if human and current and stamp and last and (stamp-last).total_seconds()>gap:
+        # Idle is any gap over `gap` between two dated rows, not only the gap just before the typed
+        # turn: Codex writes turn_context, token_count and task_started at the moment of sending, so
+        # the row before a typed turn is always under two seconds old (measured 2 Oct over 346 turns).
+        if stamp and last and (stamp-last).total_seconds()>gap:
+            idle = True
+        if human and current and idle:
             groups.append(metadata+current); current=[]
+        if human: idle=False   # idle before the first typed turn opens nothing
+        if stamp: last=stamp
         if human or current:
             current.append(row)
-            if stamp: last=stamp
     if current: groups.append(metadata+current)
     return groups
 
