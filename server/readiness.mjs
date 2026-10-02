@@ -16,10 +16,14 @@ export async function readiness(config,{fetcher=fetch,storageKey=process.env.STR
  let denied=false;try{denied=[401,403].includes(discovery?.status)&&(await discovery.json()).code==='42501';}catch{}
  checks.discovery=denied?'ready':'unavailable';
  checks.photo_storage='unavailable';
- checks.photo_cleanup=cronSecret?'ready':'unavailable';
+ checks.photo_cleanup='unavailable';
  if(storageKey){
   const storage=await read('/storage/v1/bucket/strive-run-photos',{headers:{apikey:storageKey,Authorization:'Bearer '+storageKey}});
   try{if(storage?.ok&&(await storage.json()).public===false)checks.photo_storage='ready';}catch{}
+  if(cronSecret){
+   const queue=await read('/rest/v1/photo_deletion_queue?select=object_name&limit=0',{headers:{apikey:storageKey,Authorization:'Bearer '+storageKey,'Accept-Profile':'strava'}});
+   if(queue?.ok)checks.photo_cleanup='ready';
+  }
  }
  return {ready:Object.values(checks).every(v=>v==='ready'),checks};
 }
