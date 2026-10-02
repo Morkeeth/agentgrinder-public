@@ -38,7 +38,7 @@ export async function runPhotos({method,headers={},query={},body},config,fetchIm
   if(runId!==undefined&&!UUID.test(String(runId))) return result(400,{error:'Choose a saved run.'});
   if(method==='POST'&&!runId) return result(400,{error:'Save the session privately before adding photos.'});
   if(query.id!==undefined&&!UUID.test(String(query.id))) return result(400,{error:'Photo not found.'});
-  const dbHeaders={apikey:config.SB_KEY,Authorization:bearer||`Bearer ${config.SB_KEY}`,
+  const dbHeaders={apikey:config.SB_KEY,...(bearer?{Authorization:bearer}:{}),
    'Accept-Profile':'strava','Content-Profile':'strava','Content-Type':'application/json',
    ...(runId?{'x-grinder-run-id':runId}:{})};
   async function request(url,opts={}) {
