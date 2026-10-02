@@ -25,7 +25,7 @@ def test_connect_calls_thin_wrappers_exactly():
 def test_connect_primary_next_is_mine_for_private_uploads():
     assert 'href="/?mine">See my runs</a>' in CONNECT
     assert "Private uploads appear in" in CONNECT
-    assert "Share explicitly" in CONNECT
+    assert "Choose Public when you want a run on the feed." in CONNECT
     # Primary Next CTA is Mine, not explore-as-blue
     next_block = CONNECT[CONNECT.index("<h2>Next</h2>") :]
     blue = next_block.index('class="act blue"')

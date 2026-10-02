@@ -74,6 +74,38 @@ def test_public_run_page_stays_public():
     assert "This run is private on STRIVE" not in out["body"]
 
 
+def test_public_run_route_renders_revocable_same_origin_photos():
+    script = r'''
+const root=process.argv[1],id=process.argv[2];
+const run={id,title:'Fixture public run',visibility:'public',profiles:{handle:'fixture-builder'}};
+const photo='22222222-2222-2222-2222-222222222222';
+const seen=[];
+globalThis.fetch=async(url,opts={})=>{seen.push({url:String(url),authorization:opts.headers?.Authorization||null,apikey:opts.headers?.apikey||null});
+  if(String(url).includes('/rest/v1/runs?'))return new Response(JSON.stringify([run]),{status:200});
+  if(String(url).includes('/rest/v1/run_photos?'))return new Response(JSON.stringify([{id:photo,run_id:id,width:1200,height:900,byte_size:1234,created_at:'2026-10-02T00:00:00Z'}]),{status:200});
+  if(String(url).includes('/rest/v1/acks?'))return new Response('[]',{status:200});
+  throw Error('unexpected '+url);
+};
+const handler=require(root+'/api/run.js');
+const req={query:{id}};const headers={};let body='';
+const res={statusCode:200,setHeader:(k,v)=>{headers[k.toLowerCase()]=v},end:b=>{body=String(b??'')}};
+handler(req,res).then(()=>console.log(JSON.stringify({status:res.statusCode,type:headers['content-type'],body,seen})));
+'''
+    result = subprocess.run(
+        ["node", "-e", script, str(ROOT), MISSING], cwd=ROOT,
+        check=True, capture_output=True, text=True)
+    out = json.loads(result.stdout.strip().splitlines()[-1])
+    assert out["status"] == 200
+    assert '<section class="public-run-photos"' in out["body"]
+    assert f'/api/run-photos?id=22222222-2222-2222-2222-222222222222&amp;run_id={MISSING}' in out["body"]
+    assert 'width="1200" height="900"' in out["body"]
+    assert "storage/v1" not in out["body"] and "signed" not in out["body"].lower()
+    photo_read = next(call for call in out["seen"] if "/rest/v1/run_photos?" in call["url"])
+    assert photo_read["authorization"] is None
+    assert photo_read["apikey"]
+    assert "run_id=eq." + MISSING in photo_read["url"]
+
+
 def test_link_row_that_reaches_the_handler_stays_neutral_for_strangers():
     # Oscar ruling: Link is relationship-gated, not globally readable on /r/.
     # Even if a link row reached the handler, the public-only re-check must keep the neutral page.

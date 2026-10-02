@@ -12,8 +12,8 @@ def test_run_edit_panel_offers_title_project_and_photo():
         assert f'id="{field}"' in panel
     # runs.title is NOT NULL: an empty title is refused in the page, an empty project saves null.
     assert "if(!title){status('Add a title.',true)" in panel
-    assert "update({title,project:project||null,image_url:imageUrl||null" in panel
-    assert "isRunPhotoUrl(imageUrl)" in panel
+    assert "update({title,project:project||null,hero_visual:heroVisual" in panel
+    assert "image_url:imageUrl" not in panel
     # Only the owner gets the panel.
     assert "if(ME?.id===r.profile_id){" in INDEX[INDEX.index("async function viewRun(id){"):INDEX.index("controls.id='run-edit'")]
 
