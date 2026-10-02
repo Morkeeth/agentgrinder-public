@@ -76,7 +76,7 @@ const actionUrl=(runId,canonical,facts,decision)=>{
   '',
   'Challenge or next verified stop:',
  ].filter(Boolean).join('\n');
- const url=new URL('https://github.com/Morkeeth/agentgrinder-public/issues/new');
+ const url=new URL('https://github.com/Morkeeth/strive/issues/new');
  url.searchParams.set('title',title);
  url.searchParams.set('body',body);
  return url.href;

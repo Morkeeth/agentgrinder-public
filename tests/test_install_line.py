@@ -30,7 +30,7 @@ def test_the_copy_button_runs_from_the_clone_and_installs_nothing():
     cmd = _install_cmd()
     assert "pip install" not in cmd, cmd          # the command that fails on stock macOS python
     assert "python3 -m agentgrinder grind" in cmd  # the path that works with no install
-    assert cmd.startswith("git clone https://github.com/Morkeeth/agentgrinder")
+    assert cmd.startswith("git clone https://github.com/Morkeeth/strive")
 
 
 def test_the_copy_button_does_not_promise_the_coach_on_a_python_that_cannot_run_it():

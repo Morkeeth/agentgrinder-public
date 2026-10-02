@@ -11,11 +11,10 @@ MIGRATION = (ROOT / "supabase" / "migrations" / "2026-09-14-run-post-fields.sql"
 def test_post_page_exposes_priority_harnesses_and_private_preview():
     block = INDEX[INDEX.index("async function viewPost()") : INDEX.index("async function viewExplore()")]
     composer = INDEX[INDEX.index("function postComposerHtml(") : INDEX.index("async function viewPost()")]
-    # 25 Sep 2026: the page names four agents and gives each its own command, on one page.
+    # The page starts with one auto-detect command; per-tool setup is secondary.
     connect = INDEX[INDEX.index("function connectBodyHtml()") : INDEX.index("function wireConnectCopies(")]
-    for name, harness in (("Claude Code", "claude"), ("Cursor", "cursor"), ("Codex", "codex")):
-        assert f"agent('{name}','{harness}'" in connect
-    assert "ONE_LINE('grokbot')" in connect
+    assert "const capture=ONE_LINE('auto')" in connect
+    assert "Advanced options" in connect
     assert "Grok Bot" in connect
     assert "docs/GROK-PUSH.md" in connect
     assert "${connectBodyHtml()}" in block
@@ -31,13 +30,13 @@ def test_card_shows_builder_project_session_caption_and_output():
         assert field in card
     assert "Open ${esc(ridgeOutput||'output')}" in card
     assert card.index("${r.caption?") < card.index("${visual}")
-    assert card.index("${cover}") < card.index("${visual}")
-    assert card.index("run-social-actions") < card.index("${explore}")
+    assert "chosenRunHero" in card
+    assert card.index("${visual}") < card.index("${metricStrip()}")
     assert "Project touched" in card
     assert "Code activity" in card
     assert "Explore this run" in card
     assert "card-follow" in card
-    assert "coverHtml" in card or "${cover}" in card
+    assert "runHeroChoices" in INDEX
     assert "card-harness" in card
     assert "run-metrics" in card
     assert "heroStats" in card

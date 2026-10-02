@@ -20,7 +20,7 @@ def test_show_sign_in_copy_has_no_agentgrinder():
     start = index.index("function showSignIn")
     end = index.index("\nfunction viewIdentitySetup", start)
     block = index[start:end]
-    assert "Continue with GitHub" in block
+    assert "Continue with '+providerLabel(p)" in block
     assert "__BRAND__" in block or "STRIVE" in block
     assert "Agentgrinder" not in block
     assert "Agent Grinder" not in block

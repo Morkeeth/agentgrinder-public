@@ -36,11 +36,13 @@ def test_run_photo_rule_matches_the_contract():
     assert all(out), dict(zip(cases, out))
 
 
-def test_profile_edit_offers_a_photo_link_and_refuses_http():
-    assert 'id="e_avatar"' in INDEX
+def test_profile_edit_uses_the_linked_github_photo_not_a_typed_url():
+    assert 'id="e_avatar"' not in INDEX
+    assert 'id="use-github-photo"' in INDEX
     save = INDEX[INDEX.index("$('savep').addEventListener"):INDEX.index("function signInWithGitHub")]
     assert "avatar_url:avatarUrl" in save
-    assert "/^https:\\/\\/[^\\s]+$/i.test(avatarUrl)" in save
+    assert "let avatarUrl=prof.avatar_url||null" in INDEX
+    assert "avatarUrl=`https://github.com/${encodeURIComponent(prof.github_handle)}.png?size=160`" in INDEX
 
 
 def test_profile_header_shows_the_face_for_a_person():

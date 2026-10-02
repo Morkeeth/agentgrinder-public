@@ -44,7 +44,7 @@ const href=page.match(/<a class="action" href="([^"]+)"/)?.[1].replaceAll('&amp;
 assert.ok(href,'continuation URL missing');
 const continuation=new URL(href);
 assert.equal(continuation.hostname,'github.com');
-assert.equal(continuation.pathname,'/Morkeeth/agentgrinder-public/issues/new');
+assert.equal(continuation.pathname,'/Morkeeth/strive/issues/new');
 assert.ok(continuation.searchParams.get('body').includes(canonical));
 assert.ok(continuation.searchParams.get('body').includes('Decision to challenge: Carry the work beyond agentgrinder-public to fleet-ops.'));
 assert.ok(continuation.searchParams.get('body').includes('State renderer repaired'));
@@ -67,7 +67,7 @@ console.log('PASS decision story uses the supplied route and preserves context i
  assert.ok(hasDecisionStory(other));
  const html=render(other,{origin:'https://strive.test'});
  // The challenge is filed in STRIVE's own repository; nothing else may name another run's projects.
- const story=html.replaceAll('github.com/Morkeeth/agentgrinder-public/issues/new','');
+ const story=html.replaceAll('github.com/Morkeeth/strive/issues/new','');
  for(const leak of ['fleet-ops','agentgrinder-public','strive-live','fleet-fail'])assert.ok(!story.includes(leak),'hard-coded '+leak);
  assert.ok(html.includes('Carry the work beyond api to web.')&&html.includes('Challenge the web handoff'));
  // A public run with no Code Route has no decision story (api/decision.js sends it to /r/<id>).

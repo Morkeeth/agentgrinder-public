@@ -24,5 +24,6 @@ def test_home_invents_nothing():
     for word in ("sample", "Sample", "example club", "demo"):
         assert word not in landing
     home = (ROOT / "site/home.js").read_text()
-    assert "No events planned yet." in index and "No clubs yet." in index
+    # Empty secondary modules stay out of the signed-out landing page.
+    assert "No events planned yet." not in index and "No clubs yet." not in index
     assert "Math.random" not in home

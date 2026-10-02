@@ -23,7 +23,8 @@ def test_run_map_markup_and_copy():
     assert "Linked output is not placed on the map" in CONTRACT
     assert "touchOrigin.scrubbing" in CONTRACT
     ridge_fn = CONTRACT.split("function ridge")[1].split("function mountRunMaps")[0]
-    assert 'role="img"' not in ridge_fn
+    assert 'role="img"' in ridge_fn
+    assert 'aria-label="Tool calls across ${escText(basisLabel)}"' in ridge_fn
 
 
 def test_no_fake_ranked_metrics_or_unknown_disclaimers():

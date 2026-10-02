@@ -67,3 +67,17 @@ def test_a2a_export_selects_codex_and_latest_sitting(tmp_path, monkeypatch, caps
     assert doc['duration_s'] == 120
     assert doc['turns_typed'] == 1
     assert doc['source']['ingest'] == 'native-codex-jsonl'
+
+
+def test_codex_send_time_rows_do_not_hide_an_idle_gap(tmp_path):
+    # Codex writes turn_context and task_started at the moment of sending, under 2 s before the
+    # typed turn (measured 2 Oct 2026 over 346 real turns). Idle is the gap BEFORE those rows.
+    path=tmp_path/'desktop.jsonl'
+    rows=[{'type':'session_meta','timestamp':'2026-09-01T09:00:00Z','payload':{'cwd':str(tmp_path)}}]
+    for day,hour in (('01','09'),('01','12')):
+        rows.append({'type':'turn_context','timestamp':f'2026-09-{day}T{hour}:00:00Z','payload':{}})
+        rows.append({'type':'event_msg','timestamp':f'2026-09-{day}T{hour}:00:00.500Z','payload':{'type':'task_started'}})
+        rows.append({'type':'event_msg','timestamp':f'2026-09-{day}T{hour}:00:01Z','payload':{'type':'user_message','message':'Go'}})
+        rows.append({'type':'response_item','timestamp':f'2026-09-{day}T{hour}:05:00Z','payload':{'type':'function_call','call_id':hour}})
+    path.write_text('\n'.join(json.dumps(row) for row in rows))
+    assert len(sittings(path,'codex'))==2

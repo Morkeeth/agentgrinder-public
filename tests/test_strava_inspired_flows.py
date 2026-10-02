@@ -57,8 +57,8 @@ def test_run_detail_promotes_audience_aware_next_action():
 
 def test_profile_and_response_return_are_people_first():
     profile = INDEX[INDEX.index("async function viewProfile(") : INDEX.index("function showSignIn(")]
-    assert profile.index("Identity first, then recent work") < profile.index("Recent public runs")
-    assert profile.index("Recent public runs") < profile.index("Profile totals")
+    assert profile.index("profileProjectsHtml(R)") < profile.index("Recent public runs")
+    assert "Edit profile" in profile and "profile-edit-dialog" in profile
     assert "Post a real run and share it with a friend" in SOCIAL
     assert "Open the exact conversation, then come back here" in SOCIAL
     assert "Post your next run" in SOCIAL

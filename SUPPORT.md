@@ -4,9 +4,9 @@ Questions and reports are welcome, including “the start guide did not work for
 
 ## Where to ask
 
-- **Setup, contribution or usage question:** [open a help request](https://github.com/Morkeeth/agentgrinder-public/issues/new?template=help.md).
-- **Broken behaviour:** [report a bug](https://github.com/Morkeeth/agentgrinder-public/issues/new?template=bug.md).
-- **Feature or design idea:** [propose an improvement](https://github.com/Morkeeth/agentgrinder-public/issues/new?template=improvement.md).
+- **Setup, contribution or usage question:** [open a help request](https://github.com/Morkeeth/strive/issues/new?template=help.md).
+- **Broken behaviour:** [report a bug](https://github.com/Morkeeth/strive/issues/new?template=bug.md).
+- **Feature or design idea:** [propose an improvement](https://github.com/Morkeeth/strive/issues/new?template=improvement.md).
 - **A change already under review:** comment on its PR so the discussion stays with the code.
 
 Search existing issues first. If yours matches, add useful new details rather than opening a duplicate. Support is community-based; there is no promised response time.

@@ -57,7 +57,8 @@ def _claude_transcript(home: Path) -> Path:
 def test_the_copied_command_reads_any_of_the_four_tools():
     assert 'python3 -m agentgrinder grind --harness auto"' in INDEX     # INSTALL_CMD
     assert "python3 -m agentgrinder grind --harness auto --push" in INDEX
-    assert "--harness cursor" not in INDEX
+    assert "const capture=ONE_LINE('auto')" in INDEX
+    assert "hook install --harness cursor" in INDEX
     assert "Capture from Cursor, Claude Code, Codex or Grok Bot" in INDEX
 
 
@@ -84,6 +85,29 @@ def test_auto_makes_a_card_from_a_claude_code_session(tmp_path):
     assert out.is_file() and "<html" in card
     assert "Claude Code" in card               # the card names the harness it read
     assert "1 file changed in demo" in done.stdout
+
+
+def test_codex_desktop_response_items_split_into_real_sittings(tmp_path):
+    """The current Codex app has response_item/message turns, not event_msg/user_message."""
+    from agentgrinder.native_sittings import sittings
+
+    transcript = tmp_path / "rollout.jsonl"
+    rows = [
+        {"timestamp": "2026-10-01T10:00:00Z", "type": "session_meta",
+         "payload": {"cwd": str(tmp_path), "source": "user"}},
+        {"timestamp": "2026-10-01T10:00:01Z", "type": "response_item",
+         "payload": {"type": "message", "role": "user",
+                     "content": [{"type": "input_text", "text": "repair the card"}]}},
+        {"timestamp": "2026-10-01T10:00:02Z", "type": "response_item",
+         "payload": {"type": "function_call", "call_id": "call-1", "name": "exec", "arguments": "{}"}},
+        {"timestamp": "2026-10-01T11:00:00Z", "type": "response_item",
+         "payload": {"type": "message", "role": "user",
+                     "content": [{"type": "input_text", "text": "verify the repair"}]}},
+    ]
+    transcript.write_text("\n".join(json.dumps(row) for row in rows) + "\n")
+    groups = sittings(str(transcript), "codex", gap=1800)
+    assert len(groups) == 2
+    assert any((row.get("payload") or {}).get("call_id") == "call-1" for row in groups[0])
 
 
 # ---- the next step when there is nothing to read ---------------------------------------------

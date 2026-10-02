@@ -29,7 +29,8 @@ def test_post_forms_offer_three_private_first_audiences():
         assert 'value="close_friends"' in choices
         assert 'value="public"' in choices
         assert 'value="link"' in choices
-    assert "Your first post defaults to Only me." in INDEX
+    assert "Choose an audience" in INDEX
+    assert "Only me - just you" in INDEX
 
 
 def test_profile_manages_an_owner_only_list_by_handle():

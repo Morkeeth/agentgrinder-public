@@ -110,6 +110,7 @@
   }
 
   function achievement(r) {
+    if (r && r.trace_basis === "typed-by-author") return null;
     const secs = whole(r.wall_time_s ?? r.duration_s);
     const turns = whole(r.prompts ?? r.turns_typed);
     const tools = toolCalls(r);
@@ -248,6 +249,57 @@
     return `<div class="fc-map"><svg viewBox="0 0 ${MAP_W} ${g.h}" role="img" aria-label="Route: ${esc(g.label)}">${rail}${hops}${stations}</svg><p class="fc-map-k">${esc(g.label)}</p></div>`;
   }
 
+  // One run, one signature visual. Every choice is offered only when its backing fields exist.
+  // A stored preference that no longer has evidence falls back to the strongest supported view.
+  function proofRoute(r) {
+    const route = r && r.code_route;
+    const stops = route && route.v === 1 && !route.unavailable && Array.isArray(route.stops) ? route.stops.filter(Boolean) : [];
+    if (stops.length < 2) return "";
+    const problem = stops.find((s) => s.kind === "check" || s.kind === "fail") || stops[0];
+    const change = stops.find((s) => ["artifact", "merge", "change"].includes(s.kind) && s.id !== problem.id) || stops[1];
+    const checked = [...stops].reverse().find((s) => s.basis === "measured" && (s.kind === "check" || (Array.isArray(s.evidence) && s.evidence.length)));
+    const result = (route.finish && route.finish.label) || (Array.isArray(r.shipped) && r.shipped[0]) || null;
+    if (!problem?.label || !change?.label || !checked?.label || !result) return "";
+    return `<dl class="fc-proof" aria-label="Proof Route">${[["Problem", problem.label], ["Change", change.label], ["Check", checked.label], ["Result", result]].map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>`;
+  }
+  function resultVisual(r) {
+    const shipped = Array.isArray(r.shipped) ? r.shipped.filter(Boolean) : [];
+    const n = shipped.length || (whole(r.commits) > 0 ? whole(r.commits) : 0);
+    const label = shipped[0] || (n ? `${n} commit${n === 1 ? "" : "s"} recorded` : "");
+    return n && label ? `<div class="fc-result" aria-label="Result"><b class="num">${n}</b><span>${esc(label)}</span></div>` : "";
+  }
+  function changeAtlas(r) {
+    const native = routeMap(r);
+    if (native) return native;
+    const route = r && r.code_route;
+    const projects = route && route.v === 1 && !route.unavailable && Array.isArray(route.projects) ? route.projects.filter(Boolean) : [];
+    const stops = route && Array.isArray(route.stops) ? route.stops.filter(Boolean) : [];
+    if (!projects.length || !stops.length) return "";
+    const byId = new Map(projects.map((p, i) => [p.id, i]));
+    const w = 300, row = 18, h = Math.max(44, projects.length * row + 8);
+    const points = stops.map((s, i) => ({ x: 10 + i * 280 / Math.max(stops.length - 1, 1), y: 8 + ((byId.get(s.project) || 0) * row) + row / 2 }));
+    const line = points.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+    return `<div class="fc-atlas"><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Change Atlas across ${projects.length} projects"><path d="${line}"/><g>${points.map((p) => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3"/>`).join("")}</g></svg><p>${projects.map((p) => esc(p.label || p.id)).join(" · ")}</p></div>`;
+  }
+  function photoVisual(r) {
+    const url = typeof r.image_url === "string" && /^https:\/\/[^\s<>"'\\]+\.(?:png|jpe?g|webp)(?:[?#].*)?$/i.test(r.image_url) ? r.image_url : "";
+    return url ? `<div class="fc-photo"><img src="${esc(url)}" alt="Run photo" loading="lazy" referrerpolicy="no-referrer"></div>` : "";
+  }
+  function heroChoices(r) {
+    if (r && r.trace_basis === "typed-by-author") return [];
+    return [
+      ["proof_route", proofRoute(r)],
+      ["activity_terrain", spark(r)],
+      ["change_atlas", changeAtlas(r)],
+      ["result", resultVisual(r)],
+    ].filter((entry) => entry[1]);
+  }
+  function heroVisual(r) {
+    const choices = heroChoices(r);
+    const chosen = choices.find(([key]) => key === r.hero_visual) || choices[0];
+    return chosen ? chosen[1] : "";
+  }
+
   // THE STRIDE LINE. Wordle's grid for a run: two lines of plain text a person pastes into a
   // reply, spoiler-free (no prompt, no code, no repo), readable with zero other users. The first
   // line is the card's own figures in the card's own order; the second is the activity line as
@@ -372,7 +424,7 @@
     <${tag} class="fc-title">${esc(titleOf(r))}</${tag}>
     ${r.caption || r.note ? `<p class="fc-cap">${esc(r.caption || r.note)}</p>` : ""}
     <div class="fc-numbers">${lead ? `<div class="fc-hero"><span class="fc-n num">${esc(lead.n)}</span><span class="fc-u">${esc(lead.unit)}</span></div>` : ""}${facts.length ? `<dl class="fc-stats">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd class="num">${esc(v)}</dd></div>`).join("")}</dl>` : ""}</div>
-    ${badge(r)}${routeMap(r)}${spark(r)}${strideHtml}
+    ${r.trace_basis === "typed-by-author" ? '<p class="fc-source">Typed by the author. No capture.</p>' : ""}${badge(r)}${heroVisual(r)}${strideHtml}
   `;
     return `<article class="card fc"${preview ? "" : ` id="card-${id}" data-run-id="${id}"`}>
   <header class="fc-top">${faceHtml}<div class="fc-who">${who}<small>${meta}</small></div>${shipped}</header>
@@ -394,7 +446,7 @@
     return `<div class="fc-builder">${face(r, 44)}<div class="fc-who"><a class="fc-name" href="/?u=${encodeURIComponent(p.handle)}">${esc(p.name)}</a><small>Latest: <a href="/?run=${esc(r.id)}">${esc(titleOf(r))}</a></small></div><span class="card-follow" data-profile="${esc(r.profile_id)}" data-handle="${esc(p.handle)}" data-label="Follow"></span></div>`;
   }
 
-  const api = { card, face, headline, stats, achievement, harnessName, badge, spark, settle, routeGeometry, routeMap, strideBars, strideText, strideHtml, stride, wireStride, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };
+  const api = { card, face, headline, stats, achievement, harnessName, badge, spark, settle, routeGeometry, routeMap, proofRoute, changeAtlas, resultVisual, photoVisual, heroChoices, heroVisual, strideBars, strideText, strideHtml, stride, wireStride, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };
   root.GrinderFeed = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

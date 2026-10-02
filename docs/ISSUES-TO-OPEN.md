@@ -1,6 +1,6 @@
 # Five first contributions
 
-Each of these fits in about 30 minutes, needs no database and no account, and ends with a PR. They are not yet open on GitHub; a maintainer will open them as issues, or you can open one yourself and start. Check [open issues](https://github.com/Morkeeth/agentgrinder-public/issues) first so two people do not do the same one.
+Each of these fits in about 30 minutes, needs no database and no account, and ends with a PR. They are not yet open on GitHub; a maintainer will open them as issues, or you can open one yourself and start. Check [open issues](https://github.com/Morkeeth/strive/issues) first so two people do not do the same one.
 
 Run `python3 scripts/dev.py setup` once, then `python3 scripts/dev.py check` before you push. See [CONTRIBUTING.md](../CONTRIBUTING.md) for branches and the PR template.
 

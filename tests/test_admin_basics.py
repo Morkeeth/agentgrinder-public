@@ -11,7 +11,7 @@ def test_every_page_has_the_icon_and_the_footer():
         html = (SITE / name).read_text()
         assert '<link rel="icon" href="/favicon.svg" type="image/svg+xml">' in html, name
         foot = html[html.index('<footer class="site-foot">'):]
-        for href in ('/about', '/privacy', '/terms', 'github.com/Morkeeth/agentgrinder-public/issues', '/privacy#deletion'):
+        for href in ('/about', '/privacy', '/terms', 'github.com/Morkeeth/strive/issues', '/privacy#deletion'):
             assert f'href="{href}' in foot or f'href="https://{href}' in foot, (name, href)
     assert (SITE / "favicon.svg").read_text().startswith("<svg")
 

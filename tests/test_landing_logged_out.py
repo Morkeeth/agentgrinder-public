@@ -93,7 +93,7 @@ def test_sign_in_explains_github_and_private_runs():
 
 
 def test_capture_command_points_to_the_public_product():
-    assert 'git clone https://github.com/Morkeeth/agentgrinder-public' in HTML
+    assert 'git clone https://github.com/Morkeeth/strive' in HTML
     assert 'git clone &lt;repo&gt;' not in HTML
 
 

@@ -8,7 +8,7 @@ export const validId=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function readPublic(id,fetcher=fetch){
  if(!validId(id))return null;
- const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,created_at,title,caption,output_url,repo_url,receipts,shipped,artifact_url,image_url,project,harness,started_at,duration_s,wall_time_s,prompts,tool_calls,shell_calls,files_touched,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,code_route,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
+ const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,created_at,title,caption,output_url,repo_url,receipts,shipped,artifact_url,image_url,hero_visual,project,harness,started_at,duration_s,wall_time_s,prompts,tool_calls,shell_calls,files_touched,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,code_route,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
  const response=await fetcher(config.SB_URL+'/rest/v1/runs?'+query,{headers:{apikey:config.SB_KEY,"Accept-Profile":config.SB_SCHEMA},cache:'no-store',signal:AbortSignal.timeout(8000)});
  if(!response.ok)throw new Error('Public run unavailable');const rows=await response.json();
  // The query asks for public rows only. The row is checked again here, so a lost filter or a
@@ -23,7 +23,7 @@ export async function readPublic(id,fetcher=fetch){
 const pageStyle=`*{box-sizing:border-box}html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}body{background:var(--paper);color:var(--ink);font:15px/1.5 'IBM Plex Sans',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;padding:0 16px 40px}a{color:inherit;text-decoration:none}.num{font-variant-numeric:tabular-nums}main{max-width:560px;margin:0 auto}a.home{display:inline-flex;align-items:center;min-height:48px;margin:8px 0;font-weight:600;letter-spacing:.08em;color:var(--blue)}.fc{margin:0 0 16px}.fc h1.fc-title{font-size:24px}.share-open{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:0 0 16px}a.open{display:inline-flex;align-items:center;min-height:48px;background:var(--blue);color:#fff;padding:0 20px;font-weight:500}a.open-profile{display:inline-flex;align-items:center;min-height:48px;color:var(--blue);font-weight:500}a.output{color:var(--blue);font-weight:500}a:focus-visible{outline:2px solid var(--blue);outline-offset:3px}.note{color:var(--soft);font-size:13px;margin:0}.private-card{background:var(--box);border:1px solid var(--rule);padding:24px 16px;margin:0 0 16px}.private-card h1{font-size:22px;line-height:1.25;font-weight:600;margin:0 0 8px}.private-card p{color:var(--soft);margin:0 0 16px}.outcome{background:var(--box);border:1px solid var(--rule);padding:14px 16px;margin:0 0 16px;overflow-wrap:anywhere}.outcome h2{font-size:13px;color:var(--soft);font-weight:500;margin:0 0 6px}.outcome p,.outcome li{font-size:14px;margin:6px 0}.outcome ul{margin:8px 0;padding-left:20px}.outcome a{color:var(--blue)}.code-route{background:var(--box);border:1px solid var(--rule);padding:14px 16px;margin:0 0 16px;color:var(--blue);min-width:0;overflow-wrap:anywhere}.code-route h2{font-size:13px;color:var(--blue);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px}.code-route svg{display:block;width:100%;height:auto}.code-route-projects{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;color:var(--ink);font-size:14px}.code-route-projects li{display:flex;gap:8px;align-items:baseline;min-width:0}.code-route-projects li[data-dense="1"] .code-route-project-name{font-weight:600}.code-route-lane-mark{flex:none;min-width:1.1em;color:var(--blue);font-weight:600}.code-route-insight{font-size:16px;line-height:1.35;color:var(--ink);margin:12px 0 0;font-weight:600}.code-route-stats,.code-route-harnesses,.code-route-why{font-size:13px;color:var(--soft);margin:8px 0 0}.code-route-stops{margin:8px 0 0;display:grid;gap:6px;min-width:0;color:var(--ink);font-size:14px}.code-route-point summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;min-width:0}.code-route-kind{color:var(--blue);font-size:12px;font-weight:600;text-transform:uppercase}.code-route-stop-label,.code-route-stop-project{min-width:0;overflow-wrap:anywhere}.code-route-basis{color:var(--soft)}`;
 const pageHead=`<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght%40400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/design.css"><link rel="stylesheet" href="/feed.css"><style>${pageStyle}</style><link rel="icon" href="/favicon.svg" type="image/svg+xml">`;
 // The same footer the site's own pages carry.
-const siteFoot='<footer class="site-foot"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/Morkeeth/agentgrinder-public/issues">Contact</a><a href="/privacy#deletion">Delete your data</a></footer>';
+const siteFoot='<footer class="site-foot"><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/Morkeeth/strive/issues">Contact</a><a href="/privacy#deletion">Delete your data</a></footer>';
 // How many XUDOS a public run has. The acks policy lets anyone read the acks of a run they can
 // read, and this is only called for a row that came back public. A failed read returns null and
 // the heart is drawn without a number rather than with a zero nobody measured.
@@ -245,9 +245,18 @@ export async function readAvatar(run,fetcher=fetch){
  }catch(_){return null}
 }
 export function card(run,opts={}){
- const routePlot=codeRoutePlot(run);
+ const availableRoutePlot=codeRoutePlot(run);
+ const availableSeries=series(run);
+ const availableGeo=Feed.routeGeometry(run);
+ const requested=run.hero_visual;
+ const selected=requested==='activity_terrain'&&availableSeries?'activity_terrain'
+  :requested==='change_atlas'&&(availableGeo||availableRoutePlot)?'change_atlas'
+  :requested==='proof_route'&&availableRoutePlot?'proof_route'
+  :requested==='result'?'result'
+  :availableRoutePlot?'proof_route':availableSeries?'activity_terrain':availableGeo?'change_atlas':'result';
+ const routePlot=selected==='proof_route'||(selected==='change_atlas'&&!availableGeo)?availableRoutePlot:null;
  const insight=routePlot?routeInsight(run.code_route):'';
- const plotted=routePlot?null:series(run);
+ const plotted=selected==='activity_terrain'?availableSeries:null;
  const lead=Feed.headline(run),facts=Feed.stats(run,lead);
  const who=Feed.profileOf(run);
  const name=run.visibility==='public'?who.name:run.visibility==='anonymous'?'Anonymous builder':'Builder';
@@ -262,7 +271,7 @@ export function card(run,opts={}){
  // THE RUN MAP, the same geometry the card draws (Feed.routeGeometry), scaled to the image.
  // The card's 300 by 44 drawing, scaled to the image: x by the width, y by a flatter 2.2 so the
  // map stays a strip, and every station still a circle.
- const geo=Feed.routeGeometry(run);
+ const geo=selected==='change_atlas'?availableGeo:null;
  const SX=W/300,SY=2.2,MAP_H=Math.round((geo?geo.h:44)*SY),RAIL_Y=(geo?geo.rail:30)*SY;
  const hop=d=>{const n=d.match(/-?[\d.]+/g).map(Number);return `M${(n[0]*SX).toFixed(1)},${(n[1]*SY).toFixed(1)} Q${(n[2]*SX).toFixed(1)},${(n[3]*SY).toFixed(1)} ${(n[4]*SX).toFixed(1)},${(n[5]*SY).toFixed(1)}`;};
  const map=geo?el('div',{style:{display:'flex',flexDirection:'column',marginTop:6}},

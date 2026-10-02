@@ -9,8 +9,8 @@ the owner’s laptop, and the capture flow must never guess private paths.
 Clone or update the capture tool on the bot’s computer, separate from the project being built:
 
 ```sh
-git clone https://github.com/Morkeeth/agentgrinder-public.git ~/.agentgrinder/agentgrinder-public
-cd ~/.agentgrinder/agentgrinder-public
+git clone https://github.com/Morkeeth/strive.git ~/.agentgrinder/strive
+cd ~/.agentgrinder/strive
 ```
 
 Install the complete `templates/grokbot/post-agent-run/` directory through the current Grok Bot
@@ -32,7 +32,7 @@ Running it proves only that this checkout’s source works.
 Ask the owner to identify the exact JSONL export already present on this bot’s computer. Then run:
 
 ```sh
-cd ~/.agentgrinder/agentgrinder-public
+cd ~/.agentgrinder/strive
 python3 templates/grokbot/post-agent-run/scripts/preview.py \
   /exact/path/to/selected-grokbot-export.jsonl \
   --base-url https://agentic-strava.vercel.app

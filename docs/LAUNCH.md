@@ -92,7 +92,7 @@ Blockers for Sunday:
 
 1. **Deploy and push.** The README and site command installs from GitHub `main`. It works only
    after this branch is on `main`. Then run
-   `uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --list`
+   `uvx --from git+https://github.com/Morkeeth/strive agentgrinder grind --list`
    from an empty `HOME`.
 2. **Sign in on prod.** A real GitHub sign-in that returns to the preview is not
    tested. Oscar can test it with his own account and save as Only me. His profile is excluded

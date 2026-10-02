@@ -4,7 +4,7 @@ Welcome. Help us make a small, useful place to share agent runs. You can contrib
 
 ## Choose a contribution
 
-Read [PRODUCT.md](PRODUCT.md) for the scope. Then pick a [first contribution](docs/FIRST-PR.md) or check [open issues](https://github.com/Morkeeth/agentgrinder-public/issues).
+Read [PRODUCT.md](PRODUCT.md) for the scope. Then pick a [first contribution](docs/FIRST-PR.md) or check [open issues](https://github.com/Morkeeth/strive/issues).
 
 A typo, broken link or small fix can go straight to a PR. For a feature or larger change, open an issue describing the user problem and intended result before doing substantial work. Comment when you start an existing issue so others can coordinate. A comment signals intent; it does not reserve the task indefinitely.
 
@@ -15,9 +15,9 @@ You do not need to understand the whole repository. Start with one visible impro
 Use GitHub’s **Fork** button to create your own copy, then clone it. Replace `YOUR-HANDLE` with your GitHub username:
 
 ```sh
-git clone https://github.com/YOUR-HANDLE/agentgrinder-public.git
-cd agentgrinder-public
-git remote add upstream https://github.com/Morkeeth/agentgrinder-public.git
+git clone https://github.com/YOUR-HANDLE/strive.git
+cd strive
+git remote add upstream https://github.com/Morkeeth/strive.git
 git switch -c improve-run-card
 ```
 
@@ -72,7 +72,7 @@ Review `git diff` and `git status`. Stage the files you intend to contribute, co
 git push -u origin improve-run-card
 ```
 
-Open a PR from your branch to `Morkeeth/agentgrinder-public:main`. Use the template: describe the user-visible change, link the issue if any, show UI screenshots and state exactly what you tested. List missing checks or required setup.
+Open a PR from your branch to `Morkeeth/strive:main`. Use the template: describe the user-visible change, link the issue if any, show UI screenshots and state exactly what you tested. List missing checks or required setup.
 
 Keep the PR focused. If review asks for changes, push to the same branch. A maintainer reviews before merging. Reviews have no guaranteed response time; keep follow-ups on the PR so the context stays together. See [maintainer guidelines](docs/MAINTAINING.md).
 
