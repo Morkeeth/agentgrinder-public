@@ -47,7 +47,7 @@ revoke all on strava.photo_deletion_queue from public,anon,authenticated;
 do $$ begin
  if exists(select 1 from pg_roles where rolname='service_role') then
   grant usage on schema strava to service_role;
-  grant select,delete on strava.photo_deletion_queue to service_role;
+  grant select,insert,delete on strava.photo_deletion_queue to service_role;
  end if;
 end $$;
 create or replace function strava.queue_run_photo_deletion() returns trigger

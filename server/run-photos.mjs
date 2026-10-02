@@ -60,6 +60,19 @@ export async function runPhotos({method,headers={},query={},body},config,fetchIm
    if(!UUID.test(String(owner))) return false;
    return (await rows('runs?select=id&id=eq.'+id+'&profile_id=eq.'+owner)).length>0;
   }
+  async function eraseOrQueue(p) {
+   try {
+    const removed=await storage(BUCKET,{method:'DELETE',body:JSON.stringify({prefixes:[path(p)]})});
+    if(removed.ok) return;
+   } catch {}
+   // The metadata may already have cascaded away and its original queue entry been drained.
+   // Recreate only this request's erasure obligation using the server capability.
+   const queued=await fetchImpl(config.SB_URL+'/rest/v1/photo_deletion_queue',{method:'POST',
+    headers:{apikey:config.STORAGE_KEY,Authorization:`Bearer ${config.STORAGE_KEY}`,
+     'Content-Type':'application/json','Content-Profile':'strava',Prefer:'resolution=ignore-duplicates'},
+    body:JSON.stringify({object_name:path(p)}),cache:'no-store',signal:AbortSignal.timeout(15000)});
+   if(!queued.ok) throw new Error('Photo cleanup could not be confirmed.');
+  }
   if(method==='POST') {
    // Reject invalid tokens and other people's runs before spending image-decoder resources.
    if(!await ownsRun(runId)) return result(404,{error:'Run not found.'});
@@ -73,9 +86,15 @@ export async function runPhotos({method,headers={},query={},body},config,fetchIm
    let uploaded;
    try {uploaded=await storage(BUCKET+'/'+path(p),{method:'POST',headers:{'Content-Type':'image/jpeg','x-upsert':'false'},body:image.data});} catch {}
    if(!uploaded?.ok) {
-    try {await storage(BUCKET,{method:'DELETE',body:JSON.stringify({prefixes:[path(p)]})});} catch {}
+    await eraseOrQueue(p);
     try {await rows('run_photos?id=eq.'+p.id,{method:'DELETE'});} catch {}
     return result(503,{error:'Photo upload did not complete. Try again.'});
+   }
+   let stillSaved;
+   try {stillSaved=await rows('run_photos?select=id&id=eq.'+p.id);} catch(error) {await eraseOrQueue(p);throw error;}
+   if(!stillSaved.length) {
+    await eraseOrQueue(p);
+    return result(409,{error:'The run or photo was removed during upload. Nothing was added.'});
    }
    return result(201,{photo:present(saved[0])});
   }

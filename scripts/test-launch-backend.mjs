@@ -114,6 +114,7 @@ const fakeFetch=async(url,opts)=>{
   assert.equal(opts.headers.Authorization,'Bearer user-test');
   if(url.endsWith('/rpc/grinder_profile_id')) return new Response(JSON.stringify(CASEY),{status:200});
   if(url.includes('/runs?')) return new Response(JSON.stringify([{id:RUN}]),{status:200});
+  if(opts.method!=='POST') return new Response(JSON.stringify([{id:PHOTO}]),{status:200});
   const p=JSON.parse(opts.body);return new Response(JSON.stringify([p]),{status:201});
  }
  assert.equal(opts.headers.Authorization,'Bearer server-test');
@@ -139,4 +140,15 @@ await assert.rejects(cleanupPhotos(config,async(url,opts)=>{
  cleanupAcknowledged=true;return new Response('{}');
 }));
 assert.equal(cleanupAcknowledged,false,'Failed storage erase retains queue entry');
+let raceQueued=false,raceDeleted=false;
+const raced=await runPhotos({method:'POST',headers:{authorization:'Bearer user-test'},body:{run_id:RUN,image_base64:input.toString('base64')}},config,async(url,opts)=>{
+ if(url.endsWith('/rpc/grinder_profile_id')) return new Response(JSON.stringify(CASEY));
+ if(url.includes('/runs?')) return new Response(JSON.stringify([{id:RUN}]));
+ if(url.includes('/run_photos?')&&opts.method==='POST') return new Response(JSON.stringify([JSON.parse(opts.body)]),{status:201});
+ if(url.includes('/run_photos?')) return new Response('[]'); // concurrent deletion
+ if(url.includes('/storage/')&&opts.method==='DELETE') {raceDeleted=true;return new Response('{}',{status:503});}
+ if(url.includes('/photo_deletion_queue')) {raceQueued=true;assert.equal(opts.headers.Authorization,'Bearer server-test');return new Response('{}',{status:201});}
+ return new Response('{}');
+});
+assert.equal(raced.status,409);assert.equal(raceDeleted,true);assert.equal(raceQueued,true);
 console.log('Launch backend: capture required, facts immutable, private default, duplicate refused, photo owner/friend/public/revoke/delete RLS, raw Storage denied, metadata stripped, API capabilities separated. '+(captured?'Actual selected session parsed, measured and normalized via public export accepted.':process.env.STRIVE_CAPTURE_SAMPLE?'Capture export sample accepted.':'Synthetic source used; actual capture check separate.'));
