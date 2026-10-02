@@ -22,7 +22,7 @@ follow **Automatic private upload** below. Otherwise use the manual preview path
 
 ## Manual preview
 
-Prepare a real private preview. STRIVE at `https://agentic-strava.vercel.app` is the default:
+Prepare a real private preview. STRIVE at `https://striverun.app` is the default:
 
 ```sh
 python3 /absolute/path/to/post-agent-run/scripts/preview.py \

@@ -67,7 +67,7 @@ window.GrinderAccount = function ({
     return `<section class="account-notice" role="status" aria-live="polite"><p><strong>Your __BRAND__ profile was deleted.</strong> Your sign-in account and any Agent Grinder profile were left as they were. You are signed out of this browser.</p></section>`;
   }
   function signedOutHtml(recovered, pend, deleted) {
-    return `<section class="account card pad" id="account-body"><h1>Your account</h1>${deleted ? deletedHtml() : recoveryHtml(recovered, pend, null)}
+    return `<section class="account card pad" id="account-body"><h1>Settings</h1>${deleted ? deletedHtml() : recoveryHtml(recovered, pend, null)}
       <p>Sign in to edit your handle, manage the sign-in methods on your account, or delete your __BRAND__ profile.</p>
       <div class="account-actions"><button type="button" id="account-signin">Sign in</button><a class="act" href="/?example">Try the bundled example first</a></div>
       <p class="account-hint">Signing in never posts a run. Your email stays off your public profile.</p></section>`;
@@ -98,14 +98,15 @@ window.GrinderAccount = function ({
   function panelHtml(profile, ids, recovered, pend, user) {
     const p = present(profile);
     return `<div class="account" id="account-body">${recoveryHtml(recovered, pend, user)}
-      <section class="card pad account-section"><h1>Your account</h1>
-        <p class="account-lead">Signed in as <a id="account-lead-handle" href="${esc(p.url)}">@${esc(p.handle)}</a>. Your profile id stays the same when you change your handle; the link follows the new handle.</p>
+      <section class="card pad account-section"><h1>Settings</h1>
+        <p class="account-lead">Your STRIVE username is <a id="account-lead-handle" href="${esc(p.url)}">@${esc(p.handle)}</a>. GitHub is a separate linked account. X sign-in is unavailable.</p>
         <form id="account-profile" class="account-form" novalidate>
-          <label for="account-handle">Handle</label>
-          <input id="account-handle" name="handle" autocomplete="username" maxlength="40" spellcheck="false" value="${esc(profile.handle || "")}" aria-describedby="account-handle-help">
-          <p id="account-handle-help" class="account-hint">Letters, numbers, - or _. Friends find you at /?u=your-handle.</p>
-          <label for="account-name">Display name</label>
+          <label for="account-name">Name</label>
           <input id="account-name" name="display_name" autocomplete="nickname" maxlength="60" value="${esc(profile.display_name || profile.name || "")}">
+          <p class="account-hint">Shown beside your runs. It does not need to be unique.</p>
+          <label for="account-handle">STRIVE username</label>
+          <input id="account-handle" name="handle" autocomplete="username" maxlength="40" spellcheck="false" value="${esc(profile.handle || "")}" aria-describedby="account-handle-help">
+          <p id="account-handle-help" class="account-hint">Unique on STRIVE. Letters, numbers, - or _. Your profile link uses this username.</p>
           <p id="account-profile-state" class="account-state" role="status" aria-live="polite"></p>
           <div class="account-actions"><button type="submit" id="account-save">Save</button></div>
         </form></section>
@@ -120,7 +121,7 @@ window.GrinderAccount = function ({
         <p>Signs you out of __BRAND__ in this browser only. Other devices, and Agent Grinder if you use it with the same sign-in, stay signed in.</p>
         <div class="account-actions"><button type="button" class="act" id="account-signout">Sign out here</button></div></section>
       <section class="card pad account-section account-danger" id="danger" aria-labelledby="account-delete-title"><h2 id="account-delete-title">Delete your __BRAND__ profile</h2>
-        <p><strong>Goes:</strong> this __BRAND__ profile, your posted runs, and the ACKs and replies you gave or received here. Deleted work cannot be restored.</p>
+        <p><strong>Goes:</strong> this __BRAND__ profile, your posted runs, and the thanks and replies you gave or received here. Deleted work cannot be restored.</p>
         <p><strong>Stays:</strong> your sign-in account, your Agent Grinder profile and runs if you have one, and anything on your own computer.</p>
         <form id="account-delete" class="account-form" novalidate>
           <label for="account-confirm">Type your handle <strong id="account-confirm-handle">${esc(p.handle)}</strong> to confirm</label>
@@ -131,7 +132,7 @@ window.GrinderAccount = function ({
   }
 
   function onboardingHtml(recovered, pend, user) {
-    return `<section class="account card pad" id="account-body">${recoveryHtml(recovered, pend, user)}<h1>Your account</h1><p>You are signed in but have no __BRAND__ profile yet. Create one to post runs and follow friends.</p><div class="account-actions"><a class="act blue" href="/">Create your profile</a><button type="button" class="act" id="account-signout">Sign out here</button></div></section>`;
+    return `<section class="account card pad" id="account-body">${recoveryHtml(recovered, pend, user)}<h1>Settings</h1><p>You are signed in but have no __BRAND__ profile yet. Create one to post runs and follow friends.</p><div class="account-actions"><a class="act blue" href="/">Create your profile</a><button type="button" class="act" id="account-signout">Sign out here</button></div></section>`;
   }
 
   async function view() {
@@ -139,7 +140,7 @@ window.GrinderAccount = function ({
     if (!root) return;
     if (typeof frame === "function") frame(null, null);
     if (!auth) {
-      root.innerHTML = '<section class="account card pad"><h1>Your account</h1><p>Account controls are unavailable. Reload the page.</p></section>';
+      root.innerHTML = '<section class="account card pad"><h1>Settings</h1><p>Settings are unavailable. Reload the page.</p></section>';
       return;
     }
     const fromUrl = auth.recoverFromUrl();
@@ -280,7 +281,7 @@ window.GrinderAccount = function ({
 
   function root_after_delete() {
     const root = mount(); if (!root) return;
-    root.innerHTML = '<section class="account card pad" id="account-body"><h1>Your account</h1>' + deletedHtml() + '<div class="account-actions"><a class="act blue" href="/">Back to the feed</a></div></section>';
+    root.innerHTML = '<section class="account card pad" id="account-body"><h1>Settings</h1>' + deletedHtml() + '<div class="account-actions"><a class="act blue" href="/">Back to the feed</a></div></section>';
     try { sessionStorage.setItem(DELETED_KEY, "1"); } catch (_) {} // the shell's SIGNED_OUT re-route reads it once
   }
 

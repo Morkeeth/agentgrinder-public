@@ -230,8 +230,8 @@ def test_web_app_never_headlines_prompts():
     # is not part of the card's headline contract.
     # Social profiles show public work and responses, not activity-as-quality rankings.
     prof = src[src.index("async function viewProfile("):src.index("async function refreshAuth(")]
-    assert "Public runs" in prof and "XUDOS received" in prof
-    assert "Link runs stay off this profile" in prof
+    assert "Public runs" in prof and "Thanks received" in prof
+    assert "Followers-only runs stay off this profile" in prof
     assert "verified per turn" not in prof
     assert '<div class="k">prompts</div>' not in prof
     # a missing part is a dash that names the missing fact, never a 0 and never a private project

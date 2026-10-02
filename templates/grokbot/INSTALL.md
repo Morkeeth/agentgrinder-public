@@ -1,9 +1,16 @@
 # STRIVE Grok Bot publish kit
 
-Status: source kit only. Installing or running the labelled sample does not prove that a second
+Status: preview source on `codex/strive-launch-integration-20261002`, not yet a released marketplace template. Installing or running the labelled sample does not prove that a second
 bot used a real export or that an owner saved a post.
 
-## Install only the kit
+## Choose the unit you need
+
+- `post-agent-run` prepares and uploads one owner-selected real Grok Bot run. Keep its scripts and samples together.
+- `manage-strive` guides safe account and run management in the signed-in STRIVE website. It is a standalone `SKILL.md` and does not grant upload or database access.
+
+Install either unit on its own. Install both when the bot must capture a run and then help the owner manage it.
+
+## Install `post-agent-run`
 
 The `post-agent-run` directory is a complete, standard-library-only install unit:
 
@@ -13,6 +20,7 @@ post-agent-run/
 ├── samples/sample_grokbot_bot_activity.jsonl
 └── scripts/
     ├── preview.py
+    ├── upload.py
     └── smoke_test.py
 ```
 
@@ -21,7 +29,7 @@ a bot workflow, replace `DEST` with that workflow's skill directory and run this
 
 ```sh
 DEST="$HOME/bot-workflow/post-agent-run"; TMP="$(mktemp -d)"; \
-git clone --depth 1 --filter=blob:none --sparse https://github.com/Morkeeth/strive.git "$TMP" && \
+git clone --branch codex/strive-launch-integration-20261002 --depth 1 --filter=blob:none --sparse https://github.com/Morkeeth/strive.git "$TMP" && \
 git -C "$TMP" sparse-checkout set templates/grokbot/post-agent-run && \
 mkdir -p "$DEST" && cp -R "$TMP/templates/grokbot/post-agent-run/." "$DEST/" && \
 rm -rf "$TMP"
@@ -29,6 +37,20 @@ rm -rf "$TMP"
 
 Install `post-agent-run/SKILL.md` through the current Grok Bot skill interface and keep the
 directory intact. This kit has no verified marketplace manifest.
+
+## Install `manage-strive`
+
+Copy only the companion unit into the bot workflow:
+
+```sh
+DEST="$HOME/bot-workflow/manage-strive"; TMP="$(mktemp -d)"; \
+git clone --branch codex/strive-launch-integration-20261002 --depth 1 --filter=blob:none --sparse https://github.com/Morkeeth/strive.git "$TMP" && \
+git -C "$TMP" sparse-checkout set templates/grokbot/manage-strive && \
+mkdir -p "$DEST" && cp -R "$TMP/templates/grokbot/manage-strive/." "$DEST/" && \
+rm -rf "$TMP"
+```
+
+Install `manage-strive/SKILL.md` through the current Grok Bot skill interface. Confirm that the installed description says it manages a STRIVE owner's account and does not claim deployment, database or service-role access.
 
 The reusable skill must not contain credentials, transcripts or account-specific paths. The
 owner selects the exact export, public-facing text, signed-in account, destination and audience.
@@ -47,7 +69,7 @@ real run.
 
 ## Preview one selected real export
 
-The default preview destination is STRIVE at `https://agentic-strava.vercel.app`:
+The default preview destination is STRIVE at `https://striverun.app`:
 
 ```sh
 python3 /absolute/path/to/post-agent-run/scripts/preview.py \

@@ -50,10 +50,9 @@ window.GrinderSocial = function ({
     (typeof communityTabs === "function" ? communityTabs("crews") : "") +
     '<nav class="social-nav" aria-label="Community extras"><a href="/?inbox">Inbox</a></nav>';
   function start(title, description, section) {
-    const rail =
-      section === "inbox" && typeof railHtml === "function"
-        ? railHtml("inbox")
-        : null;
+    const rail = typeof railHtml === "function"
+      ? railHtml(section === "feed" ? "following" : section === "inbox" ? "inbox" : null)
+      : null;
     frame(rail, null);
     if (typeof setPrimarySection === "function") {
       setPrimarySection(section === "inbox" ? "inbox" : section === "feed" ? "feed" : "community");
@@ -73,7 +72,7 @@ window.GrinderSocial = function ({
   function signedIn() {
     if (me()) return true;
     byId("social-body").innerHTML =
-      '<div class="card"><p>Sign in to open Responses and follow builders. Your private runs stay in My runs.</p><button type="button" class="act blue" id="social-signin">Sign in with GitHub</button></div>';
+      '<div class="card"><p>Sign in to see notifications and follow builders. Your private runs stay in My runs.</p><button type="button" class="act blue" id="social-signin">Sign in with GitHub</button></div>';
     byId("social-signin").onclick = () => {
       try {
         sessionStorage.setItem("ag_social_return", location.search);
@@ -260,7 +259,7 @@ window.GrinderSocial = function ({
   async function notificationsPanel(slot) {
     if (!slot) return;
     if (!me()) {
-      slot.innerHTML = '<p class="notice-empty">Sign in to see replies, XUDOS and new followers.</p>';
+      slot.innerHTML = '<p class="notice-empty">Sign in to see replies, thanks and new followers.</p>';
       return;
     }
     slot.innerHTML = '<p class="notice-empty">Loading…</p>';
@@ -274,12 +273,12 @@ window.GrinderSocial = function ({
           .limit(20),
       );
       if (!rows.length) {
-        slot.innerHTML = '<p class="notice-empty">No notifications yet. Replies, XUDOS and follows will appear here.</p>';
+        slot.innerHTML = '<p class="notice-empty">No notifications yet. Replies, thanks and follows will appear here.</p>';
         return;
       }
       slot.innerHTML = rows.map((n) => {
         const actor = present(n.actor);
-        const kind = n.kind === "reply" ? "replied to your run" : n.kind === "ack" ? "sent XUDOS" : "followed you";
+        const kind = n.kind === "reply" ? "replied to your run" : n.kind === "ack" ? "thanked your run" : "followed you";
         const href = notificationHref(n);
         return `<article class="notice-item ${n.read_at ? "read" : "unread"}" data-notification-id="${esc(n.id)}">
           <span class="notice-dot" aria-hidden="true"></span><div><p class="notice-copy"><b>${esc(actor.label)}</b> ${kind}</p>
@@ -351,7 +350,7 @@ window.GrinderSocial = function ({
   function responseReturnBar() {
     const pending = peekResponseReturn();
     if (pending !== "?inbox") return "";
-    return `<p class="response-return"><a class="act" href="/?inbox">Back to Responses</a></p>`;
+    return `<p class="response-return"><a class="act" href="/?inbox">Back to Notifications</a></p>`;
   }
 
   // THE FOLLOWING FEED, which is also the signed-in home (25 Sep 2026 evening). Runs from the
@@ -407,7 +406,7 @@ window.GrinderSocial = function ({
             `<div class="cta"><a class="act blue" href="/?people">Find people</a><a class="act" href="/?post">Add a run</a></div>`,
           ) + '<div id="following-suggest"></div><div id="following-latest"></div>';
         await suggestBuilders(byId("following-suggest"));
-        byId("following-latest").innerHTML = await latest("Latest public runs");
+        byId("following-latest").innerHTML = await latest("Recent public runs");
         return;
       }
       const followedIds = follows.map((f) => f.followed_id);
@@ -447,7 +446,7 @@ window.GrinderSocial = function ({
         (list
           ? `<article class="card"><h3>People you follow</h3><ul class="following-people">${list}</ul></article>`
           : "") + '<div id="following-latest"></div>';
-      byId("following-latest").innerHTML = await latest("Latest public runs");
+      byId("following-latest").innerHTML = await latest("Recent public runs");
     } catch (e) {
       byId("social-body").innerHTML = empty(
         "The following feed could not load. Your follows have not changed.",
@@ -496,7 +495,7 @@ window.GrinderSocial = function ({
       ) {
         const bar = document.createElement("p");
         bar.className = "response-return";
-        bar.innerHTML = '<a class="act" href="/?inbox">Back to Responses</a>';
+        bar.innerHTML = '<a class="act" href="/?inbox">Back to Notifications</a>';
         slot.before(bar);
       }
     } catch (_) {}
@@ -739,14 +738,6 @@ window.GrinderSocial = function ({
     await paint();
   }
 
-  function audienceNeedsPublicAgent(audience) {
-    return (
-      audience === "public" ||
-      audience === "link" ||
-      audience === "close_friends"
-    );
-  }
-
   async function saveAgentVisibility(id, visibility) {
     if (visibility !== "private" && visibility !== "public") {
       throw new Error("Choose Private or Public.");
@@ -764,7 +755,7 @@ window.GrinderSocial = function ({
         <option value="private"${priv}>Private</option>
         <option value="public"${pub}>Public</option>
       </select></label>
-      <p class="hint">Public lets a linked run be shared. Other Only-me runs stay private.</p>
+      <p class="hint">Public makes this agent profile discoverable. Run audiences stay unchanged.</p>
       <button type="submit">Save visibility</button>
     </form>`;
   }
@@ -780,9 +771,7 @@ window.GrinderSocial = function ({
             form.dataset.agentVisibility,
             form.elements.visibility.value,
           );
-          status(
-            "Agent visibility saved. Other Only-me runs stay private.",
-          );
+          status("Agent profile visibility saved. Run audiences did not change.");
           if (typeof reload === "function") await reload();
         } catch (error) {
           fail(error);
@@ -793,11 +782,10 @@ window.GrinderSocial = function ({
   }
 
   async function attachAgentShareGate(runId) {
-    const save = byId("run-save");
     const edit = byId("run-edit");
-    if (!save || !edit || save.dataset.agentGate === "1" || !uuid(runId))
+    if (!edit || edit.dataset.agentContext === "1" || !uuid(runId))
       return;
-    save.dataset.agentGate = "1";
+    edit.dataset.agentContext = "1";
     let actor = null;
     try {
       const runs = await result(
@@ -827,36 +815,12 @@ window.GrinderSocial = function ({
       notice.id = "run-agent-visibility";
       notice.className = "account-notice";
       notice.innerHTML =
-        `<p>This run is linked to <a href="/?agent=${encodeURIComponent(actor.id)}">${esc(actor.name || "an agent")}</a>, which is private. Public, Link or Close friends needs the agent public first. Other Only-me runs stay private.</p>` +
-        `<label><input type="checkbox" id="run-agent-public-consent"> Make this agent public. Do not change other Only-me runs.</label>`;
+        `<p>This run is linked to <a href="/?agent=${encodeURIComponent(actor.id)}">${esc(actor.name || "an agent")}</a>, whose profile is private. You can still choose Followers, Close friends or Public for this captured run. Sharing the run does not publish the agent profile or change other runs.</p>`;
       const heading = edit.querySelector("h2");
       if (heading && heading.nextSibling)
         edit.insertBefore(notice, heading.nextSibling);
       else edit.prepend(notice);
     }
-    const previous = save.onclick;
-    save.onclick = async function (ev) {
-      const audience = byId("run-audience")?.value;
-      if (audienceNeedsPublicAgent(audience) && actor.visibility !== "public") {
-        const consent = byId("run-agent-public-consent");
-        if (!consent || !consent.checked) {
-          status(
-            "This run is linked to a private agent. Make that agent public first. Other Only-me runs stay private.",
-            true,
-          );
-          byId("run-agent-visibility")?.scrollIntoView({ block: "center" });
-          return;
-        }
-        try {
-          await saveAgentVisibility(actor.id, "public");
-          actor.visibility = "public";
-        } catch (error) {
-          fail(error);
-          return;
-        }
-      }
-      if (typeof previous === "function") return previous.call(this, ev);
-    };
   }
 
   async function thread(runId, slot) {
@@ -1108,7 +1072,7 @@ window.GrinderSocial = function ({
           );
           status(
             peekResponseReturn() === "?inbox"
-              ? "Reply posted. Return to Responses when you are ready."
+              ? "Reply posted. Return to Notifications when you are ready."
               : "Reply posted.",
           );
           await thread(runId, slot);
@@ -1127,7 +1091,7 @@ window.GrinderSocial = function ({
 
   async function inbox() {
     start(
-      "Responses",
+      "Notifications",
       "Open the exact conversation, then come back here. Unread stays unread until you actually see it.",
       "inbox",
     );
@@ -1165,7 +1129,7 @@ window.GrinderSocial = function ({
         body.innerHTML =
           filters +
           empty(
-            "Post a real run and share it with a friend. Their ACKs and replies will bring you back to the exact conversation.",
+            "Post a real run and share it with a friend. Their thanks and replies will bring you back to the conversation.",
             `<div class="cta"><a class="act blue" href="/?post">Post your first run</a><a class="act" href="/?people">Find people</a></div>`,
           );
         await refreshUnread();
@@ -1176,7 +1140,7 @@ window.GrinderSocial = function ({
         body.innerHTML =
           filters +
           empty(
-            "No unread responses. Open All to browse earlier ACKs and replies.",
+            "No unread notifications. Open All to browse earlier thanks and replies.",
             `<div class="cta"><a class="act" href="/?inbox">Show all responses</a></div>`,
           );
         await refreshUnread();
@@ -1193,7 +1157,7 @@ window.GrinderSocial = function ({
               n.kind === "reply"
                 ? "replied to your run"
                 : n.kind === "ack"
-                  ? "sent XUDOS on your work"
+                  ? "thanked your work"
                   : "followed you";
             const run = n.run_id ? runs.get(n.run_id) : null;
             const reply =
@@ -1319,10 +1283,10 @@ window.GrinderSocial = function ({
       const choices = memberships.map((m) => m.crew).filter(Boolean);
       if (!choices.length) {
         slot.innerHTML =
-          '<a href="/?crews">Create or join a Crew to share this grind with its members.</a>';
+          '<a href="/?crews">Create or join a club to share this run with its members.</a>';
         return;
       }
-      slot.innerHTML = `<form class="panel" id="share-crew-form"><label>Share with a Crew<select name="crew">${choices.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label><label>Audience<select name="audience"><option value="crew">Crew members only · removes public access</option><option value="public">Public and this Crew</option></select></label><button>Share grind with Crew</button></form>`;
+      slot.innerHTML = `<form class="panel" id="share-crew-form"><label>Share with a club<select name="crew">${choices.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label><label>Audience<select name="audience"><option value="crew">Club members only · removes public access</option><option value="public">Public and this club</option></select></label><button>Share run with club</button></form>`;
       slot.querySelector("form").onsubmit = async (e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -1438,7 +1402,7 @@ window.GrinderSocial = function ({
           '<p class="hint">Invite one person. A Crew becomes real when two builders each have a run in this feed.</p>';
       } else if (members.length === 2 && posters.size >= 2) {
         loopNote =
-          '<p class="hint">Two builders, real runs. Send XUDOS for a specific moment, then open Responses to return.</p>';
+          '<p class="hint">Two builders, real runs. Thank a specific contribution, then return through Notifications.</p>';
       } else if (members.length === 2 && posters.size === 1) {
         const missing = members.find((m) => !posters.has(m.profile_id));
         const label = missing ? present(missing.profile).label : "the other member";
@@ -1454,7 +1418,7 @@ window.GrinderSocial = function ({
           : empty(
               members.length < 2
                 ? "Invite one friend, then each of you post a real run here."
-                : "No grinds shared with this Crew yet. Each member posts one real run to start the return loop.",
+                : "No runs shared with this club yet.",
             ));
       // A public club can be joined by anyone signed in, for themselves only (migration 014).
       if (!mine && c.visibility === "public") {
@@ -1815,7 +1779,7 @@ window.GrinderSocial = function ({
         `<article class="card"><h2>${esc(actor.name)}</h2><p>Agent · owned by ${link(actor.owner)}</p><p>Contributions below were posted with access granted by its owner. Identity does not independently verify an outcome.</p>${mine ? agentVisibilityForm(actor) : ""}</article>` +
         (runs.length
           ? await renderRuns(runs)
-          : empty("No visible grinds from this agent yet."));
+          : empty("No visible runs from this agent yet."));
       if (mine) wireAgentVisibility(() => agentProfile(id));
     } catch (e) {
       fail(e);
@@ -1828,7 +1792,7 @@ window.GrinderSocial = function ({
     const form = document.createElement("form");
     form.className = "reply-form panel";
     form.innerHTML =
-      '<h3>Ask this agent about the grind</h3><label>Your question<textarea name="question" required maxlength="2000"></textarea></label><p>The connected agent receives public counts and revision references. Raw test output and private transcripts are not included. It replies when its owner runs the integration.</p><button>Queue question</button>';
+      '<h3>Ask this agent about the run</h3><label>Your question<textarea name="question" required maxlength="2000"></textarea></label><p>The connected agent receives public counts and revision references. Raw test output and private transcripts are not included. It replies when its owner runs the integration.</p><button>Queue question</button>';
     form.onsubmit = async (e) => {
       e.preventDefault();
       form.querySelector("button").disabled = true;
@@ -1883,7 +1847,7 @@ window.GrinderSocial = function ({
         );
         if (runs.length)
           featured =
-            '<div class="head"><h2>Selected grind</h2></div>' +
+            '<div class="head"><h2>Selected run</h2></div>' +
             (await renderRuns(runs));
       }
       slot.innerHTML =
@@ -1925,7 +1889,7 @@ window.GrinderSocial = function ({
     button.onclick = async () => {
       try {
         await result(db.rpc("grinder_feature_run", { grind: run.id }));
-        status("Selected grind saved to your Scrapbook.");
+        status("Run saved to your profile.");
       } catch (e) {
         fail(e);
       }

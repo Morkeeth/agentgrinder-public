@@ -2,7 +2,7 @@
 
 **Strava is for people who ran. STRIVE is for people who didn't.** Every run your agent made, on a card you can share: the numbers, the run map, and a stride line to paste anywhere.
 
-A free, MIT-licensed social app for people building with coding agents. Capture a session, preview its card, choose to post it, and follow other builders. Keep it minimal: runs, a feed, profiles, ACKs and replies.
+A free, MIT-licensed social app for people building with coding agents. Bring in a recorded session, add a photo or a note, and choose who can see it. Follow friends and see what they are making.
 
 ## Post your first run
 
@@ -21,9 +21,25 @@ python3 -m venv ~/.strive && ~/.strive/bin/pip install -U pip
 ~/.strive/bin/agentgrinder grind --push
 ```
 
-Nothing is uploaded by the command. Open the `preview ->` link, sign in with GitHub, write a title and caption, pick who can see it, then press **Save run**. No model API key
-and no account are needed to make the card. Run `agentgrinder grind --list` first to see which
-session it picked.
+Nothing is uploaded by the command. Open the `preview ->` link and sign in with GitHub. On your
+first visit, choose your name and unique STRIVE username. The session preview is already filled
+in; edit the title or add a note if you want. Keep **Only me** selected and press **Save run** to
+save privately. You can add photos and change the audience from the saved run.
+
+No model API key or account is needed for local capture. Run `agentgrinder grind --list` first
+to check which session it picked.
+
+## Photos and privacy
+
+Add up to six JPEG, PNG or WebP photos to a saved session. Keep the original shape or choose a
+crop before uploading. Uploads are resized and location/camera metadata is removed. Photos
+follow the run's audience: **Only me**, **Close friends**, **Followers**, or **Public**.
+Followers includes signed-in followers and people on your close-friends list; it is not an
+unrestricted link. Public runs appear in the feed and on your public profile.
+
+Recorded measurements cannot be edited. Runs must come from a supported session import;
+there is no manual score-entry form. Imported logs are not independent proof of execution,
+and tool counts are not a measure of work quality. See [photo and capture safeguards](docs/RUN-PHOTOS.md).
 
 **Come build it with us.** Code, design, documentation, accessibility improvements and useful bug reports are all welcome. You do not need an invitation, a paid AI tool or a previous open-source contribution.
 

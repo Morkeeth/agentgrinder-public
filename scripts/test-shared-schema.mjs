@@ -37,12 +37,15 @@ await db.query("select set_config('request.jwt.claim.sub',$1,false)",[a]);
 assert.equal((await db.query('select strava.grinder_profile_id() id')).rows[0].id,null);
 await db.exec(`set role authenticated;
 insert into profiles(id,auth_uid,name) values('${a}','${a}','Strava A');
-insert into runs(id,profile_id,title,caption,visibility) values('${a}','${a}','Strava private','TEST DATA','private');`);
+insert into runs(id,profile_id,title,caption,visibility,harness,schema_version,measurement_revision,trace_basis,rhythm)
+values('${a}','${a}','Strava private','TEST DATA','private','Codex',1,repeat('a',64),'elapsed','[1,2]');`);
 await db.query("select set_config('request.jwt.claim.sub',$1,false)",[b]);
 await db.exec(`insert into profiles(id,auth_uid,name) values('${b}','${b}','Strava B')`);
 assert.equal((await db.query('select * from runs')).rows.length,0);
 assert.equal((await db.query("update runs set title='not mine' returning id")).rows.length,0);
-await assert.rejects(db.exec(`insert into runs(profile_id,title) values('${a}','not mine')`),/row-level security/);
+// Valid TEST DATA capture, wrong owner: ensure RLS itself rejects the request.
+await assert.rejects(db.exec(`insert into runs(profile_id,title,visibility,harness,schema_version,measurement_revision,trace_basis,rhythm)
+values('${a}','TEST DATA not mine','private','Codex',1,repeat('b',64),'elapsed','[1,2]')`),/row-level security/);
 await db.query("select set_config('request.jwt.claim.sub',$1,false)",[a]);
 await db.exec("update runs set visibility='public'");
 await db.query("select set_config('request.jwt.claim.sub',$1,false)",[b]);
@@ -56,8 +59,12 @@ const linkId='20000000-0000-0000-0000-000000000010';
 const publicGateId='20000000-0000-0000-0000-000000000011';
 const stranger='10000000-0000-0000-0000-000000000003';
 await db.exec(`set role authenticated;
-insert into runs(id,profile_id,title,caption,visibility) values('${linkId}','${a}','Strava link','TEST DATA','link');
-insert into runs(id,profile_id,title,caption,visibility) values('${publicGateId}','${a}','Strava public gate','TEST DATA','public');`);
+insert into runs(id,profile_id,title,caption,visibility,harness,schema_version,measurement_revision,trace_basis,rhythm)
+values('${linkId}','${a}','Strava link','TEST DATA','private','Codex',1,repeat('c',64),'elapsed','[1,2]');
+insert into runs(id,profile_id,title,caption,visibility,harness,schema_version,measurement_revision,trace_basis,rhythm)
+values('${publicGateId}','${a}','Strava public gate','TEST DATA','private','Codex',1,repeat('d',64),'elapsed','[1,2]');
+update runs set visibility='link' where id='${linkId}';
+update runs set visibility='public' where id='${publicGateId}';`);
 await db.exec('reset role');
 await db.query("select set_config('request.jwt.claim.sub',$1,false)",[stranger]);
 await db.exec(`set role authenticated;

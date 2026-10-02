@@ -44,11 +44,12 @@ def _run() -> dict:
 
 
 def test_the_preview_offers_the_project_as_a_field_prefilled_from_capture():
-    assert '<label>Project (optional)<input id="i_project"' in INDEX
+    assert '<label>Project<input id="i_project"' in INDEX
+    assert INDEX.index("Edit details") < INDEX.index('id="i_project"')
     assert 'value="${esc(capturedProject||\'\')}"' in INDEX
-    assert "Shown to readers as Project touched" in INDEX
-    # the hint says when capture fills it, because an unproven folder name is dropped (push.py)
-    assert "only when it could confirm the session ran in that project's git repository" in INDEX
+    assert "placeholder=\"Project name\"" in INDEX
+    # the captured value remains editable behind the one details control.
+    assert "const capturedProject=GrinderContract.projectLabel(run.project)" in INDEX
     # It is an edit like the others: kept across a sign-in bounce, and repainted live.
     assert "'i_project'" in INDEX.split("const editFields=")[1].split("]")[0]
 

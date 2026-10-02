@@ -70,7 +70,7 @@
     return [...seen.values()].sort((a, b) => b.n - a.n || String(b.run.created_at).localeCompare(String(a.run.created_at))).slice(0, limit || 6);
   }
 
-  // Most XUDOS first, then newest. A run nobody cheered still counts as recent.
+  // Most thanks first, then newest. A run nobody thanked still counts as recent.
   function popular(runs, counts, limit) {
     return [...(runs || [])].sort((a, b) => ((counts[b.id] || 0) - (counts[a.id] || 0)) || String(b.created_at).localeCompare(String(a.created_at))).slice(0, limit || 5);
   }

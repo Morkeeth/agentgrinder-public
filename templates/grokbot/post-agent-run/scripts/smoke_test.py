@@ -29,7 +29,7 @@ def main():
 
     assert imported == metrics
     assert receipt["preview_url"].startswith(
-        "https://agentic-strava.vercel.app/#import="
+        "https://striverun.app/#import="
     )
     assert metrics["harness"] == "Grok Bot"
     assert metrics["activity_label"] == "bot activity"

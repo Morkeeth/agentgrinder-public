@@ -25,10 +25,10 @@ def test_exact_reply_navigation_and_return_context():
     assert "#reply-" in SOCIAL
     assert "reply=${encodeURIComponent(n.source_id)}" in SOCIAL or "reply=" in SOCIAL
     assert "ag_response_return" in SOCIAL
-    assert "Back to Responses" in SOCIAL
+    assert "Back to Notifications" in SOCIAL
     assert "reply-target" in SOCIAL
     assert "refreshUnread" in SOCIAL
-    assert "Back to Responses" in PEOPLE
+    assert "Back to Notifications" in PEOPLE
 
 
 def test_response_inbox_phone_styles_use_blue_unread_trace():

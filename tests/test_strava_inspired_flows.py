@@ -23,16 +23,14 @@ def test_all_twelve_flows_are_mapped_with_lanes_and_boundaries():
         assert phrase in MAP
 
 
-def test_private_preview_leads_with_story_and_plain_privacy_choices():
+def test_private_preview_leads_with_populated_run_and_optional_details():
     preview = INDEX[INDEX.index("const sample=run.is_sample===true;") : INDEX.index("const editFields=")]
-    assert preview.index("STORY FIRST") < preview.index('id="i_caption"')
-    assert preview.index('id="i_caption"') < preview.index("Review recorded measurements")
-    assert preview.index('id="i_output_url"') < preview.index("Review recorded measurements")
-    assert "Only me - just you" in preview
-    assert "Link - followers and close friends" in preview
-    assert "Public - Feed and profile" in preview
-    assert "Unknown measurements stay unknown" not in preview
-    assert "It never carries prompts" in preview
+    assert preview.index('id="import-card-preview"') < preview.index('id="i_title"')
+    assert 'value="${esc(importedTitle())}"' in preview
+    assert 'Add a note <span class="hint">(optional)</span>' in preview
+    assert preview.index('id="i_vis"') < preview.index("Edit details")
+    assert preview.index("Edit details") < preview.index('id="i_project"')
+    assert "Prompts, code and file paths are not" in preview
 
 
 def test_run_detail_promotes_audience_aware_next_action():
@@ -40,18 +38,18 @@ def test_run_detail_promotes_audience_aware_next_action():
     for phrase in (
         "Saved to Public feed and profile",
         "Copy public link",
-        "Open share card",
-        "Saved for followers and close friends",
+        "Open shared post",
+        "Saved for Followers",
         "Saved for Only me",
         "Open builder profile",
-        "Follow lives on the card with XUDOS and Share",
+        "Follow, thank or share from the card above.",
     ):
         assert phrase in detail
-    assert "Link audience. This run does not appear on the public profile" in detail
-    assert "card-follow" in detail or "Follow lives on the card" in detail
+    assert "Followers means signed-in followers and close friends" in detail
+    assert "runCard(r" in detail
     assert detail.index("+nextAction") < detail.index("grind-thread")
     assert "Grokbot Builders Sunday" not in INDEX
-    assert "Send XUDOS" in INDEX
+    assert "Send thanks" in INDEX
     assert "Oscar and Eric" in SOCIAL
 
 

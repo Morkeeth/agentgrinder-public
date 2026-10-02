@@ -24,8 +24,9 @@ const base={id:'r1',profile_id:'p1',created_at:'2026-09-14T00:00:00Z',title:'Pla
 const plain=vm.runInContext('runCard('+JSON.stringify(base)+',false,0)',context);
 const withTree=vm.runInContext('runCard('+JSON.stringify({...base,tree:sample.tree})+',false,0)',context);
 const preview=vm.runInContext('runCard('+JSON.stringify({...base,tree:sample.tree})+',false,0,{preview:true})',context);
+const owner=vm.runInContext('runCard('+JSON.stringify(base)+',false,0,{ownerActions:true})',context);
 const empty=vm.runInContext('runCard('+JSON.stringify({...base,tree:{...sample.tree,children:[]}})+',false,0)',context);
-process.stdout.write(JSON.stringify({plain,withTree,preview,empty}));
+process.stdout.write(JSON.stringify({plain,withTree,preview,owner,empty}));
 '''
 
 
@@ -58,6 +59,13 @@ def test_tree_renders_orchestrator_then_workers():
     assert max(widths) == 100 and min(widths) >= 1 and len(widths) == len(workers)
     assert 'aborted' in html  # one worker in the sample was aborted; the flag stays visible
     assert 'Preview · not saved' in out['preview'] and 'ACK' not in out['preview'].split('tree-foot')[1]
+
+
+def test_owner_run_card_renders_direct_edit_and_photo_actions():
+    out = render()
+    assert 'href="#run-edit">Edit run</a>' in out['owner']
+    assert 'href="#run-photos">Add photos</a>' in out['owner']
+    assert 'href="#run-edit">Edit run</a>' not in out['plain']
 
 
 def test_tree_with_no_workers_says_so_instead_of_inventing_rows():

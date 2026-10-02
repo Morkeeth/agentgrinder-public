@@ -93,6 +93,12 @@ window.GrinderPeople = function ({
     return `<article class="card people-empty"><h3>${esc(title)}</h3><p>${esc(body)}</p>${actionsHtml || ""}</article>`;
   }
 
+  async function accessToken() {
+    const { data, error } = await db.auth.getSession();
+    if (error) throw new Error(error.message);
+    return data?.session?.access_token || null;
+  }
+
   function personCard(row, opts) {
     const p = present(row);
     const meta = [];
@@ -157,27 +163,41 @@ window.GrinderPeople = function ({
   }
 
   async function discover(initialQuery) {
-    frame(null, null);
-    if (typeof setPrimarySection === "function") setPrimarySection("feed");
+    frame(typeof railHtml === "function" ? railHtml("people") : null, null);
+    if (typeof setPrimarySection === "function") setPrimarySection("discover");
     const q0 =
       typeof initialQuery === "string"
         ? initialQuery
         : new URLSearchParams(location.search).get("q") || "";
+    const self = me?.();
+    const links = self && typeof window.GrinderAuth?.linksOf === "function" ? window.GrinderAuth.linksOf(self) : {};
+    const linked = [links.github ? `GitHub @${links.github.handle}` : "", links.x ? `X @${links.x.handle} (unverified)` : ""].filter(Boolean);
+    const githubAction = !self
+      ? '<button type="button" id="people-network-signin" class="act">Sign in to find friends</button>'
+      : links.github
+        ? '<button type="button" id="people-github-friends" class="act">Find friends on GitHub</button>'
+        : '<a class="act" href="/?account">Link GitHub to find friends</a>';
     app().innerHTML =
       peopleTabs("people") +
       `<div class="head"><h2>Find people</h2></div>
-      <p class="people-lead">Look up a builder by handle or name. You can follow them before they post a run.</p>
-      <form id="people-search" class="people-search" role="search">
-        <label for="people-query">Handle or name</label>
+      <section class="card pad people-networks"><h3>People from your networks</h3>
+        <p>${linked.length ? `Linked to ${esc(linked.join(" and "))}. ` : ""}GitHub matching only checks verified STRIVE accounts when you ask. It never follows anyone automatically. X friend matching is unavailable.</p>
+        <div class="cta">${githubAction}${self ? '<a class="act ghost" href="/?account">Manage linked accounts</a>' : ""}</div>
+        <div id="people-network-result" class="people-network-result" aria-live="polite"></div>
+      </section>
+      <details class="people-search-panel" ${q0 ? "open" : ""}><summary>Search by STRIVE username</summary><form id="people-search" class="people-search" role="search">
+        <label for="people-query">Username or name</label>
         <div class="people-search-row">
-          <input id="people-query" name="q" type="search" maxlength="80" autocomplete="off" spellcheck="false" placeholder="e.g. casey or Ada" value="${esc(q0)}">
+          <input id="people-query" name="q" type="search" maxlength="80" autocomplete="off" spellcheck="false" placeholder="e.g. @casey or Ada" value="${esc(q0)}">
           <button type="submit">Search</button>
         </div>
-      </form>
+      </form></details>
       <div id="people-body" class="people-body" aria-live="polite">Loading…</div>`;
     const form = byId("people-search");
     const input = byId("people-query");
     const body = byId("people-body");
+    byId("people-network-signin")?.addEventListener("click", () => byId("auth")?.click());
+    byId("people-github-friends")?.addEventListener("click", () => loadGithubFriends().catch(fail));
     form.onsubmit = (e) => {
       e.preventDefault();
       const q = input.value.trim();
@@ -193,6 +213,50 @@ window.GrinderPeople = function ({
       }
     });
     await load(q0.trim());
+  }
+
+  async function loadGithubFriends() {
+    const button = byId("people-github-friends");
+    const slot = byId("people-network-result");
+    if (!button || !slot) return;
+    button.disabled = true;
+    button.textContent = "Checking GitHub…";
+    slot.innerHTML = '<p class="meta">Looking for verified STRIVE accounts you follow on GitHub…</p>';
+    try {
+      const token = await accessToken();
+      if (!token) throw new Error("Sign in again to check GitHub.");
+      const response = await fetch("/api/github-friends", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      let payload = null;
+      try { payload = await response.json(); } catch (_) {}
+      if (!response.ok) throw new Error(payload?.message || payload?.error || "GitHub friends could not load.");
+      if (payload?.scope !== "public_github_following") throw new Error("GitHub returned an unexpected connection scope.");
+      const people = Array.isArray(payload?.people) ? payload.people : [];
+      const scanned = Number.isFinite(Number(payload?.scanned)) ? Number(payload.scanned) : null;
+      const truncated = payload?.truncated === true;
+      if (!people.length) {
+        const scope = scanned === null ? "" : ` ${scanned} GitHub account${scanned === 1 ? " was" : "s were"} checked.`;
+        slot.innerHTML = emptyCard(
+          "No matching public GitHub connections",
+          `No verified STRIVE account matched the public GitHub accounts you follow.${scope}${truncated ? " GitHub limited this check, so it may not cover everyone you follow." : ""}`,
+          '<div class="cta"><a class="act" href="/?explore">Discover public runs</a></div>',
+        );
+      } else {
+        slot.innerHTML = `<div class="head"><h3>Friends on STRIVE</h3><span class="meta">${people.length}</span></div>${people.map((person) => personCard(person, { followSlot: true })).join("")}${truncated ? '<p class="hint">GitHub limited this check, so more matches may exist.</p>' : ""}`;
+        await wireFollowSlots(slot);
+      }
+    } catch (error) {
+      slot.innerHTML = emptyCard(
+        "GitHub friends could not load",
+        String(error?.message || "Try again in a moment."),
+        '<div class="cta"><button type="button" id="people-github-retry" class="act">Try again</button></div>',
+      );
+      byId("people-github-retry")?.addEventListener("click", () => loadGithubFriends().catch(fail));
+    } finally {
+      button.disabled = false;
+      button.textContent = "Find friends on GitHub";
+    }
   }
 
   async function load(query) {
@@ -254,29 +318,16 @@ window.GrinderPeople = function ({
           )
         : [];
 
-      let recent = [];
+      let recent = null;
       try {
         recent = await result(db.rpc("grinder_recent_builders", { lim: 12 }));
       } catch (_) {
-        recent = [];
+        recent = null;
       }
-      recent = Array.isArray(recent) ? recent : [];
+      if(recent!==null) recent = Array.isArray(recent) ? recent : [];
 
       const parts = [];
-      if (self) {
-        const p = present(self);
-        parts.push(
-          `<section class="people-section"><div class="head"><h2>Your shareable profile</h2></div>
-          <article class="card people-share">
-            <p>Friends open this link even before you post.</p>
-            <p class="people-share-url"><a href="${p.href || "/"}">${esc(shareUrl(self) || location.origin + "/?u=")}</a></p>
-            <div class="cta">
-              <button type="button" id="people-copy-link" class="act blue">Copy profile link</button>
-              <a class="act" href="${p.href || "/"}">Open your profile</a>
-            </div>
-          </article></section>`,
-        );
-      } else {
+      if (!self) {
         parts.push(
           emptyCard(
             "Sign in to follow builders",
@@ -293,7 +344,7 @@ window.GrinderPeople = function ({
         parts.push(
           emptyCard(
             "You are not following anyone yet",
-            "Search a friend’s handle above, or open a profile from a public run and tap Follow. Following works before they post.",
+            "Search for a STRIVE username, or open a profile from a public run and choose Follow.",
             `<div class="cta"><a class="act" href="/?following">Open Following</a><a class="act" href="/?explore">Discover runs</a></div>`,
           ),
         );
@@ -307,7 +358,15 @@ window.GrinderPeople = function ({
         );
       }
 
-      if (recent.length) {
+      if (recent === null) {
+        parts.push(
+          emptyCard(
+            "Suggested people could not load",
+            "Public runs may still be available. Refresh to try loading people again.",
+            `<div class="cta"><button type="button" id="people-retry" class="act">Try again</button><a class="act" href="/?explore">Open the feed</a></div>`,
+          ),
+        );
+      } else if (recent.length) {
         parts.push(
           `<section class="people-section"><div class="head"><h2>Builders with public runs</h2><span class="meta">${recent.length}</span></div>` +
             recent
@@ -323,26 +382,15 @@ window.GrinderPeople = function ({
       } else {
         parts.push(
           emptyCard(
-            "Discover is quiet",
-            "No public runs yet. Share your profile link so a friend can follow you, then post when you have a real session.",
-            `<div class="cta"><a class="act blue" href="/?post">Post a run</a><a class="act" href="/?explore">Check the run feed</a></div>`,
+            "No other builders with public runs yet",
+            "Your own profile is not shown as a suggestion.",
+            `<div class="cta"><a class="act" href="/?explore">Open the feed</a></div>`,
           ),
         );
       }
 
       body.innerHTML = parts.join("");
-      const copy = byId("people-copy-link");
-      if (copy && self) {
-        copy.onclick = async () => {
-          const url = shareUrl(self);
-          try {
-            await navigator.clipboard.writeText(url);
-            status("Profile link copied.");
-          } catch (_) {
-            status(url || "Could not copy.", !url);
-          }
-        };
-      }
+      byId("people-retry")?.addEventListener("click", () => load(query).catch(fail));
       const signin = byId("people-signin");
       if (signin) {
         signin.onclick = () => {
@@ -369,7 +417,7 @@ window.GrinderPeople = function ({
    * never creates a profile from the URL.
    */
   async function profile(handleOrId) {
-    frame(null, null);
+    frame(typeof railHtml === "function" ? railHtml("profile") : null, null);
     if (typeof setPrimarySection === "function") setPrimarySection("feed");
     app().innerHTML = '<div class="card"><p>Loading profile…</p></div>';
     const key = String(handleOrId || "").trim();
@@ -420,7 +468,7 @@ window.GrinderPeople = function ({
       try {
         if (sessionStorage.getItem("ag_response_return") === "?inbox") {
           responseReturn =
-            '<p class="response-return"><a class="act" href="/?inbox">Back to Responses</a></p>';
+            '<p class="response-return"><a class="act" href="/?inbox">Back to Notifications</a></p>';
         }
       } catch (_) {}
       const { data: runs, error } = await db

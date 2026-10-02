@@ -263,14 +263,14 @@ def main():
             casey.wait_for_url(f"**/?run={run_id}*", timeout=20_000)
             casey.get_by_text("TEST DATA reply for exact return.").wait_for()
             casey.locator(f"#reply-{reply_id}.reply-target").wait_for()
-            casey.get_by_role("link", name="Back to Responses").first.wait_for()
+            casey.get_by_role("link", name="Back to Notifications").first.wait_for()
             casey.screenshot(
                 path=str(ARTIFACTS / "exact-reply-return-mobile.png"),
                 full_page=True,
             )
 
             # Return to inbox after opening the conversation.
-            casey.get_by_role("link", name="Back to Responses").first.click()
+            casey.get_by_role("link", name="Back to Notifications").first.click()
             casey.wait_for_url("**/?inbox*", timeout=20_000)
             casey.get_by_role("heading", name="Responses").wait_for()
 

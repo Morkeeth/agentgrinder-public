@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "outputDirectory": "dist",
+  "crons": [{"path":"/api/photo-cleanup","schedule":"0 3 * * *"}],
   "rewrites": [
     {
       "source": "/proof/:id",

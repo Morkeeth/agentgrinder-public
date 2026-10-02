@@ -25,7 +25,8 @@ def test_project_page_and_list_are_routed_and_public_only():
     assert ".eq('project',name).eq('profile_id',ME.id)" in page  # the owner sees their own too
     lst = INDEX[INDEX.index("async function viewProjects()") : INDEX.index("async function viewProfile(handle)")]
     assert ".eq('visibility','public').not('project','is',null)" in lst
-    assert "a('/?projects','Projects'" in INDEX
+    rail = INDEX[INDEX.index("function railHtml"):INDEX.index("function setPrimarySection")]
+    assert "Projects" not in rail  # preserved as a deep link, not primary navigation
 
 
 def test_cards_and_profile_link_to_the_project():

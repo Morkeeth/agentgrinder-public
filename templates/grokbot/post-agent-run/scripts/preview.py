@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 from urllib.parse import quote, urlsplit
 
-DEFAULT_URL = "https://agentic-strava.vercel.app"
+DEFAULT_URL = "https://striverun.app"
 USER_QUERY = re.compile(r"<user_query>(.*?)</user_query>", re.S)
 
 

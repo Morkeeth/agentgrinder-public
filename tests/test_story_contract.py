@@ -44,7 +44,7 @@ def test_public_export_keeps_counts_and_drops_raw_capture_data():
 
 
 def test_public_reader_selects_counts_but_not_raw_capture_fields():
-    select = PUBLIC_RUN.split("select:'", 1)[1].split("'", 1)[0]
+    select = PUBLIC_RUN.split("const PUBLIC_RUN_FIELDS='", 1)[1].split("'", 1)[0]
     for field in ("output_url", "project", "shell_calls", "files_touched", "commits", "tool_calls"):
         assert field in select
     for private in ("private_title_prompt", "command", "path", "tool_output"):

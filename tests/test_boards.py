@@ -23,12 +23,12 @@ def test_boards_read_public_runs_only_and_use_the_card_time_rule():
     assert "weekStart(" in boards and "d.getDate()-((d.getDay()+6)%7)" in INDEX
 
 
-def test_boards_are_routed_and_in_the_menu():
+def test_boards_route_is_preserved_but_not_promoted():
     assert "if(q.has('boards'))return viewBoards();" in INDEX
     # Boards remain directly addressable, but do not compete with Feed, Projects and Profile.
     rail = INDEX[INDEX.index("function railHtml"):INDEX.index("function feedTabs")]
     assert "/?boards" not in rail
-    assert 'href="/?boards">Marathon and boards</a>' in INDEX
+    assert 'href="/?boards">Marathon and boards</a>' not in INDEX
 
 
 def test_profile_carries_a_heatmap_of_visible_runs():
@@ -39,5 +39,5 @@ def test_profile_carries_a_heatmap_of_visible_runs():
 
 
 def test_product_states_the_rules():
-    assert "Time on a run is `wall_time_s` when measured, else `duration_s`" in PRODUCT
-    assert "A Marathon is a public run of 3 hours or more" in PRODUCT
+    assert "app does not promote metric competition" in PRODUCT
+    assert "Feed, My runs and Profile" in PRODUCT

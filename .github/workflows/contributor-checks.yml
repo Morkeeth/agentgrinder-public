@@ -26,3 +26,4 @@ jobs:
       - run: node scripts/test-runtime-config.mjs
       - run: npm run build
       - run: node scripts/test-people-identity.mjs
+      - run: npm run test:launch

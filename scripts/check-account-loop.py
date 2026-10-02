@@ -201,7 +201,12 @@ def main():
                 context = browser.new_context(viewport={"width": width, "height": height})
                 context.route(f"https://{HOST}/**", lambda route: proxy(route, disposable))
                 if sub:
-                    context.add_init_script(session_script(mint(sub, handle, identities or [])))
+                    context.add_init_script(
+                        "if(location.origin===" + json.dumps(base)
+                        + "&&!sessionStorage.getItem('test_session_seeded')){"
+                        + session_script(mint(sub, handle, identities or []))
+                        + "sessionStorage.setItem('test_session_seeded','1');}"
+                    )
                 return context
 
             # 1. Signed out, a draft in the browser, provider cancels. Draft and message survive.
@@ -286,11 +291,15 @@ def main():
             page = context.new_page()
             page.goto(base + "/")
             page.wait_for_selector("#identity-form")
-            check("Make this your profile" in page.inner_text("#app"), "GitHub-only: first sign-in opens STRIVE onboarding")
+            check(page.locator("#identity-form").is_visible() and page.locator(".identity-intro h1").inner_text().startswith("Claim your corner of "), "GitHub-only: first sign-in opens the STRIVE identity moment")
+            check("Record a run" not in page.inner_text("#app"), "GitHub-only: first screen asks only for name and STRIVE username")
             check(page.query_selector("#origin-connection") is None, "GitHub-only: Origin is not mixed into onboarding")
-            page.screenshot(path=str(ARTIFACTS / "github-only-onboarding-mobile.png"), full_page=True)
             page.fill("[name=handle]", "test-github-builder")
             page.fill("[name=display_name]", "TEST DATA GitHub Builder")
+            check(page.inner_text("#identity-preview-handle") == "@test-github-builder", "GitHub-only: chosen handle updates the profile preview")
+            check(page.inner_text("#identity-preview-name") == "TEST DATA GitHub Builder", "GitHub-only: chosen name updates the profile preview")
+            check(page.inner_text("#identity-submit") == "Claim @test-github-builder", "GitHub-only: claim action names the exact handle")
+            page.screenshot(path=str(ARTIFACTS / "github-only-onboarding-mobile.png"), full_page=True)
             page.click("#identity-form button")
             settle(page, "test-github-builder")
             after_onboard = snapshot(disposable)
@@ -422,8 +431,9 @@ def main():
             page.click("#account-signout")
             page.wait_for_url(base + "/")
             page.wait_for_selector("#auth")
-            # The test context re-seeds the session on every load, so the object checked is the
-            # request the SDK made: a logout scoped to this browser only, never global.
+            check(page.evaluate("localStorage.getItem('agentic-strava-auth')") is None,
+                  "riley: sign-out remains signed out after navigation")
+            # Also verify the SDK request is scoped to this browser only, never global.
             check(any(r.startswith("POST /auth/v1/logout?scope=local") for r in REQUESTS), "riley: sign-out sent scope=local logout: " + ", ".join(r for r in REQUESTS if "logout" in r))
             check(not any("scope=global" in r or "scope=others" in r for r in REQUESTS), "riley: no global sign-out was requested")
             check(any(r["auth_uid"] == riley for r in snapshot(disposable)["strava"]), "riley: profile row survives sign-out")
@@ -436,7 +446,7 @@ def main():
             page.goto(base + "/")
             page.wait_for_function("document.getElementById('me').textContent.trim()==='@test-riley'")
             page.click("#account-menu summary")
-            check(page.is_visible("a[href='/?account']"), "menu: Account settings item visible when signed in")
+            check(page.is_visible("a[href='/?account']"), "menu: Settings item visible when signed in")
             page.keyboard.press("Escape")
             page.click("#delete")
             page.wait_for_selector("#danger")

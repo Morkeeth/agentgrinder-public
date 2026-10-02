@@ -56,6 +56,7 @@ def test_segment_schema_stays_in_strava_and_public_reads_are_filtered():
     assert '.eq("visibility", "public")' in page
     assert "This run was on segment:" in page
     assert "segment_id:$('f_segment').value||null" in index
-    assert "segment_id:$('i_segment').value||null" in index
-    assert "wall_time_s:wallTime" in index
+    assert "segment_id:run.segment_id||null" in index
+    assert "wall_time_s:Number.isInteger(run.wall_time_s)" in index
+    assert 'id="i_segment"' not in index[index.index("async function importRun(){"):]
     assert index.count("dropNullSegmentColumns(") == 3, "both run inserts omit unset segment columns"

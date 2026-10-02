@@ -6,7 +6,7 @@ const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 const [index, publicRun, health, agentApi, a2a, publicConfigText] = await Promise.all([
   read('site/index.html'),
   read('server/public-run.mjs'),
-  read('api/health.js'),
+  read('server/readiness.mjs'),
   read('agentgrinder/agent_api.py'),
   read('agentgrinder/a2a_client.py'),
   read('server/public-config.json'),
@@ -25,7 +25,7 @@ requireText(index, 'const SB_SCHEMA="strava";', 'site/index.html', 'the browser 
 requireText(index, 'db:{schema:SB_SCHEMA}', 'site/index.html', 'the browser schema selection');
 requireText(index, 'storageKey:"agentic-strava-auth"', 'site/index.html', 'the Strava-only auth storage key');
 requireText(publicRun, '"Accept-Profile":config.SB_SCHEMA', 'server/public-run.mjs', 'the public read schema header');
-requireText(health, "'Accept-Profile':'strava'", 'api/health.js', 'the health read schema header');
+requireText(health, "'Accept-Profile':'strava'", 'server/readiness.mjs', 'the health read schema header');
 requireText(agentApi, "'Content-Profile':DEFAULT_SCHEMA", 'agentgrinder/agent_api.py', 'the agent write schema header');
 requireText(a2a, '"Accept-Profile": DEFAULT_SCHEMA', 'agentgrinder/a2a_client.py', 'the CLI read schema header');
 

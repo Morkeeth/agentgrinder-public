@@ -21,7 +21,7 @@ await as(CASEY);
 let emptyInsertError;
 try {
   await db.query(
-    "insert into strava.runs(profile_id,title,visibility) values($1,'TEST DATA blocked empty audience','close_friends')",
+    "insert into strava.runs(profile_id,title,visibility,harness,schema_version,measurement_revision,trace_basis,rhythm) values($1,'TEST DATA blocked empty audience','close_friends','Codex',1,repeat('c',64),'elapsed','[1,2]')",
     [CASEY],
   );
 } catch (error) {
@@ -34,7 +34,7 @@ assert.match(
 );
 const privateRun = (
   await db.query(
-    "insert into strava.runs(profile_id,title,visibility) values($1,'TEST DATA private run','private') returning id",
+    "insert into strava.runs(profile_id,title,visibility,harness,schema_version,measurement_revision,trace_basis,rhythm) values($1,'TEST DATA private run','private','Codex',1,repeat('a',64),'elapsed','[1,2]') returning id",
     [CASEY],
   )
 ).rows[0].id;
@@ -67,10 +67,11 @@ await db.query(
 );
 const closeRun = (
   await db.query(
-    "insert into strava.runs(profile_id,title,visibility) values($1,'TEST DATA close friends run','close_friends') returning id",
+    "insert into strava.runs(profile_id,title,visibility,harness,schema_version,measurement_revision,trace_basis,rhythm) values($1,'TEST DATA close friends run','private','Codex',1,repeat('b',64),'elapsed','[2,1]') returning id",
     [CASEY],
   )
 ).rows[0].id;
+await db.query("update strava.runs set visibility='close_friends' where id=$1", [closeRun]);
 assert.equal(
   (
     await db.query(

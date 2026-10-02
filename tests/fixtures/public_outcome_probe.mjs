@@ -39,4 +39,16 @@ assert.ok(!/<li>x{200,}/.test(hostile), 'shipped line not truncated');
 const rows = [{...base, visibility:'private', repo_url:'https://github.com/a/b'}];
 const fake = async () => ({ok:true, json: async () => rows});
 assert.equal(await readPublic(base.id, fake), null, 'a non-public row must never reach the page');
+
+// An additive visual-choice column may not be deployed yet. The public route retries without
+// that one optional field, but only for the exact missing-column response.
+let calls = 0;
+const oldSchema = async (url) => {
+  calls += 1;
+  if (calls === 1) return new Response(JSON.stringify({code:'42703',message:'column runs.hero_visual does not exist'}), {status:400});
+  assert.ok(!decodeURIComponent(String(url)).includes('hero_visual'), 'compatibility retry still selected the missing column');
+  return new Response(JSON.stringify([base]), {status:200, headers:{'content-type':'application/json'}});
+};
+assert.equal((await readPublic(base.id, oldSchema))?.id, base.id, 'old-schema public run did not recover');
+assert.equal(calls, 2, 'missing optional column should retry exactly once');
 console.log('PASS public share page: declared receipts render, hostile stored values are neutralised, no remote image, private rows stay hidden');

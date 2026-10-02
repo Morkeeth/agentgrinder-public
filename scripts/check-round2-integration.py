@@ -189,11 +189,11 @@ def main():
 
             def open_account_settings(page):
                 # The phone path: the header menu is hidden under 900px, so a person taps their
-                # own handle, opens Edit profile and follows the Account settings link there.
+                # own handle, opens Edit profile and follows the Settings link there.
                 page.click("#me a")
                 page.wait_for_selector(".profile-settings summary")
                 page.click(".profile-settings summary")
-                page.get_by_role("link", name="Account settings").click()
+                page.get_by_role("link", name="Settings").click()
 
             # 1. Signed out, a capture preview on the phone, sign-in cancelled at the provider.
             context, page = context_for()
@@ -235,7 +235,7 @@ def main():
             check(uuid.UUID(run_id) is not None, "casey post: run saved and opened at /?run=")
             shot(cp, "04-posted-run-mobile.png")
 
-            # 3. Account settings by the phone path: duplicate handle refused, new handle saved.
+            # 3. Settings by the phone path: duplicate handle refused, new handle saved.
             open_account_settings(cp)
             cp.wait_for_url("**/?account*")
             cp.wait_for_selector("#account-profile")
@@ -314,10 +314,10 @@ def main():
             cp.wait_for_url(f"**/?run={run_id}*", timeout=20000)
             cp.locator(f"#reply-{reply_id}.reply-target, .reply-missing").first.wait_for(timeout=20000)
             check(cp.locator(f"#reply-{reply_id}.reply-target").count() == 1 and cp.locator(".reply-missing").count() == 0, "exact conversation: a reply past page one is found, not reported removed")
-            check(cp.get_by_role("link", name="Back to Responses").count() >= 1, "exact conversation: Back to Responses offered")
+            check(cp.get_by_role("link", name="Back to Notifications").count() >= 1, "exact conversation: Back to Notifications offered")
             check("@test-riley ACKed" in cp.inner_text("#app"), "exact conversation: the ACK list names the acker by handle")
             shot(cp, "11-exact-conversation-mobile.png")
-            cp.get_by_role("link", name="Back to Responses").first.click()
+            cp.get_by_role("link", name="Back to Notifications").first.click()
             cp.wait_for_url("**/?inbox*", timeout=20000)
             cp.get_by_role("heading", name="Responses").wait_for()
             cp.wait_for_timeout(800)
@@ -330,8 +330,8 @@ def main():
             cp.goto(base + "/?run=" + str(uuid.uuid4()))
             settle(cp, "test-casey-r2")
             cp.get_by_text("This run is private or does not exist.").wait_for()
-            back = cp.get_by_role("link", name="Back to Responses")
-            check(back.count() == 1, "missing run: Back to Responses shown on the empty state")
+            back = cp.get_by_role("link", name="Back to Notifications")
+            check(back.count() == 1, "missing run: Back to Notifications shown on the empty state")
             shot(cp, "13-missing-run-return-mobile.png")
             back.first.click()
             cp.wait_for_url("**/?inbox*", timeout=20000)

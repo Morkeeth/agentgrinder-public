@@ -51,7 +51,11 @@ assert.equal((await db.query('select count(*)::int n from runs')).rows[0].n,0);
 await db.query('insert into grinder_follows(follower_id,followed_id) values($1,$2)',[a,b]);
 assert.equal((await db.query('select followed_id from grinder_follows where follower_id=$1',[a])).rows[0].followed_id,b,'follow before first post');
 await as(b);
-await db.query("insert into runs(profile_id,title,caption,visibility) values($1,'TEST DATA public','TEST DATA','public'),($1,'TEST DATA private','TEST DATA','private')",[b]);
+// Two independent TEST DATA captures, both private until the owner shares one.
+await db.query(`insert into runs(profile_id,title,caption,visibility,harness,schema_version,measurement_revision,trace_basis,rhythm)
+ values($1,'TEST DATA public','TEST DATA','private','Codex',1,repeat('a',64),'elapsed','[1,2]'),
+ ($1,'TEST DATA private','TEST DATA','private','Codex',1,repeat('b',64),'elapsed','[2,1]')`,[b]);
+await db.query("update runs set visibility='public' where profile_id=$1 and measurement_revision=repeat('a',64)",[b]);
 await as(a);
 assert.equal((await recent())[0].handle,'x-builder');assert.equal(Number((await recent())[0].public_runs),1);
 // Pair blocking applies in both directions to search and public-run suggestions.

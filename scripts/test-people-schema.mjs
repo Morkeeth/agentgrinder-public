@@ -38,10 +38,12 @@ assert.equal(
 await as(CASEY);
 const rev = "a".repeat(64);
 await db.query(
-  `insert into runs(profile_id,title,visibility,schema_version,measurement_revision,trace_basis)
-   values($1,'TEST DATA public people','public',1,$2,'elapsed')`,
+  `insert into runs(profile_id,title,visibility,schema_version,measurement_revision,trace_basis,harness,rhythm)
+   values($1,'TEST DATA public people','private',1,$2,'elapsed','Codex','[1,2]')`,
   [CASEY, rev],
 );
+// The owner deliberately shares only after the capture exists privately.
+await db.query("update runs set visibility='public' where profile_id=$1 and measurement_revision=$2", [CASEY,rev]);
 
 await as(RILEY);
 assert.equal(

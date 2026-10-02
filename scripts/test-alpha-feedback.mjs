@@ -1,0 +1,45 @@
+// Real PostgreSQL/WASM constraints, grants and RLS. Disposable actors only; no network.
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {bootDisposable,seedJourneyActors,CASEY,RILEY} from './disposable-supabase.mjs';
+const {db,as,anonymous}=await bootDisposable();
+await seedJourneyActors(db);
+const insert=(profile=CASEY,category='bug',message='  The navigation moved. \n',page='/')=>
+ db.query('insert into strava.alpha_feedback(profile_id,category,message,page) values($1,$2,$3,$4)',[profile,category,message,page]);
+await anonymous();await assert.rejects(insert(),/permission denied/);
+await as(CASEY);
+await insert();
+await assert.rejects(db.query('select * from strava.alpha_feedback'),/permission denied/);
+await assert.rejects(db.query("update strava.alpha_feedback set message='rewritten'"),/permission denied/);
+await assert.rejects(db.query('delete from strava.alpha_feedback'),/permission denied/);
+await assert.rejects(insert(RILEY),/your account|row-level security/);
+await assert.rejects(insert(CASEY,'invalid'),/check constraint/);
+await assert.rejects(insert(CASEY,'bug',' \n\t '),/between 1 and 2000/);
+await assert.rejects(insert(CASEY,'idea','x'.repeat(2001)),/between 1 and 2000/);
+for(const page of ['https://example.test/','//example.test/','/?token=secret','/#session=secret','/line\nbreak','/back\\slash','/'+'a'.repeat(200)])
+ await assert.rejects(insert(CASEY,'other','TEST DATA invalid route',page),/check constraint/);
+await assert.rejects(db.query("insert into strava.alpha_feedback(profile_id,category,message,page,created_at) values($1,'bug','TEST DATA','/','2000-01-01')",[CASEY]),/permission denied/);
+await assert.rejects(db.query("insert into strava.alpha_feedback(id,profile_id,category,message,page) values(gen_random_uuid(),$1,'bug','TEST DATA','/')",[CASEY]),/permission denied/);
+for(let i=0;i<4;i++) await insert(CASEY,i%2?'idea':'other','TEST DATA feedback '+i,'/r/test-run');
+await assert.rejects(insert(),/five messages this hour/);
+await as(RILEY);await insert(RILEY,'idea','TEST DATA another account','/');
+await assert.rejects(db.query('select * from strava.alpha_feedback'),/permission denied/);
+await db.exec('reset role');
+const rows=(await db.query('select * from strava.alpha_feedback order by created_at')).rows;
+assert.equal(rows.length,6);
+assert.equal(rows[0].message,'The navigation moved.');
+assert.ok(new Date(rows[0].created_at).getTime()>Date.now()-60000);
+assert.match(rows[0].id,/^[0-9a-f-]{36}$/);
+assert.equal(rows.filter(r=>r.profile_id===CASEY).length,5);
+await db.query("update strava.alpha_feedback set created_at=clock_timestamp()-interval '61 minutes' where id=$1",[rows[0].id]);
+await as(CASEY);await insert(CASEY,'other','TEST DATA hourly slot reopened','/');
+await assert.rejects(insert(),/five messages this hour/);
+await db.exec('reset role');
+await db.exec(readFileSync(new URL('../supabase/strava/021_alpha_feedback.sql',import.meta.url),'utf8'));
+assert.equal((await db.query('select count(*) n from strava.alpha_feedback')).rows[0].n,7,'Migration reapply preserves feedback');
+await as(CASEY);
+await assert.rejects(db.query('select * from strava.alpha_feedback'),/permission denied/);
+await db.exec('reset role');await db.query('delete from strava.profiles where id=$1',[RILEY]);
+assert.equal((await db.query('select count(*) n from strava.alpha_feedback where profile_id=$1',[RILEY])).rows[0].n,0);
+await db.close();
+console.log('Alpha feedback passed: persisted/trimmed, owner-only submission, no client reads/edits/deletes, server identity/time, path-only field, five-per-hour limit, independent accounts, expiry and cascade deletion.');

@@ -15,7 +15,7 @@ def connect_body():
 def test_connect_leads_with_computer_capture():
     body = connect_body()
     assert "Run this on the computer where you build" in body
-    assert "opens a private preview" in body
+    assert "opens it privately for review" in body
     assert "Copy command" in body
 
 
@@ -23,13 +23,13 @@ def test_one_page_auto_capture_with_advanced_import():
     body = connect_body()
     assert "${dropZoneHtml()}" in body
     assert "const capture=ONE_LINE('auto')" in body
-    assert "Advanced options" in body
+    assert "Other import methods" in body
     assert "Connect through MCP" in body
     assert "uvx --from git+https://github.com/Morkeeth/strive agentgrinder grind" in HTML
     for path in ("~/.claude/projects/", "~/.cursor/projects/", "~/.codex/sessions/"):
         assert path in HTML
     # No account for the card or the link; sign-in only to post. No email, no mailto.
-    assert "Nothing posts without your action" in body
+    assert "opens it privately for review" in body
     assert "mailto:" not in body and "signInWithOtp" not in body
     # Bots and unsupported agents have documented paths under Advanced.
     assert "docs/AGENT-UPLOAD-API.md" in body and "docs/GROK-PUSH.md" in body

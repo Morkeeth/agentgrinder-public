@@ -24,7 +24,7 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
       "  -H 'Content-Type: application/json' \\",
       "  -d @run.json",
       "",
-      "# Metrics only. Default audience is Only me. After upload open /?mine (My runs). Share explicitly for public Latest runs.",
+      "# Metrics only. Default audience is Only me. After upload open /?mine (My runs). Choose Public to add it to the feed.",
     ].join("\n");
   }
 
@@ -44,7 +44,7 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
   function signedOutHtml() {
     return `<section class="card pad connect" id="connect-body">
       <h1>Connect an agent</h1>
-      <p>Sign in with GitHub, name the agent, get one private upload credential. Private uploads appear in My runs. Share explicitly for public Latest runs.</p>
+      <p>Sign in with GitHub, name the agent, get one private upload credential. Private uploads appear in My runs. Choose Public to add one to the feed.</p>
       <div class="account-actions"><button type="button" class="act blue" id="connect-signin">Sign in with GitHub</button>
       <a class="act" href="/?mine">See my runs</a></div>
       <p class="account-hint">Signing in never posts a run. Connect tokens stay Only me.</p>
@@ -76,7 +76,7 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
     const isPublic = agent.visibility === "public";
     return `<section class="card pad account-section" id="connect-agent-visibility">
         <h2>Agent profile</h2>
-        <p>Uploads are linked to this Connect agent. Public, Link or Close friends needs the agent public first. Other Only-me runs stay private.</p>
+        <p>Uploads stay linked to this Connect agent. A captured run can use Only me, Close friends, Followers or Public while the agent profile stays private. Agent profile visibility controls whether people can discover the agent; it does not change any run audience.</p>
         <p class="account-hint">Now: ${isPublic ? "Public" : "Private"}.</p>
         ${isPublic ? "" : `<div class="account-actions"><button type="button" class="act blue" id="connect-make-public">Make Connect agent public</button></div>`}
         <p id="connect-agent-state" class="account-state" role="status" aria-live="polite"></p>
@@ -101,7 +101,7 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
     return `<div class="connect" id="connect-body">
       <section class="card pad account-section">
         <h1>Connect an agent</h1>
-        <p class="account-lead">One step: name it, connect, paste the credential once. Private uploads appear in <a href="/?mine">My runs</a>. Share explicitly when you want a run on public Latest runs.</p>
+        <p class="account-lead">One step: name it, connect, paste the credential once. Private uploads appear in <a href="/?mine">My runs</a>. Choose Public when you want a run on the feed.</p>
         <form id="connect-create" class="account-form" novalidate>
           <label for="connect-label">Agent name</label>
           <input id="connect-label" name="label" maxlength="80" required placeholder="Grok laptop" autocomplete="off">
@@ -121,7 +121,7 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
         <h2>Next</h2>
         <div class="account-actions">
           <a class="act blue" href="/?mine">See my runs</a>
-          <a class="act" href="/?explore">Latest runs</a>
+          <a class="act" href="/?explore">Recent runs</a>
           <a class="act" href="/?agents">Advanced Agents</a>
           <a class="act" href="/?account">Account</a>
         </div>
@@ -274,7 +274,7 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
           .update({ visibility: "public" })
           .eq("id", agent.id);
         if (error) throw error;
-        say("Connect agent is public. Other Only-me runs stay private.");
+        say("Connect agent profile is public. Run audiences did not change.");
         await view(null);
       } catch (error) {
         if (state) {
