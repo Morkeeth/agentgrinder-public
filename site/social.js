@@ -738,14 +738,6 @@ window.GrinderSocial = function ({
     await paint();
   }
 
-  function audienceNeedsPublicAgent(audience) {
-    return (
-      audience === "public" ||
-      audience === "link" ||
-      audience === "close_friends"
-    );
-  }
-
   async function saveAgentVisibility(id, visibility) {
     if (visibility !== "private" && visibility !== "public") {
       throw new Error("Choose Private or Public.");
@@ -763,7 +755,7 @@ window.GrinderSocial = function ({
         <option value="private"${priv}>Private</option>
         <option value="public"${pub}>Public</option>
       </select></label>
-      <p class="hint">Public lets a linked run be shared. Other Only-me runs stay private.</p>
+      <p class="hint">Public makes this agent profile discoverable. Run audiences stay unchanged.</p>
       <button type="submit">Save visibility</button>
     </form>`;
   }
@@ -779,9 +771,7 @@ window.GrinderSocial = function ({
             form.dataset.agentVisibility,
             form.elements.visibility.value,
           );
-          status(
-            "Agent visibility saved. Other Only-me runs stay private.",
-          );
+          status("Agent profile visibility saved. Run audiences did not change.");
           if (typeof reload === "function") await reload();
         } catch (error) {
           fail(error);
@@ -792,11 +782,10 @@ window.GrinderSocial = function ({
   }
 
   async function attachAgentShareGate(runId) {
-    const save = byId("run-save");
     const edit = byId("run-edit");
-    if (!save || !edit || save.dataset.agentGate === "1" || !uuid(runId))
+    if (!edit || edit.dataset.agentContext === "1" || !uuid(runId))
       return;
-    save.dataset.agentGate = "1";
+    edit.dataset.agentContext = "1";
     let actor = null;
     try {
       const runs = await result(
@@ -826,36 +815,12 @@ window.GrinderSocial = function ({
       notice.id = "run-agent-visibility";
       notice.className = "account-notice";
       notice.innerHTML =
-        `<p>This run is linked to <a href="/?agent=${encodeURIComponent(actor.id)}">${esc(actor.name || "an agent")}</a>, which is private. Public, Link or Close friends needs the agent public first. Other Only-me runs stay private.</p>` +
-        `<label><input type="checkbox" id="run-agent-public-consent"> Make this agent public. Do not change other Only-me runs.</label>`;
+        `<p>This run is linked to <a href="/?agent=${encodeURIComponent(actor.id)}">${esc(actor.name || "an agent")}</a>, whose profile is private. You can still choose Followers, Close friends or Public for this captured run. Sharing the run does not publish the agent profile or change other runs.</p>`;
       const heading = edit.querySelector("h2");
       if (heading && heading.nextSibling)
         edit.insertBefore(notice, heading.nextSibling);
       else edit.prepend(notice);
     }
-    const previous = save.onclick;
-    save.onclick = async function (ev) {
-      const audience = byId("run-audience")?.value;
-      if (audienceNeedsPublicAgent(audience) && actor.visibility !== "public") {
-        const consent = byId("run-agent-public-consent");
-        if (!consent || !consent.checked) {
-          status(
-            "This run is linked to a private agent. Make that agent public first. Other Only-me runs stay private.",
-            true,
-          );
-          byId("run-agent-visibility")?.scrollIntoView({ block: "center" });
-          return;
-        }
-        try {
-          await saveAgentVisibility(actor.id, "public");
-          actor.visibility = "public";
-        } catch (error) {
-          fail(error);
-          return;
-        }
-      }
-      if (typeof previous === "function") return previous.call(this, ev);
-    };
   }
 
   async function thread(runId, slot) {

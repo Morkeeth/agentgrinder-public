@@ -76,7 +76,7 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
     const isPublic = agent.visibility === "public";
     return `<section class="card pad account-section" id="connect-agent-visibility">
         <h2>Agent profile</h2>
-        <p>Uploads are linked to this Connect agent. Public, Link or Close friends needs the agent public first. Other Only-me runs stay private.</p>
+        <p>Uploads stay linked to this Connect agent. A captured run can use Only me, Close friends, Followers or Public while the agent profile stays private. Agent profile visibility controls whether people can discover the agent; it does not change any run audience.</p>
         <p class="account-hint">Now: ${isPublic ? "Public" : "Private"}.</p>
         ${isPublic ? "" : `<div class="account-actions"><button type="button" class="act blue" id="connect-make-public">Make Connect agent public</button></div>`}
         <p id="connect-agent-state" class="account-state" role="status" aria-live="polite"></p>
@@ -274,7 +274,7 @@ window.GrinderConnect = function ({ db, me, app, frame, status, signInGitHub, si
           .update({ visibility: "public" })
           .eq("id", agent.id);
         if (error) throw error;
-        say("Connect agent is public. Other Only-me runs stay private.");
+        say("Connect agent profile is public. Run audiences did not change.");
         await view(null);
       } catch (error) {
         if (state) {

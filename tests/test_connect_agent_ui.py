@@ -37,7 +37,8 @@ def test_connect_can_make_existing_agent_public():
     assert "Make Connect agent public" in CONNECT
     assert 'from("grinder_agents")' in CONNECT
     assert 'update({ visibility: "public" })' in CONNECT
-    assert "Other Only-me runs stay private" in CONNECT
+    assert "it does not change any run audience" in CONNECT
+    assert "Run audiences did not change" in CONNECT
     assert 'eq("name", "Connect")' in CONNECT
 
 
