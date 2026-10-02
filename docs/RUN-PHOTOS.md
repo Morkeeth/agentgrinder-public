@@ -50,6 +50,11 @@ delete immediately revokes API access and queues bucket-object erasure. Run
 `node scripts/cleanup-run-photos.mjs` in the server environment after deletion, or schedule it.
 It removes up to 100 queued objects and acknowledges only successful Storage deletes; failed
 operations retain the entry for retry. Physical deletion is only confirmed after this worker runs.
+Production schedules `/api/photo-cleanup` daily at 03:00 UTC. Set a random server-only
+`CRON_SECRET` so the scheduled request can authenticate. Requests without that exact Bearer
+secret are denied. For the ten-person launch this drains up to 100 pending photos per day;
+monitor `remaining_unknown` and drain again when true. This is deferred erasure, not instant
+physical removal after a raw database deletion. Access is revoked immediately by parent RLS.
 Failed uploads attempt to remove both the object and reservation; an interrupted request can
 leave an inaccessible object or an empty reservation, which the owner can remove.
 

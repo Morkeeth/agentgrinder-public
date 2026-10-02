@@ -1,5 +1,5 @@
 // Probe the capabilities the product actually needs, not merely one reachable table.
-export async function readiness(config,{fetcher=fetch,storageKey=process.env.STRIVE_STORAGE_SERVICE_ROLE_KEY}={}) {
+export async function readiness(config,{fetcher=fetch,storageKey=process.env.STRIVE_STORAGE_SERVICE_ROLE_KEY,cronSecret=process.env.CRON_SECRET}={}) {
  const headers={apikey:config.SB_KEY,'Accept-Profile':'strava'};
  const read=async(path,extra={})=>{
   try{return await fetcher(config.SB_URL+path,{headers,...extra,signal:AbortSignal.timeout(5000),cache:'no-store'});}
@@ -16,6 +16,7 @@ export async function readiness(config,{fetcher=fetch,storageKey=process.env.STR
  let denied=false;try{denied=[401,403].includes(discovery?.status)&&(await discovery.json()).code==='42501';}catch{}
  checks.discovery=denied?'ready':'unavailable';
  checks.photo_storage='unavailable';
+ checks.photo_cleanup=cronSecret?'ready':'unavailable';
  if(storageKey){
   const storage=await read('/storage/v1/bucket/strive-run-photos',{headers:{apikey:storageKey,Authorization:'Bearer '+storageKey}});
   try{if(storage?.ok&&(await storage.json()).public===false)checks.photo_storage='ready';}catch{}
