@@ -43,7 +43,7 @@ def test_handoff_keeps_complete_url_out_of_bot_output(tmp_path):
     receipt = json.loads(result.stdout)
     assert 'preview_url' not in receipt
     assert receipt['preview_handoff'] == str(handoff.resolve())
-    assert handoff.read_text().startswith('https://agentic-strava.vercel.app/#import=')
+    assert handoff.read_text().startswith('https://striverun.app/#import=')
 
 
 def preview(path):
