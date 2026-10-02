@@ -1,6 +1,6 @@
 # STRIVE Grok Bot publish kit
 
-Status: source kit only. Installing or running the labelled sample does not prove that a second
+Status: preview source on `codex/strive-launch-integration-20261002`, not yet a released marketplace template. Installing or running the labelled sample does not prove that a second
 bot used a real export or that an owner saved a post.
 
 ## Choose the unit you need
@@ -29,7 +29,7 @@ a bot workflow, replace `DEST` with that workflow's skill directory and run this
 
 ```sh
 DEST="$HOME/bot-workflow/post-agent-run"; TMP="$(mktemp -d)"; \
-git clone --depth 1 --filter=blob:none --sparse https://github.com/Morkeeth/strive.git "$TMP" && \
+git clone --branch codex/strive-launch-integration-20261002 --depth 1 --filter=blob:none --sparse https://github.com/Morkeeth/strive.git "$TMP" && \
 git -C "$TMP" sparse-checkout set templates/grokbot/post-agent-run && \
 mkdir -p "$DEST" && cp -R "$TMP/templates/grokbot/post-agent-run/." "$DEST/" && \
 rm -rf "$TMP"
@@ -44,7 +44,7 @@ Copy only the companion unit into the bot workflow:
 
 ```sh
 DEST="$HOME/bot-workflow/manage-strive"; TMP="$(mktemp -d)"; \
-git clone --depth 1 --filter=blob:none --sparse https://github.com/Morkeeth/strive.git "$TMP" && \
+git clone --branch codex/strive-launch-integration-20261002 --depth 1 --filter=blob:none --sparse https://github.com/Morkeeth/strive.git "$TMP" && \
 git -C "$TMP" sparse-checkout set templates/grokbot/manage-strive && \
 mkdir -p "$DEST" && cp -R "$TMP/templates/grokbot/manage-strive/." "$DEST/" && \
 rm -rf "$TMP"
