@@ -46,15 +46,25 @@ function headers(sub, write) {
   return h;
 }
 
-// The browser Save path: POST /rest/v1/runs with the ridge fields in the body.
+// TEST DATA capture provenance, unique for each independently captured fixture.
+const capture = label => ({schema_version:1,measurement_revision:createHash('sha256').update('TEST DATA '+label).digest('hex'),trace_basis:'elapsed'});
+// The browser Save path: POST privately, then explicitly share the saved run.
 async function saveRun(sub, row) {
+  const audience = row.visibility;
   const response = await fetch(restUrl + "/rest/v1/runs?select=id", {
     method: "POST",
     headers: headers(sub, true),
-    body: JSON.stringify(row),
+    body: JSON.stringify({...row,visibility:'private'}),
   });
   const payload = await response.json();
   assert.equal(response.status, 200, "Save must succeed: " + JSON.stringify(payload));
+  assert.deepEqual(await readRun(null,payload[0].id),[],"new capture stays private before sharing");
+  if(audience!=='private'){
+    const shared=await fetch(restUrl+'/rest/v1/runs?id=eq.'+payload[0].id,{
+      method:'PATCH',headers:headers(sub,true),body:JSON.stringify({visibility:audience}),
+    });
+    assert.equal(shared.status,200,'owner can deliberately share the saved capture');
+  }
   return payload[0].id;
 }
 
@@ -100,6 +110,7 @@ const publicRun = await saveRun(CASEY, {
   tool_calls: TRANSCRIPT_TOOL_CALLS,
   wall_time_s: 1234,
   rhythm: [1, 2, 1],
+  ...capture('public ridge'),
   ...SENT,
 });
 const reloaded = (await readRun(CASEY, publicRun))[0];
@@ -141,6 +152,7 @@ const closeRun = await saveRun(CASEY, {
   harness: "Codex",
   prompts: 9,
   rhythm: [2, 1, 2],
+  ...capture('close friends ridge'),
   ...SENT,
 });
 
@@ -200,6 +212,7 @@ const legacyRun = await saveRun(CASEY, {
   visibility: "public",
   harness: "Codex",
   rhythm: [1, 4, 2, 5, 3],
+  ...capture('rhythm without ridge'),
 });
 const legacyRow = await readPublic(legacyRun, anonFetch);
 assert.equal(legacyRow.ridge, null, "a run saved without a ridge stays null, no backfill");
