@@ -20,7 +20,7 @@ Cursor run capture and Origin repository access are separate. A linked repositor
 
 ## Capture a real run
 
-Use the adjacent post-agent-run kit for an owner-selected export on the bot's own computer. Read its SKILL.md before capture. Never choose an unrelated session or substitute the sample. No raw prompts, replies, secrets or local paths belong in an uploaded run.
+Use the adjacent post-agent-run kit for an owner-selected export on the bot's own computer. Read its SKILL.md before capture. Install that complete sibling directory, including scripts/upload.py; if absent, report the missing dependency instead of improvising capture. Browser management also needs a supported browser-control tool and the owner's authenticated session; installing this skill supplies neither. Never choose an unrelated session or substitute the sample. No raw prompts, replies, secrets or local paths belong in an uploaded run.
 
 Save privately only when authorized. Keep missing facts unknown and captured measurements unchanged. The owner may write the title, description and outcome; that does not verify their claim. A retry must check whether the same run already exists before creating another.
 
