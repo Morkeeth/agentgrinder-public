@@ -32,5 +32,5 @@ def test_prepare_strava_bootstrap_includes_010():
 def test_privacy_and_progress_match_relationship_gate():
     assert "relationship-gated" in PRIVACY
     assert "Anyone with a link to a link-only run" not in PRIVACY
-    assert "Followers and close friends" in PROGRESS
+    assert "link:'Followers'" in PROGRESS
     assert "Anyone with the link" not in PROGRESS

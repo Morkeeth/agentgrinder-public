@@ -202,7 +202,7 @@
   // them, sized by how often it was there; every move is one arc, forward over the rail and back
   // under it, so a run that kept returning to one folder draws a dense knot and a run that
   // walked the tree once draws a clean sweep. No folder is named: the map is the shape of the
-  // work. Blue only; orange is spent on the peak and a sent XUDOS. A run that touched
+  // work. Blue only; orange is spent on the peak and a sent thanks mark. A run that touched
   // two folders draws a short strip (h, rail and the arcs halved): the full box around one arc
   // reads as an empty map.
   const MAP_W = 300, MAP_H = 44, RAIL = 30, MAP_X0 = 12, MAP_X1 = 288;
@@ -383,7 +383,7 @@
     '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 3v10M6 7l4-4 4 4M4 11v5.5h12V11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   // opts.page: the signed-out share page at /r/<id>. It has no script, so the heart is a link into
-  // the run (where a signed-in reader can send XUDOS) and the title is the page's one h1.
+  // the run (where a signed-in reader can send thanks) and the title is the page's one h1.
   // opts.count null means the count could not be read; the heart then carries no number.
   // opts.preview: a run that is not saved anywhere yet (the import preview, and the card the
   // command line writes on this computer, agentgrinder/feedcard.py). Nothing on it links anywhere:
@@ -408,12 +408,12 @@
       : `<a class="fc-name" href="/?u=${encodeURIComponent(p.handle)}">${esc(p.name)}</a>`;
     const meta = [esc(harnessName(r)), esc(when(r.created_at)), opts.metaExtra ? esc(opts.metaExtra) : ""].filter(Boolean).join(" · ");
     const kudos = preview
-      ? `<span class="fc-act" aria-label="Send XUDOS">${KUDOS_ICON}</span>`
+      ? `<span class="fc-act" aria-label="Send thanks">${KUDOS_ICON}</span>`
       : page
-      ? `<a class="fc-act" href="/?run=${id}" aria-label="Send XUDOS${count === null ? "" : `, ${count} so far`}">${KUDOS_ICON}${countHtml}</a>`
+      ? `<a class="fc-act" href="/?run=${id}" aria-label="Send thanks${count === null ? "" : `, ${count} so far`}">${KUDOS_ICON}${countHtml}</a>`
       : mine
       ? `<span class="fc-act fc-kudos-mine">${KUDOS_ICON}<span class="num">${count}</span></span>`
-      : `<button class="fc-act kudo${opts.acked ? " on" : ""}" data-run="${id}" data-to="${esc(r.profile_id)}" aria-label="${opts.acked ? "XUDOS sent" : "Send XUDOS"}, ${count} so far">${KUDOS_ICON}<span class="num">${count}</span></button>`;
+      : `<button class="fc-act kudo${opts.acked ? " on" : ""}" data-run="${id}" data-to="${esc(r.profile_id)}" aria-label="${opts.acked ? "Thanks sent" : "Send thanks"}, ${count} so far">${KUDOS_ICON}<span class="num">${count}</span></button>`;
     const talk = preview
       ? `<span class="fc-act" aria-label="Discuss">${TALK_ICON}<span>Discuss</span></span><span class="fc-act" aria-label="Share">${SHARE_ICON}<span>Share</span></span>`
       : `<a class="fc-act" href="/?run=${id}#grind-thread" aria-label="Discuss">${TALK_ICON}<span>Discuss</span></a><a class="fc-act" href="/?share=1&amp;run=${id}" aria-label="Share">${SHARE_ICON}<span>Share</span></a>`;
@@ -443,7 +443,7 @@
   // module fills. Built only from profiles that have a public run.
   function builderRow(r) {
     const p = profileOf(r);
-    return `<div class="fc-builder">${face(r, 44)}<div class="fc-who"><a class="fc-name" href="/?u=${encodeURIComponent(p.handle)}">${esc(p.name)}</a><small>Latest: <a href="/?run=${esc(r.id)}">${esc(titleOf(r))}</a></small></div><span class="card-follow" data-profile="${esc(r.profile_id)}" data-handle="${esc(p.handle)}" data-label="Follow"></span></div>`;
+    return `<div class="fc-builder">${face(r, 44)}<div class="fc-who"><a class="fc-name" href="/?u=${encodeURIComponent(p.handle)}">${esc(p.name)}</a><small>Recent: <a href="/?run=${esc(r.id)}">${esc(titleOf(r))}</a></small></div><span class="card-follow" data-profile="${esc(r.profile_id)}" data-handle="${esc(p.handle)}" data-label="Follow"></span></div>`;
   }
 
   const api = { card, face, headline, stats, achievement, harnessName, badge, spark, settle, routeGeometry, routeMap, proofRoute, changeAtlas, resultVisual, photoVisual, heroChoices, heroVisual, strideBars, strideText, strideHtml, stride, wireStride, nextSlot, builderRow, profileOf, durationLabel, when, titleOf };

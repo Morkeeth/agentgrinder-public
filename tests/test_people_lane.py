@@ -22,12 +22,34 @@ def test_people_module_owns_lookup_and_shareable_profile():
     assert "grinder_find_people" in PEOPLE
     assert "grinder_recent_builders" in PEOPLE
     assert "Find people" in PEOPLE
-    assert "Copy profile link" in PEOPLE
+    assert "Search by STRIVE username" in PEOPLE
+    assert "Find friends on GitHub" in PEOPLE
+    assert 'fetch("/api/github-friends"' in PEOPLE
+    assert "Authorization: `Bearer ${token}`" in PEOPLE
+    assert "never follows anyone automatically" in PEOPLE
+    assert "X friend matching is unavailable" in PEOPLE
     assert "window.GrinderPeople" in PEOPLE
     assert "async function discover" in PEOPLE
     assert "async function profile" in PEOPLE
     exported = PEOPLE.rsplit("return {", 1)[1]
     assert "discover" in exported and "profile" in exported and "present" in exported
+
+
+def test_recent_builder_failure_is_not_reported_as_no_public_runs():
+    assert "recent = null" in PEOPLE
+    assert "Suggested people could not load" in PEOPLE
+    assert "No other builders with public runs yet" in PEOPLE
+
+
+def test_github_friend_matching_has_distinct_states_and_never_auto_follows():
+    assert "Checking GitHub" in PEOPLE
+    assert "No matching public GitHub connections" in PEOPLE
+    assert "GitHub friends could not load" in PEOPLE
+    assert "payload?.truncated === true" in PEOPLE
+    assert "payload?.scanned" in PEOPLE
+    assert 'payload?.scope !== "public_github_following"' in PEOPLE
+    github_block = PEOPLE[PEOPLE.index("async function loadGithubFriends"):PEOPLE.index("async function load(query)")]
+    assert '.from("grinder_follows").insert' not in github_block
 
 
 def test_following_empty_states_point_to_people():

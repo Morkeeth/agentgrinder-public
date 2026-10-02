@@ -99,13 +99,14 @@ window.GrinderAccount = function ({
     const p = present(profile);
     return `<div class="account" id="account-body">${recoveryHtml(recovered, pend, user)}
       <section class="card pad account-section"><h1>Your account</h1>
-        <p class="account-lead">Signed in as <a id="account-lead-handle" href="${esc(p.url)}">@${esc(p.handle)}</a>. Your profile id stays the same when you change your handle; the link follows the new handle.</p>
+        <p class="account-lead">Your STRIVE username is <a id="account-lead-handle" href="${esc(p.url)}">@${esc(p.handle)}</a>. GitHub is a separate linked account. X sign-in is unavailable.</p>
         <form id="account-profile" class="account-form" novalidate>
-          <label for="account-handle">Handle</label>
-          <input id="account-handle" name="handle" autocomplete="username" maxlength="40" spellcheck="false" value="${esc(profile.handle || "")}" aria-describedby="account-handle-help">
-          <p id="account-handle-help" class="account-hint">Letters, numbers, - or _. Friends find you at /?u=your-handle.</p>
-          <label for="account-name">Display name</label>
+          <label for="account-name">Name</label>
           <input id="account-name" name="display_name" autocomplete="nickname" maxlength="60" value="${esc(profile.display_name || profile.name || "")}">
+          <p class="account-hint">Shown beside your runs. It does not need to be unique.</p>
+          <label for="account-handle">STRIVE username</label>
+          <input id="account-handle" name="handle" autocomplete="username" maxlength="40" spellcheck="false" value="${esc(profile.handle || "")}" aria-describedby="account-handle-help">
+          <p id="account-handle-help" class="account-hint">Unique on STRIVE. Letters, numbers, - or _. Your profile link uses this username.</p>
           <p id="account-profile-state" class="account-state" role="status" aria-live="polite"></p>
           <div class="account-actions"><button type="submit" id="account-save">Save</button></div>
         </form></section>
@@ -120,7 +121,7 @@ window.GrinderAccount = function ({
         <p>Signs you out of __BRAND__ in this browser only. Other devices, and Agent Grinder if you use it with the same sign-in, stay signed in.</p>
         <div class="account-actions"><button type="button" class="act" id="account-signout">Sign out here</button></div></section>
       <section class="card pad account-section account-danger" id="danger" aria-labelledby="account-delete-title"><h2 id="account-delete-title">Delete your __BRAND__ profile</h2>
-        <p><strong>Goes:</strong> this __BRAND__ profile, your posted runs, and the ACKs and replies you gave or received here. Deleted work cannot be restored.</p>
+        <p><strong>Goes:</strong> this __BRAND__ profile, your posted runs, and the thanks and replies you gave or received here. Deleted work cannot be restored.</p>
         <p><strong>Stays:</strong> your sign-in account, your Agent Grinder profile and runs if you have one, and anything on your own computer.</p>
         <form id="account-delete" class="account-form" novalidate>
           <label for="account-confirm">Type your handle <strong id="account-confirm-handle">${esc(p.handle)}</strong> to confirm</label>

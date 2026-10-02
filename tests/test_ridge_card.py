@@ -79,7 +79,7 @@ def test_card_draws_one_primary_ridge_and_story_before_effort():
     assert facts.count('<div class="run-metric') >= 2
     assert "Session" in facts
     assert html.index("Achieved") < html.index('ridge-wrap') < html.index("Open PR")
-    assert html.index('ridge-wrap') < html.index("Project touched") < html.index("Code activity")
+    assert html.index('ridge-wrap') < html.index(">Project<") < html.index("Code activity")
     assert "4</strong> Shell calls" in html
     assert "5</strong> Files changed" in html
     assert html.index('ridge-wrap') < html.index('class="run-metrics"')
@@ -100,7 +100,7 @@ def test_card_keeps_recorded_zero_and_hides_missing_metrics():
 
 def test_browser_card_omits_missing_output_and_sensitive_capture_data():
     unknown = render()["unknown"]
-    assert "Project touched" not in unknown
+    assert ">Project<" not in unknown
     assert "Code activity" not in unknown
     assert 'class="run-output"' not in unknown
     for private in ("PRIVATE PROMPT", "PRIVATE COMMAND", "/private/", "PRIVATE OUTPUT"):

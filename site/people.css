@@ -10,6 +10,10 @@
 .people-section{display:grid;gap:12px}
 .people-empty,.people-share,.people-card{background:var(--box);border:1px solid var(--rule);padding:20px;margin:0}
 .people-empty h3,.people-card h3{margin:0 0 8px;font-size:18px;letter-spacing:-.02em;line-height:1.25}
+.people-networks .cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.people-network-result{display:grid;gap:12px;margin-top:16px}
+.people-network-result:empty{margin-top:0}
+.people-network-result .people-empty,.people-network-result .people-card{background:var(--paper)}
 .people-empty p,.people-share p,.people-card p{margin:0 0 8px;line-height:1.5}
 .people-empty .cta,.people-share .cta,.people-card-actions,.people-profile-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 .people-card-main{display:flex;gap:14px;align-items:flex-start;min-width:0}
@@ -28,4 +32,5 @@
   .people-search-row{flex-direction:column}
   .people-search button,.people-empty .cta .act,.people-share .cta .act,.people-card-actions .act{width:100%;text-align:center;box-sizing:border-box}
   .people-card,.people-empty,.people-share{padding:16px}
+  .people-networks .cta .act{width:100%;text-align:center;box-sizing:border-box}
 }

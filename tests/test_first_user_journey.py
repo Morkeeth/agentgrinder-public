@@ -24,17 +24,17 @@ def test_signed_in_builder_lands_on_the_feed_not_a_tour():
     # The current Connect page leads with one auto-detect command. Tool-specific setup is advanced.
     assert "function connectBodyHtml()" in INDEX
     assert "const capture=ONE_LINE('auto')" in INDEX
-    assert "Advanced options" in INDEX
+    assert "Other import methods" in INDEX
     assert "docs/GROK-PUSH.md" in INDEX
 
 
 def test_zero_run_surfaces_connect_and_deliberate_save():
     assert "Preview stays private on this device" not in INDEX
-    assert "Anyone with the link needs no account: whoever has the address can open that card." in INDEX
+    assert "Sign in to save the run and choose who can read it." in INDEX
     assert "Your first run starts private" in PROGRESS
     assert 'href="/?connect">Connect an agent</a>' in PROGRESS
     assert "Private uploads appear here" in PROGRESS
-    assert "Share explicitly for public Latest runs" in PROGRESS
+    assert "Choose Public to add one to the feed." in PROGRESS
     assert "Grok Bot push guide" in PROGRESS
 
 
@@ -53,7 +53,7 @@ def test_connect_primary_still_points_at_mine():
 
 def test_private_run_offers_deliberate_audience_cta():
     assert 'href="#run-audience">Choose who can see this</a>' in INDEX
-    assert "Private uploads stay in My runs until you deliberately choose Link or Public below." in INDEX
+    assert "Private uploads stay in My runs until you deliberately choose Followers or Public below." in INDEX
 
 
 def test_responses_signed_out_uses_github():

@@ -14,7 +14,7 @@ def test_post_page_exposes_priority_harnesses_and_private_preview():
     # The page starts with one auto-detect command; per-tool setup is secondary.
     connect = INDEX[INDEX.index("function connectBodyHtml()") : INDEX.index("function wireConnectCopies(")]
     assert "const capture=ONE_LINE('auto')" in connect
-    assert "Advanced options" in connect
+    assert "Other import methods" in connect
     assert "Grok Bot" in connect
     assert "docs/GROK-PUSH.md" in connect
     assert "${connectBodyHtml()}" in block
@@ -32,7 +32,7 @@ def test_card_shows_builder_project_session_caption_and_output():
     assert card.index("${r.caption?") < card.index("${visual}")
     assert "chosenRunHero" in card
     assert card.index("${visual}") < card.index("${metricStrip()}")
-    assert "Project touched" in card
+    assert ">Project<" in card
     assert "Code activity" in card
     assert "Explore this run" in card
     assert "card-follow" in card
@@ -47,8 +47,8 @@ def test_card_shows_builder_project_session_caption_and_output():
 def test_social_actions_remain_in_the_focused_app():
     assert ".from(\"grinder_follows\")" in SOCIAL
     assert ".from(\"grinder_replies\")" in SOCIAL
-    assert "Cheer this run" in INDEX
-    assert "Send XUDOS" in INDEX
+    assert "Thank this run" in INDEX
+    assert "Send thanks" in INDEX
     assert "ACK the work" not in INDEX
     assert "Send ACK" not in INDEX
     assert "Responses" in SOCIAL
@@ -62,7 +62,8 @@ def test_social_actions_remain_in_the_focused_app():
     assert "luma.com" not in INDEX
     assert "eventChip" in INDEX or "${eventChip}" in INDEX
     assert "xudos-tip" in INDEX
-    assert "Scene photo URL" in INDEX
+    assert "Scene photo URL" not in INDEX
+    assert "Add up to six photos" in INDEX
     assert "history.replaceState(null,'','/?explore')" in INDEX
     assert "async function viewEvent()" in INDEX
     # Since migration 014 an event is a real page: the club's event, who is going, and Join.

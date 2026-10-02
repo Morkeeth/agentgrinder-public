@@ -23,8 +23,11 @@ def test_post_forms_offer_three_private_first_audiences():
             INDEX.index(f'<select id="{select_id}"')
             : INDEX.index("</select>", INDEX.index(f'<select id="{select_id}"'))
         ]
-        assert choices.count("<option") == 5
-        assert 'value="" selected disabled' in choices
+        assert choices.count("<option") in (4, 5)
+        if select_id == "f_vis":
+            assert 'value="" selected disabled' in choices
+        else:
+            assert 'value="private" selected' in choices
         assert 'value="private"' in choices
         assert 'value="close_friends"' in choices
         assert 'value="public"' in choices

@@ -19,7 +19,7 @@ def test_failed_save_keeps_the_draft_and_offers_an_explicit_retry():
     assert "Save not confirmed." in IMPORT
     assert "cannot tell whether the service received the run" in IMPORT
     assert 'id="i_retry"' in IMPORT and "Check and try again" in IMPORT
-    assert 'href="/?mine">Your runs' in IMPORT
+    assert 'href="/?mine">My runs' in IMPORT
     # no timer or loop re-sends the insert; the only retry is the person's click
     assert "setTimeout" not in IMPORT and "setInterval" not in IMPORT
     assert "Check Your runs before retrying" not in IMPORT
@@ -64,13 +64,9 @@ def test_a_failed_rig_update_never_reads_as_a_failed_save():
 def test_the_preview_names_what_the_export_carries_and_matches_the_allowlist():
     assert 'class="hint export-contents"' in IMPORT
     assert "carries only:" not in IMPORT
-    assert "the project folder name, counts, timing, the activity trace" in IMPORT
-    assert "ridge bins and worker counts" in IMPORT
-    assert "progress notes" in IMPORT and "a reach flag" in IMPORT and "measurement references" in IMPORT
+    assert "Counts, timing and the activity trace are imported" in IMPORT
     assert "coach_experiment" in IMPORT  # disclosure gates on the traveling field
-    assert "It never carries prompts, code or file paths." in IMPORT
-    assert "MCP names travel only if you tick the box below." in IMPORT
-    assert "saved to your profile even when the run is Only me" in IMPORT
+    assert "Prompts, code and file paths are not" in IMPORT
     # the words are pinned to the exporter's allowlist: if a new field starts travelling, this
     # test must be revisited with the copy
     keys = set(re.findall(r'^\s+"([a-z_]+)":', PUSH, re.M))

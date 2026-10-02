@@ -95,12 +95,13 @@
     const h = x ? x.handle.replace(/^@+/, "") : "";
     return /^[a-z0-9_]{1,15}$/i.test(h) ? h : null;
   }
-  // The public links a profile row proves: each one comes from a provider identity, never typed.
+  // GitHub is provider-backed. The legacy X column was owner-writable before X auth was disabled,
+  // so it is only an unverified social link and must never be presented as a connected identity.
   function linksOf(p) {
     const gh = str(p?.github_handle), x = str(p?.x_handle);
     return {
-      github: gh ? { handle: gh, url: "https://github.com/" + encodeURIComponent(gh) } : null,
-      x: x ? { handle: x, url: "https://x.com/" + encodeURIComponent(x) } : null,
+      github: gh ? { handle: gh, url: "https://github.com/" + encodeURIComponent(gh), verified: true } : null,
+      x: x ? { handle: x, url: "https://x.com/" + encodeURIComponent(x), verified: false } : null,
     };
   }
   // Suggested onboarding values. The owner confirms or edits them; nothing is saved here.

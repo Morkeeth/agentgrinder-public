@@ -121,7 +121,7 @@ function mount({run,slot,status,moment=null,review=null}){
  const publicShare=run.visibility==='public', handle=run.profiles?.github_handle;
  const url=moment?location.origin+'/?run='+encodeURIComponent(run.id)+'&moment='+encodeURIComponent(moment.id):location.origin+(publicShare?'/r/':'/?run=')+encodeURIComponent(run.id);
  slot.innerHTML=`<div class="head"><h2>${review?"Share my outcome":"Share your run"}</h2>${review?"":`<a href="/?run=${encodeURIComponent(run.id)}">Back to run</a>`}</div>
- <p class="hint">${publicShare?'Public run · anyone can read it at /r/.':run.visibility==='link'?'Link run · signed-in followers and close friends can open /?run=.':'Private run · exporting an image does not change who can read the run.'}</p>
+ <p class="hint">${publicShare?'Public run · anyone can read it at /r/.':run.visibility==='link'?'Followers · signed-in followers and close friends can open it.':'Private run · exporting an image does not change who can read the run.'}</p>
  <div class="share-studio"><form id="post-editor" class="panel reply-form">
  <label>Title<input name="title" maxlength="100" required value="${esc(run.title)}"></label>
  <label>Caption (optional edit)<textarea name="result" maxlength="240" placeholder="One short result line. Leave as-is if the card already says it.">${esc(run.caption||'')}</textarea></label>
@@ -147,7 +147,7 @@ function mount({run,slot,status,moment=null,review=null}){
  ctx.fillStyle='#111';clipped=lines(f.title||'Your run',64,172,952,'600 46px sans-serif',54,2)||clipped;
  ctx.fillStyle='#444';clipped=lines(f.result||'Achievement caption unknown',64,275,952,'24px sans-serif',31,2)||clipped;
  ctx.fillStyle='#666';const identity=f.identity&&handle?'@'+handle:'Identity not included';const agentLabel=(()=>{const n=String(run.agent_name||'').trim();if(!n||/^connect$/i.test(n))return run.source_actor_id?'via Connect':'';return n;})();clipped=lines(identity+' · '+(run.harness||'Harness unknown')+(f.identity&&agentLabel?' · '+agentLabel:''),64,330,952,'19px sans-serif',24,1)||clipped;
- const facts=storyFacts(run),story=[['OUTPUT',facts.output],['PROJECT TOUCHED',facts.project],['CODE ACTIVITY',facts.code]].filter(([,value])=>value);story.forEach(([label,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='15px sans-serif';ctx.fillText(label,x,378);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'19px sans-serif':'600 20px sans-serif';clipped=lines(value,x,408,285,'600 20px sans-serif',24,1)||clipped;});
+ const facts=storyFacts(run),story=[['OUTPUT',facts.output],['PROJECT',facts.project],['CODE ACTIVITY',facts.code]].filter(([,value])=>value);story.forEach(([label,value],i)=>{const x=64+i*317;ctx.fillStyle='#666';ctx.font='15px sans-serif';ctx.fillText(label,x,378);ctx.fillStyle=value==='Unknown'?'#666':'#111';ctx.font=value==='Unknown'?'19px sans-serif':'600 20px sans-serif';clipped=lines(value,x,408,285,'600 20px sans-serif',24,1)||clipped;});
  const route=run.code_route&&run.code_route.v===1?run.code_route:null;
  if(route&&!route.unavailable&&Array.isArray(route.projects)&&Array.isArray(route.stops)&&route.projects.length&&route.stops.length){
   const projects=route.projects,stops=route.stops,idx=Object.fromEntries(projects.map((p,i)=>[p.id,i]));

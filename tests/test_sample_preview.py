@@ -107,14 +107,14 @@ const preview=nodes['import-card-preview'].innerHTML;
 if(!preview.includes('<article class="card fc">')||preview.includes('href=')||preview.includes('<button')) throw Error('Preview has saved-run controls');
 if(preview.includes('Untitled run')||preview.includes('ACHIEVED')) throw Error('Preview shows a placeholder title');
 const saved=vm.runInContext("runCard({id:'real-run',profile_id:'real-author',created_at:'2026-09-14',title:'Real run'},false,0)",context);
-for(const text of ['XUDOS','Discuss','Share','/?run=real-run'])if(!saved.includes(text))throw Error('Saved run lost '+text);
+for(const text of ['Thanks','Discuss','Share','/?run=real-run'])if(!saved.includes(text))throw Error('Saved run lost '+text);
 // The rhythm trace carries the blue token inline. A ridge carries it through design.css
 // (.ridge-line stroke:var(--blue)), so a preview with a ridge is checked against that rule.
 const css=fs.readFileSync(root+'/site/feed.css','utf8');
 if(preview.includes('class="fc-line"')&&!/\.fc-line\{[^}]*stroke:var\(--blue\)/.test(css))throw Error('Preview trace lost blue token');
 const rendered=nodes.app.innerHTML;
 if(sample){
- if(!rendered.includes('Sample card preview')||!rendered.includes('not your activity')) throw Error('Sample provenance not visible');
+ if(!rendered.includes('Sample run preview')||!rendered.includes('not your activity')) throw Error('Sample provenance not visible');
  if(!/id="i_pub" disabled/.test(rendered)) throw Error('Sample save not disabled');
 }else if(/id="i_pub" disabled/.test(rendered)) throw Error('Real export save disabled');
  await events['i_pub:click']();

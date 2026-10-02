@@ -6,10 +6,18 @@ const config=runtimeConfig();
 export const origin=config.ORIGIN;
 export const validId=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const PUBLIC_RUN_FIELDS='id,created_at,title,caption,output_url,repo_url,receipts,shipped,artifact_url,image_url,hero_visual,project,harness,started_at,duration_s,wall_time_s,prompts,tool_calls,shell_calls,files_touched,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,code_route,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)';
 export async function readPublic(id,fetcher=fetch){
  if(!validId(id))return null;
- const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select:'id,created_at,title,caption,output_url,repo_url,receipts,shipped,artifact_url,image_url,hero_visual,project,harness,started_at,duration_s,wall_time_s,prompts,tool_calls,shell_calls,files_touched,artifacts_produced,commits,rhythm,route,trace_basis,ridge,worker_bins,commit_bins,ridge_basis,ridge_wall_seconds,ridge_tool_calls,code_route,visibility,profiles!runs_profile_id_fkey(github_handle,handle,display_name)',limit:'1'});
- const response=await fetcher(config.SB_URL+'/rest/v1/runs?'+query,{headers:{apikey:config.SB_KEY,"Accept-Profile":config.SB_SCHEMA},cache:'no-store',signal:AbortSignal.timeout(8000)});
+ const request=select=>{const query=new URLSearchParams({id:'eq.'+id,visibility:'eq.public',select,limit:'1'});return fetcher(config.SB_URL+'/rest/v1/runs?'+query,{headers:{apikey:config.SB_KEY,"Accept-Profile":config.SB_SCHEMA},cache:'no-store',signal:AbortSignal.timeout(8000)})};
+ let response=await request(PUBLIC_RUN_FIELDS);
+ // Production can trail an additive visual-choice migration. Keep the public page available on
+ // that older schema; retry only for this exact missing optional column, never for a broad 400.
+ if(response.status===400){
+  const detail=await response.clone().text();
+  if(/hero_visual/i.test(detail)&&/(does not exist|not found|schema cache|PGRST204)/i.test(detail))
+   response=await request(PUBLIC_RUN_FIELDS.replace(',hero_visual',''));
+ }
  if(!response.ok)throw new Error('Public run unavailable');const rows=await response.json();
  // The query asks for public rows only. The row is checked again here, so a lost filter or a
  // permissive REST layer still cannot put a close friends, link or only-me run on this page.

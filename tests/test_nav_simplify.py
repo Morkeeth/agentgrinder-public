@@ -7,12 +7,12 @@ INDEX = (ROOT / "site" / "index.html").read_text()
 
 
 def test_primary_nav_has_the_product_loop():
-    """One rail: the feed, projects, and profile. Posting is a separate action."""
+    """One rail: the feed, own runs, and profile. Posting is contextual."""
     assert 'data-section="feed"' in INDEX
     rail = INDEX[INDEX.index("function railHtml(active,runs)"):INDEX.index("function setPrimarySection")]
-    for label in ("Feed", "Projects", "Profile"):
+    for label in ("Feed", "My runs", "Profile"):
         assert f"'{label}'" in rail
-    assert 'class="rail-post"' in rail and "Post a run" in rail
+    assert "Projects" not in rail and 'class="rail-post"' not in rail
     assert "More" not in rail and "Responses" not in rail and "Privacy" not in rail
     retired = INDEX[INDEX.index("const RETIRED="):]
     retired = retired[: retired.index("\n")]
@@ -24,7 +24,7 @@ def test_mobile_nav_is_four_or_fewer_destinations():
     """Phone matches the desktop destinations; posting stays in the top action."""
     mobile = INDEX.split('id="mobile-product-nav"', 1)[1].split("</nav>", 1)[0]
     labels = [re.sub(r"<[^>]+>", "", m).strip() for m in re.findall(r"<(?:a|button)\s[^>]*>(.*?)</(?:a|button)>", mobile, flags=re.S)]
-    assert labels == ["Feed", "Projects", "Profile"]
+    assert labels == ["Feed", "My runs", "Profile"]
     assert "data-sheet" not in mobile
     assert "Progress" not in mobile and "Practices" not in mobile and "Challenges" not in mobile
 
@@ -40,11 +40,11 @@ def test_account_links_are_reachable_on_a_phone():
 
 
 def test_posting_defaults_private_and_names_each_audience():
-    assert '<option value="" selected disabled>Choose an audience</option>' in INDEX
-    assert '<option value="private">Only me - just you</option>' in INDEX
-    assert '<option value="close_friends">Close friends - people on your private list</option>' in INDEX
-    assert '<option value="public">Public - Feed and profile</option>' in INDEX
-    assert "Choosing Public is the deliberate action" in INDEX
+    preview = INDEX[INDEX.index("async function importRun(){"):INDEX.index("async function viewShareRun(")]
+    assert '<option value="private" selected>Only me</option>' in preview
+    assert '<option value="close_friends">Close friends</option>' in preview
+    assert '<option value="public">Public feed and profile</option>' in preview
+    assert "stays private unless you choose another audience and save" in preview
 
 
 def test_account_menu_keyboard_dismiss_wired():
@@ -59,3 +59,5 @@ def test_responses_are_a_notification_drawer_not_navigation():
     assert "social.markAllNotificationsRead" in INDEX
     mobile = INDEX.split('id="mobile-product-nav"', 1)[1].split("</nav>", 1)[0]
     assert "Responses" not in mobile
+    assert '.notice-drawer[aria-hidden="true"]{display:none}' in INDEX
+    assert 'id="notifications-drawer" class="notice-drawer" aria-label="Notifications" aria-hidden="true" inert' in INDEX
