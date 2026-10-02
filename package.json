@@ -22,6 +22,7 @@
     "jsdom": "^26.1.0"
   },
   "dependencies": {
-    "@vercel/og": "0.8.5"
+    "@vercel/og": "0.8.5",
+    "sharp": "^0.35.5"
   }
 }

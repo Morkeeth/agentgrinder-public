@@ -44,7 +44,7 @@ assert.equal(frozen.visibility, "private");
 
 const caseyLater = (
   await db.query(
-    "insert into runs(profile_id,title,visibility,harness,schema_version,measurement_revision,trace_basis,started_at,prompts,claims,claims_verified,artifacts_produced) values($1,'TEST DATA Casey later sitting','private','Codex',1,$2,'elapsed',now(),3,2,2,1) returning id",
+    "insert into runs(profile_id,title,visibility,harness,schema_version,measurement_revision,trace_basis,started_at,prompts,claims,claims_verified,artifacts_produced,rhythm) values($1,'TEST DATA Casey later sitting','private','Codex',1,$2,'elapsed',now(),3,2,2,1,'[1,1,1]'::jsonb) returning id",
     [CASEY, "b".repeat(64)],
   )
 ).rows[0].id;
@@ -117,7 +117,7 @@ assert.equal(keptAttempt.owner_id, RILEY);
 
 const rileyLater = (
   await db.query(
-    "insert into runs(profile_id,title,visibility,harness,schema_version,measurement_revision,trace_basis,started_at,prompts,claims,claims_verified) values($1,'TEST DATA Riley later sitting','private','Codex',1,$2,'elapsed',now(),4,2,2) returning id",
+    "insert into runs(profile_id,title,visibility,harness,schema_version,measurement_revision,trace_basis,started_at,prompts,claims,claims_verified,rhythm) values($1,'TEST DATA Riley later sitting','private','Codex',1,$2,'elapsed',now(),4,2,2,'[1,2,1]'::jsonb) returning id",
     [RILEY, "d".repeat(64)],
   )
 ).rows[0].id;
