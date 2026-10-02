@@ -1,5 +1,7 @@
 # STRIVE new-user journey and build map
 
+Current implementation update, 2 October 2026: imported sessions default to Only me and save privately before any selected audience change. New manual metric posts are rejected. Followers requires a signed-in permitted relationship; only Public is readable signed out. Photo access follows the current run audience. The September evidence and proposed work below are historical, not proof of today's hosted release. See README.md for the current flow; production acceptance remains required.
+
 Reviewed 15 September 2026 for the Cursor + Grok Bot path. This is the product map for the
 bounded card → post → response → return loop. It does not replace
 [`COMPLETION-PLAN.md`](COMPLETION-PLAN.md) or PR 23's two-person test.
@@ -74,7 +76,7 @@ A builder completes useful work in their own project. On the same computer, they
 select that Cursor sitting, or on a Grok Bot computer they explicitly select an exported JSONL
 sitting. STRIVE reads only allowlisted measurements and first opens a private preview. The
 builder writes the public explanation and optional output link, checks the signed-in account,
-chooses Only me, Link or Public, and presses Save once.
+chooses Only me, Followers or Public, and presses Save once.
 
 A friend receives a saved public or link URL, understands the caption and output before the
 metrics, opens the builder's profile, and chooses to follow, ACK or reply. Those actions require
@@ -97,7 +99,7 @@ Both hand the human to the same STRIVE account, audience control and saved-run r
 | Preview → auth | `stashImport`, `ag_import_edits`, `ag_auth_return` and profile onboarding preserve the capture and typed title/caption/link/audience in session storage. Cancellation and provider failure have explicit recovery copy. | The exact hosted Auth allowlist is not readable from this run. | Verify callbacks without changing shared Site URL. If browser storage is unavailable, stop before redirect and tell the user to retain their local capture. No auth event may post a run. |
 | Auth → account/profile | One shared Supabase Auth user maps to one schema-qualified `strava.profiles` row. Only GitHub is enabled (`PROVIDERS_ENABLED`); email is not offered and X is gated. | “One identity” is a product invariant, but a user still needs to verify the account shown after returning from a provider. | Show account/handle before Save. Keep Cursor/Origin as integrations, never login providers. |
 | Draft → audience → Save | Imported captures require title, caption and a deliberate non-default audience. A measurement revision deduplicates imported saves. This PR adds an explicit browser save ID and persisted draft to make manual fallback retries idempotent too. | Baseline lost-response evidence proved the server held a run while UI claimed “Nothing was posted.” Manual fallback could duplicate on retry. | Say “Save not confirmed,” preserve fields and audience, never retry automatically, and on the person's next click look up the exact save before inserting. |
-| Saved run → share | `/?run=<id>` works for owner/link access; `/r/<id>` serves public previews. Copy link, profile link and Continue in Cursor exist. | Link is unlisted access, not private. Public means feed/profile/searchable. Private has no friend journey. A manual post has unknown capture metrics. | Name the saved audience in success and recovery states. A card remains understandable from caption/output when measurements are unknown. |
+| Saved run → share | `/?run=<id>` works for the owner and permitted Followers readers; `/r/<id>` serves public previews. Copy link, profile link and Continue in Cursor exist. | Followers is relationship-gated, not open to anyone with the URL. Public means feed/profile/searchable. Only me has no friend journey. | Name the saved audience in success and recovery states. A card remains understandable from caption/output when measurements are unknown. |
 | Friend arrival → identity | Signed-out people can read public and link-visible runs. Follow/ACK/reply asks for sign-in and stashes the social return route. | A private, deleted, blocked or withdrawn target may disappear during auth. | After auth, return only to an allowlisted route. If target is unavailable, show a neutral state and retain a way back; never reveal why private data is hidden. |
 | Friend → follow | Public profile and `/?people` support follow; `/?following` shows public runs from followed profiles. | A new feed may have no one to find. Grok Bot owns first-user/friend polish, so this review does not implement discovery UI. | Handoff must preserve explicit follow (no contact upload or auto-follow) and useful zero-content states. |
 | Friend → ACK/reply | ACK requires a deliberate confirmation; replies render in `#grind-thread`. Server policies deny blocked writes. | Lost write responses must not trigger automatic social retries. Deleted replies and blocked actors need neutral handling. | Keep ACK/reply separate user actions. Show failure without inventing success; the user checks the thread before retrying an uncertain social write. |
@@ -120,7 +122,7 @@ Both hand the human to the same STRIVE account, audience control and saved-run r
 | Duplicate manual save | Open first run by browser-generated run UUID; do not insert a second row. | Added in this PR; disposable acceptance required on final source. |
 | Unknown metrics | Store/render null; never infer duration, files, commits or outcomes. | Cursor and Grok safe route walks kept unsupported values unknown. |
 | Only me | Owner only; not a friend/share route. | Source/policies and disposable tests, not hosted use. |
-| Link (followers and close friends) | Relationship-gated URL; not feed/profile. Bearer alone is not enough. | Source/policies; migration 010; live two-account use outstanding. |
+| Followers | Relationship-gated URL for signed-in followers and close friends; not feed/profile. Bearer alone is not enough. The stored enum remains `link`. | Source/policies; migration 010; live two-account use outstanding. |
 | Public | Feed/profile/public preview; deliberate audience only. | Source and disposable tests; live two-account use outstanding. |
 | Withdrawn to private | Friend loses access; owner retains run. | Disposable privacy path exists. |
 | Deleted run | Discussion target unavailable; Responses explains it without a link. | Disposable Responses test passed. |
@@ -184,7 +186,7 @@ no message was sent.
   and sign-in copy.
 - **Desired behavior:** preview the exact white card/blue trace before any write; put the
   builder-authored caption and optional output link first; show account and non-default
-  Only me/Link/Public choice; Save once and name the resulting audience.
+  Only me/Followers/Public choice; Save once and name the resulting audience.
 - **Boundary:** no invented public content, new discovery feature, auto-follow/ACK, ranking,
   Close friends or card-ridge work. Grok-owned first-user/capture polish stays separate.
 - **Owner:** this PR owns the journey evidence and unowned Save/first-post boundary; Grok Bot owns

@@ -85,14 +85,14 @@ would copy, wrap or truncate the complete preview URL. Normal Cursor capture ope
 hosted preview directly and does not require a handoff file.
 
 On the hosted page, review the white card and blue trace. Missing measurements remain unknown.
-Write only a public-facing title, caption and optional HTTPS output link. Leave the audience unset
-to stop at preview. Saving needs an account: while you are signed out the button reads
+Edit the suggested title and optional note or output link. The preview is not saved until you choose Save.
+The audience defaults to Only me. Saving needs an account: while you are signed out the button reads
 **Sign in to save**, and pressing it starts sign-in with GitHub. Signed in, pick
 one audience on purpose:
 
 - **Only me**: just you.
 - **Close friends**: people on your private list.
-- **Link**: signed-in followers and close friends. It is not open to anyone who holds the URL.
+- **Followers**: signed-in followers and close friends. It is not open to anyone who holds the URL.
 - **Public**: the feed and your profile.
 
 Then press **Save run**.

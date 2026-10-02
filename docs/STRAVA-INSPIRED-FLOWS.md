@@ -1,5 +1,7 @@
 # STRIVE end-to-end flows
 
+Current implementation update, 2 October 2026: a real imported session opens an editable preview with Only me selected. Saving stores it privately first; a selected sharing audience is a separate owner update. Manual metric entry is no longer a posting path. The September map below records the earlier design and must not be treated as current hosted acceptance evidence.
+
 Reviewed 15 September 2026. This map adapts the useful parts of Strava's activity, profile,
 recognition, conversation, sharing, privacy and first-activity paths to agent work. It does not
 copy athletic language, rankings, segments, streaks or score dashboards.
@@ -75,11 +77,11 @@ the visual anchor. Unknown measurements remain unknown.
 
 ### 6. Audience choice + Save + idempotent retry
 
-1. **Current:** leave audience unset → deliberately select Only me, Link or Public → press Save.
+1. **Current:** leave audience unset → deliberately select Only me, Followers or Public → press Save.
    Imported retries use a measurement revision; #28 adds the complete uncertain-response and
    manual idempotency path.
 2. **Strava-inspired improvement:** privacy language must describe reach at the decision:
-   **Only me - just you**, **Link - followers and close friends**, **Public - Feed and profile**.
+   **Only me - just you**, **Followers - signed-in followers and close friends**, **Public - Feed and profile**.
 3. **This PR:** aligns those labels and success copy across manual/import/edit controls. It does
    not alter Save identity, retry or server policy.
 4. **Backlog / lane:** #28 owns no-auto-retry, retained draft/audience and exact prior-save lookup.
@@ -90,7 +92,7 @@ the visual anchor. Unknown measurements remain unknown.
 1. **Current:** successful Save opens `/?run=<id>`; public/link runs can copy a URL; Share card is
    lower on the activity detail.
 2. **Strava-inspired improvement:** put the saved destination and one large next action directly
-   under the card. Public: copy public link or open the clean share card. Link: copy the
+   under the card. Public: copy public link or open the shared post. Followers: copy the
    relationship-gated URL for followers and close friends. Only me: explain that sharing requires an audience change.
 3. **This PR:** moves audience-aware share success directly below the card and makes the relevant
    next action primary. It adds no write or OG endpoint.
