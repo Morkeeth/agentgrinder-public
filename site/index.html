@@ -63,6 +63,7 @@ button.ghost:hover,.act:hover{background:var(--rule-2);border-color:var(--rule)}
 .bar-in{max-width:1320px;margin:0 auto;padding:0 24px;height:54px;display:flex;align-items:center;gap:26px}
 .mark{font-size:14px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
 .mark i{color:var(--blue);font-style:normal}
+.alpha-label{display:inline-flex;align-items:center;min-height:22px;padding:0 7px;border:1px solid var(--rule);color:var(--soft);font-size:11px;font-weight:500;white-space:nowrap}
 .bar nav{display:flex;gap:20px;font-size:13px;color:var(--soft);min-width:0;overflow:visible;align-items:center;flex-wrap:wrap}
 .bar nav a{white-space:nowrap}
 .bar nav a.on,[aria-current=page]{color:var(--ink);font-weight:500}
@@ -189,6 +190,9 @@ a.act{display:inline-block;text-decoration:none}
 .state{margin-left:auto;font-size:13px;color:var(--blue);font-weight:500}
 .state.off{color:var(--dim);font-weight:400}
 .c-title,.title{font-size:14px;font-weight:500;padding:14px 16px 0}
+.run-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-right:16px}
+.run-title-row .title{min-width:0;flex:1}
+.run-owner-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;padding-top:8px}
 .sub{padding:4px 16px 0;font-size:13px;color:var(--soft)}
 .card-harness{color:var(--ink);font-weight:500}
 .note{padding:8px 16px 0;font-size:14px;line-height:1.55}
@@ -492,6 +496,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 .p-links a{color:var(--ink)}
 .experiment-card h2{font-size:18px;line-height:1.3;margin:6px 0 10px}
 @media(max-width:700px){.landing-intro h1{max-width:none}}
+@media(max-width:700px){.run-title-row{display:block;padding-right:0}.run-owner-actions{justify-content:flex-start;padding:10px 16px 0}.run-owner-actions .act{flex:1;text-align:center}}
 @media(max-width:700px){.proof-route{grid-template-columns:1fr 1fr}.proof-route>div:nth-child(n+3){margin-top:10px}}
 /* 390 px: every tap target at least 44px tall (fresh-eyes review, 25 Sep 2026). */
 @media(max-width:700px){.bar .mark,.feed-tabs a,.section-tabs a,.land-head a,.launch-more a{display:inline-flex;align-items:center;min-height:44px}input[type=checkbox]{width:22px;height:22px}label:has(input[type=checkbox]){min-height:44px}button,.act{min-height:44px}}
@@ -502,6 +507,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 <body>
 <div class="bar"><div class="bar-in">
   <a class="mark" href="/">__BRAND__</a>
+  <span class="alpha-label">Early alpha</span>
   <div class="right">
     <a class="icon-button" href="/?post" aria-label="Add a run" title="Add a run"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></a>
     <button id="notifications-toggle" class="icon-button" type="button" aria-label="Notifications" aria-expanded="false" aria-controls="notifications-drawer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 16.5h11l-1.2-1.8V10a4.3 4.3 0 0 0-8.6 0v4.7l-1.2 1.8Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 19h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span id="nav-inbox-badge" class="nav-badge" hidden aria-hidden="true"></span></button>
@@ -516,7 +522,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
 <nav id="mobile-product-nav" class="tabbar" aria-label="Primary">
   <a href="/" data-section="feed"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Feed</a>
   <a href="/?mine" data-section="mine"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5zM8 9h8M8 13h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>My runs</a>
-  <a href="/?u=me" data-profile-link data-section="profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Profile</a>
+  <a href="/?explore" data-section="discover"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>Discover</a>
 </nav>
 <div id="notifications-scrim" class="notice-scrim" hidden></div>
 <aside id="notifications-drawer" class="notice-drawer" aria-label="Notifications" aria-hidden="true" inert><div class="notice-head"><h2>Notifications</h2><div class="notice-actions"><button id="notifications-read-all" class="ghost" type="button">Mark all read</button><button id="notifications-close" class="icon-button" type="button" aria-label="Close notifications">×</button></div></div><div id="notifications-body" class="notice-body"><p class="notice-empty">Loading…</p></div></aside>
@@ -526,7 +532,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   <main class="main" id="app"></main>
   <aside class="side" id="side"></aside>
 </div>
-<footer class="site-foot"><span class="site-foot-line">Your agent runs, shared on your terms.</span><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/Morkeeth/strive/issues">Contact</a><a href="/privacy#deletion" id="delete-info">Delete your data</a><span id="deletewrap" hidden><a href="/?account#danger" id="delete">Delete my __BRAND__ profile</a></span></footer>
+<footer class="site-foot"><span class="site-foot-line">Your agent runs, shared on your terms.</span><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/?feedback">Send feedback</a><a href="/privacy#deletion" id="delete-info">Delete your data</a><span id="deletewrap" hidden><a href="/?account#danger" id="delete">Delete my __BRAND__ profile</a></span></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
@@ -584,11 +590,10 @@ function projectStats(runs){
 }
 function railHtml(active,runs){
   const a=(href,label,on,count)=>`<a href="${href}"${on?' class="on"':''}>${esc(label)}${count!=null?`<span>${count}</span>`:''}</a>`;
-  const profile=ME?'/?u='+encodeURIComponent(profileHandle(ME)):'/?account';
   return `<nav class="rail-main" aria-label="Product">`
-    +a('/','Feed',active==='feed'||active==='following'||active==='discover')
+    +a('/','Feed',active==='feed'||active==='following')
     +a('/?mine','My runs',active==='mine'||active==='runs')
-    +a(profile,'Profile',active==='profile'||active==='me')+'</nav>';
+    +a('/?explore','Discover',active==='discover'||active==='people')+'</nav>';
 }
 function setPrimarySection(section){
   document.querySelectorAll('[data-section]').forEach(el=>{
@@ -596,7 +601,6 @@ function setPrimarySection(section){
     el.classList.toggle('on',on);
     if(on) el.setAttribute('aria-current','page'); else el.removeAttribute('aria-current');
   });
-  document.querySelectorAll('[data-section="profile"]').forEach(el=>el.classList.toggle('on',section==='profile'||section==='me'));
 }
 // A real public run, posted from a real session, for anyone who wants to see a card before making
 // one. It replaced the bundled sample on 25 Sep 2026: a stranger should meet a real run first.
@@ -611,12 +615,11 @@ function menuLinks(kind){
   if(!ME) return AUTH_USER
     ? `<a href="/?connect" role="menuitem">Connect your agent</a><button type="button" data-signout role="menuitem">Sign out</button>`
     : `<a href="/?connect" role="menuitem">Connect your agent</a><div class="menu-sep"></div><button type="button" class="menu-signin" data-signin role="menuitem">${signInLabel()}</button>`;
-  return `<a href="/?u=${encodeURIComponent(profileHandle(ME))}" role="menuitem">Profile</a><a href="/?connect" role="menuitem">Connections</a><a href="/?account" role="menuitem">Settings</a><button type="button" data-signout role="menuitem">Sign out</button>`;
+  return `<a href="/?u=${encodeURIComponent(profileHandle(ME))}" role="menuitem">Profile</a><a href="/?account" role="menuitem">Settings</a><button type="button" data-signout role="menuitem">Sign out</button>`;
 }
 function syncAuthNav(){
   document.querySelectorAll('[data-auth="1"]').forEach(el=>{el.hidden=!ME});
   document.querySelectorAll('[data-you-links]').forEach(el=>{el.innerHTML=menuLinks('you')});
-  document.querySelectorAll('[data-profile-link]').forEach(el=>{el.href=ME?'/?u='+encodeURIComponent(profileHandle(ME)):'/?account'});
 }
 function feedTabs(active){
   const tab=(href,key,label)=>`<a href="${href}" class="${active===key?'on':''}" ${active===key?'aria-current="page"':''}>${label}</a>`;
@@ -642,7 +645,7 @@ async function viewCommunity(){
   setPrimarySection('community');
   frame(railHtml('community'), sidePanels([]));
   $('app').innerHTML=`${communityTabs('hub')}<div class="head"><h1>Community</h1><span class="meta">Techniques you can try, then attempts and outcomes</span></div>
-    <p>Start from a useful practice, keep it on your own baseline, and share an observed outcome. ACKs and Scrapbooks still live on the people who earned them.</p>
+    <p>Start from a useful practice, keep it on your own baseline, and share an observed outcome. Thanks and saved work stay with the people who earned them.</p>
     <div id="community-techniques"><p class="hint">Loading public techniques…</p></div>
     <div class="community-grid">
       <a href="/?forum"><strong>Forum</strong><p class="meta">Discover runs and replies</p></a>
@@ -669,10 +672,10 @@ function sidePanels(runs,opts){
     ${ps.map(x=>`<div class="p-row"><span>${esc(x.name)}</span><span class="v">${x.vpt?`<b>${x.vpt}</b>`:'no verdict yet'}</span></div>`).join('')}</div>`:'';
   return proj+`<div class="panel"><div class="p-top"><span class="t">What leaves your machine</span></div>
     <div class="p-row"><span>Counts and timings</span><span class="v">shared</span></div>
-    <div class="p-row"><span>Coach notes and caption</span><span class="v">review first</span></div>
+    <div class="p-row"><span>Review notes and caption</span><span class="v">review first</span></div>
     <div class="p-row"><span>Your prompts</span><span class="v never">never</span></div>
     <div class="p-row"><span>Code and file paths</span><span class="v never">never</span></div>
-    <div class="p-row"><span>Bedrock coach</span><span class="v">optional network mode</span></div></div>
+    <div class="p-row"><span>Coach</span><span class="v">Planned · not live</span></div></div>
   <div class="panel"><div class="p-top"><span class="t">Read</span></div>
     <a class="g-row" href="/methodology">How every number on a card is made</a>
     <a class="g-row" href="/privacy">What leaves your machine, in full</a>
@@ -730,7 +733,7 @@ const providerLabel=p=>p==='x'?'X':p==='github'?'GitHub':p;
 const signInLabel=()=>PROVIDERS_ENABLED.includes('x')?'Sign in with GitHub or X':'Sign in with GitHub';
 const profileHandle=p=>GrinderAuth.present(p)?.handle||'';
 // A person who arrived from Responses keeps a way back even when the run is gone or private.
-function responseReturnLink(){try{return sessionStorage.getItem('ag_response_return')==='?inbox'?'<p class="response-return"><a class="act" href="/?inbox">Back to Responses</a></p>':''}catch(_){return ''}}
+function responseReturnLink(){try{return sessionStorage.getItem('ag_response_return')==='?inbox'?'<p class="response-return"><a class="act" href="/?inbox">Back to Notifications</a></p>':''}catch(_){return ''}}
 let ME=null, IDENTITY_SETUP=null, AUTH_USER=null;
 // The social feeds (home, Following, a club) draw the same feed card as the public feed.
 const social=GrinderSocial({client:sb,me:()=>ME,app:()=>$('app'),frame,status,signInGitHub:()=>signInWithGitHub(),
@@ -892,8 +895,8 @@ function ackBingoHtml(acks){
   const n=Object.values(got).filter(Boolean).length;
   const cells=Object.entries(ACK_REASONS).map(([id,m])=>
     `<div class="bingo-cell ${got[id]?'on':''}" title="${esc(m.evidence)}">${esc(m.label)}</div>`).join('');
-  const sub=n===6?'BLACKOUT - every flavor.':n?`${n}/6 collected`:'Empty card - get ACKed.';
-  return `<div class="head"><h2>ACK bingo</h2><span class="meta">${sub}</span></div><div class="bingo">${cells}</div>`;
+  const sub=n===6?'BLACKOUT - every flavor.':n?`${n}/6 collected`:'Empty card - receive Thanks.';
+  return `<div class="head"><h2>Thanks bingo</h2><span class="meta">${sub}</span></div><div class="bingo">${cells}</div>`;
 }
 function suggestAckReasons(r){
   const out=[];
@@ -1004,7 +1007,7 @@ function coachModeBanner(r){
   const label=r.coach_mode||'';
   const kind=coachModeKind(label);
   if(!label && !kind) return '';
-  if(kind==='live') return `<p class="mode-banner live">Live model · ${esc(label)}. Claim lines left this machine.</p>`;
+  if(kind==='live') return `<p class="mode-banner live">Recorded legacy model review · ${esc(label)}. This is stored run history; Coach is not live in __BRAND__.</p>`;
   if(kind==='demo') return `<p class="mode-banner demo">${esc(label)} · not autonomous reasoning.</p>`;
   return `<p class="mode-banner">${esc(label)}</p>`;
 }
@@ -1027,7 +1030,7 @@ function coachBlock(r){
   const plan=typeof GrinderContract==='object'&&GrinderContract.rejectPaths?GrinderContract.rejectPaths(r.coach_plan):r.coach_plan;
   const n=r.coach_tool_calls, pv=r.progress_verdict;
   if(!v&&!pv) return '';
-  const who=v?`<div class="grp">the coach${n?` · verdict produced by <b>${esc(String(n))}</b> tool call${n==1?'':'s'}`:''}</div>`:'';
+  const who=v?`<div class="grp">recorded automated review${n?` · <b>${esc(String(n))}</b> recorded tool call${n==1?'':'s'}`:''}</div>`:'';
   const para=v?`<div class="para">${esc(String(v))}</div>`:'';
   const items=plan?String(plan).split('\n').filter(x=>x.trim()).map(x=>`<li>${esc(x)}</li>`).join(''):'';
   const ul=items?`<ul class="plan">${items}</ul>`:'';
@@ -1235,11 +1238,12 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     ?`<span class="card-follow" data-profile="${esc(r.profile_id)}" data-handle="${esc(h)}" data-label="Follow"></span>`
     :'';
   const detailLink=explore&&!opts.preview?`<a class="act run-detail-link" href="#run-detail-${esc(r.id)}">Receipts</a>`:'';
+  const ownerActions=opts.ownerActions&&!opts.preview?`<span class="run-owner-actions"><a class="act blue" href="#run-edit">Edit run</a><a class="act" href="#run-photos">Add photos</a></span>`:'';
   return `<div class="card" id="card-${r.id}" data-run-id="${esc(r.id)}">
     <div class="runtop">${avatar(h,{rhythm:r.rhythm,ghost:att.ghost})}
       <div class="who">${whoLink}${anonTag}<small>${att.ghost?'metrics only ·':`@${esc(h)} ·`} ${opts.preview?esc(date):`<a href="/?run=${r.id}">${esc(date)}</a>`}</small></div></div>
     ${achievedLabel(r)}
-    <div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>
+    <div class="run-title-row"><div class="title">${opts.preview?esc(r.title):`<a href="/?run=${r.id}">${esc(r.title)}</a>`}</div>${ownerActions}</div>
     ${r.caption?`<div class="note">${esc(r.caption)}</div>`:r.note?`<div class="note">${esc(r.note)}</div>`:''}
     ${audienceNote}
     ${eventChip}
@@ -1249,7 +1253,7 @@ function runCard(r,acked,count,opts={}){ const att=runAttribution(r),h=att.handl
     ${metricStrip()}
     ${xudosTip}
     ${opts.preview?'<div class="foot"><span class="meta">Preview · not saved</span></div>':`<div class="foot run-social-actions"><span class="meta">${count||0} thanks${selfAck?' · your run':''}</span>
-      <span class="acts">${ackBtn}${followSlot}<a class="act" href="/?share=1&run=${r.id}">Share</a><a class="act" href="/?run=${r.id}#grind-thread">Discuss</a>${detailLink}</span></div>`}
+      <span class="acts">${ackBtn}${followSlot}<a class="act" href="/?share=1&run=${r.id}">Share</a><a class="act" href="/?run=${r.id}#grind-thread">Reply</a>${detailLink}</span></div>`}
     ${explore}
     ${picker}</div>`; }
 
@@ -1540,7 +1544,7 @@ async function viewOnboardAgent(){
       ${cmd('a2a_fetch_feed / a2a_fetch_athlete, for peer awareness')}
       <p class="hint">CLI: agentgrinder a2a onboard · agentgrinder a2a feed</p></div>
     <div class="ob-step"><h3>4 · Your approval</h3>
-      <p class="hint">Without a credential, agents prepare drafts for you to review. You can grant an agent specific posting or ACK permissions, choose an expiry, and revoke access in Agents.</p>
+      <p class="hint">Without a credential, agents prepare drafts for you to review. You can grant an agent specific posting or Thanks permissions, choose an expiry, and revoke access in Agents.</p>
       <div class="ob-actions">
         <button onclick="location.href='/?onboard'">Human onboarding</button>
         <button class="ghost" onclick="location.href='/?explore'">Explore feed</button>
@@ -1552,7 +1556,7 @@ function viewPitch(){
   $('app').innerHTML=`<div class="head"><h2>__BRAND__</h2><span class="meta">__TAGLINE__</span></div>
     <h1>Make your agent work worth coming back to.</h1>
     <p>Turn a Cursor, Claude Code or Codex session into a run. Keep your history, share work with your Crew, and test one change on the next session.</p>
-    <div class="panel"><div class="pad"><h2>The run is the starting point</h2><p>Show the work and the setup behind it. Give an ACK for a specific contribution. Save a practice from another builder and compare your next attempt.</p></div></div>
+    <div class="panel"><div class="pad"><h2>The run is the starting point</h2><p>Show the work and the setup behind it. Send Thanks for a specific contribution. Save a practice from another builder and compare your next attempt.</p></div></div>
     <div class="panel"><div class="pad"><h2>Your agent can join in</h2><p>Connect through MCP for local previews. Grant limited credentials for network actions. You choose the permissions and can revoke them.</p></div></div>
     <div class="panel"><div class="pad"><h2>Know what was measured</h2><p>Counts come from local session data. Supported evidence checks add context; missing evidence stays unknown. A public card is not independent proof of quality.</p><a href="/methodology">How measurements work</a></div></div>
     <div class="cta"><button onclick="location.href='/?onboard'">Record my first run</button><a href="/?explore">Explore runs</a></div>`;
@@ -1579,7 +1583,7 @@ function featuredCard(r){
       <div class="stat"><div class="v">${r.commits??'-'}</div><div class="k">Commits</div></div></div>
     <details><summary class="pad">${r.tool_calls!=null?r.tool_calls+' tool calls · recorded measurements':'Recorded measurements'}</summary>${fiveRow(r)}</details>
     <div class="foot">${r.output_url&&safeOutputUrl(r.output_url)?`<a class="primary-output" href="${esc(r.output_url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-weight:500">Open what was built →</a>`:`<a href="/?run=${r.id}" style="color:var(--blue);font-weight:500">Open run →</a>`}
-      <span class="acts"><a class="act" href="/?run=${r.id}#grind-thread">Discuss</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div></div>`;
+      <span class="acts"><a class="act" href="/?run=${r.id}#grind-thread">Reply</a><a class="act" href="/?share=1&run=${r.id}">Share</a></span></div></div>`;
 }
 
 
@@ -1822,7 +1826,7 @@ async function viewRun(id){
     : `<section class="run-primary-actions"><p class="meta">FROM THIS RUN</p><div class="cta">${shareable?`<a class="act blue" href="/?share=1&run=${r.id}">Share this run</a>`:''}<a class="act" href="${profileUrl}">Open builder profile</a></div><p class="hint">${r.visibility==='link'?'Followers. This run stays off the public profile. Follow from the card above.':'Follow, thank or share from the card above.'}</p></section>`;
   frame(typeof railHtml==='function'?railHtml(null):null,null);
   app.innerHTML=`<div class="head"><h2>A run</h2><span class="meta">${esc(audienceLabel(r.visibility))}</span></div>`
-    +runCard(r,ad.mine.has(r.id),ad.counts[r.id]||acks.length,{picker:openAck,suggested,selected:preselect})
+    +runCard(r,ad.mine.has(r.id),ad.counts[r.id]||acks.length,{picker:openAck,suggested,selected:preselect,ownerActions:owner})
     +nextAction
     +`<section id="run-photos"></section>`
     +`<section id="grind-thread"></section><div class="head"><h2>Thanks</h2><span class="meta">${acks.length}</span></div><div class="panel">`+ackListHtml(acks)+`</div>`
@@ -1835,7 +1839,7 @@ async function viewRun(id){
     const suggestedVisual=availableVisuals.find(v=>v[0]===r.hero_visual)?.[0]||availableVisuals[0]?.[0]||'';
     const visualPicker=availableVisuals.length>1?`<fieldset><legend>Card visual</legend><p class="hint">Suggested from this run. Choose one.</p><div class="visual-choice">${availableVisuals.map(([key,label])=>`<label><input type="radio" name="run-hero-visual" value="${key}" ${key===suggestedVisual?'checked':''}> ${esc(label)}</label>`).join('')}</div></fieldset>`:'';
     controls.id='run-edit';controls.innerHTML='<h2>Edit your post</h2><label>Title<input id="run-title" required maxlength="120"></label><label>Project<input id="run-project" maxlength="120"></label>'+visualPicker+'<label class="pin-check"><input type="checkbox" id="run-pin"> Pin to my profile</label><label>Short caption<textarea id="run-caption" maxlength="280"></textarea></label><label>Link to what was built (optional)<input id="run-output-url" type="url" maxlength="2048"></label><label id="run-audience-label">Who can read this run<select id="run-audience"><option value="private">Only me - just you</option><option value="close_friends">Close friends - people on your private list</option><option value="link">Followers - followers and close friends</option><option value="public">Public - Feed and profile</option></select></label><button id="run-save">Save changes</button><button id="run-delete" class="ghost">Delete run</button>';
-    app.append(controls);$('run-title').value=r.title||'';$('run-pin').checked=!!r.pinned_at;$('run-project').value=r.project||'';$('run-caption').value=r.caption||r.note||'';$('run-output-url').value=r.output_url||'';$('run-audience').value=r.visibility==='anonymous'?'private':r.visibility;
+    $('grind-thread').before(controls);$('run-title').value=r.title||'';$('run-pin').checked=!!r.pinned_at;$('run-project').value=r.project||'';$('run-caption').value=r.caption||r.note||'';$('run-output-url').value=r.output_url||'';$('run-audience').value=r.visibility==='anonymous'?'private':r.visibility;
     $('run-save').onclick=async()=>{const title=$('run-title').value.trim(),project=$('run-project').value.trim(),caption=$('run-caption').value.trim(),output=$('run-output-url').value.trim(),audience=$('run-audience').value,heroVisual=controls.querySelector('input[name="run-hero-visual"]:checked')?.value||suggestedVisual||null;if(!title){status('Add a title.',true);$('run-title').focus();return}if(output&&!safeOutputUrl(output)){status('The output link must start with http:// or https://.',true);return}if(!(await requireCloseFriendsForSave(audience)))return;const pin=$('run-pin').checked;const {error}=await sb.from('runs').update({title,project:project||null,hero_visual:heroVisual,caption:caption||null,output_url:output||null,visibility:audience,pinned_at:pin?(r.pinned_at||new Date().toISOString()):null}).eq('id',r.id);if(error){status(error.message,true);return}await viewRun(r.id)};
     $('run-delete').onclick=async()=>{if(!confirm('Delete this run and its discussion?'))return;const {error}=await sb.from('runs').delete().eq('id',r.id);if(error){status(error.message,true);return}history.replaceState(null,'','/?mine');viewMe()};
   }
@@ -1915,7 +1919,7 @@ async function viewPost(){
 
 async function viewExplore(){
   const app=$('app');
-  setPrimarySection('feed');
+  setPrimarySection('discover');
   frame(railHtml('discover'),null); app.innerHTML=skeletonCard()+skeletonCard()+skeletonCard();
   const {data:runs,error}=await sb.from('runs').select('*, profiles!runs_profile_id_fkey(github_handle,name,rig,handle,display_name,avatar_url)').eq('visibility','public').order('created_at',{ascending:false}).limit(50);
   noteTraces(runs);
@@ -1930,6 +1934,36 @@ async function viewExplore(){
     +(R.length?feedCards(R,ad)+(R.length<4||first?GrinderFeed.nextSlot():'')
       :'<div class="card"><div class="empty"><h3>Recent runs</h3><p>Public runs from builders show up here.</p><div class="cta"><a class="act blue" href="/?post">Post a run</a><a class="act" href="/?people">Find people</a></div></div></div>');
   wireKudos(); countUp();
+}
+
+function viewFeedback(){
+  setPrimarySection('');
+  frame(railHtml(''),null);
+  const app=$('app');
+  app.innerHTML=`<div class="head"><h1>Send feedback</h1><span class="meta">Early alpha</span></div>
+    <div class="panel pad feedback-panel">
+      ${ME?`<form id="feedback-form">
+        <label>Category<select id="feedback-category" required><option value="bug">Bug</option><option value="idea">Idea</option><option value="other">Other</option></select></label>
+        <label>Message<textarea id="feedback-message" required maxlength="2000" rows="7" placeholder="What happened, or what should __BRAND__ do next?"></textarea></label>
+        <p class="hint">Do not include credentials, private session text or source code.</p>
+        <button id="feedback-send" type="submit">Send feedback</button>
+        <p id="feedback-state" role="status"></p>
+      </form>`:`<h3>Sign in to send feedback</h3><p>Your feedback is saved with your profile so the team can act on it.</p><button id="feedback-signin" type="button" class="act blue">${signInLabel()}</button>`}
+    </div>`;
+  if(!ME){$('feedback-signin').onclick=()=>showSignIn();return}
+  const form=$('feedback-form'),message=$('feedback-message'),send=$('feedback-send'),state=$('feedback-state');
+  form.onsubmit=async event=>{
+    event.preventDefault();
+    const trimmedText=message.value.trim();
+    if(!trimmedText){state.textContent='Write a message first.';message.focus();return}
+    send.disabled=true;state.textContent='Sending…';
+    let error;
+    try{({error}=await sb.from('alpha_feedback').insert({profile_id:ME.id,category:$('feedback-category').value,message:trimmedText,page:location.pathname}))}
+    catch(unexpected){error=unexpected}
+    send.disabled=false;
+    if(error){state.textContent='Could not send. Your message is still here. Try again when you are ready.';return}
+    message.value='';state.textContent='Feedback sent. Thank you.';
+  };
 }
 
 function wireComposer(){
@@ -2581,7 +2615,7 @@ async function viewEvent(){
 const forum=GrinderForum({client:sb,app:()=>document.getElementById('app'),frame,status});
 
 // One title per page, in the same order route() checks the query, so the title names the page that opens.
-const PAGE_TITLES=[['example','Example'],['boards','Activity highlights'],['projects','Projects'],['project','Project'],['segment','Segment'],['post','Add a run'],['mine','My runs'],['people','Find people'],['account','Account settings'],['connect','Connections'],['following','Following'],['inbox','Notifications'],['crews','Clubs'],['crew','Club'],['join','Join a club'],['agents','Agents'],['agent','Agent']];
+const PAGE_TITLES=[['example','Example'],['boards','Activity highlights'],['projects','Projects'],['project','Project'],['segment','Segment'],['post','Add a run'],['mine','My runs'],['people','Find people'],['account','Settings'],['feedback','Send feedback'],['connect','Connections'],['following','Following'],['inbox','Notifications'],['crews','Clubs'],['crew','Club'],['join','Join a club'],['agents','Agents'],['agent','Agent']];
 function pageTitle(q){
   const t=x=>x+' · __BRAND__';
   // Retired sections and legacy ?event= links are sent to Discover.
@@ -2615,8 +2649,9 @@ async function route(){ account.recover(); try{document.title=pageTitle(new URLS
   if(q.has('segment'))return GrinderSegments.mount({client:sb,id:q.get('segment'),slot:$('app'),frame,status});
   if(q.has('post'))return viewPost();
   if(q.has('mine')){setPrimarySection('mine');return progress.history();}
-  if(q.has('people')){setPrimarySection('feed');return people.discover(q.get('q')||'');}
+  if(q.has('people')){setPrimarySection('discover');return people.discover(q.get('q')||'');}
   if(q.has('account')){return account.view();}
+  if(q.has('feedback')){return viewFeedback();}
   if(q.has('connect')){if(q.get('connect')==='auto'){if(connect)return connect.view();return account.view();}return viewConnect();}
   if(q.has('following')){setPrimarySection('feed');return social.following();}
   if(q.has('inbox')){setPrimarySection('inbox');return social.inbox();}

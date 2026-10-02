@@ -11,7 +11,7 @@ def test_every_page_has_the_icon_and_the_footer():
         html = (SITE / name).read_text()
         assert '<link rel="icon" href="/favicon.svg" type="image/svg+xml">' in html, name
         foot = html[html.index('<footer class="site-foot">'):]
-        for href in ('/about', '/privacy', '/terms', 'github.com/Morkeeth/strive/issues', '/privacy#deletion'):
+        for href in ('/about', '/privacy', '/terms', '/?feedback', '/privacy#deletion'):
             assert f'href="{href}' in foot or f'href="https://{href}' in foot, (name, href)
     assert (SITE / "favicon.svg").read_text().startswith("<svg")
 
@@ -25,7 +25,7 @@ def test_deletion_has_an_anchor_and_terms_link_clean_urls():
 def test_each_spa_page_sets_its_own_title():
     html = (SITE / "index.html").read_text()
     assert "document.title=pageTitle(new URLSearchParams(location.search))" in html
-    for label in ("'Activity highlights'", "'Add a run'", "'Find people'", "'Account settings'"):
+    for label in ("'Activity highlights'", "'Add a run'", "'Find people'", "'Settings'"):
         assert label in html
 
 

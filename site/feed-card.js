@@ -415,8 +415,8 @@
       ? `<span class="fc-act fc-kudos-mine">${KUDOS_ICON}<span class="num">${count}</span></span>`
       : `<button class="fc-act kudo${opts.acked ? " on" : ""}" data-run="${id}" data-to="${esc(r.profile_id)}" aria-label="${opts.acked ? "Thanks sent" : "Send thanks"}, ${count} so far">${KUDOS_ICON}<span class="num">${count}</span></button>`;
     const talk = preview
-      ? `<span class="fc-act" aria-label="Discuss">${TALK_ICON}<span>Discuss</span></span><span class="fc-act" aria-label="Share">${SHARE_ICON}<span>Share</span></span>`
-      : `<a class="fc-act" href="/?run=${id}#grind-thread" aria-label="Discuss">${TALK_ICON}<span>Discuss</span></a><a class="fc-act" href="/?share=1&amp;run=${id}" aria-label="Share">${SHARE_ICON}<span>Share</span></a>`;
+      ? `<span class="fc-act" aria-label="Reply">${TALK_ICON}<span>Reply</span></span><span class="fc-act" aria-label="Share">${SHARE_ICON}<span>Share</span></span>`
+      : `<a class="fc-act" href="/?run=${id}#grind-thread" aria-label="Reply">${TALK_ICON}<span>Reply</span></a><a class="fc-act" href="/?share=1&amp;run=${id}" aria-label="Share">${SHARE_ICON}<span>Share</span></a>`;
     const shipped = r.output_url && /^https:\/\//i.test(r.output_url) ? `<span class="fc-chip">Shipped</span>` : "";
     const faceHtml = anon || preview ? face(r) : `<a href="/?u=${encodeURIComponent(p.handle)}" tabindex="-1">${face(r)}</a>`;
     const strideHtml = opts.stride === false || !(preview || page || opts.url) ? "" : stride(r, { url: opts.url, copy: !!opts.copy });

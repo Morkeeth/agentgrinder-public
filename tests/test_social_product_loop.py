@@ -51,7 +51,7 @@ def test_social_actions_remain_in_the_focused_app():
     assert "Send thanks" in INDEX
     assert "ACK the work" not in INDEX
     assert "Send ACK" not in INDEX
-    assert "Responses" in SOCIAL
+    assert "Notifications" in SOCIAL
     assert "/?people" in SOCIAL
     assert "IntersectionObserver" in SOCIAL
     assert "Open exact reply" in SOCIAL
@@ -64,6 +64,7 @@ def test_social_actions_remain_in_the_focused_app():
     assert "xudos-tip" in INDEX
     assert "Scene photo URL" not in INDEX
     assert "Add up to six photos" in INDEX
+    assert ">Reply</a>" in INDEX
     assert "history.replaceState(null,'','/?explore')" in INDEX
     assert "async function viewEvent()" in INDEX
     # Since migration 014 an event is a real page: the club's event, who is going, and Join.

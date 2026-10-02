@@ -67,7 +67,7 @@ window.GrinderAccount = function ({
     return `<section class="account-notice" role="status" aria-live="polite"><p><strong>Your __BRAND__ profile was deleted.</strong> Your sign-in account and any Agent Grinder profile were left as they were. You are signed out of this browser.</p></section>`;
   }
   function signedOutHtml(recovered, pend, deleted) {
-    return `<section class="account card pad" id="account-body"><h1>Your account</h1>${deleted ? deletedHtml() : recoveryHtml(recovered, pend, null)}
+    return `<section class="account card pad" id="account-body"><h1>Settings</h1>${deleted ? deletedHtml() : recoveryHtml(recovered, pend, null)}
       <p>Sign in to edit your handle, manage the sign-in methods on your account, or delete your __BRAND__ profile.</p>
       <div class="account-actions"><button type="button" id="account-signin">Sign in</button><a class="act" href="/?example">Try the bundled example first</a></div>
       <p class="account-hint">Signing in never posts a run. Your email stays off your public profile.</p></section>`;
@@ -98,7 +98,7 @@ window.GrinderAccount = function ({
   function panelHtml(profile, ids, recovered, pend, user) {
     const p = present(profile);
     return `<div class="account" id="account-body">${recoveryHtml(recovered, pend, user)}
-      <section class="card pad account-section"><h1>Your account</h1>
+      <section class="card pad account-section"><h1>Settings</h1>
         <p class="account-lead">Your STRIVE username is <a id="account-lead-handle" href="${esc(p.url)}">@${esc(p.handle)}</a>. GitHub is a separate linked account. X sign-in is unavailable.</p>
         <form id="account-profile" class="account-form" novalidate>
           <label for="account-name">Name</label>
@@ -132,7 +132,7 @@ window.GrinderAccount = function ({
   }
 
   function onboardingHtml(recovered, pend, user) {
-    return `<section class="account card pad" id="account-body">${recoveryHtml(recovered, pend, user)}<h1>Your account</h1><p>You are signed in but have no __BRAND__ profile yet. Create one to post runs and follow friends.</p><div class="account-actions"><a class="act blue" href="/">Create your profile</a><button type="button" class="act" id="account-signout">Sign out here</button></div></section>`;
+    return `<section class="account card pad" id="account-body">${recoveryHtml(recovered, pend, user)}<h1>Settings</h1><p>You are signed in but have no __BRAND__ profile yet. Create one to post runs and follow friends.</p><div class="account-actions"><a class="act blue" href="/">Create your profile</a><button type="button" class="act" id="account-signout">Sign out here</button></div></section>`;
   }
 
   async function view() {
@@ -140,7 +140,7 @@ window.GrinderAccount = function ({
     if (!root) return;
     if (typeof frame === "function") frame(null, null);
     if (!auth) {
-      root.innerHTML = '<section class="account card pad"><h1>Your account</h1><p>Account controls are unavailable. Reload the page.</p></section>';
+      root.innerHTML = '<section class="account card pad"><h1>Settings</h1><p>Settings are unavailable. Reload the page.</p></section>';
       return;
     }
     const fromUrl = auth.recoverFromUrl();
@@ -281,7 +281,7 @@ window.GrinderAccount = function ({
 
   function root_after_delete() {
     const root = mount(); if (!root) return;
-    root.innerHTML = '<section class="account card pad" id="account-body"><h1>Your account</h1>' + deletedHtml() + '<div class="account-actions"><a class="act blue" href="/">Back to the feed</a></div></section>';
+    root.innerHTML = '<section class="account card pad" id="account-body"><h1>Settings</h1>' + deletedHtml() + '<div class="account-actions"><a class="act blue" href="/">Back to the feed</a></div></section>';
     try { sessionStorage.setItem(DELETED_KEY, "1"); } catch (_) {} // the shell's SIGNED_OUT re-route reads it once
   }
 

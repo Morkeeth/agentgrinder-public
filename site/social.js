@@ -350,7 +350,7 @@ window.GrinderSocial = function ({
   function responseReturnBar() {
     const pending = peekResponseReturn();
     if (pending !== "?inbox") return "";
-    return `<p class="response-return"><a class="act" href="/?inbox">Back to Responses</a></p>`;
+    return `<p class="response-return"><a class="act" href="/?inbox">Back to Notifications</a></p>`;
   }
 
   // THE FOLLOWING FEED, which is also the signed-in home (25 Sep 2026 evening). Runs from the
@@ -495,7 +495,7 @@ window.GrinderSocial = function ({
       ) {
         const bar = document.createElement("p");
         bar.className = "response-return";
-        bar.innerHTML = '<a class="act" href="/?inbox">Back to Responses</a>';
+        bar.innerHTML = '<a class="act" href="/?inbox">Back to Notifications</a>';
         slot.before(bar);
       }
     } catch (_) {}
@@ -1072,7 +1072,7 @@ window.GrinderSocial = function ({
           );
           status(
             peekResponseReturn() === "?inbox"
-              ? "Reply posted. Return to Responses when you are ready."
+              ? "Reply posted. Return to Notifications when you are ready."
               : "Reply posted.",
           );
           await thread(runId, slot);
@@ -1091,7 +1091,7 @@ window.GrinderSocial = function ({
 
   async function inbox() {
     start(
-      "Responses",
+      "Notifications",
       "Open the exact conversation, then come back here. Unread stays unread until you actually see it.",
       "inbox",
     );

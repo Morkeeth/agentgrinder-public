@@ -547,7 +547,7 @@ def card(r: dict, meta_extra: str = "", avatars: bool = False, url: str | None =
     return f"""<article class="card fc">
   <header class="fc-top">{face(r, avatars=avatars)}<div class="fc-who">{who}<small>{meta}</small></div>{shipped}</header>
   <div class="fc-body">{body}</div>
-  <footer class="fc-foot"><span class="fc-act" aria-label="Send thanks">{KUDOS_ICON}</span><span class="fc-act" aria-label="Discuss">{TALK_ICON}<span>Discuss</span></span><span class="fc-act" aria-label="Share">{SHARE_ICON}<span>Share</span></span></footer>
+  <footer class="fc-foot"><span class="fc-act" aria-label="Send thanks">{KUDOS_ICON}</span><span class="fc-act" aria-label="Reply">{TALK_ICON}<span>Reply</span></span><span class="fc-act" aria-label="Share">{SHARE_ICON}<span>Share</span></span></footer>
 </article>"""
 
 

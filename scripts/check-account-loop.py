@@ -436,7 +436,7 @@ def main():
             page.goto(base + "/")
             page.wait_for_function("document.getElementById('me').textContent.trim()==='@test-riley'")
             page.click("#account-menu summary")
-            check(page.is_visible("a[href='/?account']"), "menu: Account settings item visible when signed in")
+            check(page.is_visible("a[href='/?account']"), "menu: Settings item visible when signed in")
             page.keyboard.press("Escape")
             page.click("#delete")
             page.wait_for_selector("#danger")

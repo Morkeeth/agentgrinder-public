@@ -286,7 +286,7 @@ def main():
             check(cp.locator(".reply-missing").count() == 0, "cap: no removed claim for a reply that exists")
             check("shown here on its own" in cp.inner_text(".reply-direct") and "the reply a friend actually meant" in cp.inner_text(".reply-direct"), "cap: the direct card explains itself and carries the reply body")
             check(cp.evaluate("() => document.activeElement && document.activeElement.id === 'reply-" + str(oldest) + "'"), "cap: focus lands on the exact reply")
-            check(cp.locator(".reply-direct").get_by_role("link", name="Back to Responses").count() == 1, "cap: Back to Responses is offered on the direct card")
+            check(cp.locator(".reply-direct").get_by_role("link", name="Back to Notifications").count() == 1, "cap: Back to Notifications is offered on the direct card")
             cp.screenshot(path=str(ARTIFACTS / "08-exact-reply-beyond-cap-mobile.png"), full_page=False)
             ghost = str(uuid.uuid4())
             cp.goto(base + f"/?run={run_id}&reply={ghost}#reply-{ghost}")

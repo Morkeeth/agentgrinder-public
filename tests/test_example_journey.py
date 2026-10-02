@@ -52,7 +52,7 @@ def test_router_still_serves_the_example_without_signup():
 def test_demo_and_live_modes_are_visibly_distinguished():
     assert "function coachModeKind" in INDEX
     assert "not autonomous reasoning" in INDEX
-    assert "Live model" in INDEX
+    assert "Recorded legacy model review" in INDEX
     assert "coach --live-status" in EXAMPLE_JSON["live"]["command"]
     assert EXAMPLE_JSON["live"]["needs"]
 

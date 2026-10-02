@@ -18,6 +18,16 @@ def test_run_edit_panel_offers_title_project_and_photo():
     assert "if(ME?.id===r.profile_id){" in INDEX[INDEX.index("async function viewRun(id){"):INDEX.index("controls.id='run-edit'")]
 
 
+def test_owner_actions_are_beside_the_title_and_editing_precedes_replies():
+    card = INDEX[INDEX.index("function runCard(") : INDEX.index("function wireKudos(")]
+    view = INDEX[INDEX.index("async function viewRun(id){") : INDEX.index("async function trendingRepos(")]
+    assert 'href="#run-edit">Edit run</a>' in card
+    assert 'href="#run-photos">Add photos</a>' in card
+    assert "ownerActions:owner" in view
+    assert "$('grind-thread').before(controls)" in view
+    assert "app.append(controls)" not in view
+
+
 def test_run_photo_rule_matches_the_contract():
     import json, subprocess
     start = INDEX.index("function isRunPhotoUrl(u){")

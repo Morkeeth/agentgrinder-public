@@ -168,7 +168,7 @@ def test_public_page_exposes_recorded_metrics_as_readable_html():
     assert "Built the import.\nThen checked the save." in visible
     assert 'href="/?u=builder"' in visible and '>builder</a>' in visible
     assert 'aria-label="STRIVE home"' in visible
-    assert 'aria-label="Discuss"' in visible and 'aria-label="Share"' in visible
+    assert 'aria-label="Reply"' in visible and 'aria-label="Share"' in visible
     assert '<img' not in visible  # no avatar and no GitHub account: the initial, no remote image
 
 

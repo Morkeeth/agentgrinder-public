@@ -163,8 +163,8 @@ window.GrinderPeople = function ({
   }
 
   async function discover(initialQuery) {
-    frame(typeof railHtml === "function" ? railHtml("feed") : null, null);
-    if (typeof setPrimarySection === "function") setPrimarySection("feed");
+    frame(typeof railHtml === "function" ? railHtml("people") : null, null);
+    if (typeof setPrimarySection === "function") setPrimarySection("discover");
     const q0 =
       typeof initialQuery === "string"
         ? initialQuery
@@ -468,7 +468,7 @@ window.GrinderPeople = function ({
       try {
         if (sessionStorage.getItem("ag_response_return") === "?inbox") {
           responseReturn =
-            '<p class="response-return"><a class="act" href="/?inbox">Back to Responses</a></p>';
+            '<p class="response-return"><a class="act" href="/?inbox">Back to Notifications</a></p>';
         }
       } catch (_) {}
       const { data: runs, error } = await db

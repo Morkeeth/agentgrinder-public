@@ -34,6 +34,7 @@ def test_run_page_mounts_photos_for_reader_and_owner_controls():
     assert '<section id="run-photos"></section>' in INDEX
     assert "StriveRunPhotos.mount({client:sb,run:r,slot:$('run-photos'),owner,status})" in INDEX
     assert "/run-photos.js" in INDEX and "/run-photos.css" in INDEX
+    assert 'href="#run-photos">Add photos</a>' in INDEX
 
 
 def test_feed_cards_load_managed_photo_cover_without_token_query():

@@ -47,7 +47,7 @@ def test_walks_do_not_insert_production_hooks():
 def test_walk_covers_the_assigned_integrated_path():
     for needle in (
         "capture_hash()", "Preview your run", "cancelled sign-in", "duplicate handle", "Follow", "Post reply",
-        "cold load", "Open exact reply", "Back to Responses", "missing run", "deleted reply", "delete cancel",
+        "cold load", "Open exact reply", "Back to Notifications", "missing run", "deleted reply", "delete cancel",
         "Block", "deleted profile", "grinder-snapshot", "hosted_oauth", "consenting_users",
     ):
         assert needle in WALK, needle

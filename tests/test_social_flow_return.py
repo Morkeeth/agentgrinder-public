@@ -40,7 +40,7 @@ def test_profile_empty_and_heading_respect_viewer():
 
 def test_responses_return_and_ack_paths_remain():
     assert "ag_response_return" in SOCIAL
-    assert "Back to Responses" in SOCIAL
+    assert "Back to Notifications" in SOCIAL
     assert "Open exact reply" in SOCIAL
     assert "Thank this run" in INDEX
     assert "Send thanks" in INDEX
