@@ -18,6 +18,7 @@ TEST DATA actors only. No production writes, no posting, no deployment.
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
 import sys
@@ -73,15 +74,30 @@ def session_script(value: dict) -> str:
 
 
 def save_run(disposable: str, sub: str, handle: str, row: dict) -> str:
+    # Synthetic fixture only: exercise the same private insert then owner-share path as the app.
+    payload = dict(row)
+    audience = payload.get("visibility", "private")
+    payload.setdefault("measurement_revision", hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest())
+    payload["visibility"] = "private"
     request = urllib.request.Request(
         disposable + "/rest/v1/runs?select=id",
-        data=json.dumps(row).encode(),
+        data=json.dumps(payload).encode(),
         method="POST",
         headers={"apikey": "local-development-only", "Content-Profile": "strava",
                  "Content-Type": "application/json",
                  "Authorization": "Bearer " + mint(sub, handle)})
     with urllib.request.urlopen(request, timeout=30) as response:
-        return json.loads(response.read().decode())[0]["id"]
+        run_id = json.loads(response.read().decode())[0]["id"]
+    if audience != "private":
+        share = urllib.request.Request(
+            disposable + "/rest/v1/runs?id=eq." + run_id,
+            data=json.dumps({"visibility": audience}).encode(), method="PATCH",
+            headers={"apikey": "local-development-only", "Content-Profile": "strava",
+                     "Content-Type": "application/json",
+                     "Authorization": "Bearer " + mint(sub, handle)})
+        with urllib.request.urlopen(share, timeout=30) as response:
+            response.read()
+    return run_id
 
 
 def proxy(route, disposable):

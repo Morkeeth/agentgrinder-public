@@ -26,7 +26,8 @@ await db.exec(read('supabase/strava/015_pin.sql')); // re-applying is safe
 const A = '40000000-0000-0000-0000-00000000000a', B = '40000000-0000-0000-0000-00000000000b';
 await db.exec(`insert into strava.profiles(id,auth_uid,handle,display_name) values ('${A}','${A}','alice','Alice'),('${B}','${B}','bob','Bob')`);
 const runs = [1, 2, 3, 4].map(i => `50000000-0000-0000-0000-00000000000${i}`);
-for (const id of runs) await db.exec(`insert into strava.runs(id,profile_id,title,visibility) values ('${id}','${A}','Run','private')`);
+for (const id of runs) await db.query(`insert into strava.runs(id,profile_id,title,visibility,harness,schema_version,measurement_revision,trace_basis,rhythm)
+ values ($1,$2,'TEST DATA pin run','private','Codex',1,$3,'elapsed','[1,2]')`, [id,A,id.replaceAll('-','').repeat(2)]);
 await db.exec('set search_path=strava,pg_temp');
 const as = async (id) => { await db.exec('reset role'); await db.query("select set_config('request.jwt.claim.sub',$1,false)", [id || '']); await db.exec(`set role ${id ? 'authenticated' : 'anon'}`); };
 const pinned = async () => { await db.exec('reset role'); const n = (await db.query(`select count(*)::int n from strava.runs where profile_id=$1 and pinned_at is not null`, [A])).rows[0].n; return n; };

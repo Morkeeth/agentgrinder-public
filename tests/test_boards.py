@@ -39,5 +39,5 @@ def test_profile_carries_a_heatmap_of_visible_runs():
 
 
 def test_product_states_the_rules():
-    assert "Time on a run is `wall_time_s` when measured, else `duration_s`" in PRODUCT
-    assert "A Marathon is a public run of 3 hours or more" in PRODUCT
+    assert "app does not promote metric competition" in PRODUCT
+    assert "Feed, My runs and Profile" in PRODUCT
