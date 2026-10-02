@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {bootDisposable,seedJourneyActors,CASEY,RILEY} from './disposable-supabase.mjs';
+const {db,as}=await bootDisposable();
+await seedJourneyActors(db);
+await as(CASEY);
+await assert.rejects(db.query('update profiles set x_handle=$1 where id=$2',['someone_else',CASEY]),/Connect your X/);
+await db.exec('reset role');
+await db.query("insert into auth.identities(user_id,provider,identity_data) values($1,'twitter',$2)",[CASEY,{sub:'123456',user_name:'casey_x'}]);
+await as(CASEY);
+await db.query('update profiles set x_handle=$1 where id=$2',['casey_x',CASEY]);
+assert.equal((await db.query('select x_handle from profiles where id=$1',[CASEY])).rows[0].x_handle,'casey_x');
+await as(RILEY);
+await assert.rejects(db.query('update profiles set x_handle=$1 where id=$2',['casey_x',RILEY]),/Connect your X/);
+await as(CASEY);
+await db.query('update profiles set x_handle=null where id=$1',[CASEY]);
+await db.close();
+console.log('X username changes require the same user’s server-owned X identity; another profile cannot claim it.');
