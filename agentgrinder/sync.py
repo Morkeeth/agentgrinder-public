@@ -41,7 +41,7 @@ INTERVAL = 15 * 60
 MAX_PER_SYNC = 20   # the database rate-limits uploads; the rest go on the next sync
 LABEL = "app.strive.sync"
 NAMESPACE = uuid.UUID("7d3f0a52-6d3c-4b7e-9a4f-2f0c6a1e5b11")
-UVX_SOURCE = "git+https://github.com/Morkeeth/agentgrinder-public"
+UVX_SOURCE = "git+https://github.com/Morkeeth/strive"
 # The upload token only ever goes to these hosts, over HTTPS, with redirects refused.
 TRUSTED_HOSTS = {"agentic-strava.vercel.app"} | {
     h.strip().lower() for h in os.environ.get("STRIVE_TRUSTED_HOSTS", "").split(",") if h.strip()}

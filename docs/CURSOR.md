@@ -9,11 +9,11 @@ and keyless. The hosted page receives only allowlisted card metrics in the URL f
 Keep the capture tool outside your own project:
 
 ```sh
-git clone https://github.com/Morkeeth/agentgrinder-public.git ~/.agentgrinder/agentgrinder-public
+git clone https://github.com/Morkeeth/strive.git ~/.agentgrinder/strive
 python3 -m venv ~/.agentgrinder/venv
 # macOS system Python 3.9 ships pip 21.2, which cannot do an editable install of this project.
 ~/.agentgrinder/venv/bin/pip install -U pip
-~/.agentgrinder/venv/bin/pip install -e ~/.agentgrinder/agentgrinder-public
+~/.agentgrinder/venv/bin/pip install -e ~/.agentgrinder/strive
 ```
 
 To make the local MCP tools available in one of your projects, run this once for that project:

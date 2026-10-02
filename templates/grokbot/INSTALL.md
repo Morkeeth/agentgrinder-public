@@ -16,12 +16,12 @@ post-agent-run/
     └── smoke_test.py
 ```
 
-No `agentgrinder-public` parent checkout is required at runtime. To copy only this directory into
+No `strive` parent checkout is required at runtime. To copy only this directory into
 a bot workflow, replace `DEST` with that workflow's skill directory and run this one command:
 
 ```sh
 DEST="$HOME/bot-workflow/post-agent-run"; TMP="$(mktemp -d)"; \
-git clone --depth 1 --filter=blob:none --sparse https://github.com/Morkeeth/agentgrinder-public.git "$TMP" && \
+git clone --depth 1 --filter=blob:none --sparse https://github.com/Morkeeth/strive.git "$TMP" && \
 git -C "$TMP" sparse-checkout set templates/grokbot/post-agent-run && \
 mkdir -p "$DEST" && cp -R "$TMP/templates/grokbot/post-agent-run/." "$DEST/" && \
 rm -rf "$TMP"
@@ -78,7 +78,7 @@ python3 /absolute/path/to/post-agent-run/scripts/preview.py \
 
 Pass `/tmp/strive-preview-url.txt` directly to the browser workflow instead of copying a printed
 hash. For adapters that carry a ridge but omit `worker_bins`, wait for
-[worker bin default PR #42](https://github.com/Morkeeth/agentgrinder-public/pull/42) before relying
+[worker bin default PR #42](https://github.com/Morkeeth/strive/pull/42) before relying
 on that import. This Grok kit does not invent a ridge or worker bins.
 
 For local kit development only, pass `--base-url http://localhost:8000` to a separately running

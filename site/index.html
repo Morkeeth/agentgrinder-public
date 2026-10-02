@@ -523,7 +523,7 @@ footer{max-width:1320px;margin:0 auto;padding:20px 24px 40px;color:var(--dim);fo
   <main class="main" id="app"></main>
   <aside class="side" id="side"></aside>
 </div>
-<footer class="site-foot"><span class="site-foot-line">Your agent runs, shared on your terms.</span><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/Morkeeth/agentgrinder-public/issues">Contact</a><a href="/privacy#deletion" id="delete-info">Delete your data</a><span id="deletewrap" hidden><a href="/?account#danger" id="delete">Delete my __BRAND__ profile</a></span></footer>
+<footer class="site-foot"><span class="site-foot-line">Your agent runs, shared on your terms.</span><a href="/about">About</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/Morkeeth/strive/issues">Contact</a><a href="/privacy#deletion" id="delete-info">Delete your data</a><span id="deletewrap" hidden><a href="/?account#danger" id="delete">Delete my __BRAND__ profile</a></span></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/run-contract.js"></script>
@@ -1442,12 +1442,12 @@ async function shouldOnboard(){
 // commands: /?post (git clone ... grind --harness auto), /?onboard (the same inside a four-step
 // wizard) and, once signed in, a uvx line. Now: one page, fastest path first, one command per
 // agent, and the same drop zone as the landing. /?onboard and /?connect both land here.
-const ONE_LINE=h=>`uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind${h?' --harness '+h:''} --push`;
+const ONE_LINE=h=>`uvx --from git+https://github.com/Morkeeth/strive agentgrinder grind${h?' --harness '+h:''} --push`;
 // AUTOMATIC SYNC (Oscar, 25 Sep 2026 evening: "the uploads is awful ... automatic fetch").
 // Signed in, one button issues a private Connect token (migration 007) and shows one line to run
 // once on the computer the agent runs on. From then on `agentgrinder sync` uploads every finished
 // Claude Code, Cursor and Codex session as a private run (agentgrinder/sync.py). No file picking.
-const SYNC_LINE=t=>`uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder sync --install --token ${t}`;
+const SYNC_LINE=t=>`uvx --from git+https://github.com/Morkeeth/strive agentgrinder sync --install --token ${t}`;
 function autoSyncHtml(){
   return `<section class="auto-sync" id="auto-sync" aria-labelledby="auto-sync-title">
     <h2 id="auto-sync-title">Automatic: your sessions arrive on their own</h2>
@@ -1492,7 +1492,7 @@ function connectBodyHtml(){
       <p class="hint">Replace /your/project with the project folder. Replace cursor with claude when needed.</p>
       <h3>Import a session file manually</h3>${dropZoneHtml()}
       <p class="hint">Finder: press Cmd+Shift+G and paste the session folder. Claude Code: ${esc(AGENT_FILES[0][1])} · Cursor: ${esc(AGENT_FILES[1][1])} · Codex: ${esc(AGENT_FILES[2][1])}</p>
-      <p class="hint"><a href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/AGENT-UPLOAD-API.md">Agent upload API</a> · <a href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Grok Bot export</a></p>
+      <p class="hint"><a href="https://github.com/Morkeeth/strive/blob/main/docs/AGENT-UPLOAD-API.md">Agent upload API</a> · <a href="https://github.com/Morkeeth/strive/blob/main/docs/GROK-PUSH.md">Grok Bot export</a></p>
     </div></details>`;
 }
 function wireConnectCopies(root){
@@ -1600,7 +1600,7 @@ function howItWorks(){
 // with exit 1, so the first thing anyone did from this page failed. There is no install in the
 // line any more, because the package needs none: it runs from the clone on the python macOS
 // already has. The coach is a second, honest line - it needs Python 3.10 or newer, and says so.
-const INSTALL_CMD="git clone https://github.com/Morkeeth/agentgrinder-public && cd agentgrinder-public && python3 -m agentgrinder grind --harness auto";
+const INSTALL_CMD="git clone https://github.com/Morkeeth/strive && cd strive && python3 -m agentgrinder grind --harness auto";
 // The first-run door: one line that installs nothing globally and needs no clone. Its --push
 // defaults to the hosted app (agentgrinder/push.py), so the printed link opens a real page.
 const COACH_CMD='python3.12 -m venv .venv && .venv/bin/pip install -e ".[coach]" && .venv/bin/agentgrinder grind --coach';
@@ -1643,7 +1643,7 @@ function landingHTML(){
     <section class="home-sec landing-feature" aria-labelledby="h-popular" id="landing-feature"><div class="land-head"><h2 id="h-popular">Popular runs</h2><a href="/?explore">See all</a></div><div id="landing-feature-body">${skeletonCard()}</div><p id="public-run-count" class="public-run-count" role="status"></p></section>
     <section class="home-join"><h2>Post your own runs</h2><button type="button" class="act primary" data-signin>${signInLabel()} and build your profile</button></section>
   </div>
-  <div class="launch-more"><a href="https://github.com/Morkeeth/agentgrinder-public">GitHub ↗</a><a href="/?boards">Marathon and boards</a><a href="/methodology">How the numbers are made</a><a href="/?post">Add a run from a file</a><a href="${REAL_RUN}">A real run</a></div>`;
+  <div class="launch-more"><a href="https://github.com/Morkeeth/strive">GitHub ↗</a><a href="/?boards">Marathon and boards</a><a href="/methodology">How the numbers are made</a><a href="/?post">Add a run from a file</a><a href="${REAL_RUN}">A real run</a></div>`;
 }
 
 // THE DROP ZONE. One markup, mounted by site/dropin.js, on the landing and on Connect.
@@ -1852,7 +1852,7 @@ function postComposerHtml({first=false}={}){
     <div class="up-top"><span class="t">Capture from Cursor, Claude Code, Codex or Grok Bot</span><span class="meta">local and private until you choose</span></div>
     <div class="cmd"><span class="c">${INSTALL_CMD}</span><button class="act" id="cp1">Copy</button></div>
     <div class="cmd"><span class="c">python3 -m agentgrinder grind --harness auto --push</span><span class="d">reads the freshest Cursor, Claude Code, Codex or imported Grok Bot session</span></div>
-    <div class="cmd"><span class="c"><span class="card-harness">Grok Bot</span> · use an explicitly selected export</span><a class="d" href="https://github.com/Morkeeth/agentgrinder-public/blob/main/docs/GROK-PUSH.md">Preview steps →</a></div>
+    <div class="cmd"><span class="c"><span class="card-harness">Grok Bot</span> · use an explicitly selected export</span><a class="d" href="https://github.com/Morkeeth/strive/blob/main/docs/GROK-PUSH.md">Preview steps →</a></div>
     <div class="up-foot">The reader sends recorded counts and timing, never prompt text, code or file paths. You review every field before choosing an audience.</div>
   </div>`}
   <details class="panel manual-post">

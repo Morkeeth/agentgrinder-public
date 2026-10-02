@@ -10,14 +10,14 @@ One command. It reads your latest Claude Code, Cursor or Codex session on this m
 `grind.html`, and prints a private preview link to the live app:
 
 ```sh
-uvx --from git+https://github.com/Morkeeth/agentgrinder-public agentgrinder grind --push
+uvx --from git+https://github.com/Morkeeth/strive agentgrinder grind --push
 ```
 
 No `uv`? Use a virtual environment instead (macOS system Python needs the pip upgrade):
 
 ```sh
 python3 -m venv ~/.strive && ~/.strive/bin/pip install -U pip
-~/.strive/bin/pip install git+https://github.com/Morkeeth/agentgrinder-public
+~/.strive/bin/pip install git+https://github.com/Morkeeth/strive
 ~/.strive/bin/agentgrinder grind --push
 ```
 
@@ -34,8 +34,8 @@ session it picked.
 Python 3.9+ runs the local app. Node 20+ is needed for contributor checks.
 
 ```sh
-git clone https://github.com/Morkeeth/agentgrinder-public.git
-cd agentgrinder-public
+git clone https://github.com/Morkeeth/strive.git
+cd strive
 python3 scripts/dev.py serve
 ```
 
@@ -88,7 +88,7 @@ request and never posts. Use `python3 -m agentgrinder hook status` to inspect it
 
 ## What help matters now?
 
-Make first-run instructions easier, improve the card on a phone, test keyboard access, report a reproducible bug, or improve the empty states a new user meets in a feed with few runs. [First contributions](docs/FIRST-PR.md) and [issues to open](docs/ISSUES-TO-OPEN.md) give starting files and a clear outcome. [Open issues](https://github.com/Morkeeth/agentgrinder-public/issues) show reported work; check before starting something large.
+Make first-run instructions easier, improve the card on a phone, test keyboard access, report a reproducible bug, or improve the empty states a new user meets in a feed with few runs. [First contributions](docs/FIRST-PR.md) and [issues to open](docs/ISSUES-TO-OPEN.md) give starting files and a clear outcome. [Open issues](https://github.com/Morkeeth/strive/issues) show reported work; check before starting something large.
 
 Small fixes can go straight to a PR. Discuss new features in an issue first. Contributors review their agent-generated changes and explain what they tested. [Maintainer process](docs/MAINTAINING.md) explains how changes are triaged and reviewed.
 
